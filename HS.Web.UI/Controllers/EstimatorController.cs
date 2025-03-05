@@ -1177,6 +1177,7 @@ namespace HS.Web.UI.Controllers
                     item.CreatedBy = CurrentUser.UserId;
                     item.CreatedDate = DateTime.Now.UTCCurrentTime();
                     item.EstimatorId = Model.Estimator.EstimatorId;
+                    item.IsOneTimeService = false;
                     _Util.Facade.EstimatorFacade.InsertEstimatorService(item);
                 }
             }
