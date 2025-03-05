@@ -1,0 +1,696 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+    DateTime EndDate = (DateTime)ViewBag.EndDate;
+    DateTime StartDate = (DateTime)ViewBag.StartDate;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using Permissions = HS.Framework.UserPermissions;
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper;
+@using AppConfig = HS.Framework.Utils.AppConfig;
+<link href="~/Content/Css/Invoice/InvoicePartial.css" rel="stylesheet" />
+
+@if (CurrentUser.UserTags == "Customer")
+{
+    <script>
+        var StartDateDatepicker;
+        var EndDateDatepicker;
+        var startTab = '@ViewBag.StartTab';
+        var FirstDayOfWeek = '@ViewBag.FirstDayOfWeek';
+        var InvoiceType = "@ViewBag.InvoiceType";
+
+        var SetLoaderText = function () {
+            $(".AllUnPaidInvoice_Load").html(TabsLoaderText);
+            $(".AllPaidInvoice_Load").html(TabsLoaderText);
+            $(".AllRolledOverInvoice_Load").html(TabsLoaderText);
+        }
+        $(document).ready(function () {
+            var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            //if ($.trim($("ul.invoices-tabs li.active").text()) == "Rolled Over") {
+            //    $(".btn-add-invoice").addClass('hidden');
+            //}
+            //$(LoadCustomerDiv + ".AllUnPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType);
+            if (startTab == "Unpaid") {
+                 $(".AllUnPaidInvoice_Load").addClass('active');
+            $(".AllUnPaidInvoice").addClass('active');
+                $(LoadCustomerDiv + ".AllUnPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=Unpaid");
+                $(".btn-add-invoice").removeClass('hidden');
+                $(".btn-add-invoice-Statement").removeClass('hidden');
+            }
+            else if (startTab == "Paid") {
+                $(".AllPaidInvoice_Load").addClass('active');
+            $(".AllPaidInvoice").addClass('active');
+                $(LoadCustomerDiv + ".AllPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=Paid");
+                $(".btn-add-invoice").removeClass('hidden');
+                $(".btn-add-invoice-Statement").addClass('hidden');
+            }
+            else if (startTab == "Rolled Over") {
+                InvoiceType = encodeURI("Rolled Over");
+                $(".AllRolledOverInvoice_Load").addClass('active');
+                $(".AllRolledOverInvoice").addClass('active');
+                $(LoadCustomerDiv + ".AllRolledOverInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType="+InvoiceType);
+                $(".btn-add-invoice").addClass('hidden');
+                $(".btn-add-invoice-Statement").addClass('hidden');
+            }
+            $(LoadCustomerDiv+".AllPaidInvoice").click(function () {
+                InvoiceType = "Paid";
+                SetLoaderText();
+                $(LoadCustomerDiv + ".AllPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType);
+                $(".btn-add-invoice").removeClass('hidden');
+                $(".btn-add-invoice-Statement").addClass('hidden');
+            });
+            $(LoadCustomerDiv+".AllRolledOverInvoice").click(function () {
+                InvoiceType = encodeURI("Rolled Over");
+                SetLoaderText();
+                $(LoadCustomerDiv + ".AllRolledOverInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType);
+                $(".btn-add-invoice").addClass('hidden');
+                $(".btn-add-invoice-Statement").addClass('hidden');
+            });
+            $(LoadCustomerDiv+".AllUnPaidInvoice").click(function () {
+                InvoiceType = "Unpaid";
+                SetLoaderText();
+                $(LoadCustomerDiv + ".AllUnPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType);
+                $(".btn-add-invoice").removeClass('hidden');
+                $(".btn-add-invoice-Statement").removeClass('hidden');
+            });
+            $(".btn-add-invoice").click(function () {
+                OpenTopToBottomModal(domainurl + "/Invoice/AddInvoice/?CustomerId=" + CustomerLoadId);
+            });
+            $(".btn-add-invoice-Statement").click(function () {
+                $(".btn-add-invoice-Statement").attr("href", domainurl + "/Invoice/CustomerUnpaidInvoiceStatement/?CustomerId=" + CustomerLoadId + "&StatementType=RMR&PaymentLink=false");
+            });
+        });
+    </script>
+}
+else
+{
+    <script>
+        var StartDateDatepicker;
+        var EndDateDatepicker;
+        var startTab = '@ViewBag.StartTab';
+        var FirstDayOfWeek = '@ViewBag.FirstDayOfWeek';
+        var InvoiceType = "@ViewBag.InvoiceType";
+        var SetLoaderText = function () {
+            console.log("hello");
+            var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            $(LoadCustomerDiv + ".AllUnPaidInvoice_Load").html(TabsLoaderText);
+            $(LoadCustomerDiv + ".AllRolledOverInvoice_Load").html(TabsLoaderText);
+            $(LoadCustomerDiv + ".AllPaidInvoice_Load").html(TabsLoaderText);
+            $(LoadCustomerDiv + ".AllDeclinedInvoice_Load").html(TabsLoaderText);
+        }
+        var UpdatePtoCookie = function () {
+            var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            var FirstDayStr = $(LoadCustomerDiv + ".InvoiceFilterStartDate").val();
+            var EndDayStr = $(LoadCustomerDiv + ".InvoiceFilterEndDate").val();
+            var FilterWeeksStr = $(LoadCustomerDiv + ".FilterWeeks").val();
+            var PTOFilterStr = "";
+            var NewCookie = String.format("{0},{1},{2},{3}", FirstDayStr, EndDayStr, FilterWeeksStr, PTOFilterStr);
+
+            $.cookie("_PtoFilter", NewCookie, { expires: 1 * 60 * 24, path: '/' });
+        }
+        $(document).ready(function () {
+            var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            var Popupwidth = 920;
+            if (window.innerWidth < 920) {
+                Popupwidth = window.innerWidth;
+            }
+
+            var idlist = [{ id: LoadCustomerDiv + ".InvoicePrint", type: 'iframe', width: Popupwidth, height: 600 },
+                { id: ".input-add-invoice-Statement", type: 'iframe', width: Popupwidth, height: 600 }];
+            jQuery.each(idlist, function (i, val) {
+                magnificPopupObj(val);
+            });
+            $(LoadCustomerDiv + ".InvoiceFilterStartDate").val("");
+            $(LoadCustomerDiv + '.InvoiceFilterEndDate').val("");
+
+            $(LoadCustomerDiv + '.FilterWeeks').val('-1');
+
+            var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            $(".AllDeclinedInvoice").click(function () {
+                console.log("sdfsd");
+                LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+                InvoiceType = "Declined";
+                SetLoaderText();
+                $(LoadCustomerDiv + ".AllDeclinedInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType);
+            });
+            //$(LoadCustomerDiv + ".AllUnPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType);
+            //if ($.trim($("ul.invoices-tabs li.active").text())=="Rolled Over") {
+            //    $(".btn-add-invoice").addClass('hidden');
+            //}
+            if (startTab == "Unpaid") {
+        $(".AllUnPaidInvoice_Load").addClass('active');
+            $(".AllUnPaidInvoice").addClass('active');
+                $(LoadCustomerDiv + ".AllUnPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=Unpaid");
+                $(".btn-add-invoice").removeClass('hidden');
+                $(".btn-add-invoice-Statement").removeClass('hidden');
+                $(".AllUnPaidInvoice").click();
+            }
+            else if (startTab == "Paid") {
+                $(".AllPaidInvoice_Load").addClass('active');
+            $(".AllPaidInvoice").addClass('active');
+                $(LoadCustomerDiv + ".AllPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=Paid");
+                $(".btn-add-invoice").removeClass('hidden');
+                $(".btn-add-invoice-Statement").addClass('hidden');
+            }
+            else if (startTab == "Rolled Over") {
+                InvoiceType = encodeURI("Rolled Over");
+                $(".AllRolledOverInvoice_Load").addClass('active');
+            $(".AllRolledOverInvoice").addClass('active');
+                $(LoadCustomerDiv + ".AllRolledOverInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType="+InvoiceType);
+                $(".btn-add-invoice").addClass('hidden');
+                $(".btn-add-invoice-Statement").addClass('hidden');
+            }
+
+
+            $(".AllPaidInvoice").click(function () {
+                LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+                InvoiceType = "Paid";
+                SetLoaderText();
+                $(LoadCustomerDiv + ".AllPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType);
+                $(".btn-add-invoice").removeClass('hidden');
+                $(".btn-add-invoice-Statement").addClass('hidden');
+            });
+            $(".AllRolledOverInvoice").click(function () {
+                LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+                InvoiceType = encodeURI("Rolled Over");
+                SetLoaderText();
+                $(LoadCustomerDiv + ".AllRolledOverInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType);
+                $(".btn-add-invoice").addClass('hidden');
+                $(".btn-add-invoice-Statement").addClass('hidden');
+            });
+            $(".AllUnPaidInvoice").click(function () {
+                LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+                console.log(LoadCustomerDiv);
+                InvoiceType = "Unpaid";
+                SetLoaderText();
+                $(LoadCustomerDiv + ".AllUnPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType);
+                $(".btn-add-invoice").removeClass('hidden');
+                $(".btn-add-invoice-Statement").removeClass('hidden');
+            });
+            $(".btn-add-invoice").click(function () {
+                OpenTopToBottomModal(domainurl + "/Invoice/AddInvoice/?CustomerId=" + CustomerLoadId);
+            });
+            $(".btn-add-invoice-Statement").click(function () {   
+                var Customhtml = '', clickCount = 0;
+                Customhtml = '<div class="row rmrRow" id="rmrcustomdiv"><div class="rmrdiv"><div class="span-style rmrTextdiv">Invoice Type</div><select name="InvoiceType" id="InvoiceType" class="form-control"><option value="RMR">RMR</option><option value="Others">Others</option><option value="All">All</option></select></div><div class="rmrdiv"><div class="span-style rmrTextdiv">Include Payment Link</div><select name="IsPaymentLink" id="IsPaymentLink" class="form-control"><option value="yes">Yes</option><option value="no">No</option></select></div></div>';
+                OpenConfirmationMessageNew("Statement", Customhtml, function () {    
+                    var InvType = $("#InvoiceType").val();
+                    var PayLink = $("#IsPaymentLink").val();
+                    if (PayLink == "yes") { PayLink = true; }
+                    else { PayLink = false; }                    
+                    $(".input-add-invoice-Statement").attr("href", domainurl + "/Invoice/CustomerUnpaidInvoiceStatement/?CustomerId=" + encodeURI(CustomerLoadId) + "&StatementType=" + encodeURI(InvType) + "&PaymentLink=" + PayLink);
+                    $(".input-add-invoice-Statement").click();
+                }, function () { return false; });
+            });
+            StartDateDatepicker = new Pikaday({
+                field: $(LoadCustomerDiv + '.InvoiceFilterStartDate')[0],
+                format: 'MM/DD/YYYY'
+            });
+            EndDateDatepicker = new Pikaday({
+                field: $(LoadCustomerDiv + '.InvoiceFilterEndDate')[0],
+                format: 'MM/DD/YYYY'
+            });
+            $(LoadCustomerDiv + ".PayrollFilterBtn").click(function () {
+                InvoiceSearchKeyUp(1);
+                UpdatePtoCookie();
+            });
+            $(LoadCustomerDiv + ".FilterWeeks").change(function () {
+                if ($(this).val().split('/').length == 2) {
+                    var StartingDay = getDateOfISOWeek($(this).val().split('/')[1], $(this).val().split('/')[0]);
+                    StartDateDatepicker.setDate(StartingDay);
+                    var EndingDay = StartingDay.addDays(6);
+                    EndDateDatepicker.setDate(EndingDay);
+                }
+            });
+
+            $(LoadCustomerDiv + ".InvoiceReport").click(function () {
+
+                var ids = "";
+                var idsAll = "";
+                var flag = 0;
+                $(LoadCustomerDiv + ".CheckItems").each(function () {
+                    idsAll += $(this).attr("data-id") + ",";
+                    if ($(this).is(':checked'))
+                    {
+                        flag = 1;
+                        ids += $(this).attr("data-id")+","
+                    }
+
+               });
+                var ColumnName = "Created On,Invoice No,Description,Due Date,Total,Balance,Status,Last Note Added";
+
+                if (flag == 0)
+                {
+                    if (idsAll != "")
+                    {
+                        window.location.href = domainurl + "/Reports/NewReport/?ColumnNames=" + ColumnName + "&ReportFor=Invoice&SelectAllIds=" + idsAll;
+                    }
+                    else {
+                        OpenErrorMessageNew("", "Invoice List are empty.");
+                    }
+
+                }
+                else {
+                    if (ids != "") {
+                        window.location.href = domainurl + "/Reports/NewReport/?ColumnNames=" + ColumnName + "&ReportFor=Invoice&SelectAllIds=" + ids;
+                    }
+                    else {
+                        OpenErrorMessageNew("", "Invoice List are empty.");
+                    }
+                }
+
+
+            });
+
+            $(LoadCustomerDiv + ".InvPrint").click(function () {
+                console.log("ase gasi");
+                var ids = "";
+                var idsAll = "";
+                var flag = 0;
+                $(LoadCustomerDiv + ".CheckItems").each(function () {
+                    idsAll += $(this).attr("data-id") + ",";
+                    if ($(this).is(':checked')) {
+                        flag = 1;
+                        ids += $(this).attr("data-id") + ","
+                    }
+
+                });
+
+
+                if (flag == 0) {
+                    if (idsAll != "") {
+                        $(LoadCustomerDiv + ".InvoicePrint").attr("href", domainurl + "/Invoice/GetInvoiceListPartial/?Ids=" + idsAll);
+                        $(LoadCustomerDiv + ".InvoicePrint").click();
+                    }
+                    else {
+
+                        OpenErrorMessageNew("", "Invoice List are empty.", function () {
+                            location.reload();
+                        });
+                    }
+                   // window.location.href = "/Invoice/GetInvoiceListPartial/?Ids=" + idsAll ;
+                }
+                else {
+                    if (ids != "") {
+                        $(LoadCustomerDiv + ".InvoicePrint").attr("href", domainurl + "/Invoice/GetInvoiceListPartial/?Ids=" + ids);
+                        $(LoadCustomerDiv + ".InvoicePrint").click();
+                    }
+                    else {
+                        OpenErrorMessageNew("", "Invoice List are empty.");
+                    }
+                    //window.location.href = "/Invoice/GetInvoiceListPartial/?Ids=" + ids;
+                }
+
+
+            });
+
+            $(LoadCustomerDiv + ".InvPrintForPhone").click(function () {
+                var ids = "";
+                var idsAll = "";
+                var flag = 0;
+                $(LoadCustomerDiv + ".CheckItems").each(function () {
+                    idsAll += $(this).attr("data-id") + ",";
+                    if ($(this).is(':checked')) {
+                        flag = 1;
+                        ids += $(this).attr("data-id") + ","
+                    }
+
+                });
+
+
+                if (flag == 0) {
+                    if (idsAll != "") {
+                        var IdSallSt = idsAll.toString();
+                        //$(LoadCustomerDiv + ".InvoicePrint").attr("href", domainurl + "/Invoice/DownLoadAllInvoicePdfList/?InvIdList=" + IdSallSt);
+                        var DownloadUrl = domainurl + "/Invoice/DownLoadAllInvoicePdfList/?InvIdList=" + IdSallSt;
+                        parent.window.open(DownloadUrl, '_blank');
+                        parent.$.magnificPopup.close();
+                    }
+                    else {
+
+                        OpenErrorMessageNew("", "Invoice List are empty.", function () {
+                            location.reload();
+                        });
+                    }
+                    // window.location.href = "/Invoice/GetInvoiceListPartial/?Ids=" + idsAll ;
+                }
+                else {
+                    if (ids != "") {
+                        var IdSallSt = ids.toString();
+                        //$(LoadCustomerDiv + ".InvoicePrint").attr("href", domainurl + "/Invoice/DownLoadAllInvoicePdfList/?InvIdList=" + IdSallSt);
+                        var DownloadUrl = domainurl + "/Invoice/DownLoadAllInvoicePdfList/?InvIdList=" + IdSallSt;
+                        parent.window.open(DownloadUrl, '_blank');
+                        parent.$.magnificPopup.close();
+                    }
+                    else {
+                        OpenErrorMessageNew("", "Invoice List are empty.");
+                    }
+                    //window.location.href = "/Invoice/GetInvoiceListPartial/?Ids=" + ids;
+                }
+
+
+            });
+
+            if ($("#PTOFilter").val() == "AllTime") {
+            var Today = new Date();
+            //$("#PayrollFilterStartDate").val("");
+            //$("#PayrollFilterEndDate").val("");
+            var FirstDayOfMonth = '@ViewBag.FilterStartDate';
+            var LastDayOfMonth = new Date(Today.getFullYear() + 1, 11, 31);
+
+            StartDateDatepicker.setDate(FirstDayOfMonth);
+            EndDateDatepicker.setDate(LastDayOfMonth);
+
+
+        }
+        $("#PTOFilter").change(function () {
+            if ($(this).val() == "Today") {
+                var Today = new Date();
+                StartDateDatepicker.setDate(Today);
+                EndDateDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "Yesterday") {
+                var Today = new Date();
+                EndDateDatepicker.setDate(Today.addDays(-1));
+                StartDateDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "ThisWeek") {
+                var Today = new Date();
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDateDatepicker.setDate(StartDay);
+                EndDateDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "LastWeek") {
+                var Today = new Date();
+                Today = Today.addDays(-7);
+
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDateDatepicker.setDate(StartDay);
+                EndDateDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "ThisMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() + 1, 0);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+
+            }
+            else if ($(this).val() == "LastMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() - 1, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 0);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "ThisYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), 11, 31);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "LastYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear() - 1, 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear() - 1, 11, 31);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "AllTime") {
+                var Today = new Date();
+                //$("#PayrollFilterStartDate").val("");
+                //$("#PayrollFilterEndDate").val("");
+                var FirstDayOfMonth = '@ViewBag.FilterStartDate';
+                var LastDayOfMonth = new Date(Today.getFullYear() + 1, 11, 31);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+        });
+        });
+    </script>
+}
+<script>
+    var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+    var InvoiceSearchKeyUp = function (pageNumber, order) {
+
+        console.log("df");
+        var StartDayeVal = $(LoadCustomerDiv + '.InvoiceFilterStartDate').val();
+        var EndDayval = $(LoadCustomerDiv + '.InvoiceFilterEndDate').val();
+        var SearchText = $(LoadCustomerDiv + '.invsearchtext').val();
+
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var InvoiceType = $("#Status").val();
+        if (InvoiceType == "Paid") {
+            $(LoadCustomerDiv + ".AllPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType + "&PageNo=" + pageNumber + "&order=" + order + "&StrStartDate=" + StartDayeVal + "&StrEndDate=" + EndDayval + "&SearchText=" + SearchText);
+            $(".btn-add-invoice").removeClass('hidden');
+            $(".btn-add-invoice-Statement").addClass('hidden');
+        }
+        //else if (InvoiceType == "Declined") {
+        //    $(LoadCustomerDiv + ".AllDeclinedInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType + "&PageNo=" + pageNumber + "&order=" + order + "&StrStartDate=" + StartDayeVal + "&StrEndDate=" + EndDayval + "&SearchText=" + SearchText);
+        //}
+        else if (InvoiceType == "Rolled Over" || InvoiceType == "Cancelled" || InvoiceType == "Cancel") {
+            $(LoadCustomerDiv + ".AllRolledOverInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&InvoiceType=" + InvoiceType + "&PageNo=" + pageNumber + "&order=" + order + "&StrStartDate=" + StartDayeVal + "&StrEndDate=" + EndDayval + "&SearchText=" + SearchText);
+            $(".btn-add-invoice").addClass('hidden');
+            $(".btn-add-invoice-Statement").addClass('hidden');
+        }
+        else {
+            $(LoadCustomerDiv + ".AllUnPaidInvoice_Load").load(domainurl + "/Invoice/InvoiceListPartial/?CustomerId=" + CustomerLoadGuid + "&PageNo=" + pageNumber + "&order=" + order + "&StrStartDate=" + StartDayeVal + "&StrEndDate=" + EndDayval + "&SearchText=" + SearchText);
+            $(".btn-add-invoice").removeClass('hidden');
+            $(".btn-add-invoice-Statement").removeClass('hidden');
+        }
+
+        $("#tblInvoice").hide();
+        $(".inv1").hide();
+    }
+</script>
+
+
+<div class="all_invoices_partial_container">
+    <div class="invoices_tabs_header">
+        <ul class="nav nav-tabs invoices-tabs" id="myInvoicesTab">
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.UnpaidInvoiceTab))
+            {
+                <li class="AllUnPaidInvoice">
+                    <a data-target=".AllUnPaidInvoice_Load" data-toggle="tab">
+                        @Localize.T("Unpaid")
+                        <span class="InvoiceOpenCounter">@(ViewBag.OpenInvoiceCount > 0 ? string.Format("({0})", ViewBag.OpenInvoiceCount) : "")</span>
+
+                    </a>
+                </li>
+            }
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.RolledOverInvoiceTab) && ViewBag.IsRolledOverPermission == "true")
+            {
+                <li class="AllRolledOverInvoice">
+                    <a data-target=".AllRolledOverInvoice_Load" data-toggle="tab">
+                        @Localize.T("Rolled Over")
+                        <span class="InvoiceRolledoverCounter">@(ViewBag.RolledOverInvoiceCount > 0 ? string.Format("({0})", ViewBag.RolledOverInvoiceCount) : "")</span>
+
+                    </a>
+                </li>
+            }
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaidInvoiceTab))
+            {
+                <li class="AllPaidInvoice">
+                    <a data-target=".AllPaidInvoice_Load" data-toggle="tab">
+                        @Localize.T("Paid")
+                        <span class="InvoicePaidCounter">@(ViewBag.PaidInvoiceCount > 0 ? string.Format("({0})", ViewBag.PaidInvoiceCount) : "")</span>
+
+                    </a>
+                </li>
+            }
+            @*@if (string.IsNullOrWhiteSpace(ViewBag.InvoiceType))
+        {
+            <!--[Open Unpaid tab first]-->
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.UnpaidInvoiceTab))
+            {
+                <li class="AllUnPaidInvoice active">
+                    <a data-target=".AllUnPaidInvoice_Load" data-toggle="tab">@Localize.T("Unpaid")</a>
+                </li>
+            }
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.RolledOverInvoiceTab))
+            {
+                <li class="AllRolledOverInvoice">
+                    <a data-target=".AllRolledOverInvoice_Load" data-toggle="tab">@Localize.T("Rolled Over")</a>
+                </li>
+            }
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaidInvoiceTab))
+            {
+                <li class="AllPaidInvoice">
+                    <a data-target=".AllPaidInvoice_Load" data-toggle="tab">@Localize.T("Paid")</a>
+                </li>
+            }
+        }
+
+        else if (!string.IsNullOrWhiteSpace(ViewBag.InvoiceType) && ViewBag.InvoiceType == "Paid")
+        {
+            <!--[Open Paid tab first]-->
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.UnpaidInvoiceTab))
+            {
+                <li class="AllUnPaidInvoice">
+                    <a data-target=".AllUnPaidInvoice_Load" data-toggle="tab">@Localize.T("Unpaid")</a>
+                </li>
+            }
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.RolledOverInvoiceTab))
+            {
+                <li class="AllRolledOverInvoice">
+                    <a data-target=".AllRolledOverInvoice_Load" data-toggle="tab">@Localize.T("Rolled Over")</a>
+                </li>
+            }
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaidInvoiceTab))
+            {
+                <li class="AllPaidInvoice active">
+                    <a data-target=".AllPaidInvoice_Load" data-toggle="tab">@Localize.T("Paid")</a>
+                </li>
+            }
+        }
+
+        else
+        {
+            <!--[Default Open Unpaid tab first]-->
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.UnpaidInvoiceTab))
+            {
+                <li class="AllUnPaidInvoice active">
+                    <a data-target=".AllUnPaidInvoice_Load" data-toggle="tab">@Localize.T("Unpaid")</a>
+                </li>
+            }
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.RolledOverInvoiceTab))
+            {
+                <li class="AllRolledOverInvoice">
+                    <a data-target=".AllRolledOverInvoice_Load" data-toggle="tab">@Localize.T("Rolled Over")</a>
+                </li>
+            }
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaidInvoiceTab))
+            {
+                <li class="AllPaidInvoice">
+                    <a data-target=".AllPaidInvoice_Load" data-toggle="tab">@Localize.T("Paid")</a>
+                </li>
+            }
+        }*@
+
+            @if (@ViewBag.Role != "Customer")
+            {
+                @*<li class="AllDeclinedInvoice">
+                <a data-target=".AllDeclinedInvoice_Load" data-toggle="tab">@Localize.T("Declined")</a>
+            </li>*@
+                @*<li class="AllDeclinedInvoice">
+                <a data-target=".AllDeclinedInvoice_Load" data-toggle="tab">@Localize.T("Declined")</a>
+            </li>*@
+                <li style="float:right;border:none!important;">
+                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerUnpaidInvoiceStatement))
+                    {
+                        <button class="btn btn-primary btn-add-invoice-Statement" href="" type="button" title="@Localize.T("Customer Unpaid Invoice Statement")">
+                            <i class="fa fa-file-pdf-o" aria-hidden="true"></i> @Localize.T("Invoice Statement")
+                        </button>
+                        <input type="hidden" class="input-add-invoice-Statement" />
+                    }
+                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerInvoiceAdd))
+                    {
+                        <button class="btn btn-primary btn-add-invoice" @*id="AddInvoice"*@ type="button" title="@Localize.T("Add New Invoice")">
+                            <i class="fa fa-plus-circle" aria-hidden="true"></i> &nbsp;@Localize.T("New")
+                        </button>
+                    }
+                </li>
+            }
+
+        </ul>
+    </div>
+    <div class="all_invoice_partial_search">
+        <span id="PayrollStartDate">
+            <input type="text" value="@StartDate.ToString("MM/dd/yy")" placeholder="Start Date" class="form-control border-radius-0 InvoiceFilterStartDate" />
+        </span>
+        <span id="PayrollEndDate">
+            <input type="text" value="@EndDate.ToString("MM/dd/yy")" placeholder="End Date" class="form-control border-radius-0 InvoiceFilterEndDate" />
+        </span>
+
+        <span id="PTO">
+            @Html.DropDownList("PTOFilter", (List<SelectListItem>)ViewBag.PTOFilterOptions, new { @class = "form-control PTOFilter" })
+        </span>
+        <div class="input-group add-on">
+            <span id="SearchText">
+                <input type="text" value="" placeholder="Search" class="form-control border-radius-0 invsearchtext" />
+            </span>
+
+            <div class="input-group-btn time_clock_filter_btn">
+                <button class="btn PayrollFilterBtn green_button" title="@Localize.T("Search")">
+                    <i class="glyphicon glyphicon-search"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="all_invoice_partial_other_option">
+
+        @*<span id="InvExport">
+                <a title="Download"  href="javascript:void(0)"><i class="fa fa-file-excel-o InvoiceReport" aria-hidden="true"></i></a>
+            </span>*@
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.InvoicePrintPermission))
+        {
+            if (Request.Browser.IsMobileDevice)
+            {
+                <span class="InvPrintForPhone">
+                    <a title="Print" class="InvoicePrint" href=""><i class="fa fa-print" aria-hidden="true"></i></a>
+                </span>
+            }
+            else
+            {
+
+                <span class="InvPrint">
+                    <a title="Print" class="InvoicePrint" href="javascript:void(0);"><i class="fa fa-print" aria-hidden="true"></i></a>
+                </span>
+            }
+        }
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.InvoiceDownloadPermission))
+        {
+            <button class="btn download_btn" id="InvExport" title="@Localize.T("Download")">
+                <i class="glyphicon glyphicon-download-alt InvoiceReport"></i>
+            </button>
+        }
+
+    </div>
+
+    <div class="invoices-tabs">
+        <div class="nav-detail-contents">
+            <div class="tab-content">
+                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.UnpaidInvoiceTab))
+                {
+                    <div class="tab-pane AllUnPaidInvoice_Load" @*id="AllUnPaidInvoice"*@>
+
+                    </div>
+                }
+                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.RolledOverInvoiceTab))
+                {
+                    <div class="tab-pane  AllRolledOverInvoice_Load" @*id="AllRolledoverInvoice"*@>
+
+                    </div>
+                }
+                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaidInvoiceTab))
+                {
+                    <div class="tab-pane AllPaidInvoice_Load" @*id="AllPaidInvoice"*@>
+
+                    </div>
+                }
+                <div class="tab-pane AllDeclinedInvoice_Load" @*id="AllPaidInvoice"*@>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="hidden" style="display:none;">
+    <a href="" class="InvoiceExportReport"></a>
+</div>

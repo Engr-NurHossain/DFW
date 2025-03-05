@@ -1,0 +1,90 @@
+﻿@model HS.Entities.Invoice
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@{
+    Layout = null;
+    string DomainURL = AppConfig.DomainSitePath;
+} 
+<html>
+<head>
+    <script src="~/Content/Jquery-ui/jquery.js"></script>
+    @Styles.Render("~/styles/GetInvoice")
+    <script>
+        var transactionid = '@ViewBag.TransactionId';
+        var domainurl = "@DomainURL";
+    function printFrame(id) {
+        var frm = document.getElementById(id).contentWindow;
+        frm.focus();// focus on contentWindow is needed on some ie versions
+        frm.print();
+        return false;
+    }
+
+        var SendEmailTransaction = function () {
+            var url = domainurl + "/Transaction/SendEmailFunding";
+            var param = JSON.stringify({
+                toEmail: $("#fund_toemail").val(),
+                ccEmail: $("#fund_cc").val(),
+                transactionid: transactionid,
+                subject: $("#fund_subject").val(),
+                body: $("#fund_description").val()
+            })
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result == true) {
+                        parent.OpenSuccessMessageNew("Success", data.message, function () {
+                            parent.ClosePopup();
+                        })
+                    }
+                    else {
+                        parent.OpenErrorMessageNew("Error", data.message, function () {
+                            parent.ClosePopup();
+                        })
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+        <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+    </div>
+    <div class="HeadContents">
+        <h4>Print preview</h4>
+        <span>To print, right-click the preview and select Print. Or, click the Print icon if you see one below.</span>
+
+    </div>
+    <div style="width:100%">
+        <div style="float:left;width:50%;padding-left:30px;">
+            <div style="padding-top:10px;font-weight:600;font-size:15px;">Email</div>
+            <input type="text" class="form-control" id="fund_toemail" value="@ViewBag.ToEmailAddress" />
+            <div style="padding-top:10px;font-weight:600;font-size:15px;">Cc</div>
+            <input type="text" class="form-control" id="fund_cc" placeholder="Add cc email by ';' separator" />
+            <div style="padding-top:10px;font-weight:600;font-size:15px;">Subject</div>
+            <input type="text" class="form-control" id="fund_subject" value="Payment receipt from @ViewBag.companyname" />
+            <div style="padding-top:10px;font-weight:600;font-size:15px;">Body Content</div>
+            <textarea class="form-control" id="fund_description">Here is your Payment receipt!</textarea>
+        </div>
+        <div style="float:right;width:50%;padding-right:30px;">
+            <div class="bodyConentsDiv">
+                <iframe class="pdf-styles" id="iframePdf" src="@(DomainURL)/Transaction/TransactionPdf/?TransactionId=@ViewBag.TransactionId"></iframe>
+            </div>
+        </div>
+    </div>
+    <div class="footerContents">
+        <button onclick="parent.ClosePopup()" class="btnCancel">Cancel</button>
+        <button onclick="printFrame('iframePdf')" class="btnPrint">Print</button>
+        <button onclick="SendEmailTransaction()" class="btnemail_send" style="float:right;">Send Email</button>
+    </div>
+</body>
+</html>

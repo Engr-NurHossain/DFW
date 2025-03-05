@@ -1,0 +1,154 @@
+﻿@model HS.Entities.Customer
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+<script src="~/Content/Js/Login/domainurl.js"></script>
+@Styles.Render("~/styles/GetInvoice")
+<link href="~/Content/FontAwesome/css/font-awesome.min.css" rel="stylesheet" />
+<link href="~/Content/Css/SmartLeads/GetSmartLeadsForPopUp.css" rel="stylesheet" />
+<script src="~/Content/Jquery-ui/jquery.js"></script>
+@*<script src="~/Content/MagnificPopUp/jquery.magnific-popup.js"></script>*@
+@*<script src="~/Content/Js/Popups/GetLeadsForPopUp.js"></script>*@
+<script src="~/Content/Js/SignaturePad/SignaturePad.js"></script>
+<script src="~/Content/Js/Layout/Device.js"></script>
+<link href="~/Content/Css/Ticket/GetCustomerAddendumPopUp.css" rel="stylesheet" />
+
+<script>
+    var globalval = parseInt('@ViewBag.AgreementDocumentHeight');
+    var CustomerId = "@ViewBag.CustoemrId";
+    var TicketId = "@ViewBag.TicketId";
+    var printFrame = function (id) {
+        var frm = document.getElementById(id).contentWindow;
+        frm.focus();// focus on contentWindow is needed on some ie versions
+        frm.print();
+        return false;
+    }
+    var counter = 0;
+    var SentEmailSMSAddendum = function (email, sms) {
+        var emailtxt = $("#EmailAddress").val();
+        var phonetxt = $("#Phone_no").val();
+        var URL = domainurl + "/Ticket/SentEmailSMSAddendum/";
+        $.ajax({
+            url: URL,
+            data: JSON.stringify({
+                CustomerId: CustomerId,
+                TicketId: TicketId,
+                SentEmail: email,
+                SentSms: sms,
+                email: emailtxt,
+                phone: phonetxt
+            }),
+            type: "POST",
+            dataType: "json",
+            contentType: "application/json; charset=utf-8",
+        }).done(function (data) {
+            if (data.result) {
+                parent.OpenSuccessMessageNew("Success!", data.message, parent.ClosePopup());
+            }
+            else {
+                parent.OpenErrorMessageNew("Error!", data.message, parent.ClosePopup());
+            }
+        });
+    }
+    $(document).ready(function () {
+
+        if (Device.All()) {
+            $('#AggrementDiv').remove();
+        }
+        else {
+            $('.mobile_document_btn').remove();
+        }
+
+
+
+        //$(".warning-error").hide();
+        $("#AggrementDiv").scroll(function () {
+            var MathScroll = ($("#AggrementDiv iframe").height() - $("#AggrementDiv").scrollTop());
+            console.log(MathScroll);
+            //var Globalval = parseInt();
+            if (MathScroll <= 500) {
+                $(".btnIAgree").removeAttr("disabled");
+            }
+            else {
+                $(".btnIAgree").attr("disabled", true);
+
+                $(".btnIAgree").addClass('DisablebtnAgree');
+            }
+        })
+
+
+    })
+</script>
+
+<div id="body_id">
+    <div class="hidden LoadImgDiv">
+        <div class="lds-css ng-scope">
+            <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+        </div>
+    </div>
+    <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+        <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+    </div>
+    <div class="HeadContents">
+        <h4>@Localize.T("Print preview")</h4>
+        <span>@Localize.T("To print, right-click the preview and select Print. Or, click the Print icon if you see one below.")</span>
+    </div>
+    <div style="float:left;margin-bottom:10px;margin-left:30px; margin-top:10px;">
+        <button class="btnPrint all_button" onclick="printFrame('iframePdf')"><i class="fa fa-print" aria-hidden="true"></i>&nbsp;@Localize.T(" Print")</button>
+    </div>
+    @*<div style="float:right;margin-top:10px;margin-right:35px;">
+            <button class="btnSign"><i class="fa fa-sign-in" aria-hidden="true"></i>&nbsp;@Localize.T("Sign Document")</button>
+        </div>*@
+    <div class="bodyConentsDiv" id="AggrementDiv">
+        <iframe name="iframe" class="pdf-styles cus-pdf-style" id="iframePdf" src="@(AppConfig.DomainSitePath)/Ticket/CreateAddendumPdf/?CustomerId=@ViewBag.CustoemrId&TicketId=@ViewBag.TicketId"></iframe>
+    </div>
+    <div class="mobile_document_btn">
+        <a class="btn btn-default" target="_blank" href="@(AppConfig.DomainSitePath)/Ticket/CreateAddendumPdf/?CustomerId=@ViewBag.CustoemrId&TicketId=@ViewBag.TicketId"><i class="fa fa-eye"></i> @Localize.T(" View Document")</a>
+    </div>
+    <div class="sign-document hidden">
+        <div class="wrapper">
+            <canvas id="signature-pad" class="signature-pad" width=300 height=100 style="float:left;"></canvas>
+        </div>
+        <button class="btn all_button" id="save-png"><i class="fa fa-floppy-o" aria-hidden="true"></i>&nbsp;@Localize.T(" Save")</button>
+        <button class="btn all_button" id="clear"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp;@Localize.T(" Clear")</button>
+    </div>
+    @if (ViewBag.TicketId != new Guid())
+    {
+        <div class="gslfp_footer">
+            <div class="gslfp_footer_inner">
+                <div class="input-group add-on">
+                    <input type="text" value="@Model.EmailAddress" id="EmailAddress" placeholder="ex@mail.com;ex2@mail.com" class="form-control" />
+                    <div class="input-group-btn">
+                        <button class="btn" id="btnSendMail" onclick="SentEmailSMSAddendum(true, false)"><i class="fa fa-envelope" aria-hidden="true"></i>&nbsp;@Localize.T("Email Quote")</button>
+                    </div>
+                </div>
+                <div class="input-group add-on">
+                    @{
+                        if (!string.IsNullOrWhiteSpace(Model.PrimaryPhone))
+                        {
+                            <input type="text" value="@Model.PrimaryPhone" id="Phone_no" placeholder="xxx-xxx-xxxx" class="form-control input-phone-format" />
+                        }
+                        else if (!string.IsNullOrWhiteSpace(Model.SecondaryPhone))
+                        {
+                            <input type="text" value="@Model.SecondaryPhone" id="Phone_no" placeholder="xxx-xxx-xxxx" class="form-control input-phone-format" />
+                        }
+                        else
+                        {
+                            <input type="text" value="" id="Phone_no" placeholder="xxx-xxx-xxxx" class="form-control input-phone-format" />
+                        }
+                    }
+                    <div class="input-group-btn">
+                        <button class="btn" id="btnSendSMS" onclick="SentEmailSMSAddendum(false, true)"><i class="fa fa-commenting-o" aria-hidden="true"></i>&nbsp;@Localize.T("Text Quote")</button>
+                    </div>
+                </div>
+                <div class="input-group add-on"> <button class="btn" id="btnSendMailAndSMS" onclick="SentEmailSMSAddendum(true, true)">@Localize.T("Send To Both")</button></div>
+            </div>
+
+        </div>
+    }
+
+</div>
+
+

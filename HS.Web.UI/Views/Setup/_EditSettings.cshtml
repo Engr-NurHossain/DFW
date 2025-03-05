@@ -1,0 +1,920 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.GlobalSetting
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using InpTyp = HS.Web.UI.Helper.LabelHelper.GlobalSettingInputType
+@{
+    var isvalue = false;
+    if (Model.Value.ToLower() == "true")
+    {
+        isvalue = true;
+    }
+    var profileUrl = HS.Framework.Utils.AppConfig.DomainSitePath + "/Content/Icons/blank_thumb_file_without_border.png";
+    if (!string.IsNullOrEmpty(Model.Value))
+    {
+        profileUrl = Model.Value;
+    }
+
+    if (string.IsNullOrWhiteSpace(Model.InputType))
+    {
+        Model.InputType = "textbox";
+    }
+}
+<html>
+<head>
+    <link href="~/Content/Css/Settings/Settings.css" rel="stylesheet" />
+    <link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+    <script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+    <script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+    <script src="~/Content/Tiny/tinymce.min.js"></script>
+    <script src="~/Content/Tiny/tiny.js"></script>
+
+
+    <style>
+        #mceu_33 {
+            z-index: 999999 !important;
+        }
+
+        .PaymentOptionChoosing {
+            margin-top: 20px;
+            margin-bottom: 60px;
+        }
+    </style>
+    <script>
+        var Emparr = [];
+    @if(@Model.mulselectId != null){
+        @: Emparr = [
+    foreach(var item in Model.mulselectId)
+        {
+        @: '@item',
+        }
+    @:];
+    }
+        var value;
+        var OptionalValue;
+        var Editor = "@InpTyp.Editor";
+        var InputType = "@Model.InputType.ToLower()";
+        var CheckBox = "@InpTyp.CheckBox";
+        var searchkey = '@Model.SearchKey';
+        var mintime = '@ViewBag.mintime';
+        var maxtime = '@ViewBag.maxtime';
+        var CheAndTebox = "@InpTyp.CheAndTebox";
+        var MulDrpDwn = "@InpTyp.MulDrpDwn";
+        var ChecAndTxtBox = "@InpTyp.ChecAndTxtBox";
+        var Image = '@Model.InputType.ToLower()';
+        var SignImage = '@Model.InputType.ToLower()';
+        var Description = "@Model.Description";
+        var SaveSettings = function () {
+            if (typeof ($(".Password").val()) != "undefined" && $(".Password").val() != null && $(".Password").val() != "" && $(".Password").val().length < 6) {
+                OpenErrorMessageNew("Error!", "Password length should be 6 or more.");
+            }
+            else {
+                $.ajax(
+                {
+                    type: "POST",
+                    url: domainurl + "Setup/EditSettings/",
+                    data: {
+                        Id: $("#Id").val(),
+                        SearchKey: $("#SearchKey").val(),
+                        Value: value,
+                        CompanyId: $("#CompanyId").val(),
+                        IsActive: $("#IsActive").val(),
+                        OptionalValue: OptionalValue,
+                    },
+                    success: function () {
+                        $(".close").trigger("click");
+                        if (value != null && value != "") {
+                            OpenSuccessMessageNew("Success!", "Successfully Update Global Setting",
+                                //LoadSettings(true)
+                                window.location.reload()
+                            )
+                        }
+                        else {
+                            if (InputType == "password") {
+                                OpenSuccessMessageNew("Alert!", "No Change Occur", LoadSettings(true))
+                            }
+                            else {
+                                OpenSuccessMessageNew("Success!", "Successfully Update Global Setting",
+                                    //LoadSettings(true)
+                                    window.location.reload()
+                                )
+                            }
+
+                        }
+                        console.log("done");
+                    }
+                });
+            }
+            
+        }
+        $(document).ready(function () {
+            $('.selectpickerValue').selectpicker('val', Emparr);
+            @*$("#UploadedPath").val('@Model.Value');*@
+            if ($("#UploadedPath").val() != "") {
+                $(".chooseFilebtn").addClass("hidden");
+                $(".changeFilebtn").removeClass("hidden");
+                $(".deleteDoc").removeClass("hidden");
+            }
+            if ($("#UploadedCompanyPath").val() != "") {
+                $(".chooseCompanyFilebtn").addClass("hidden");
+                $(".changeCompanyFilebtn").removeClass("hidden");
+                $(".deleteCompanyDoc").removeClass("hidden");
+            }
+
+            var CustomerId = 0;
+            //Upload File
+            StartDateDatepicker = new Pikaday({
+                field: $('#StartDate')[0],
+                format: 'MM/DD/YYYY'
+            });
+
+            $("#SaveCustomerFiles").click(function () {
+                if (CommonUiValidation() && $("#UploadedPath").val() != "") {
+                    SaveCustomerFile();
+                    $(".fileborder").removeClass('red-border');
+                }
+                if ($("#UploadedPath").val() == "") {
+                    $("#uploadfileerror").removeClass("hidden");
+                    $(".fileborder").addClass('red-border');
+                }
+            });
+
+            $("#UploadCustomerFileBtn").click(function () {
+                $("#UploadedFile").click();
+                $("#UploadSuccessMessage").addClass('hidden');
+            });
+            $("#UploadCompanyFileBtn").click(function () {
+                $("#UploadedCompanyFile").click();
+                $("#UploadSuccessMessage").addClass('hidden');
+            });
+            $(".change-picture-logo").click(function () {
+                $("#UploadedFile").click();
+                $("#UploadSuccessMessage").addClass('hidden');
+            });
+            $(".change-picture-sign").click(function () {
+                $("#UploadedCompanyFile").click();
+                $("#UploadSuccessMessage").addClass('hidden');
+            });
+            $(".deleteDoc").click(function () {
+                OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this file?", function () {
+                    $(".Upload_Doc").removeClass('hidden');
+                    //$(".LoadPreviewDocument").addClass('hidden');
+                    //$(".LoadPreviewDocument1").addClass('hidden');
+                    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/blank_thumb_file.png');
+                    $(".chooseFilebtn").removeClass("hidden");
+                    $(".changeFilebtn").addClass("hidden");
+                    $(".deleteDoc").addClass("hidden");
+                    $("#Preview_Doc").attr('src', "");
+                    $("#Frame_Doc").attr('src', "");
+                    $("#UploadSuccessMessage").hide();
+                    $("#description").val("");
+                    $("#UploadedPath").val('');
+                    $(".fileborder").addClass('border_none');
+                    $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+                    $("#Value").val('');
+                });
+            })
+            $(".deleteCompanyDoc").click(function () {
+                OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this file?", function () {
+                    $(".Upload_CompanyDoc").removeClass('hidden');
+                    //$(".LoadPreviewDocument").addClass('hidden');
+                    //$(".LoadPreviewDocument1").addClass('hidden');
+                    $("#UploadCompanyFileBtn").attr('src', '/Content/Icons/blank_thumb_file.png');
+                    $(".chooseCompanyFilebtn").removeClass("hidden");
+                    $(".changeCompanyFilebtn").addClass("hidden");
+                    $(".deleteCompanyDoc").addClass("hidden");
+                    $("#Preview_CompanyDoc").attr('src', "");
+                    $("#Frame_CompanyDoc").attr('src', "");
+                    $("#UploadSuccessMessage").hide();
+                    $("#description").val("");
+                    $("#UploadedCompanyPath").val('');
+                    $(".fileborderCompany").addClass('border_none');
+                    $("#UploadCompanyFileBtn").removeClass('otherfileposition');
+                    $("#Value").val('');
+                });
+            })
+            $('#UploadedFile').fileupload({
+                pasteZone: null,
+                url: '@(AppConfig.DomainSitePath)/File/UploadCompanyLogo/',
+                dataType: 'json',
+                add: function (e, data) {
+                    if ($("#description").val() == "") {
+                        var filename = data.fileInput[0].value.split('\\').pop();
+                        $("#description").val(filename);
+                    }
+                    UserFileUploadjqXHRData = data;
+                },
+                progress: function (e, data) {
+                    var percentVal = parseInt(data.loaded / data.total * 100, 10);
+                    $(".file-progress").show();
+                    $(".file-progress .progress-bar").animate({
+                        width: percentVal + "%"
+                    }, 40);
+                    $(".file-progress .progress-bar span").text(percentVal + '%');
+                },
+                done: function (event, data) {
+                    setTimeout(function () {
+                        $(".file-progress").hide();
+                        $(".file-progress .progress-bar").animate({
+                            width: 0 + "%"
+                        }, 0);
+                        $(".file-progress .progress-bar span").text(0 + '%');
+                    }, 500);
+                    console.log(data.result);
+                    if ((typeof (data.result.isUploaded) != "undefined") && data.result.isUploaded == true) {
+                        $("#UploadSuccessMessage").removeClass('hidden');
+                        //$("#UploadCustomerFileBtn").addClass('hidden');
+                        $("#UploadedPath").val(data.result.filePath);
+                        var spfile = data.result.FullFilePath.split('.');
+                        $(".fileborder").removeClass('red-border');
+                        $("#uploadfileerror").addClass("hidden");
+                        $("#Value").val(data.result.filePath);
+                        //if (spfile[1] == "png" || spfile[1] == "PNG" || spfile[1] == "jpg" || spfile[1] == "JPG" || spfile[1] == "jpeg" || spfile[1] == "JPEG") {
+                        //$(".Upload_Doc").addClass('hidden');
+                        //$(".LoadPreviewDocument").removeClass('hidden');
+                        //$("#Preview_Doc").attr('src', data.result.FullFilePath);
+                        $("#UploadCustomerFileBtn").attr('src', data.result.FullFilePath)
+                        $(".chooseFilebtn").addClass("hidden");
+                        $(".changeFilebtn").removeClass("hidden");
+                        $(".deleteDoc").removeClass("hidden");
+                        $("#UploadCustomerFileBtn").addClass('custom-file');
+                        $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+                        $(".fileborder").addClass('border_none');
+                        //}
+                        //else if (spfile[1] == "pdf") {
+                        //    $(".chooseFilebtn").addClass("hidden");
+                        //    $(".changeFilebtn").removeClass("hidden");
+                        //    $(".deleteDoc").removeClass("hidden");
+                        //    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/pdf.png');
+                        //    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                        //    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                        //    $(".fileborder").removeClass('border_none');
+                        //}
+                        //else if (spfile[1] == "doc" || spfile[1] == "docx") {
+                        //    $(".chooseFilebtn").addClass("hidden");
+                        //    $(".changeFilebtn").removeClass("hidden");
+                        //    $(".deleteDoc").removeClass("hidden");
+                        //    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+                        //    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                        //    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                        //    $(".fileborder").removeClass('border_none');
+                        //}
+                        //else {
+                        //    $(".chooseFilebtn").addClass("hidden");
+                        //    $(".changeFilebtn").removeClass("hidden");
+                        //    $(".deleteDoc").removeClass("hidden");
+                        //    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+                        //    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                        //    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                        //    $(".fileborder").removeClass('border_none');
+                        //}
+                    }
+                },
+                fail: function (event, data) {
+                    if (data.files[0].error) {
+                        alert(data.files[0].error);
+                    }
+                }
+            });
+            $('#UploadedCompanyFile').fileupload({
+                pasteZone: null,
+                url: '@(AppConfig.DomainSitePath)/File/UploadCompanySignature/',
+                dataType: 'json',
+                add: function (e, data) {
+                    if ($("#description").val() == "") {
+                        var filename = data.fileInput[0].value.split('\\').pop();
+                        $("#description").val(filename);
+                    }
+                    UserFileUploadjqXHRData = data;
+                },
+                progress: function (e, data) {
+                    var percentVal = parseInt(data.loaded / data.total * 100, 10);
+                    $(".file-progressCompany").show();
+                    $(".file-progressCompany .progress-bar").animate({
+                        width: percentVal + "%"
+                    }, 40);
+                    $(".file-progressCompany .progress-bar span").text(percentVal + '%');
+                },
+                done: function (event, data) {
+                    setTimeout(function () {
+                        $(".file-progressCompany").hide();
+                        $(".file-progressCompany .progress-bar").animate({
+                            width: 0 + "%"
+                        }, 0);
+                        $(".file-progressCompany .progress-bar span").text(0 + '%');
+                    }, 500);
+                    console.log(data.result);
+                    if ((typeof (data.result.isUploaded) != "undefined") && data.result.isUploaded == true) {
+                        $("#UploadSuccessMessage").removeClass('hidden');
+                        //$("#UploadCustomerFileBtn").addClass('hidden');
+                        $("#UploadedCompanyPath").val(data.result.filePath);
+                        var spfile = data.result.FullFilePath.split('.');
+                        $(".fileborderCompany").removeClass('red-border');
+                        $("#uploadfileerrorCompany").addClass("hidden");
+                        $("#Value").val(data.result.filePath);
+                        //if (spfile[1] == "png" || spfile[1] == "PNG" || spfile[1] == "jpg" || spfile[1] == "JPG" || spfile[1] == "jpeg" || spfile[1] == "JPEG") {
+                        //$(".Upload_Doc").addClass('hidden');
+                        //$(".LoadPreviewDocument").removeClass('hidden');
+                        //$("#Preview_Doc").attr('src', data.result.FullFilePath);
+                        $("#UploadCompanyFileBtn").attr('src', data.result.filePath)
+                        $(".chooseCompanyFilebtn").addClass("hidden");
+                        $(".changeCompanyFilebtn").removeClass("hidden");
+                        $(".deleteCompanyDoc").removeClass("hidden");
+                        $("#UploadCompanyFileBtn").addClass('custom-file');
+                        $("#UploadCompanyFileBtn").removeClass('otherfileposition');
+                        $(".fileborderCompany").addClass('border_none');
+                        //}
+                        //else if (spfile[1] == "pdf") {
+                        //    $(".chooseFilebtn").addClass("hidden");
+                        //    $(".changeFilebtn").removeClass("hidden");
+                        //    $(".deleteDoc").removeClass("hidden");
+                        //    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/pdf.png');
+                        //    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                        //    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                        //    $(".fileborder").removeClass('border_none');
+                        //}
+                        //else if (spfile[1] == "doc" || spfile[1] == "docx") {
+                        //    $(".chooseFilebtn").addClass("hidden");
+                        //    $(".changeFilebtn").removeClass("hidden");
+                        //    $(".deleteDoc").removeClass("hidden");
+                        //    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+                        //    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                        //    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                        //    $(".fileborder").removeClass('border_none');
+                        //}
+                        //else {
+                        //    $(".chooseFilebtn").addClass("hidden");
+                        //    $(".changeFilebtn").removeClass("hidden");
+                        //    $(".deleteDoc").removeClass("hidden");
+                        //    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+                        //    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                        //    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                        //    $(".fileborder").removeClass('border_none');
+                        //}
+                    }
+                },
+                fail: function (event, data) {
+                    if (data.files[0].error) {
+                        alert(data.files[0].error);
+                    }
+                }
+            });
+            $("#UploadedFile").on("change", function () {
+                if (UserFileUploadjqXHRData) {
+                    UserFileUploadjqXHRData.submit();
+                }
+                return false;
+            });
+            $("#UploadedCompanyFile").on("change", function () {
+                if (UserFileUploadjqXHRData) {
+                    UserFileUploadjqXHRData.submit();
+                }
+                return false;
+            });
+            $("#SaveSettings").click(function () {
+                console.log("hi");
+            //if (searchkey == "PaymentOptionChoosing" ) {
+            //
+            //            console.log("PaymentOptionChoosing2nd");
+            //             value = $("#PaymentOptionChoosing2").val();
+
+            //                SaveSettings();
+
+            //        }
+                if (InputType == Editor) {
+                    value = tinyMCE.get('Value').getContent();
+                    SaveSettings();
+                }
+                     else if (searchkey == "PaymentOptionChoosing") {
+
+                        console.log("PaymentOptionChoosing2nd");
+                         //value = $("#PaymentOptionChoosing").val();
+                        value =  $('#PaymentOptionChoosing option:selected').toArray().map(item => item.text).join();
+                            SaveSettings();
+
+                    }
+                else if (InputType == "datetime") {
+                    value = $("#StartDate").val();
+                    SaveSettings();
+                }
+                else if (CheckBox == InputType) {
+                    var v = $("#IsCheckVal").prop('checked');
+                    value = v.toString();
+                    SaveSettings();
+                }
+                else if (CheAndTebox == InputType) {
+                    console.log("CheAndTebox working");
+                    var v = $("#IsCheckVal").prop('checked');
+                    value = v.toString();
+                    OptionalValue = $("#OptionalValue").val();
+                    SaveSettings();
+                }
+                else if (MulDrpDwn == InputType) {
+                    value = "";
+                    if (($("#Value").val()) != null) {
+                        value = encodeURI($("#Value").val());
+                    }
+                    OptionalValue = $("#OptionalValue").val();
+                    SaveSettings();
+                }
+                    else if (ChecAndTxtBox == InputType) {
+                    console.log("CheAndTebox working");
+                    var v = $("#IsCheckVal").prop('checked');
+                    value = v.toString();
+                    OptionalValue = $("#OptionalValue").val();
+                    SaveSettings();
+                }
+                else if (InputType == Image) {
+                    console.log($("#UploadedPath").val());
+                    value = $("#Value").val();
+                    if ($("#UploadedPath").val() != "") {
+                        SaveSettings();
+                        $(".fileborder").removeClass('red-border');
+                    }
+                    if ($("#UploadedPath").val() == "") {
+                        $("#uploadfileerror").removeClass("hidden");
+                        $(".fileborder").addClass('red-border');
+                    }
+                }
+                    else if (InputType == SignImage) {
+                    console.log($("#UploadedCompanyPath").val());
+                    value = $("#Value").val();
+                    if ($("#UploadedCompanyPath").val() != "") {
+                        SaveSettings();
+                        $(".fileborderCompany").removeClass('red-border');
+                    }
+                    if ($("#UploadedCompanyPath").val() == "") {
+                        $("#uploadfileerrorCompany").removeClass("hidden");
+                        $(".fileborderCompany").addClass('red-border');
+                    }
+                }
+
+                else {
+
+                    if (searchkey == "ScheduleCalendarMinTimeRange") {
+                        var value1 = $("#Value").val();
+                        var splitvalue = value1.split(':');
+                        var fvalue = splitvalue[0] + splitvalue[1];
+                        if (parseInt(fvalue) > parseInt(maxtime)) {
+                            OpenErrorMessageNew("Error!", "Min time should not be greater than max time", "");
+                        }
+                        else {
+                            value = $("#Value").val();
+                            SaveSettings();
+                        }
+                    }
+                    else if (searchkey == "ScheduleCalendarMaxTimeRange") {
+                        var value1 = $("#Value").val();
+                        var splitvalue = value1.split(':');
+                        var fvalue = splitvalue[0] + splitvalue[1];
+                        if (parseInt(mintime) > parseInt(fvalue)) {
+                            OpenErrorMessageNew("Error!", "Max time should not be less than min time", "");
+                        }
+                        else {
+                            value = $("#Value").val();
+                            SaveSettings();
+                        }
+                    }
+
+
+                    else {
+                        value = $("#Value").val();
+                        SaveSettings();
+                    }
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="global_info_container">
+        <div class="settings-info">
+            <div class="header-txt-style">
+                <span class="pagehead">@Localize.T("Global Information")</span>
+            </div>
+
+            @Html.HiddenFor(x => x.Id, new { id = "Id" })
+            @Html.HiddenFor(x => x.CompanyId, new { id = "CompanyId" })
+            @Html.HiddenFor(x => x.IsActive, new { id = "IsActive" })
+
+
+
+            <div class="row gi_popup_mergin">
+                <div class="col-xs-12">
+                    <label class="span-style">@Localize.T("Search Key")</label>
+                    @Html.TextBoxFor(x => x.SearchKey, new { @class = "form-control", placeholder = "SearchKey", datarequired = "true", id = "SearchKey", @readonly = "readonly" })
+                </div>
+            </div>
+            <div class="row gi_popup_mergin editsettings_checkbox">
+                <div class="col-xs-12" style="position:fixed;">
+
+                    <label class="span-style valuelabel">@Localize.T("Value")</label>
+
+
+                    @if (Model.InputType.ToLower().IndexOf(InpTyp.Editor) > -1)
+                    {
+                        <textarea class="tinymce" id="Value" name="Value" required="required" placeholder="Value">@Model.Value</textarea>
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.TextBox) > -1)
+                    {
+                        @Html.TextBoxFor(x => x.Value, new { @class = "form-control", placeholder = "Value", datarequired = "true", id = "Value" })
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.Password) > -1)
+                    {
+                        @*@Html.TextBoxFor(x => x.Value, new { @class = "form-control", placeholder = "Value", datarequired = "true", id = "Value" })*@
+                        <input class="form-control Password" placeholder="Value" datarequired="true" type="text" id="Value">
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.TextArea) > -1)
+                    {
+                        @Html.TextAreaFor(x => x.Value, new { @class = "form-control", placeholder = "Value", datarequired = "true", id = "Value" })
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.DateTime) > -1)
+                    {
+                        @Html.TextBoxFor(x => x.Value, new { @class = "form-control", placeholder = "Value", datarequired = "true", id = "StartDate" })
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.Number) > -1)
+                    {
+                        <input class="form-control" placeholder="Value" required="required" id="Value" type="number" value="@Model.Value" />
+                    }
+
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.SignImage) > -1)
+                    {
+                        <script>
+                            $(".valuelabel").hide();
+                        </script>
+                        <input class="form-control" style="display:none" placeholder="Value" required="required" id="Value" type="text" value="@Model.Value" />
+                        <div class="container-fluid">
+                            <div class="clearfix">
+                                &nbsp;
+                            </div>
+                            <div class="form-group clearfix">
+                                <span class="">@Localize.T("Allowed file types: jpg, jpeg, gif, png") </span><br />
+                                <span class="">@Localize.T("(max file size: 20 mb)")</span>
+                            </div>
+                            <div>
+                                <br />
+                            </div>
+                            <div class="txt-form Upload_CompanyDoc">
+                                <div class="col-md-12 padding-left-0">
+                                    <div class="fileborderCompany border_none fileborder">
+                                        <img id="UploadCompanyFileBtn" class="cursor-pointer custom-file" src="@profileUrl" />
+                                    </div>
+                                    @*<input class="deleteDoc" type="image" src="~/Content/Icons/cross_update.png" />*@
+                                    <div class="deleteCompanyDoc cursor-pointer hidden">
+                                        <img src="~/Content/Icons/cross-image-delete.png" />
+                                    </div>
+                                    <div class="change-picture-sign change-picture-logo white-color cursor-pointer text-align-center">
+                                        <span class="chooseCompanyFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                                        <span class="changeCompanyFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                                    </div>
+                                    @*<div class="" style="margin-top: 15px;">
+                            <span id="UploadSuccessMessage" class="hidden">@Localize.T("File Uploaded Successfully..!")</span>
+                        </div>*@
+                                    <div class="LoadPreviewDocument hidden">
+                                        <div class="show-image PropertyLogoPreviewPic">
+                                            <div class="image-delete" data-id="">
+                                                <img src="~/Content/Icons/cross-image-delete.png" />
+                                            </div>
+                                            <img class="Preview_CompanyDoc T360image-photo T360image" src="" />
+                                        </div>
+                                        <div class="change-picture-sign change-picture-logo white-color cursor-pointer text-align-center T360image">
+                                            <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                                        </div>
+                                    </div>
+                                    @*<div class="progress-container file-progress" style="display:none">
+                            <div class="progress progress-striped active progress-bar">
+                                <div class="progress-bar progress-bar-danger" style="width:0%">
+                                    <span> 0%</span>
+                                </div>
+                            </div>
+                            @*<div class="progress-bar progress-bar-success">
+                                <span> 0%</span>
+                            </div>
+                        </div>*@
+                                </div>
+
+                                <div class="col-md-12 progress-container file-progressCompany" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+                                    <div class="progress progress-striped active">
+                                        <div class="progress-bar progress-bar-success" style="width:0%">
+                                            <span> 0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <label class="label red position-relative hidden" id="uploadfileerrorCompany">*@Localize.T("File required")</label>
+                            </div>
+                            @*<div class="LoadPreviewDocument hidden">
+                    <div class="show-image">
+                        <img id="Preview_Doc" src=""/>
+                        <input class="deleteDoc" type="image" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                    <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                        <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                    </div>
+                </div>
+                <div class="LoadPreviewDocument1 hidden">
+                    <div class="show-image">
+                        <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+                        <input class="deleteDoc" type="image" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                </div>*@<div class="LoadPreviewDocument hidden">
+                                <div class="show-image">
+                                    <img id="Preview_CompanyDoc" src="" />
+                                    <input class="deleteCompanyDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                                </div>
+                                <div class="change-picture-sign change-picture-logo white-color cursor-pointer text-align-center T360image">
+                                    <span><img src="~/Content/Icons/edit-icon.png" /></span>
+                                </div>
+                            </div>
+                            <div class="LoadPreviewDocument1 hidden">
+                                <div class="show-image">
+                                    <iframe id="Frame_CompanyDoc" src="" width="319" height="455"></iframe>
+                                    <input class="deleteCompanyDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                                </div>
+                            </div>
+
+                            @*<span class="content-type">@Localize.T("Description")</span>
+                <div class="txt-form">
+                    <textarea rows="2" type="text" id="description" name="description" class="content-text" style="line-height:20px; height:60px" datarequired="true" />
+                    <br /><label rel="description" class="label hidden red position-absolute">@Localize.T("Description Required")</label>
+                </div>*@
+                            <div class="">
+                                <input type="hidden" id="UploadedCompanyPath" value="" />
+                                <input type="file" name="CompanyFile" class="hidden" id="UploadedCompanyFile" accept="image/*" />
+                            </div>
+                        </div>
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.Image) > -1)
+                    {
+                        <script>
+                            $(".valuelabel").hide();
+                        </script>
+                        <input class="form-control" style="display:none" placeholder="Value" required="required" id="Value" type="text" value="@Model.Value" />
+                        <div class="container-fluid">
+                            <div class="clearfix">
+                                &nbsp;
+                            </div>
+                            <div class="form-group clearfix">
+                                <span class="">@Localize.T("Allowed file types: jpg, jpeg, gif, png") </span><br />
+                                <span class="">@Localize.T("(max file size: 20 mb)")</span>
+                            </div>
+                            <div>
+                                <br />
+                            </div>
+                            <div class="txt-form Upload_Doc">
+                                <div class="col-md-12 padding-left-0">
+                                    <div class="fileborder border_none ">
+                                        <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="@profileUrl" />
+                                    </div>
+                                    @*<input class="deleteDoc" type="image" src="~/Content/Icons/cross_update.png" />*@
+                                    <div class="deleteDoc cursor-pointer hidden">
+                                        <img src="~/Content/Icons/cross-image-delete.png" />
+                                    </div>
+                                    <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                                        <span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                                        <span class="changeFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                                    </div>
+                                    @*<div class="" style="margin-top: 15px;">
+                            <span id="UploadSuccessMessage" class="hidden">@Localize.T("File Uploaded Successfully..!")</span>
+                        </div>*@
+                                    <div class="LoadPreviewDocument hidden">
+                                        <div class="show-image PropertyLogoPreviewPic">
+                                            <div class="image-delete" data-id="">
+                                                <img src="~/Content/Icons/cross-image-delete.png" />
+                                            </div>
+                                            <img class="Preview_Doc T360image-photo T360image" src="" />
+                                        </div>
+                                        <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                                            <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                                        </div>
+                                    </div>
+                                    @*<div class="progress-container file-progress" style="display:none">
+                            <div class="progress progress-striped active progress-bar">
+                                <div class="progress-bar progress-bar-danger" style="width:0%">
+                                    <span> 0%</span>
+                                </div>
+                            </div>
+                            @*<div class="progress-bar progress-bar-success">
+                                <span> 0%</span>
+                            </div>
+                        </div>*@
+                                </div>
+
+                                <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+                                    <div class="progress progress-striped active">
+                                        <div class="progress-bar progress-bar-success" style="width:0%">
+                                            <span> 0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <label class="label red position-relative hidden" id="uploadfileerror">*@Localize.T("File required")</label>
+                            </div>
+                            @*<div class="LoadPreviewDocument hidden">
+                    <div class="show-image">
+                        <img id="Preview_Doc" src=""/>
+                        <input class="deleteDoc" type="image" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                    <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                        <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                    </div>
+                </div>
+                <div class="LoadPreviewDocument1 hidden">
+                    <div class="show-image">
+                        <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+                        <input class="deleteDoc" type="image" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                </div>*@<div class="LoadPreviewDocument hidden">
+                                <div class="show-image">
+                                    <img id="Preview_Doc" src="" />
+                                    <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                                </div>
+                                <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                                    <span><img src="~/Content/Icons/edit-icon.png" /></span>
+                                </div>
+                            </div>
+                            <div class="LoadPreviewDocument1 hidden">
+                                <div class="show-image">
+                                    <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+                                    <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                                </div>
+                            </div>
+
+                            @*<span class="content-type">@Localize.T("Description")</span>
+                <div class="txt-form">
+                    <textarea rows="2" type="text" id="description" name="description" class="content-text" style="line-height:20px; height:60px" datarequired="true" />
+                    <br /><label rel="description" class="label hidden red position-absolute">@Localize.T("Description Required")</label>
+                </div>*@
+                            <div class="">
+                                <input type="hidden" id="UploadedPath" value="" />
+                                <input type="file" name="CustomerFile" class="hidden" id="UploadedFile" accept="image/*" />
+                            </div>
+                        </div>
+                    }
+
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.CheckBox) > -1)
+                    {
+                        <label for="IsCheckVal" class="label-cbx">
+                            <input id="IsCheckVal" type="checkbox" style="position:relative;" class="cus-checkBox invisible" @(isvalue ? "checked" : "") autocomplete="off">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                    }
+
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.CheAndTebox) > -1)
+                    {
+                        <label for="IsCheckVal" class="label-cbx">
+                            <input id="IsCheckVal" type="checkbox" style="position:relative;" class="cus-checkBox invisible" @(isvalue ? "checked" : "") autocomplete="off">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                        @*@Html.TextBoxFor(x => x.OptionalValue, new { @class = "form-control", placeholder = "Value", datarequired = "true", id = "OptionalValue" })*@
+                        @Html.TextAreaFor(x => x.OptionalValue, new { @class = "form-control", placeholder = "Value", datarequired = "true", id = "OptionalValue" })
+                        <label>@Localize.T("Enter multiple number using \",\"")</label>
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.ChecAndTxtBox) > -1)
+                    {
+                        <label for="IsCheckVal" class="label-cbx">
+                            <input id="IsCheckVal" type="checkbox" style="position:relative;" class="cus-checkBox invisible" @(isvalue ? "checked" : "") autocomplete="off">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                        @*@Html.TextBoxFor(x => x.OptionalValue, new { @class = "form-control", placeholder = "Value", datarequired = "true", id = "OptionalValue" })*@
+                        @Html.TextBoxFor(x => x.OptionalValue, new { @class = "form-control", placeholder = "Value", id = "OptionalValue" })
+                    }
+
+
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.DropDown) > -1)
+                    {
+
+                        if (Model.SearchKey == "ScheduleCalendarDefaultView")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.DefaultView as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        if (Model.SearchKey == "TimeClockAutoClockOut")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.AutoClockOut as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+
+
+                        else if (Model.SearchKey == "ScheduleCalendarMinTimeRange")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.SchedularTime as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "SetDateFilterRange")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.DateRangeList as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+
+                        else if (Model.SearchKey == "ScheduleCalendarMaxTimeRange")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.SchedularTime as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "ReminderMinTime")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.SchedularTime as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "ReminderMaxTime")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.SchedularTime as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "MenuTimeAvailableStartTime")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.SchedularTime as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "MenuTimeAvailableEndTime")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.SchedularTime as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "CustomerListOrder")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.CustomerListOrderBy as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "FirstDayOfWeek")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.FirstDayOfWeek as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "SalesMatrixEffectiveFilterWeek")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.SalesMatrixWeek as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "PaymentGetway")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.PaymentMethodList as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "DefaultTicketType")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.DefaultTicketType as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "CompanyIdDefault")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.CompanyIdDefaultList as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "EmployeeIdDefault")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.EmployeeIdDefaultList as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "ShowTicketPricing")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.ShowTicketPricing as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "PayrollFilterWeek")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.PayrollFilterWeek as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "UserXFilterWeek")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.PayrollFilterWeek as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "BillFor")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.PayrollFilterWeek as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "iEateryOrderType")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.ordertype as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "AssignTaskTeamForReferringClient")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.AssignTaskTeamList as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "CurrentCurrencyExcelFormat")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.CurrencyFormat as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.MulDrpDwn) > -1)
+                    {
+                        if (Model.SearchKey == "TicketAssignPermissionGroup")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.PermissionGroupList as List<SelectListItem>, new { @class = "form-control selectpickerValue", @multiple = "multiple", datarequired = "true" })
+                        }
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <section class="footer-section">
+        <footer class="footer">
+            <div class="SaveCancelDiv">
+                <button class="btn" id="SaveSettings"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+            </div>
+        </footer>
+    </section>
+</body>
+
+</html>

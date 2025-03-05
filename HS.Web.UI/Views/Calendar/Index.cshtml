@@ -1,0 +1,241 @@
+﻿@{
+    Layout = "~/Views/Shared/_PrivateLayout.cshtml";
+    ViewBag.Title = "Calendar for Day";
+    bool IsAllShow = ViewBag.IsAllPermited;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.ScheduleCalendarList>
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script>
+    var IsPreviousDate = '@PermissionChekcer.IsPermitted(Permissions.SchedulePermission.PreviousDateSchedulePermission)';
+    var IsInActiveTicket = '@PermissionChekcer.IsPermitted(Permissions.SchedulePermission.DeactivateTicketShowButton)';
+        var IsPermissionToAddDayOff = '@PermissionChekcer.IsPermitted(Permissions.TimeClockPtoPermission.EmployeesListShowForAddDayOff)';
+        var IsClickedPermition = '@PermissionChekcer.IsPermitted(Permissions.SchedulePermission.ScheduleCalendarPermission)';
+        var IsNewTicketCreated = '@PermissionChekcer.IsPermitted(Permissions.CustomerTicketPermission.CreateTicketPermission)';
+        var defview = '@ViewBag.defaultView';
+        var Scheduler, pixle = 30, marginTop = (100 / 60), selectrdDate = '@ViewBag.Currentday';
+        var bottomvalue = '@ViewBag.IsBottom';
+        var IsCalendarShow = '@ViewBag.IsCalendar';
+        var IsHideFullDay = '@ViewBag.HideFullDay';
+        var IsCalendarShowPermission = '@ViewBag.IsViewCalendar';
+        var scrolluserval = '@ViewBag.scrolluser';
+        var IsAllShow = '@IsAllShow';
+        var UserVal = '@Html.Raw(Json.Encode(@ViewBag.UserValValueList))';
+        UserVal = JSON.parse(UserVal);
+        var typeval = '@Html.Raw(Json.Encode(@ViewBag.typevalList))';
+        typeval = JSON.parse(typeval);
+        var UserSkills = '@Html.Raw(Json.Encode(@ViewBag.ESkill))';
+        UserSkills = JSON.parse(UserSkills);
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=@ViewBag.GoogleMapAPIKey"></script>
+@Styles.Render("~/styles/CalendarPartial")
+@Scripts.Render("~/scripts/CalendarPartial")
+<div class="calender_container">
+    @if ((((List<HS.Entities.CustomCalendarTicketTypes>
+        )ViewBag.TicketStatus) != null && ((List<HS.Entities.CustomCalendarTicketTypes>
+            )ViewBag.TicketStatus).Count > 0) || (((List<HS.Entities.CustomCalendarTicketStatus>
+                )ViewBag.StatusTicket) != null && ((List<HS.Entities.CustomCalendarTicketStatus>
+                    )ViewBag.StatusTicket).Count > 0))
+    {
+        <button class="btn ticket_color_btn"><i class="fa fa-info"></i></button>
+    }
+<div class="row hidden">
+    <input type="hidden" id="dailyShedule" value="@ViewBag.defaultView" />
+    <input type="hidden" id="ScheduleCalendarMinTimeRange" value="@ViewBag.ScheduleCalendarMinTimeRange" />
+    <input type="hidden" id="ScheduleCalendarMaxTimeRange" value="@ViewBag.ScheduleCalendarMaxTimeRange" />
+    <input type="hidden" id="FirstDayOfWeek" value="@ViewBag.FirstDayOfWeek" />
+    <input type="hidden" id="CustomCalendarFontSize" value="@ViewBag.CustomCalendarFontSize" />
+    <input type="hidden" id="CustomCalendarTopRowEmployee" value="@ViewBag.CustomCalendarTopRowEmployee" />
+    <input type="hidden" id="CustomCalendarRMRReportShow" value="@ViewBag.CustomCalendarRMRReportShow" />
+    <input type="hidden" id="CustomCalendarTableHeaderColor" value="@ViewBag.CustomCalendarTableHeaderColor" />
+    <input type="hidden" id="CustomCalendarColumnHourDuration" value="@ViewBag.CustomCalendarColumnHourDuration" />
+    <input type="hidden" id="CustomCalendarScheduleShadowShow" value="@ViewBag.CustomCalendarScheduleShadowShow" />
+    <input type="hidden" id="CustomCalendarScheduleBorderShow" value="@ViewBag.CustomCalendarScheduleBorderShow" />
+    <input type="hidden" id="EventMovePermission" value="@ViewBag.IsEventDragDrop" />
+    <input type="hidden" id="EventIconResizer" value="@ViewBag.IconResizer" />
+    <input type="hidden" id="EventTicketResize" value="@ViewBag.TicketResizer" />
+    <input type="hidden" id="CustomCalendarTictekIntId" value="@ViewBag.TicketIntId" />
+    <input type="hidden" id="IsSupervisorPermission" value="@ViewBag.IsSupervisor" />
+    <input type="hidden" id="SelectedDateReload" value="@ViewBag.SelectedDateReload" />
+    <input type="hidden" id="SysUserViewPostion" value="@ViewBag.SystemUserPosition" />
+    <input type="hidden" id="CalendarViewPostion" value="@ViewBag.CalendarViewPosition" />
+    <input type="hidden" id="IsBottomValue" value="@ViewBag.IsBottom" />
+    <input type="hidden" id="IsAllTechnicianList" />
+    <input type="hidden" id="CalendarResizing" />
+    <input type="hidden" id="TimeCount" />
+    <input type="hidden" id="CurrentBar" />
+    <input type="hidden" id="TotalPix" />
+</div>
+
+    <div class="calendar_header_top">
+        <div class="row">
+            <div class="col-md-5">
+                <div class="row">
+                    <div class="col-sm-3">
+                        <div class="row btn-group" role="group">
+                            <button type="button" class="btn btn-default" onclick="CalendarPreviousButton()"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span></button>
+                            <button type="button" class="btn btn-default" onclick="CalendarNextButton()"><span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></button>
+                        </div>
+                    </div>
+                    <div class="col-sm-9">
+                        <div id="DateTilteHide"><span id="titleDate">@ViewBag.DateTitle</span><div class='edit_date_header_schedule'><i class='fa fa-edit' onclick='EditDateHeader()'></i></div></div>
+                        <div style='float:left; display:none;' id="DateTitleShow">
+                            <div class="input-group add-on">
+                                <input type='date' class='form-control' id='eventDate' onchange='CalendarDateChange(this)' />
+                                <div class="input-group-btn">
+                                    <button class='btn' id='btn_close_date_header' style='float:left;cursor:pointer;' onclick='CloseDateHeader()' title='Cancel'><i class='fa fa-close'></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="row">
+                    <div class="row btn-group" role="group">
+                        <button type="button" class="btn btn-default active" id="btnDay" onclick="CalendarDayViewButtonClick()">@Localize.T("Day")</button>
+                        @if (PermissionChekcer.IsPermitted(Permissions.SchedulePermission.CustomCalendarWeeklyButtonShowPermission))
+                        {
+                            <button type="button" class="btn btn-default" id="btnWeek" onclick="CalendarWeekViewButtonClick()">@Localize.T("Week")</button>
+                        }
+                        <button type="button" class="btn btn-default" id="btnMonth" onclick="CalendarMonthViewButtonClick()">@Localize.T("Month")</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="row">
+                    <div class="LoadSchedule">
+                        @if (!IsAllShow)
+                        {
+                            <div class="col-sm-12">
+                                <div class="input-group top_group_style">
+                                    @Html.DropDownList("ListTicketType", ViewBag.TicketType as List<SelectListItem>
+                                        , new { @class = "form-control selectpicker_type", @multiple = "multiple", title = "Select Ticket Type" })
+                                    @Html.DropDownList("ListEmployee", ViewBag.ListEmployee as List<SelectListItem>
+                                        , new { @class = "form-control selectpicker_user", @multiple = "multiple", title = "Select User", name = "selUser" })
+                                    <div class="input-group-btn">
+                                        <button title="Search" onclick="CalendarSearchFilter()" class="btn green_button" id="cal_search_btn"><i class="fa fa-search"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-1 prpp_float_right">
+                <div class="row input-group" role="group">
+                    @if (PermissionChekcer.IsPermitted(Permissions.SchedulePermission.CustomCalendarDayOffPermission))
+                    {
+                        <button class="btn green_button" id="btnAddPto" title="Add Day Off"><i class="fa fa-plus-circle"></i></button>
+                    }
+                   
+                    @if (PermissionChekcer.IsPermitted(Permissions.SchedulePermission.CustomCalendarSettingsPermission))
+                    {
+                        <button class="btn green_button" id="btn_ticket_status_setup" title="Setup"><i class="fa fa-cog"></i></button>
+                    }
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<div id="ticket_color_div" class="row btn-group" role="group">
+    @if (((List<HS.Entities.CustomCalendarTicketTypes>
+        )ViewBag.TicketStatus) != null && ((List<HS.Entities.CustomCalendarTicketTypes>
+            )ViewBag.TicketStatus).Count > 0)
+    {
+        <div class="ticket_status_div_container">
+            @foreach (var item in ((List<HS.Entities.CustomCalendarTicketTypes>
+                )ViewBag.TicketStatus))
+            {
+                if (item.DataValue != "-1")
+                {
+                    if (!string.IsNullOrWhiteSpace(item.AlterDisplayText))
+                    {
+                        <div class="ticket_type_div"><span class="ticket_status_div" style="background-color:#@item.AlterDisplayText;"></span><span>@item.DisplayText</span></div>
+                    }
+                    else
+                    {
+                        <div class="ticket_type_div"><span class="ticket_status_div"></span><span>@item.DisplayText</span></div>
+                    }
+                }
+            }
+        </div>
+    }
+    @if (((List<HS.Entities.CustomCalendarTicketStatus>
+        )ViewBag.StatusTicket) != null && ((List<HS.Entities.CustomCalendarTicketStatus>
+            )ViewBag.StatusTicket).Count > 0)
+    {
+<div class="ticket_status_div_container">
+    @foreach (var item in ((List<HS.Entities.CustomCalendarTicketStatus>
+        )ViewBag.StatusTicket))
+    {
+        <div class="ticket_type_div"><img class="ticket_status_div_img" src="@item.Filename" onerror="this.style.display='none'" /><span>@item.TicketStatus</span></div>
+    }
+   
+</div>
+    }
+</div>
+<div class="row btn-group" role="group" id="detailspopup1"><div class="ticket_status_div_container" id="detailsdata1"></div></div>
+<div class="row btn-group" role="group" id="detailspopup2"><div class="ticket_status_div_container" id="detailsdata2"></div></div>
+<div class="calendar_color_container" role="group">
+   
+    @if (((List<HS.Entities.CustomCalendarTicketStatus>
+        )ViewBag.StatusTicket) != null && ((List<HS.Entities.CustomCalendarTicketStatus>
+            )ViewBag.StatusTicket).Count > 0)
+    {
+    <div class="ticket_status_div_container">
+        @if (((List<HS.Entities.CustomCalendarTicketTypes>
+           )ViewBag.TicketStatus) != null && ((List<HS.Entities.CustomCalendarTicketTypes>
+               )ViewBag.TicketStatus).Count > 0)
+        {
+            <div class="ticket_type_container">
+                <label>@Localize.T("Ticket Type Colors"): </label>
+                @foreach (var item in ((List<HS.Entities.CustomCalendarTicketTypes>
+                    )ViewBag.TicketStatus))
+                {
+                    if (item.DataValue != "-1")
+                    {
+                        if (!string.IsNullOrWhiteSpace(item.AlterDisplayText))
+                        {
+                            <div class="ticket_type_div"><span class="ticket_status_div" style="background-color:#@item.AlterDisplayText;"></span><span><a class="cus-anchor filter-class" data-filter="@item.DataValue">@item.DisplayText</a></span></div>
+                        }
+                        else
+                        {
+                            <div class="ticket_type_div"><span class="ticket_status_div"></span><span><a class="cus-anchor filter-class" data-filter="@item.DataValue">@item.DisplayText</a></span></div>
+                        }
+                    }
+                }
+            </div>
+        }
+
+        <label>@Localize.T("Ticket Status/Border Colors"): </label>
+        @foreach (var item in ((List<HS.Entities.CustomCalendarTicketStatus>
+            )ViewBag.StatusTicket))
+        {
+            if (!string.IsNullOrWhiteSpace(item.TicketStatusColor))
+            {
+                <div class="ticket_type_div"><span class="ticket_status_div" style="background-color:@item.TicketStatusColor;"></span><span><a class="cus-anchor filter-class" data-filter="@item.TicketStatus">@item.TicketStatus</a></span></div>
+            }
+            else
+            {
+                <div class="ticket_type_div"><span class="ticket_status_div"></span><span><a class="cus-anchor filter-class" data-filter="@item.TicketStatus">@item.TicketStatus</a></span></div>
+            }
+        }
+        @if (PermissionChekcer.IsPermitted(Permissions.SchedulePermission.DeactivateTicketShowButton))
+        {
+            <div class="lacf_info">
+                <div class="ticket_button_con">
+                    <input type="checkbox" checked id="InactiveButton" class="StatusToogle" onchange="inActiveTicket()" data-on="Active" data-off="Inactive" data-toggle="toggle" data-onstyle="success" data-offstyle="danger">
+                </div>
+            </div>
+        }
+    </div>
+    }
+</div>
+<div class="tablebing_container"><div id="tablebing"></div></div>
+<div class="hidden">
+    <a class="ScheduleMapPopUp" href="@(HS.Framework.Utils.AppConfig.DomainSitePath)/Calendar/ScheduleGoogleMap" target="_blank">@Localize.T("Map")</a>
+</div>

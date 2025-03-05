@@ -1,0 +1,669 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@model IEnumerable<HS.Entities.ARBUnpaidInvoiceGenerateList>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<style>
+    .rmr_total_color {
+        border-left: 10px solid #0077c5;
+        font-size: 19px;
+        padding: 5px;
+        color: #fff;
+        background-color: #035890;
+        font-family: sans-serif;
+        margin-bottom: 10px;
+    }
+</style>
+<script>
+    var ModelCount = '@ViewBag.OutOfNumber';
+    var pageno = '@ViewBag.PageNumber';
+    var orderBy = '@ViewBag.order';
+
+    var SendRecurringEmailToSelectedInvoice = function (event) {
+        var ArrayItemInvoiceId = [];
+        OpenConfirmationMessageNew("", "Do you want to send email?", function () {
+            $(".RecurringCheckItems").each(function () {
+                if ($(this).is(':checked')) {
+                    var InvoiceId = $(this).attr("data-invoice-id");
+                    ArrayItemInvoiceId.push(InvoiceId);
+                }
+            });
+            console.log(ArrayItemInvoiceId);
+            var url = domainurl + "/RecurringBilling/SendRecurringInvoiceEmail";
+            var param = JSON.stringify({
+                ArrayItemInvoiceId: ArrayItemInvoiceId
+            })
+
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data) {
+                        OpenSuccessMessageNew("Success!", "Email successfully send.");
+                        LoadAllUnpaidInvoices(pageno, orderBy);
+                    }
+                    else {
+                        OpenErrorMessageNew("Error!", "Failed to send email.");
+                        event.stopPropagation();
+                        event.cancelBubble = true;
+                    }
+                },
+
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            })
+        }, function () {
+                //$(".RecurringCheckItems").prop("checked", false);
+                //$("#IsCheckValforrecurring").prop('checked', false);
+        });
+        event.stopPropagation();
+        event.cancelBubble = true;
+    }
+
+    var SendRMRInvoiceStatementEmailToSelectedCustomer = function (event) {
+        var ArrayItemCustomerId = [];
+        OpenConfirmationMessageNew("", "Do you want to send email?", function () {
+            $(".RecurringCheckItems").each(function () {
+                if ($(this).is(':checked')) {
+                    var CustomerId = $(this).attr("data-customer-id");
+                    ArrayItemCustomerId.push(CustomerId);
+                }
+            });
+            console.log(ArrayItemInvoiceId);
+            var IsLink = $("#PaymentMethodFilter").val();
+            if (IsLink == "Invoice") { IsLink = true; }
+            else { IsLink = false; }
+            var url = domainurl + "/Invoice/SendGroupRMRInvoiceStatementByEmail";
+            var param = JSON.stringify({
+                CustomerIntIdList: ArrayItemCustomerId,
+                StatementType: "RMR",
+                PaymentLink: IsLink
+            })
+
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        OpenSuccessMessageNew("Success!", data.message);
+                        LoadAllUnpaidInvoices(pageno, orderBy);
+                    }
+                    else {
+                        OpenErrorMessageNew("Error!", data.message);
+                        event.stopPropagation();
+                        event.cancelBubble = true;
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            })
+        }, function () {
+            //$(".RecurringCheckItems").prop("checked", false);
+            //$("#IsCheckValforrecurring").prop('checked', false);
+        });
+        event.stopPropagation();
+        event.cancelBubble = true;
+    }
+
+    var DownloadExcelForSelectedRMRInvoices = function (event) {
+        //Customhtml = '<div class="row rmrRow" id="rmrcustomdiv"><div class="rmrdivsingle"><div class="span-style rmrTextdiv">Invoice Type</div><select name="InvoiceType" id="InvoiceType" class="form-control"><option value="RMR">RMR</option><option value="Others">Others</option><option value="All">All</option></select></div></div>';
+        //Customhtml = '<div class="row rmrRow" id="rmrcustomdiv"><div class="rmrdiv"><div class="span-style rmrTextdiv">Invoice Type</div><select name="InvoiceType" id="InvoiceType" class="form-control"><option value="RMR">RMR</option><option value="Others">Others</option><option value="All">All</option></select></div><div class="rmrdiv"><div class="span-style rmrTextdiv">Payment Method</div><select name="PaymentMethod" id="PaymentMethod" class="form-control"><option value="Invoice">Invoice</option><option value="CC">Credit Card</option><option value="ACH">ACH</option><option value="All">All</option></select></div></div>';
+        OpenConfirmationMessageNew("Download", "Do you want to download rmr excel file?", function () {
+            var StrItemCustomerId = "";
+            $(".RecurringCheckItems").each(function () {
+                if ($(this).is(':checked')) {
+                    var CustomerId = $(this).attr("data-customer-id");
+                    if (StrItemCustomerId != null && StrItemCustomerId != '' && StrItemCustomerId != 'undefined') {
+                        StrItemCustomerId += ',' + CustomerId;
+                    }
+                    else {
+                        StrItemCustomerId = CustomerId;
+                    }
+                }
+            });
+            location.href = domainurl + "/Sales/DownloadUnpaidRMRInvoicesExcel/?StrCustomerIdlist=" + encodeURI(StrItemCustomerId) + "&InvoiceType=RMR&PaymentMethod=Invoice";
+        }, function () { return false; });
+    }
+    var PdfRecurringInvoiceGenerate = function () {
+            var ids = "";
+            var idsAll = "";
+            var flag = 0;
+        $(".RecurringCheckItems").each(function () {
+                idsAll += $(this).attr("data-invId") + ",";
+                if ($(this).is(':checked')) {
+                    flag = 1;
+                    ids += $(this).attr("data-invId") + ","
+                }
+
+            });
+
+            if (flag == 0) {
+                if (idsAll != "") {
+                    $(".InvPrintforRecurringBill").attr("href", domainurl + "/Invoice/PrintInvoiceList/?idlist=" + idsAll);
+                    $(".InvPrintforRecurringBill").click();
+                }
+                else {
+
+                    OpenErrorMessageNew("", "Invoice list are empty.", function () {
+                        LoadAllUnpaidInvoices(pageno, orderBy);
+                    });
+                }
+            }
+            else {
+                if (ids != "") {
+                    $(".InvPrintforRecurringBill").attr("href", domainurl + "/Invoice/PrintInvoiceList/?idlist=" + ids);
+                    $(".InvPrintforRecurringBill").click();
+                }
+                else {
+                    OpenErrorMessageNew("", "Invoice list are empty.");
+                    LoadAllUnpaidInvoices(pageno, orderBy);
+                }
+            }
+    }
+
+    var PdfGroupRMRInvoiceStatementGenerate = function () {
+        var StrItemCustomerId = "";
+            $(".RecurringCheckItems").each(function () {
+                if ($(this).is(':checked')) {
+                    var CustomerId = $(this).attr("data-customer-id");
+                    if (StrItemCustomerId != null && StrItemCustomerId != '' && StrItemCustomerId != 'undefined') {
+                        StrItemCustomerId += ',' + CustomerId;
+                    }
+                    else {
+                        StrItemCustomerId = CustomerId;
+                    }
+                }
+            });
+        location.href = domainurl + "/Invoice/PrintGroupInvoiceStatementAsPDF/?StrCustomerIdlist=" + encodeURI(StrItemCustomerId) + "&StatementFor=RMR";
+
+    }
+    var CollectPaymentForRecurringUnpaidBills = function (event) {
+        var ArrInvoiceIdList = [];
+            //ArrCustomerIdList = [];
+        OpenConfirmationMessageNew("", "Are you sure you want to process the payments?", function () {
+            $(".RecurringCheckItems").each(function () {
+                if ($(this).is(':checked')) {
+                    var InvoiceId = $(this).attr("data-invoice-id");
+                    //var CustomerId = $(this).attr("data-customer-id");
+                    ArrInvoiceIdList.push(InvoiceId);
+                    //ArrCustomerIdList.push(CustomerId);
+                }
+            });
+            var PaymentType = $("#PaymentMethodFilter").val();
+            var url = domainurl + "/Transaction/RMRCollectPaymentByCCandACH";
+            var param = JSON.stringify({
+                InvoiceIdList: ArrInvoiceIdList,
+                PaymentType: PaymentType
+            });
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        OpenSuccessMessageNew("Success!", data.message);
+                        $(".loader-div").hide();
+                        LoadAllUnpaidInvoices(pageno, orderBy);
+                    }
+                    else {
+                        OpenErrorMessageNew("Error!", data.message);
+                        event.stopPropagation();
+                        event.cancelBubble = true;
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            })
+        }, function () {
+            //$(".RecurringCheckItems").prop("checked", false);
+            //$("#IsCheckValforrecurring").prop('checked', false);
+        });
+        event.stopPropagation();
+        event.cancelBubble = true;
+    }
+
+    var InvPrintforallRecurringBill = function (event) {
+
+        if ($(".RecurringCheckItems").is(':checked')) {
+            PdfRecurringInvoiceGenerate();
+        }
+        else {
+            OpenErrorMessageNew("Error!", "You have to select customer first.");
+            event.stopPropagation();
+            event.cancelBubble = true;
+        }
+    }
+    var PrintGroupRMRInvoiceStatement = function (event) {
+
+        if ($(".RecurringCheckItems").is(':checked')) {
+            PdfGroupRMRInvoiceStatementGenerate();
+        }
+        else {
+            OpenErrorMessageNew("Error!", "You have to select customer first.");
+            event.stopPropagation();
+            event.cancelBubble = true;
+        }
+    }
+ var SendMailSelectedInvoice = function (event) {
+
+        if ($(".RecurringCheckItems").is(':checked')) {
+            SendRecurringEmailToSelectedInvoice(event);
+        }
+        else {
+            OpenErrorMessageNew("Error!", "You have to select customer first.");
+            event.stopPropagation();
+            event.cancelBubble = true;
+        }
+
+    }
+    var SendMailStatementSelectedInvoice = function (event) {
+
+        if ($(".RecurringCheckItems").is(':checked')) {
+            SendRMRInvoiceStatementEmailToSelectedCustomer(event);
+        }
+        else {
+            OpenErrorMessageNew("Error!", "You have to select customer first.");
+            event.stopPropagation();
+            event.cancelBubble = true;
+        }
+
+    }
+    var DownloadSelectedInvoice = function (event) {
+
+        if ($(".RecurringCheckItems").is(':checked')) {
+            DownloadExcelForSelectedRMRInvoices(event);
+        }
+        else {
+            OpenErrorMessageNew("Error!", "You have to select customer first.");
+            event.stopPropagation();
+            event.cancelBubble = true;
+        }
+
+    }
+
+    var CollectPaymentsforUnpaidRB = function (event) {
+
+        if ($(".RecurringCheckItems").is(':checked')) {
+            //DisableElement("#CollectPaymentsforUnpaidRB");
+            $(".loader-div").show();
+            console.log("pay");
+            CollectPaymentForRecurringUnpaidBills(event);
+        }
+        else {
+            OpenErrorMessageNew("Error!", "You have to select customer first.");
+            event.stopPropagation();
+            event.cancelBubble = true;
+        }
+    }
+
+    var CreatingRecurringUnpaidInvoices = function (event) {
+        console.log("ClicktoGenerate");
+        OpenConfirmationMessageNew("", "Do you want to creating recurring unpaid invoices?", function () {
+            var url = domainurl + "/RecurringBilling/MenualRecurringBillingInvoiceGenerate";
+            var param = JSON.stringify({
+                StrStartDate: $(".min-date").val(),
+                StrEndDate: $(".max-date").val(),
+                PaymentFilter: $("#PaymentMethodFilter").val()
+            });
+
+            $.ajax({
+                type: "POST",
+                data: param,
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        //if (data.EmailList.length > 0) {
+                        //    for (let i = 0; i < data.EmailList.length; i++) {
+                        //        SendEmailForRecurring(data.EmailList[i]);
+                        //    }
+                        //}
+                        OpenSuccessMessageNew("Success!", "Creating recurring invoices is completed.");
+                        LoadAllUnpaidInvoices(pageno, orderBy);
+                    }
+                    else {
+                        OpenErrorMessageNew("Error!", "All recurring invoices already you have.");
+                        LoadAllUnpaidInvoices(pageno, orderBy);
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            })
+
+        }, function () { });
+        event.stopPropagation();
+        event.cancelBubble = true;
+    }
+
+    $(document).ready(function () {
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            LoadAllUnpaidInvoices(pageno, orderval);
+        });
+        $("#IsCheckValforrecurring").change(function () {
+            console.log("hlw");
+            if ($(this).is(':checked')) {
+                $(".RecurringCheckItems").each(function () {
+                    $(this).prop('checked', true);
+                });
+            }
+            else {
+                $(".RecurringCheckItems").each(function () {
+                    $(this).prop('checked', false);
+                });
+            }
+        });
+        $(".RecurringCheckItems").change(function () {
+            console.log("oi");
+            if ($(this).is(':checked')) {
+
+                $(".RecurringCheckItems").each(function () {
+                    if ($('.RecurringCheckItems:checked').length == $('.RecurringCheckItems').length) {
+                        $("#IsCheckValforrecurring").prop('checked', true);
+                    }
+
+                });
+            }
+            else {
+                $(".RecurringCheckItems").each(function () {
+                    $("#IsCheckValforrecurring").prop('checked', false);
+                });
+            }
+        });
+        $("#PaymentMethodFilter").change(function () {
+            var paymentmethod = $("#PaymentMethodFilter").val();
+            if (paymentmethod == "Invoice") {
+                $("#CollectPaymentsforUnpaidRB").hide();
+                $("#btnDownloadUnpaidRMRInvoices").show();
+                $("#btnUploadPaymentRMRInformation").show();
+            }
+            else {
+                $("#CollectPaymentsforUnpaidRB").show();
+                $("#btnDownloadUnpaidRMRInvoices").hide();
+                $("#btnUploadPaymentRMRInformation").hide();
+            }
+        });
+    })
+</script>
+<div class="lrp_bottom_border">
+    <div class="rmr_total_color"> @Localize.T("Total Subscribed Customer:") @string.Format("{0:#,##0}", ViewBag.TotalCustomer)</div>
+</div>
+<div class="invoice-table all_invoices_Table all_returns_by_filter_table">
+    <table class="display">
+        <thead class="table-head-border">
+            <tr>
+                <th class="thead-th-style">
+                    <div title="@Localize.T("Customer Name")">
+                        <label for="IsCheckValforrecurring" class="label-cbx">
+                            <input id="IsCheckValforrecurring" type="checkbox" style="position:relative;" class="cus-checkBox invisible " autocomplete="off">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                        @Localize.T("Name")
+                    </div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customername"></i></div>
+                </th>
+                @*<th class="thead-th-style">
+                        <div>@Localize.T("Method")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/billingmethod"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/billingmethod"></i></div>
+                    </th>*@
+                <th class="thead-th-style">
+                    <div>@Localize.T("Invoice Date")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/invoicedate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/invoicedate"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("Due Date")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/duedate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/duedate"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("RMR Amount")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/amount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/amount"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("Past Due")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/pastdueamount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/pastdueamount"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("Total Due")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/totaldue"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/totaldue"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("SubTotal With Tax")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/totalduewithtax"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/totalduewithtax"></i></div>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+
+
+
+                <tr class="tr-style">
+
+                    <td class="table-body-td-style" valign="top">
+
+                        <div>@Localize.T("Customer Name")</div>
+                        <div>
+                            <label for="IsCheckRecVal_@item.Id" class="label-cbx">
+                                <input id="IsCheckRecVal_@item.Id" type="checkbox" data-invoice-id="@item.InvoiceId" data-customer-id="@item.CustomerIntId" data-invId="@item.Id" style="position:relative;" class="cus-checkBox RecurringCheckItems" />
+                            </label>
+                            <a class="cus-anchor" href="/Customer/CustomerDetail?id=@item.CustomerIntId" target="_blank">@item.CustomerName</a><br />
+                            <input type="hidden" id="custIntId_@item.Id" value="@item.CustomerIntId" />
+                            <input type="hidden" id="custguidId_@item.Id" value="@item.CustomerGuidId" />
+                            <input type="hidden" id="custEmail_@item.Id" value="@item.EmailAddress" />
+                            <input type="hidden" id="payment_@item.Id" value="@item.BillingMethodId" />
+                        </div>
+                    </td>
+                    @*<td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Billing Method")</div>
+                            <div>@item.BillingMethod</div>
+                        </td>*@
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Invoice Date")</div>
+                        <div> @(item.InvoiceDate != new DateTime() ? item.InvoiceDate.ToString("MM/dd/yyyy") : "-")</div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Due Date")</div>
+                        <div>@(item.DueDate != new DateTime() ? item.DueDate.ToString("MM/dd/yyyy") : "-")</div>
+                    </td>
+                    <td class="table-body-td-style" title="Subscription Amount Without Tax" valign="top">
+                        <div>@Localize.T("Amount Without Tax")</div>
+                        <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.Amount.ToString("#,##0.00")</div>
+                    </td>
+                    <td class="table-body-td-style" title="Past Due Amount" valign="top">
+                        <div>@Localize.T("Past Due Amount")</div>
+                        <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.PastDueAmount.ToString("#,##0.00")</div>
+                    </td>
+                    <td class="table-body-td-style" title="Total Due" valign="top">
+                        <div>@Localize.T("Total Due")</div>
+                        <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.TotalAmount.ToString("#,##0.00")</div>
+                    </td>
+                    <td class="table-body-td-style" title="Total Due With Tax" valign="top">
+                        <div>@Localize.T("Total Due With Tax")</div>
+                        <div class="recurring_due_balance_@item.Id">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.SubTotalAmountWithTax.ToString("#,##0.00")</div>
+                    </td>
+                </tr>
+
+            }
+            <tr class="tr-style table_total_bg">
+                <td class="table-body-td-style" colspan="3">
+                    <b class="float_right">
+                        @Localize.T("Total:")
+                    </b>
+                </td>
+                <td class="table-body-td-style">
+                    <b title="@Localize.T("Amount Without Tax:")">$@Model.Sum(i => i.Amount).ToString("#,##0.00")</b>
+                </td>
+                <td class="table-body-td-style">
+                    <b title="@Localize.T("Past Due Amount:")">$@Model.Sum(i => i.PastDueAmount).ToString("#,##0.00")</b>
+                </td>
+                <td class="table-body-td-style">
+                    <b title="@Localize.T("Total Due:")">$@Model.Sum(i => i.TotalAmount).ToString("#,##0.00")</b>
+                </td>
+                <td class="table-body-td-style">
+                    <b title="@Localize.T("Total Due With Tax:")">$@Model.Sum(i => i.SubTotalAmountWithTax).ToString("#,##0.00")</b>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+@*<div class="AgentListPagination inv1">
+        <div class="paginationContainer">
+            @if (ViewBag.PageCount > 0)
+            {
+                <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+            }
+            @if (ViewBag.PageCount == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons disabledBtn">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber),'@ViewBag.order')">1</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadAllUnpaidInvoices(1, '@ViewBag.order')">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadAllUnpaidInvoices(2,'@ViewBag.order')">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadAllUnpaidInvoices(1,'@ViewBag.order')">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadAllUnpaidInvoices(2,'@ViewBag.order')">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="LoadAllUnpaidInvoices(3,'@ViewBag.order')">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount > 3)
+            {
+                if (ViewBag.PageNumber == ViewBag.PageCount)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber-2),'@ViewBag.order')">@(ViewBag.PageNumber - 2)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="LoadAllUnpaidInvoices()">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber+1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber + 2),'@ViewBag.order')">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber - 1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="LoadAllUnpaidInvoices(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+            }
+        </div>
+    </div>*@

@@ -1,0 +1,187 @@
+﻿
+@{
+    Layout = null;
+}
+@model HS.Entities.GlobalSetting
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using InpTyp = HS.Web.UI.Helper.LabelHelper.GlobalSettingInputType
+@{
+    var isvalue = false;
+    if (Model.Value.ToLower() == "true")
+    {
+        isvalue = true;
+    }
+}
+<html>
+<head>
+    @*<script src="~/Content/Js/Popups/AddSettings.js"></script>*@
+    <link href="~/Content/Css/Settings/Settings.css" rel="stylesheet" />
+    <script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+    <script src="~/Content/Tiny/tinymce.min.js"></script>
+    <script src="~/Content/Tiny/tiny.js"></script>
+    <style>
+        #mceu_33 {
+            z-index: 999999 !important;
+        }
+    </style>
+    <script>
+        var value;
+        var Editor = "@InpTyp.Editor";
+        var InputType = "@Model.InputType.ToLower()";
+        var CheckBox = "@InpTyp.CheckBox";
+        var searchkey = '@Model.SearchKey';
+        var mintime = '@ViewBag.mintime';
+        var maxtime = '@ViewBag.maxtime';
+        var SaveSettings = function () {
+            $.ajax(
+                {
+                    type: "POST",
+                    url: "Setup/EditEquipmentUiSettings/",
+                    data: {
+                        Id: $("#Id").val(),
+                        SearchKey: $("#SearchKey").val(),
+                        Value: value,
+                        CompanyId: $("#CompanyId").val(),
+                        IsActive: $("#IsActive").val(),
+                    },
+                    success: function () {
+                        $(".close").trigger("click");
+                        OpenSuccessMessageNew("Success!", "Successfully Update Equipment UI Setting", function () {
+                            $(".LoadEquipmentUiSettings").load(domainurl + "/Setup/EquipmentUiSettingsPartial/");
+                        });
+                        console.log("done");
+                    }
+                });
+        }
+        $(document).ready(function () {
+            $("#SaveSettings").click(function () {
+                if (InputType == Editor) {
+                    value = tinyMCE.get('Value').getContent();
+                    SaveSettings();
+                }
+                else if (CheckBox == InputType) {
+                    var v = $("#IsCheckVal").prop('checked');
+                    value = v.toString();
+                    SaveSettings();
+                }
+                else {
+                    if (searchkey == "ScheduleCalendarMinTimeRange") {
+                        var value1 = $("#Value").val();
+                        var splitvalue = value1.split(':');
+                        var fvalue = splitvalue[0] + splitvalue[1];
+                        if (parseInt(fvalue) > parseInt(maxtime)) {
+                            OpenErrorMessageNew("Error!", "Min time should not be greater than max time", "");
+                        }
+                        else {
+                            value = $("#Value").val();
+                            SaveSettings();
+                        }
+                    }
+                    else if (searchkey == "ScheduleCalendarMaxTimeRange") {
+                        var value1 = $("#Value").val();
+                        var splitvalue = value1.split(':');
+                        var fvalue = splitvalue[0] + splitvalue[1];
+                        if (parseInt(mintime) > parseInt(fvalue)) {
+                            OpenErrorMessageNew("Error!", "Max time should not be less than min time", "");
+                        }
+                        else {
+                            value = $("#Value").val();
+                            SaveSettings();
+                        }
+                    }
+                    else {
+                        value = $("#Value").val();
+                        SaveSettings();
+                    }
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="global_info_container">
+        <div class="settings-info">
+            <div class="header-txt-style">
+                <span class="pagehead">@Localize.T("Global Information")</span>
+            </div>
+
+            @Html.HiddenFor(x => x.Id, new { id = "Id" })
+            @Html.HiddenFor(x => x.CompanyId, new { id = "CompanyId" })
+            @Html.HiddenFor(x => x.IsActive, new { id = "IsActive" })
+
+
+            <div class="row gi_popup_mergin">
+                <div class="col-xs-12">
+                    <label class="span-style">@Localize.T("Search Key")</label>
+                    @Html.TextBoxFor(x => x.SearchKey, new { @class = "form-control", placeholder = "SearchKey", datarequired = "true", id = "SearchKey", @readonly = "readonly" })
+                </div>
+            </div>
+
+            <div class="row gi_popup_mergin">
+                <div class="col-xs-12">
+                    <label class="span-style">@Localize.T("Value")</label>
+                    @if (Model.InputType.ToLower().IndexOf(InpTyp.Editor) > -1)
+                    {
+                        <textarea class="tinymce" id="Value" name="Value" required="required" placeholder="Value">@Model.Value</textarea>
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.TextBox) > -1)
+                    {
+                        @Html.TextBoxFor(x => x.Value, new { @class = "form-control", placeholder = "Value", datarequired = "true", id = "Value" })
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.TextArea) > -1)
+                    {
+                        @Html.TextAreaFor(x => x.Value, new { @class = "form-control", placeholder = "Value", datarequired = "true", id = "Value" })
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.Number) > -1)
+                    {
+                        <input class="form-control" placeholder="Value" required="required" id="Value" type="number" value="@Model.Value" />
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.CheckBox) > -1)
+                    {
+                        <label for="IsCheckVal" class="label-cbx">
+                            <input id="IsCheckVal" type="checkbox" style="position:relative;" class="cus-checkBox invisible" @(isvalue ? "checked" : "") autocomplete="off">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                    }
+                    else if (Model.InputType.ToLower().IndexOf(InpTyp.DropDown) > -1)
+                    {
+                        if (Model.SearchKey == "ScheduleCalendarDefaultView")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.DefaultView as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "ScheduleCalendarMinTimeRange")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.SchedularTime as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "ScheduleCalendarMaxTimeRange")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.SchedularTime as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "FirstDayOfWeek")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.FirstDayOfWeek as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                        else if (Model.SearchKey == "PaymentGetway")
+                        {
+                            @Html.DropDownListFor(x => x.Value, ViewBag.PaymentMethodList as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                        }
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <section class="footer-section">
+        <footer class="footer">
+            <div class="SaveCancelDiv">
+                <button class="btn" id="SaveSettings"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+            </div>
+        </footer>
+    </section>
+</body>
+</html>

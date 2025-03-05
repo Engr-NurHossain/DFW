@@ -1,0 +1,151 @@
+﻿@{
+    Layout = null;
+}
+@model List<HS.Entities.KnowledgebaseRMRTag>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<link href="~/Content/Css/Contacts/contactlist.css" rel="stylesheet" />
+<style>
+    .tag_edit, .tag_edit:hover, .tag_delete, tag_delete:hover {
+        color: #2ca01c;
+        cursor: pointer !important;
+        float: left;
+    }
+
+    .Report-Tabs table tr th {
+        font-weight: bold;
+    }
+
+    .Report-Tabs table tr td, .Report-Tabs table tr th {
+        border: 1px solid #ccc !important;
+        padding: 10px 10px;
+    }
+
+    .frt_table .same_size {
+        width: 150px;
+    }
+
+    .frt_table .act_size {
+        width: 80px !important;
+    }
+
+    .frt_table tr td:last-child {
+        text-align: center;
+    }
+
+    .fa {
+        cursor: pointer !important;
+    }
+
+        .fa.fav_heart {
+            color: #d71920;
+            float: left;
+            margin-left: 5px;
+            cursor: unset !important;
+            margin-top: 4px;
+        }
+</style>
+<script>
+    var Sortknowledgebaselist = function (tag, order) {
+        OpenTopToBottomModal("/App/TagedKnowledgebaseList/?search=" + tag + "&order=" + order);
+    }
+    $(document).ready(function () {
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            FilterTag(orderval);
+        });
+        $(".tag_edit").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenRightToLeftModal("/App/AddRMRTag?id=" + idval);
+        })
+        $(".UsedCount").click(function () {
+            var tag = $(this).attr('data-tag');
+            OpenTopToBottomModal("/App/TagedKnowledgebaseList/?search=" + tag);
+        });
+        $(".tag_delete").click(function () {
+            var idval = $(this).attr('data-id');
+            var tagname = $(this).attr('data-name');
+            OpenConfirmationMessageNew("Confirmation", "Are you sure you want to delete " + tagname +"?", function () {
+                var url = "/App/DeleteKnowledgebaseRMRTag";
+                var param = JSON.stringify({
+                    Id: idval
+                })
+                $.ajax({
+                    type: "POST",
+                    ajaxStart: $(".loader-div").show(),
+                    url: url,
+                    data: param,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    cache: false,
+                    success: function (data) {
+                        if (data) {
+                            LoadTagManager(true);
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    }
+                });
+            })
+        });
+    })
+</script>
+<div class="custom_table Report-Tabs">
+    <table class="Contacts_table frt_table">
+        <thead>
+            <tr>
+                <th>
+                    <div>@Localize.T("Name")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/name"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/name"></i></div>
+                </th>
+                <th>
+                    <div>@Localize.T("Utilized")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/utilized"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/utilized"></i></div>
+                </th>
+                <th class="same_size">
+                    <div>@Localize.T("Created On")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/createdon"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/createdon"></i></div>
+                </th>
+                <th class="same_size">
+                    <div>@Localize.T("Created User")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/createdby"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/createdby"></i></div>
+                </th>
+                <th class="act_size"><div>@Localize.T("Action")</div></th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                if (Model != null && Model.Count > 0)
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div>
+                                    @Localize.T("Name")
+                                </div><div>
+                                    <a class="tag_edit" data-id="@item.Id">@item.TagName</a>
+                                    @if (item.IsFavourite)
+                                    {
+                                        <i title="Favourite" class="fa fa-heart fav_heart"></i>
+                                    }
+                                </div>
+
+                            </td>
+                            <td>
+                                <div>@Localize.T("Utilized")</div>
+                                @if (item.UsedCount > 0)
+                                {
+                                    <a class="UsedCount" data-tag="@item.TagName">@item.UsedCount</a>
+                                }
+                            </td>
+                            <td><div>@Localize.T("Created On")</div><div>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy") @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("hh:mm tt")</div></td>
+                            <td><div>@Localize.T("Created User")</div><div>@item.CreatedUser</div></td>
+                            <td><div>@Localize.T("Action")</div><div><a class="tag_delete" data-id="@item.Id" data-name="@item.TagName"><i class="fa fa-trash"></i></a></div></td>
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+    </table>
+</div>

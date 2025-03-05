@@ -1,0 +1,233 @@
+﻿
+@model HS.Entities.EmployeeListModel
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+
+<style>
+    .convert_cus_report_left {
+        float: left;
+        width: auto;
+    }
+
+    .convert_cus_report_filte_innerr {
+        width: 100%;
+        float: left;
+    }
+
+    .convert_cus_report_left .input-group {
+        width: 300px;
+        float: left;
+    }
+
+    .convert_cus_report_left #convert_cus_filterbtn {
+        float: left;
+        margin-left: 10px;
+    }
+
+    .convert_cus_filter_list .convert_cus_filter_button button {
+        margin: 5px;
+        border-color: #2ca01c;
+        background-color: #2ca01c;
+        color: white;
+    }
+
+    .convert_cus_report_filter {
+        width: 100%;
+        float: left;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-top: 10px;
+    }
+
+        .convert_cus_report_filter .convert_cus_report_filte_innerr div {
+            float: left;
+            width: 20%;
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+
+    .convert_cus_report_footer {
+        width: 100%;
+        float: left;
+        background-color: #fff;
+        padding: 5px;
+        text-align: right;
+    }
+
+    @@media (max-width:768px) {
+        .convert_cus_report_filter .convert_cus_report_filte_innerr div {
+            width: 33.33%;
+        }
+    }
+
+    @@media (max-width:414px) {
+        .convert_cus_report_filter .convert_cus_report_filte_innerr div {
+            width: 100%;
+        }
+    }
+</style>
+<script>
+     var listcity = '@Html.Raw(Json.Encode(@ViewBag.valcity))';
+    listcity = JSON.parse(listcity);
+     var liststate = '@Html.Raw(Json.Encode(@ViewBag.valstate))';
+    liststate = JSON.parse(liststate);
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+  
+    var pagesize = 20;
+
+        var TechnicianListLoad = function (pageNo, order) {
+
+        console.log(order);
+        if (typeof (pageNo) != "undefined") {
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+            var SearchText = encodeURI($(".technician_search_text").val());
+            var cityIDList = encodeURI($("#citytechnician").val());
+            var stateIDList = encodeURI($("#statetechnician").val());
+            console.log(DateFrom);
+            console.log(pageNo);
+            $(".technicianreporttable").html(TabsLoaderText);
+            $(".technicianreporttable").load(domainurl + "/Reports/TechnicianReportAppointmentList", { PageNo: pageNo, PageSize: pagesize, SearchText: SearchText, order: order, StartDate: DateFrom, EndDate: DateTo , City:cityIDList , State:stateIDList});
+        }
+    }
+       var ResetFilter = function () {
+        $(".technician_search_text").val("");
+           $("#citytechnician").selectpicker("val", "");
+        $("#statetechnician").selectpicker("val", "");
+
+        TechnicianListLoad(1);
+    }
+    $(document).ready(function () {
+        TechnicianListLoad(1);
+      //  console.log(tickettype);
+        $('[data-toggle="tooltip"]').tooltip();
+
+        $(".search_technician_btn").click(function(){
+            TechnicianListLoad(1);
+        });
+
+        $(".DateFilterContents .btn-apply-Datefilter").click(function () {
+            if (top.location.hash != "" && top.location.hash == "#TechnicianReportTab") {
+                UpdatePtoCookie();
+                TechnicianListLoad(1);
+                var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+        var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+        if (StartDate == "NaN undefined, NaN") {
+            StartDate = "All Time";
+            EndDate = "";
+        }
+
+        $(".DateFilterContents .date-start").html("");
+        $(".DateFilterContents .date-end").html("");
+        $(".DateFilterContents .date-start").html(StartDate);
+        $(".DateFilterContents .date-end").html(EndDate);
+        $(".DateFilterContents .dropdown-filter").hide();
+            }
+
+    });
+           if (listcity != null) {
+            if (listcity.length != 0) {
+                $("#citytechnician").selectpicker('val', listcity);
+            }
+            else {
+                $("#citytechnician").selectpicker('val', '');
+            }
+        }
+               if (liststate != null) {
+            if (liststate.length != 0) {
+                $("#statetechnician").selectpicker('val', liststate);
+            }
+            else {
+                $("#statetechnician").selectpicker('val', '');
+            }
+        }
+        $('.technician_search_text').keypress(function (e) {
+            var key = e.which;
+            if (key == 13)
+            {
+                TechnicianListLoad(1);
+            }
+        });
+     
+    
+
+        $("#btnDownloadtechnicianReport").click(function () {
+
+            var city = $("#citytechnician").val();
+            var state = $("#statetechnician").val();
+
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+            location.href = domainurl + "/Reports/TechnicianReportPartial/?GetReport=true" + "&SearchText=" + $(".technician_search_text").val() + "&Start=" + DateFrom + "&End=" + DateTo +"&City=" +city +"&State=" +state ;
+        });
+     
+    $(".bi_single_filte_info_container").hide();
+        $(".btn-filter").click(function () {
+
+            if ($(".bi_single_filte_info_container").is(":visible")) {
+                $(".bi_single_filte_info_container").hide();
+
+            } else {
+                $(".bi_single_filte_info_container").show();
+
+            }
+        });
+  
+    });
+</script>
+
+<div class="page-content-wrap cus-padding-top10p invoicelist">
+    <div class="FilterFunding clearfix">
+        <div class="app_date_search_filter ld_ticket_report_top_bar">
+            <div class="input-group add-on convert_cus_div" style="margin-right:10px;">
+                <input value="@Model.Searchtext" class="form-control filterinput border_radius_0 technician_search_text" id="searchtext_technician_report" placeholder="Search By Technician">
+                <div class="input-group-btn"><button class="btn search_technician_btn green_button" id="btnsearchtext" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button></div>
+            </div>
+            <div class="bi_single_filter_div_style filter_fill">
+                <button class="btn btn-filter green_button" title="Filter">
+                    <i class="glyphicon glyphicon-filter"></i>
+                </button>
+            </div>
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.TechnicianReportDownLoadButton))
+            {
+                <button title="@Localize.T("Download")" class="report_btn lrp_float_right" id="btnDownloadtechnicianReport"><i class="fa fa-download" aria-hidden="true"></i></button>
+            }
+        </div>
+        <div class="bi_single_filte_info_container">
+            <div class="row">
+                <div class="bi_single_filter_info_inner_content col-md-4">
+
+                    @Html.DropDownList("citytechnician", ViewBag.citylist as List<SelectListItem>, new { @class = "form-control convert_cus_inp_drp", @multiple = "multiple", @title = "City" })
+                </div>
+                <div class="bi_single_filter_info_inner_content col-md-4">
+
+                    @Html.DropDownList("statetechnician", ViewBag.statelist as List<SelectListItem>, new { @class = "form-control convert_cus_inp_drp", @multiple = "multiple", @title = "State" })
+                </div>
+            </div>
+            <div class="bi_single_filter_info_footer" style="float:right">
+                <button class="btn search_BI_btn green_button Technicianbtnsearchtext" onclick="TechnicianListLoad(1)" title="@Localize.T("Apply Filter")"><i class="fa fa-check" aria-hidden="true"></i>@Localize.T(" Apply")</button>
+                <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilter()">@Localize.T("Reset")</button>
+
+            </div>
+
+        </div>
+    </div>
+    <div class="technicianreporttable">
+
+    </div>
+
+    </div>
+
+

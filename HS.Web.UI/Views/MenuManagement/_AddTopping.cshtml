@@ -1,0 +1,190 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.ToppingListModel
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script>
+    var itemreqcount = '@((Model.ToppingCategoryModel != null && Model.ToppingCategoryModel.RequiredItem.HasValue && Model.ToppingCategoryModel.RequiredItem.Value > 0) ? Model.ToppingCategoryModel.RequiredItem.Value : 0)'
+</script>
+@Styles.Render("~/styles/AddEquipment")
+@Scripts.Render("~/scripts/AddTopping")
+
+<style>
+    .add_topping_container{
+        overflow-y:auto;
+        height:85vh;
+    }
+    .add_category_footer #saveToppingAndClose,
+    .add_category_footer #saveToppingAndNew{
+        background-color: #2ca01c;
+        color: #fff;
+    }
+</style>
+<script>
+    var Currency = "@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)";
+    var ToppingCategoryModel = '@Model.ToppingCategoryModel';
+    $(document).ready(function () {
+        if (ToppingCategoryModel == "") {
+            $("#saveTopping").css("background-color", "#999");
+            $("#saveToppingAndClose").css("background-color", "#999");
+        }
+        else {
+            $("#saveToppingAndNew").css("background-color", "#999");
+        }
+    })
+</script>
+
+<div class="add_category_container_main">
+    @Html.HiddenFor(x => x.ToppingCategoryModel.Id, new { id = "ToppingCategoryId" })
+    <div class="add_category_header">
+        @Localize.T("Create Topping")
+    </div>
+
+    <div class="add_category_container add_topping_container">
+        <div class="add_topping_height">
+
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Topping Category")<span class="red">*</span></span>
+                @Html.TextBoxFor(x => x.ToppingCategoryModel.ToppingCategory, new
+       {
+           @class = "form-control required-field",
+           placeholder = "Topping Category",
+           id = "ToppingCategory",
+           datarequired = "true"
+       })
+                <label rel="Name" class="label hidden red position-absolute">*@Localize.T("Topping Category Required")</label>
+            </div>
+            @{
+                if (Model.ToppingCategoryModel != null && Model.ToppingCategoryModel.RequiredItem != null)
+                {
+                    <div class="form-group clearfix">
+                        <span class="span-style">@Localize.T("Topping Required")<span class="red">*</span></span>
+                        @Html.TextBoxFor(x => x.ToppingCategoryModel.RequiredItem, new { @class = "form-control", type = "number", placeholder = "Topping Required", id = "RequiredItem" })
+                    </div>
+                }
+                else
+                {
+                    <div class="form-group clearfix">
+                        <span class="span-style">@Localize.T("Topping Required")<span class="red">*</span></span>
+                        <input class="form-control" type="number" value="0" placeholder = "Topping Required" id = "RequiredItem" />
+                    </div>
+                }
+            }
+
+            <div class="add_category_container_inline">
+                <table id="submissionTable" class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Topping Name</th>
+                            <th class="toppr">Topping Price</th>
+                            <th>Description</th>
+                            @if (Model.ToppingCategoryModel != null && Model.ToppingCategoryModel.RequiredItem.HasValue && Model.ToppingCategoryModel.RequiredItem.Value > 0)
+                            {
+                                <th class="toppr" style="width:5% !important;">Default</th>
+                            }
+                            <th class="act_head"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Toppings != null && Model.Toppings.Count() > 0)
+                        {
+                            int index = 0;
+                            foreach (var item in Model.Toppings)
+                            {
+                        <tr id="tablerow@(index)" data-id="@item.Id" class="HasItem">
+                            <td>
+                                <div class="editor-field">
+                                    <input class="text-box single-line" placeholder="Topping Name" name="ToppingName" id="ToppingName" type="text" value="@item.ToppingName" />
+                                </div>
+                            </td>
+                            <td>
+                                <div class="editor-field currency_style">
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <div class="input-group-text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</div>
+                                        </div>
+                                        <input class="text-box single-line form-control" placeholder="Topping Price" name="ToppingPrice" id="ToppingPrice" type="text" value="@LabelHelper.FormatAmount(item.Price)" />
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="editor-field">
+                                    <input class="text-box single-line" placeholder="Description" name="Description" id="Description" type="text" value="@item.Description" />
+                                </div>
+                            </td>
+                            @if (Model.ToppingCategoryModel != null && Model.ToppingCategoryModel.RequiredItem.HasValue && Model.ToppingCategoryModel.RequiredItem.Value > 0)
+                            {
+                                <td>
+                                    <input type="checkbox" class="chk_item_topping_default" @(item.IsDefault.HasValue && item.IsDefault.Value == true ? "checked" : "") id="chk_item_topping_default" />
+                                </td>
+                            }
+                            <td class="act_head">
+                                <button type="button" class="btn btn-primary" onclick="removeTr(@index);" title="Delete this row">
+                                    <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                </button>
+                            </td>
+                        </tr>
+                                index++;
+                            }
+                        }
+                    </tbody>
+                </table>
+                <p>
+                    @{
+                        if (Model.Toppings != null && Model.Toppings.Count() > 0)
+                        {
+                            <button id="add" value="@Model.Toppings.Count()" type="button" class="btn btn-primary" title="Add a new row">
+                                <i class="fa fa-plus-circle" aria-hidden="true"></i> New row
+                            </button>
+                        }
+                        else
+                        {
+                            <button id="add" type="button" class="btn btn-primary" title="Add a new row">
+                                <i class="fa fa-plus-circle" aria-hidden="true"></i> New row
+                            </button>
+                        }
+                    }
+                </p>
+                <hr />
+            </div>
+            @*@if (Model.ToppingCategoryModel != null)
+            {
+                <div class="Loadtoppingitem" data-id="@Model.ToppingCategoryModel.Id"></div>
+            }*@
+
+        </div>
+        
+    </div>
+    
+
+    <div class="add_category_footer">
+        <button class="btn" onclick="CloseTopToBottomModal()" id="">
+            @Localize.T("Cancel")
+        </button>
+        @if (PermissionChekcer.IsPermitted(Permissions.MenuManagementPermissions.ToppingDelete))
+        {
+            if (Model != null)
+            {
+                <button class="btn btn-default DeleteThisCustomer acButton_for_desktop" id="DeleteThisTopping"><i class="fa fa-trash-o" aria-hidden="true"></i> @Localize.T("Delete")</button> @*This button shows on Desktop*@
+                @*<button class="btn btn-default DeleteThisCustomer acButton_for_mobile" id="DeleteThisTopping"><i class="fa fa-trash-o" aria-hidden="true"></i></button>*@ @*This button shows on Device*@
+            }
+        }
+        @*<button class="btn" id="">
+            @Localize.T("Delete")
+        </button>*@
+        <button class="btn" id="saveTopping">
+            <i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")
+        </button>
+        <button class="btn" id="saveToppingAndClose">
+            @Localize.T("Save and Close")
+        </button>
+        <button class="btn" id="saveToppingAndNew">
+            @Localize.T("Save and New")
+        </button>
+
+    </div>
+
+</div>

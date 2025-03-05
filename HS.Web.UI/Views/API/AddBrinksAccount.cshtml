@@ -1,0 +1,1029 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.Custom.SetupBrinks
+
+
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>
+<script src="~/Content/Select2/Select2.min.js"></script>
+<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+<link href="~/Content/Css/API/AddBrinksAccount.css" rel="stylesheet" />
+<script>
+    var StartDatepicker;
+    var CSNumber = '@ViewBag.CsNumber';
+    var Platform = "'Brinks'";
+    var BrinksMendatoryField = '@ViewBag.MendatoryCheckBox';
+    var SubscribeToBrinksConfirm = function () {
+
+        OpenConfirmationMessageNew("", "Do you want to place this account online?", function () {
+            SubscribeToBrinks();
+        })
+    }
+    var SubscribeToBrinks = function () {
+        var url = "/API/AddBrinksAccount/";
+        BrinksEmergencyContact = {
+            FirstName1: $("#FirstName1").val(),
+            LastName1: $("#LastName1").val(),
+            Phone1: $("#Phone1").val(),
+            PhoneType1: $("#PhoneType1").val(),
+
+            FirstName2: $("#FirstName2").val(),
+            LastName2: $("#LastName2").val(),
+            Phone2: $("#Phone2").val(),
+            PhoneType2: $("#PhoneType2").val(),
+
+            FirstName3: $("#FirstName3").val(),
+            LastName3: $("#LastName3").val(),
+            Phone3: $("#Phone3").val(),
+            PhoneType3: $("#PhoneType3").val(),
+
+            FirstName4: $("#FirstName4").val(),
+            LastName4: $("#LastName4").val(),
+            Phone4: $("#Phone4").val(),
+            PhoneType4: $("#PhoneType4").val(),
+        };
+        var param = {
+            "cs_no": $("#cs_no").val(),
+            "site_name": $("#site_name").val(),
+            "codeword1": $("#codeword1").val(),
+            "site_addr1": $("#site_addr1").val(),
+            "sitestat_id": $("#sitestat_id").val(),
+            "sitetype_id": $("#sitetype_id").val(),
+            "subdivision": $("#subdivision").val(),
+            "systype_id": $("#systype_id").val(),
+            "sec_systype_id": $("#sec_systype_id").val(),
+            "Receiver_Phone": $("#Receiver_Phone").val(),
+            "panel_phone": $("#panel_phone").val(),
+            "phone1": $("#phone1").val(),
+            "panel_location": $("#panel_location").val(),
+            "install_date": $("#install_date").val(),
+            "panel_code": $("#panel_code").val(),
+            "city_name": $("#City").val(),
+            "state_id": $("#State").val(),
+            "county_name": $("#County").val(),
+            "zip_code": $("#ZipCode").val(),
+
+            "CustomerId": CustomerLoadGuid,
+            "install_servco_no": $("#install_servco_no").val(),
+            "servco_no": $("#servco_no").val(),
+
+            BrinksemgContact: BrinksEmergencyContact
+        };
+        console.log(param);
+        $(".LoaderWorkingDivBrinks").show();
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: JSON.stringify(param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                $(".LoaderWorkingDivBrinks").hide();
+                if (typeof (data) != 'undefined') {
+                    if (data) {
+                        if (data.result) {
+                            OpenSuccessMessageNew("Success!", data.message, function () {
+                                CloseTopToBottomModal();
+                                OpenBrinksDetails();
+                            });
+                        } else {
+                            OpenErrorMessageNew("Error!", data.message, function () {
+
+                                OpenBrinksDetails();
+                            });
+                        }
+                    } else {
+                        OpenErrorMessageNew("Error!", data.message, function () {
+
+                        });
+                    }
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+
+    var GetEquipmentType = function () {
+            var param = {
+                "EventCode": $("#BrinksEventCode1").val(),
+            };
+            console.log(param);
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: "/API/GetEquipmentType",
+                data: JSON.stringify(param),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    $(".LoaderWorkingDiv").hide();
+                    if (typeof (data.data) != 'undefined') {
+                        $("#BrinksEquipType option").remove();
+                        var resultparse = JSON.parse(data.data);
+                        $.each(resultparse, function (i, word) {
+
+                            $("#BrinksEquipType").append("<option value=" + word.EquipmentTypeId + ">" + word.EquipTypeVal + "</option>");
+                        });
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+    }
+    var SaveBrinksSignedInfo = function () {
+             
+            var param = {
+                "CustomerId":CustomerLoadGuid,
+                "IsSigned": $("#IsSigned").is(':checked'),
+                "HasBillingInfo": $("#HasBillingInfo").is(':checked'),
+                "HasBusinessPicture": $("#HasBusinessPicture").is(':checked'),
+                "IsCreditCheck":$("#IsCreditCheck").is(':checked')
+            };
+            console.log(param);
+            $.ajax({
+                type: "POST",
+           
+                url: "/API/SaveBrinksSignedInfo",
+                data: JSON.stringify(param),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                 
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                   
+                    console.log(errorThrown);
+                }
+            });
+    }
+
+    var BrinksZoneValidation = function () {
+        if ($("#BrinksZoneNumber1").val() == "-1" || $("#BrinksEventCode1").val() == "-1") {
+            return false;
+        }
+        return true;
+    }
+
+    function FormatePhoneNumber(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-()  ]/g, '');
+            if (Value.length == 10) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+                $("#Phone1").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 10) {
+                ValueClean = Value;
+                $("#Phone1").css({ "border": "1px solid red" });
+            }
+            else {
+                $("#Phone1").css({ "border": "1px solid red" });
+                ValueClean = Value;
+            }
+        }
+        return ValueClean;
+    }
+     function FormateReceiverNumber(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-()  ]/g, '');
+            if (Value.length == 10) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+                $("#Receiver_Phone").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 10) {
+                ValueClean = Value;
+                $("#Receiver_Phone").css({ "border": "1px solid red" });
+            }
+            else {
+                $("#Receiver_Phone").css({ "border": "1px solid red" });
+                ValueClean = Value;
+            }
+        }
+        return ValueClean;
+    }
+     function FormatePanelNumber(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-  ]/g, '');
+            if (Value.length == 10) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+                $("#panel_phone").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 10) {
+                ValueClean = Value;
+                $("#panel_phone").css({ "border": "1px solid red" });
+            }
+            else {
+                $("#panel_phone").css({ "border": "1px solid red" });
+                ValueClean = Value;
+            }
+        }
+        return ValueClean;
+    }
+    function Formatephone1(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-()  ]/g, '');
+            if (Value.length == 10) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+                $("#phone1").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 10) {
+                ValueClean = Value;
+                $("#phone1").css({ "border": "1px solid red" });
+            }
+            else {
+                $("#phone1").css({ "border": "1px solid red" });
+                ValueClean = Value;
+            }
+        }
+        return ValueClean;
+    }
+     function FormateAgencyNumber(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-  ]/g, '');
+            if (Value.length == 10) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+                $(".agencyPhone1").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 10) {
+                ValueClean = Value;
+                $(".agencyPhone1").css({ "border": "1px solid red" });
+            }
+            else {
+                $(".agencyPhone1").css({ "border": "1px solid red" });
+                ValueClean = Value;
+            }
+        }
+        return ValueClean;
+    }
+    $(document).ready(function () {
+        $(".LoaderWorkingDivBrinks").hide();
+        $(".add_brinks_info_container").height(window.innerHeight - 92);
+
+        $("#IsSigned").change(function () {
+            SaveBrinksSignedInfo();
+        })
+
+        $("#HasBillingInfo").change(function () {
+            SaveBrinksSignedInfo();
+        })
+         $("#IsCreditCheck").change(function () {
+            SaveBrinksSignedInfo();
+        })
+        
+        $("#HasBusinessPicture").change(function () {
+            SaveBrinksSignedInfo();
+        })
+        $("#Phone1").keyup(function () {
+
+            var PhoneNumber = $(this).val();
+             console.log(PhoneNumber);
+            if (PhoneNumber != 'undefined' && PhoneNumber != null && PhoneNumber != "") {
+                var cleanPhoneNumber = FormatePhoneNumber(PhoneNumber);
+                $(this).val(cleanPhoneNumber);
+            }
+        });
+
+            var Value = $("#Receiver_Phone").val();
+            Value = FormateReceiverNumber(Value);;
+            $("#Receiver_Phone").val(Value);
+          $("#Receiver_Phone").keyup(function () {
+
+            var PhoneNumber = $(this).val();
+             console.log(PhoneNumber);
+            if (PhoneNumber != 'undefined' && PhoneNumber != null && PhoneNumber != "") {
+                var cleanPhoneNumber = FormateReceiverNumber(PhoneNumber);
+                $(this).val(cleanPhoneNumber);
+            }
+          });
+          $("#panel_phone").keyup(function () {
+
+            var PhoneNumber = $(this).val();
+             console.log(PhoneNumber);
+            if (PhoneNumber != 'undefined' && PhoneNumber != null && PhoneNumber != "") {
+                var cleanPhoneNumber = FormatePanelNumber(PhoneNumber);
+                $(this).val(cleanPhoneNumber);
+            }
+          });
+        $("#phone1").keyup(function () {
+
+            var PhoneNumber = $(this).val();
+             console.log(PhoneNumber);
+            if (PhoneNumber != 'undefined' && PhoneNumber != null && PhoneNumber != "") {
+                var cleanPhoneNumber = Formatephone1(PhoneNumber);
+                $(this).val(cleanPhoneNumber);
+            }
+          });
+             $(".agencyPhone1").keyup(function () {
+
+            var PhoneNumber = $(this).val();
+             console.log(PhoneNumber);
+            if (PhoneNumber != 'undefined' && PhoneNumber != null && PhoneNumber != "") {
+                var cleanPhoneNumber = FormateAgencyNumber(PhoneNumber);
+                $(this).val(cleanPhoneNumber);
+            }
+        });
+
+        StartDatepicker = new Pikaday({
+
+            format: 'MM/DD/YYYY',
+            field: $('#install_date')[0],
+     
+            firstDay: 1,
+       
+
+      
+        });
+        $("#Zonelist").load("/API/CustomerZoneList?CustomerId=" + CustomerLoadGuid + "&&Platform='Brinks'");
+        $("#Agencylist").load("/API/CustomerAgencylist?CustomerId=" + CustomerLoadGuid + "&&Platform='Brinks'");
+        $("#Contactlist").load("/API/CustomerEmgContactlist?CustomerId=" + CustomerLoadGuid + "&&Platform='Brinks'");
+        $("#SubscribeToBrinks").click(function () {
+            var result = false;
+            if ($("#IsSigned").is(':checked') == true && $("#HasBillingInfo").is(':checked') == true && $("#HasBusinessPicture").is(':checked') == true && $("#IsCreditCheck").is(':checked') == true) {
+                result = true;
+            }
+            else {
+                result = false;
+            }
+            if (BrinksMendatoryField == "true") {
+                if (result == true) {
+                    SubscribeToBrinksConfirm();
+                }
+                else {
+                    OpenErrorMessageNew("Error!", "You have to check all the four check items.", function () {
+                    });
+                }
+            }
+            else {
+                 SubscribeToBrinksConfirm();
+            }
+          
+      
+        });
+
+        $("#Zode_Addition").click(function () {
+
+            if ($("#BrinksZoneNumber1").val() == "-1") {
+                $("#errorZoneNumber").removeClass("hidden");
+            }
+            else {
+                $("#errorZoneNumber").addClass("hidden");
+            }
+            if ($("#BrinksEventCode1").val() == "-1") {
+                $("#errorEventCode").removeClass("hidden");
+            }
+            else {
+                $("#errorEventCode").addClass("hidden");
+            }
+
+            var param = {
+                "ID":    $("#ZoneId").val(),
+                "CustomerId": CustomerLoadGuid,
+                "ZoneNumber": $("#BrinksZoneNumber1").val(),
+                "EventCode": $("#BrinksEventCode1").val(),
+                "Location": $("#BrinksEquipLocation1").val(),
+                "EquipmentType": $("#BrinksEquipType").val(),
+                "ZoneComment": $("#ZoneComment").val(),
+                "Platform": "Brinks"
+
+            };
+            if (BrinksZoneValidation() == true) {
+                console.log(param);
+                $.ajax({
+                    type: "POST",
+                    ajaxStart: $(".loader-div").show(),
+                    url: "/Customer/AddUccZone",
+                    data: JSON.stringify(param),
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    cache: false,
+                    success: function (data) {
+                        $(".LoaderWorkingDiv").hide();
+                        if (typeof (data) != 'undefined') {
+
+                            $("#ZoneId").val("");
+                            $("#BrinksZoneNumber1").val("");
+                            $("#BrinksEventCode1").val("-1");
+                            $("#BrinksEquipType").val("-1");
+                            $("#BrinksEquipLocation1").val("-1");
+                            $("#ZoneComment").val("");
+                            $("#Zonelist").load("/API/CustomerZoneList?CustomerId=" + CustomerLoadGuid + "&&Platform='Brinks'");
+
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        $(".loader-div").hide();
+                        console.log(errorThrown);
+                    }
+                });
+
+            }
+            else {
+
+            }
+
+        })
+        $("#Get_Agencies").click(function () {
+
+            var param = {
+                "ZipCode": $("#ZipCode").val(),
+                 "CustomerId": CustomerLoadGuid,
+            };
+
+            console.log(param);
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: "/API/GetThirdpartyAgencies",
+                data: JSON.stringify(param),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    $(".LoaderWorkingDiv").hide();
+                    if (typeof (data) != 'undefined') {
+                        if (data.result == true) {
+                            $("#Agencylist").load("/API/CustomerAgencylist?CustomerId=" + CustomerLoadGuid + "&&Platform='Brinks'");
+                        }
+                        else {
+                            OpenErrorMessageNew("Error!", data.message, function () {
+
+                            });
+                        }
+
+
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+
+
+        })
+
+        $("#Agency_Addition").click(function () {
+
+            var param = {
+                "CustomerId": CustomerLoadGuid,
+                "Agencytype": $("#agencyType").val(),
+                "Phone": $(".agencyPhone1").val(),
+                "PermType": $("#PremType").val(),
+                "Platform": "Brinks"
+            };
+
+            console.log(param);
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: "/API/AddBrinksAgency",
+                data: JSON.stringify(param),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    $(".LoaderWorkingDiv").hide();
+                    if (typeof (data) != 'undefined') {
+                        $("#Agencylist").load("/API/CustomerAgencylist?CustomerId=" + CustomerLoadGuid + "&&Platform='Brinks'");
+
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+
+
+        })
+        $("#Contact_Addition").click(function () {
+            var Haskey = "False";
+            if ($('#Haskey').is(':checked') == true) {
+                Haskey = "True";
+            }
+            var param = {
+                "Id":    $("#ContactId").val(),
+                "CustomerId": CustomerLoadGuid,
+                "FirstName":    $("#FirstName1").val(),
+                "LastName": $("#LastName1").val(),
+                "Phone": $("#Phone1").val(),
+                "RelationShip": $("#RelationShip").val(),
+                "HasKey":Haskey,
+
+                "Platform": "Brinks"
+
+            };
+
+            console.log(param);
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: "/Customer/AddEmergencyContact",
+                data: JSON.stringify(param),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    $(".LoaderWorkingDiv").hide();
+                    if (typeof (data) != 'undefined') {
+                        $("#ContactId").val("");
+                        $("#FirstName1").val(""),
+                        $("#LastName1").val(""),
+                        $("#Phone1").val("")
+                        $("#Contactlist").load("/API/CustomerEmgContactlist?CustomerId=" + CustomerLoadGuid + "&&Platform='Brinks'");
+
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+
+
+        })
+        $("#BrinksEventCode1").change(function () {
+
+            GetEquipmentType();
+        });
+
+    })
+</script>
+<div class="LoaderWorkingDivBrinks" style="margin-top:0px">
+    @*<div class='uil-ring-css' style='transform:scale(1);'>
+            <div></div>
+        </div>*@
+
+    @*<div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div>*@
+    <div style='position: fixed;left: 0px;top: 0px;width: 100%;height: 100%;'>
+        <div class="lds-css ng-scope">
+            <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+        </div>
+    </div>
+
+    @*<div>
+            <h3>@Localize.T("Please wait")</h3>
+            <h4>@Localize.T("We are fetching your data")</h4>
+        </div>*@
+</div>
+<div class="add_brinks_acc_container">
+    <div class="add_brinks_acc_header">
+        @Localize.T("Create Account Online")
+    </div>
+    <div class="add_brinks_info_container">
+        <div class="add_brinks_info_block">
+            <div class="add_brinks_info_block_header">@Localize.T("Primary Customer Info")</div>
+            <div class="add_brinks_info_block_information ">
+
+                <div class="form-group">
+                    <div class="aba_header">@Localize.T("CS Number")<span>*</span></div>
+                    @if (!string.IsNullOrEmpty(Model.cs_no))
+                    {
+                        <input type="text" id="cs_no" class="form-control" value="@Model.cs_no" placeholder="@Localize.T("CS Number")" readonly />
+                    }
+                    else
+                    {
+                        <input type="text" id="cs_no" class="form-control" value="@Model.cs_no" placeholder="@Localize.T("CS Number")" />
+                    }
+
+                </div>
+                <div class="form-group">
+                    <div class="aba_header">@Localize.T("Site Name")<span>*</span></div>
+                    <input type="text" id="site_name" value="@Model.site_name" class="form-control" placeholder="@Localize.T("Site Name")" />
+                </div>
+                <div class="form-group">
+                    <div class="aba_header">@Localize.T("Codeword")<span>*</span></div>
+                    <input type="text" id="codeword1" value="@Model.codeword1" class="form-control" placeholder="@Localize.T("Codeword")" />
+                </div>
+
+                <div class="form-group">
+                    <div class="aba_header">@Localize.T("Site Address")<span>*</span></div>
+                    <input type="text" id="site_addr1" value="@Model.site_addr1" class="form-control" placeholder="@Localize.T("Site Address")" />
+                </div>
+                @*<div class="form-group">
+            <div class="aba_header">@Localize.T("Sitestat Id")<span>*</span></div>
+            <input type="text" class="form-control" id="sitestat_id" placeholder="@Localize.T("Dealer Name")" />
+        </div>*@
+                @*<div class="form-group">
+            <div class="aba_header">@Localize.T("Site Type Id")<span>*</span></div>
+            <input type="text" id="sitetype_id" class="form-control" placeholder="@Localize.T("Site Type Id")" />
+        </div>*@
+
+                @*<div class="form-group">
+            <div class="aba_header">@Localize.T("Subdivision")<span>*</span></div>
+            <input type="text" class="form-control" id="subdivision" placeholder="@Localize.T("Subdivision")" />
+        </div>*@
+                @*<div class="form-group">
+            <div class="aba_header">@Localize.T("Systype Id")</div>
+            <input type="text" class="form-control" id="systype_id" placeholder="@Localize.T("Systype Id")" />
+        </div>*@
+                @*<div class="form-group">
+            <div class="aba_header">@Localize.T("Sec. Systype Id")</div>
+            <input type="text" class="form-control" id="sec_systype_id" placeholder="@Localize.T("Systype Id")" />
+        </div>*@
+                <div class="form-group">
+                    <div class="aba_header">@Localize.T("Receiver Phone")<span>*</span></div>
+                    <input type="text" id="Receiver_Phone" value="@Model.receiver_phone" class="form-control" placeholder="@Localize.T("Receiver Phone")" />
+                </div>
+                <div class="form-group">
+                    <div class="aba_header">@Localize.T("Panel Phone")<span>*</span></div>
+                    <input type="text" id="panel_phone" value="@Model.panel_phone" class="form-control" placeholder="@Localize.T("Panel Phone")" />
+                </div>
+                <div class="form-group">
+                    <div class="aba_header">@Localize.T("Phone1")<span>*</span></div>
+                    <input type="text" id="phone1" value="@Model.phone1" class="form-control" placeholder="@Localize.T("Phone1")" />
+                </div>
+                <div class="form-group">
+                    <div class="aba_header">@Localize.T("Panel Location")<span>*</span></div>
+                    <input type="text" id="panel_location" value="Front Door" class="form-control" placeholder="@Localize.T("Panel Location")" />
+                </div>
+                <div class="form-group">
+                    <div class="aba_header">@Localize.T("Install Date")<span>*</span></div>
+                    <input type="text" class="form-control" id="install_date" value="@Model.install_date.ToString("MM/dd/yy")" placeholder="@Localize.T("Install Date")" />
+                </div>
+                <div class="form-group">
+                    <div class="aba_header">@Localize.T("Panel Code")<span>*</span></div>
+                    @if (!string.IsNullOrEmpty(Model.panel_code))
+                    {
+                        <input type="text" class="form-control" id="panel_code" value="@Model.panel_code" placeholder="@Localize.T("Panel Code")" />
+                    }
+                    else
+                    {
+                        <input type="text" class="form-control" id="panel_code" value="1234" placeholder="@Localize.T("Panel Code")" />
+                    }
+
+                </div>
+                <div class="form-group clearfix">
+                    <div class="aba_header">@Localize.T("City")<span>*</span></div>
+                    <input type="text" class="form-control" id="City" value="@Model.city_name" placeholder="@Localize.T("City")" />
+                </div>
+                <div class="form-group clearfix">
+                    <div class="aba_header">@Localize.T("State")<span>*</span></div>
+                    <input type="text" class="form-control" id="State" value="@Model.state_id" placeholder="@Localize.T("State")" />
+                </div>
+                <div class="form-group CityState_insert_div clearfix">
+                    <div class="aba_header">@Localize.T("Zip Code")<span>*</span></div>
+
+                    <input type="text" class="" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" value="@Model.zip_code" id="ZipCode" placeholder="Zip Code" />
+                    <div class='tt-menu'>
+                        <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                    </div>
+                </div>
+                <div class="form-group clearfix">
+                    <div class="aba_header">@Localize.T("County Name")<span>*</span></div>
+                    <input type="text" class="form-control" id="County" value="@Model.county_name" placeholder="@Localize.T("County Name")" />
+                </div>
+
+                @*<div class="form-group">
+            <div class="aba_header">@Localize.T("Install Servco No")</div>
+            <input type="text" class="form-control" id="install_servco_no" placeholder="@Localize.T("Install Servco No")" />
+        </div>*@
+                <div class="form-group clearfix">
+                    <div class="aba_header">@Localize.T("Dealer No")<span>*</span></div>
+                    <input type="text" class="form-control" id="servco_no" value="@Model.servco_no" placeholder="@Localize.T("Servco No")" />
+                </div>
+            </div>
+        </div>
+        <div class="add_brinks_info_block border_brinks">
+            <div class="add_brinks_info_block_header">@Localize.T("Contacts")</div>
+            <button id="Contact_Addition" class="btn green_button" title="@Localize.T(" Agency")">
+                <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T("Add Emergency Contact")
+            </button>
+            <div class="add_brinks_info_block_information ">
+                <input type="hidden" class="form-control" value="" placeholder="@Localize.T("First Name")" id="ContactId" />
+                <div class="form-group clearfix item_margin">
+                    <span class="text-custom">@Localize.T("First Name")</span>
+                    <input type="text" class="form-control" value="" placeholder="@Localize.T("First Name")" id="FirstName1" />
+                </div>
+                <div class="form-group clearfix item_margin">
+                    <span class="text-custom">@Localize.T("Last Name")</span>
+                    <input type="text" class="form-control" value="" placeholder="@Localize.T("Last Name")" id="LastName1" />
+                </div>
+                <div class="form-group clearfix item_margin">
+                    <span class="text-custom">@Localize.T("Phone")</span>
+                    <input type="text" class="form-control emgContactPhone" value="" placeholder="@Localize.T("EC1 Phone No")" id="Phone1" />
+                </div>
+                <div class="form-group clearfix item_margin">
+                    <span class="text-custom">@Localize.T("Relationship")  </span>
+                    @Html.DropDownList("RelationShip", ViewBag.Relationship as List<SelectListItem>, new { @class = "form-control", placeholder = "Relationship", id = "RelationShip" })
+                </div>
+                <div class="form-group clearfix item_margin add_emergency_contact_check">
+                    <div><span class="text-custom">@Localize.T("Has Key")</span></div>
+                    <label><input type="radio" id="Haskey" name="Key" value="Y"> Yes</label>
+                    <label><input type="radio" id="FHasKey" name="Key" value="N"> No<br></label>
+                </div>
+                <div id="Contactlist">
+
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="add_brinks_info_block">
+            <div class="add_brinks_info_block_header">@Localize.T("Agencies")</div>
+            <div class="add_brinks_info_block_information ">
+                <div class="brinks_agencies_btn_div">
+                    <button id="Get_Agencies" class="btn green_button" title="@Localize.T("Get agencies by zipcode")">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T("Get Agencies")
+                    </button>
+                    <button id="Agency_Addition" class="btn green_button" title="@Localize.T("Get agencies by zipcode")">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T("Add Agency")
+                    </button>
+                </div>
+                <div>
+                    <div class="form-group clearfix item_margin">
+                        <span class="text-custom">@Localize.T("Agency Type")</span>
+                        @Html.DropDownList("agencyType", (List<SelectListItem>)ViewBag.AgencyTypeList, new { @class = "form-control", id = "agencyType" })
+                    </div>
+                    <div class="form-group clearfix item_margin">
+                        <span class="text-custom">@Localize.T("Permit Type")</span>
+                        @Html.DropDownList("PremType", (List<SelectListItem>)ViewBag.PremType, new { @class = "form-control", id = "PremType" })
+                    </div>
+                    <div class="form-group clearfix item_margin">
+                        <span class="text-custom">@Localize.T("Agency Phone")</span>
+                        <input type="text" placeholder="Agency Phone" class="form-control agencyPhone1" />
+                    </div>
+                </div>
+
+                <div id="Agencylist">
+
+                </div>
+
+            </div>
+        </div>
+        <div class="add_brinks_info_block">
+            <div class="add_brinks_info_block_header">@Localize.T("Zone List")</div>
+            <div class="add_brinks_info_block_information ">
+                <div class="brinks_agencies_btn_div">
+                    <button id="Zode_Addition" class="btn green_button" title="@Localize.T("Add zone")">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" Zone")
+                    </button>
+                </div>
+
+                <div class="form-group clearfix item_margin">
+                    <input type="hidden" class="form-control" value="" placeholder="@Localize.T("ZoneId")" id="ZoneId" />
+                    <span class="text-custom">@Localize.T("Zone Number")</span>
+                    <input type="number" placeholder="Zone Number" class="form-control" id="BrinksZoneNumber1" />
+                    <label class="label hidden red" id="errorZoneNumber" rel="BrinksZoneNumber1">*@Localize.T("Select zone number"). </label>
+                </div>
+                <div class="form-group clearfix item_margin">
+                    <span class="text-custom">@Localize.T("Event Code")</span>
+                    @Html.DropDownList("BrinksEventCode1", (List<SelectListItem>)ViewBag.BrinksEventCode, new { @class = "form-control", id = "BrinksEventCode1" })
+                    <label class="label hidden red" rel="BrinksEventCode1" id="errorEventCode">*@Localize.T("Select event code"). </label>
+                </div>
+                <div class="form-group clearfix item_margin">
+                    <span class="text-custom">@Localize.T("Event Type")</span>
+                    @Html.DropDownList("BrinksEquipType", (List<SelectListItem>)ViewBag.BrinksEquipType, new { @class = "form-control", id = "BrinksEquipType" })
+                    <label class="label hidden red" rel="BrinksEquipType" id="errorEventCode">*@Localize.T("Select Equip Type"). </label>
+                </div>
+                <div class="form-group clearfix item_margin">
+                    <span class="text-custom">@Localize.T("Location")</span>
+                    @Html.DropDownList("BrinksEquipLocation1", (List<SelectListItem>)ViewBag.BrinksEquipLocation, new { @class = "form-control", id = "BrinksEquipLocation1" })
+                    <label class="label hidden red" rel="BrinksEquipLocation1" id="errorEquipLocation">*@Localize.T("Select Equip Location"). </label>
+                </div>
+                <div class="form-group clearfix item_margin">
+                    <span class="text-custom">@Localize.T("Comment")</span>
+                    <input type="text" placeholder="Location" class="form-control" , id="ZoneComment" />
+                </div>
+
+                <div id="Zonelist">
+
+                </div>
+
+            </div>
+        </div>
+        @*<div class="add_brinks_info_block">
+            <div class="add_brinks_info_block_information ">
+                <div class="add_brinks_info_block_header">@Localize.T("System Info")</div>
+                <div class="add_brinks_info_block_information">
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Monitoring Type") <span>*</span></div>
+                        <select class="form-control">
+                            <option selected="selected" value="">Select..</option>
+                            <option value="1">Digital</option>
+                            <option value="2">Digital W/ 2-Way</option>
+                            <option value="3">Digital W/ Cellular Backup</option>
+                            <option value="4">Digital W/ 2-Way &amp; Cellular Backup</option>
+                            <option value="5">Cellular Primary W/ 2-Way</option>
+                            <option value="6">Cellular Primary/Digital Backup</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("System Type") <span>*</span></div>
+                        <select class="form-control">
+                            <option>@Localize.T("Select")</option>
+                            <option>@Localize.T("Select")</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Site Phone")<span>*</span></div>
+                        <input type="text" class="form-control" placeholder="@Localize.T("Site Phone")" />
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Site Type") <span>*</span></div>
+                        <select class="form-control">
+                            <option value="">Select..</option>
+                            <option value="CBUR">Burg Only: Comm</option>
+                            <option value="CBFM">Burg/Fire/Med: Comm</option>
+                            <option value="CBF">Burg/Fire: Comm</option>
+                            <option value="CFIR">Fire Only: Comm</option>
+                            <option value="ULF">UL Fire</option>
+                            <option value="RBUR">Burg Only: Res</option>
+                            <option value="RBFM">Burg/Fire/Med: Res</option>
+                            <option value="RBF">Burg/Fire: Res</option>
+                            <option value="RFIR">Fire Only: Res</option>
+                            <option value="RMED">PERS/Medical Only</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Contract Monitored/Purchased?")</div>
+                        <label for="aba_cm" class="label-cbx">
+                            <input id="IsUpsold" type="checkbox" class="form-control invisible">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                            <label class="aba_check_info" for="aba_cm">@Localize.T("CM")</label>
+                        </label>
+                        <label for="aba_cm" class="label-cbx">
+                            <input id="IsUpsold" type="checkbox" class="form-control invisible">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                            <label class="aba_check_info" for="aba_cm">@Localize.T("PUR")</label>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Contract Monitored/Purchased?") <input type="checkbox" /></div>
+                        <input type="text" class="form-control" placeholder="@Localize.T("Contract Monitored/Purchased?")" />
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Install Type")</div>
+                        <select class="form-control">
+                            <option selected="selected" value="">Select..</option>
+                            <option value="new">New Panel</option>
+                            <option value="existing">Existing Panel</option>
+                            <option value="move">Move Panel</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Install Date")</div>
+                        <input type="text" class="form-control" placeholder="@Localize.T("MM/DD/YYYY")" />
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Report Format")</div>
+                        <select class="form-control">
+                            <option selected="selected" value="">Select..</option>
+                            <option value="CID">CID</option>
+                            <option value="SIA">SIA</option>
+                            <option value="SIA3">SIA3</option>
+                        </select>
+                    </div>
+                    <div class="form-group aba_ct_type aba_single_line_check">
+                        <label for="aba_broadband" class="label-cbx">
+                            <input id="IsUpsold" type="checkbox" class="form-control invisible">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                            <label class="aba_check_info" for="aba_broadband">@Localize.T("Broadband")</label>
+                        </label>
+                        <label for="aba_pr_manager" class="label-cbx">
+                            <input id="IsUpsold" type="checkbox" class="form-control invisible">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                            <label class="aba_check_info" for="aba_pr_manager">@Localize.T("Privacy Manager")</label>
+                        </label>
+                        <label for="aba_voip" class="label-cbx">
+                            <input id="IsUpsold" type="checkbox" class="form-control invisible">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                            <label class="aba_check_info" for="aba_voip">@Localize.T("VOIP")</label>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Connection Type")</div>
+                        <select class="form-control">
+                            <option selected="selected" value="">Select..</option>
+                            <option value="H">HardWire</option>
+                            <option value="W">Wireless</option>
+                            <option value="B">Both</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Panel Location")</div>
+                        <input type="text" class="form-control" value="Front Door" placeholder="@Localize.T("Panel Location")" />
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Transformar Location")</div>
+                        <input type="text" class="form-control" placeholder="@Localize.T("Transformar Location")" />
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Installer Code")<span>*</span></div>
+                        <input type="text" class="form-control" placeholder="@Localize.T("Installer Code")" />
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Verbal Passcode")<span>*</span></div>
+                        <input type="text" class="form-control" placeholder="@Localize.T("Verbal Passcode")" />
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Signal Confirmation #")<span>*</span></div>
+                        <input type="text" class="form-control" placeholder="@Localize.T("Signal Confirmation #")" />
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("2 Way Board")</div>
+                        <select class="form-control">
+                            <option>@Localize.T("Select")</option>
+                            <option>@Localize.T("Select")</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("2 Way Confirmation #")<span>*</span></div>
+                        <input type="text" class="form-control" placeholder="@Localize.T("2 Way Confirmation #")" />
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Cell Provider")</div>
+                        <select class="form-control">
+                            <option>@Localize.T("Select")</option>
+                            <option>@Localize.T("Select")</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="aba_header">@Localize.T("Cell System Type")</div>
+                        <select class="form-control">
+                            <option>@Localize.T("Select")</option>
+                            <option>@Localize.T("Select")</option>
+                        </select>
+                    </div>
+                    <div class="aba_sys_info_btn">
+                        <button class="btn">@Localize.T("Place On 2 Way Test")</button>
+                        <button class="btn">@Localize.T("Place On Test")</button>
+                    </div>
+                </div>
+            </div>
+        </div>*@
+
+        <input type="checkbox" id="IsSigned" @((Model.IsSigned.HasValue && Model.IsSigned.Value == true) ? "checked" : "") />
+        <span>Is Signed Contract</span>
+
+        <input type="checkbox" id="HasBillingInfo" @((Model.HasBillingInfo.HasValue && Model.HasBillingInfo.Value == true) ? "checked" : "") />
+        <span>Has Billng Info</span>
+
+        <input type="checkbox" id="HasBusinessPicture" @((Model.HasBusinessPicture.HasValue && Model.HasBusinessPicture.Value == true) ? "checked" : "") />
+        <span>Has Business Picture</span>
+
+        <input type="checkbox" id="IsCreditCheck" @((Model.IsCreditCheck.HasValue && Model.IsCreditCheck.Value == true) ? "checked" : "") />
+        <span>Is credit check</span>
+
+
+    </div>
+
+
+
+</div>
+
+
+
+<div class="add_brinks_footer">
+    @if (!string.IsNullOrEmpty(ViewBag.CsNumber))
+    {
+        <button class="btn" id="SubscribeToBrinks"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Update")</button>
+    }
+    else
+    {
+        <button class="btn" id="SubscribeToBrinks"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")</button>
+    }
+
+</div>
+    </div>
+

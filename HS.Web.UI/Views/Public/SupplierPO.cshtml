@@ -1,0 +1,299 @@
+﻿
+@{
+    ViewBag.Title = "SupplierPO";
+    Layout = "~/Views/Shared/_PublicLayout.cshtml";
+}
+@model HS.Entities.CreatePurchaseOrder
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@Styles.Render("~/styles/AddInvoice")
+<link href="~/Content/Css/Expense/AddVendorBill.css" rel="stylesheet" />
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Js/TinyInvoice.js"></script>
+
+<script>
+    var SupplierId ='@Model.Supplier.SupplierId';
+    var SupplierAddress;
+    var POStatus = '@Model.PurchaseOrderWarehouse.Status';
+    var Amount = parseFloat(@Model.PurchaseOrderWarehouse.Amount);
+    var TotalAmount = parseFloat(@Model.PurchaseOrderWarehouse.TotalAmount);
+    var Currency = '@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)';
+    var InitRowIndex = function () {
+        var i = 1;
+        $(".CustomerInvoiceTab tbody tr td:first-child").each(function () {
+            $(this).text(i);
+            i += 1;
+        });
+    }
+    $(document).ready(function () {
+        InitRowIndex();
+        setTimeout(function () {
+            var WindowHeight = window.innerHeight;
+            var divHeight = WindowHeight - ($(".avb_div_header").height());
+            $(".add-invoice-container").css("height", divHeight);
+        }, 1000);
+    });
+</script>
+<style>
+    .add-invoice-container #mceu_15-body,
+    .add-invoice-container #mceu_22-body,
+    .add-invoice-container #mceu_29-body,
+    .add-invoice-container .mce-menubar,
+    .add-invoice-container #mceu_54-body,
+    .add-invoice-container #mceu_61-body {
+        display: none;
+    }
+
+    .add-invoice-container {
+        overflow-y: scroll;
+    }
+    .width-33p{
+        width:33%;
+        float:left;
+    }
+    .dark_shade{
+        width: 100%;
+        height: 400px;
+        position: absolute;
+        background: gray;
+        z-index: -1;
+        margin-top: -22px;
+    }
+    .body_id{
+        width:800px;
+        margin:auto;
+    }
+    .PoContentScroll{
+        background-color:white;
+        min-height:500px;
+    }
+    .business_name_div {
+        font-size: 30px;
+        padding-bottom: 10px;
+    }
+    .cus_name_div {
+        padding-left: 5px;
+        font-size: 12px;
+        display: inline;
+    }
+    .company-name-row{
+        color:white;
+        padding-top:30px;
+    }
+    .CustomerInvoiceTab thead tr {
+        border-top:1px solid #ddd;
+    }
+    .CustomerInvoiceTab thead tr th{
+        border-left:1px solid #ddd;
+    }
+    .CustomerInvoiceTab tbody tr td:first-child{
+        border-left:1px solid #ddd;
+        text-align:center;
+    }
+    .CustomerInvoiceTab tbody tr td:last-child{ 
+        text-align:center;
+    }
+    .span-style{
+        font-size:16px;
+    }
+    .download_btn{
+        font-size: 16px;
+        float: right;
+        padding: 7px;
+        background-color: #2ca01c;
+        color: white;
+        padding-right: 10px;
+        padding-left: 10px;
+        text-decoration: none;
+        border-radius: 8px;
+        border: 1px solid #b3a2a2;
+    }
+    .download_btn:hover{
+        box-shadow: 0px 0px 3px #ddd;
+        text-decoration:none;
+        color:white;
+    }
+</style> 
+<div class="avb_div_header">
+    <div class="header_title_avb">
+        Purchase Order - @Model.PurchaseOrderWarehouse.PurchaseOrderId 
+    </div> 
+</div>
+<div class="add-invoice-container">
+    <div class="dark_shade">
+
+    </div>
+    <div class="body_id">
+        <div class="row company-name-row">
+            <div class="col-xs-12 company-name">
+                <div class="business_name_div">
+                    <span>Purchase Order</span>
+                    <div class="cus_name_div">
+                        <span>(@Model.PurchaseOrderWarehouse.PurchaseOrderId)</span>
+                    </div>
+                    <a target="_blank" class="download_btn" href="@(AppConfig.DomainSitePath)/File/PurchaseOrder/?token=@HS.Framework.DESEncryptionDecryption.EncryptPlainTextToCipherText(Model.PurchaseOrderWarehouse.PurchaseOrderId)">@Localize.T("Download as PDF")</a>
+                </div>
+            </div>
+        </div>
+        <div class="PoContentScroll">
+            <div class="avb_invoice_informations">
+                <div class="avp_row">
+                    <div class="invoice-info">
+                        <div class="avp_row">
+                            <div class="form-group clearfix width-30p Vendor_name_insert_div">
+                                <span class="span-style">@Localize.T("Vendor")</span>
+                                <span id="VendorList">@Model.Supplier.CompanyName</span>
+                                <div class='tt-menu'>
+                                    <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                                </div>
+                            </div>
+                            <div class="form-group clearfix width-25p">
+                                <span class="span-style">@Localize.T("Order Date")</span>
+                                <span>@Model.PurchaseOrderWarehouse.OrderDate.ToString("MM/dd/yy")</span>
+                            </div>
+                        </div>
+                        <div class="avp_row">
+                            <div class="invoice-info-left-100p">
+                                <div class="form-group clearfix width-33p">
+                                    <span class="span-style">@Localize.T("Mailing Address")</span>
+                                    <p id="PurchaseOrderWarehouse_BillingAddress" @*class="tinymce"*@>@Html.Raw(Model.PurchaseOrderWarehouse.BillingAddress)</p>
+                                </div>
+                                <div class="form-group clearfix width-33p">
+                                    <span class="span-style">@Localize.T("Shipping Address")</span>
+                                    <p id="PurchaseOrderWarehouse_ShippingAddress" @*class="tinymce"*@>@Html.Raw(Model.PurchaseOrderWarehouse.ShippingAddress)</p>
+                                </div>
+                                @*<div class="form-group clearfix width-33p">
+                                    <span class="span-style">@Localize.T("Ship Via")</span>
+                                    @Html.DropDownListFor(x => x.PurchaseOrder.ShippingVia, ViewBag.POShipVia as List<SelectListItem>, new { @class = "form-control" })
+                                </div>*@
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="balance-info">
+                        @*<span class="amount amount-span-style big-amount-top" style="color:#333">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:F2}", Model.PurchaseOrder.Amount)</span>*@
+                    </div>
+                </div>
+            </div>
+            <div class="avp_table_info_container">
+                <div class="width-100p margin-top-15">
+                    <table class="CustomerInvoiceTab" id="CustomerInvoiceTab">
+                        <thead>
+                            <tr>
+                                <th class="thead-th-style1 tab-index">
+                                    <span>
+
+                                    </span>
+                                </th>
+                                <th class="thead-th-style1 tab-Product">
+                                    <span>
+                                        @Localize.T("Product/Service")
+                                    </span>
+                                </th>
+                                <th class="thead-th-style2 tab-Desc">
+                                    <span>
+                                        @Localize.T("Description")
+                                    </span>
+                                </th>
+                                <th class="thead-th-style2 tab-Quantity">
+                                    <span>
+                                        @Localize.T("QTY")
+                                    </span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.PurchaseOrderDetail.Count() > 0)
+                            {
+                                foreach (var item in Model.PurchaseOrderDetail)
+                                {
+                                    <tr data-id="@item.EquipmentId" class="HasItem">
+                                        <td valign="top"></td>
+                                        <td valign="top">
+                                            <input type="text" class="ProductName" value="@item.EquipName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                            <span class="spnProductName">@item.EquipName</span>
+                                        </td>
+                                        <td valign="top">
+                                            <input type="text" onkeydown='OthersKeyDown(this,event)' value="@item.EquipDetail" class="txtProductDesc" />
+                                            <span class="spnProductDesc">@item.EquipDetail</span>
+                                        </td>
+                                        <td valign="top">
+                                            <input type="text" onkeydown='OthersKeyDown(this,event)' value="@item.Quantity" class="txtProductQuantity" />
+                                            <span class="spnProductQuantity">@item.Quantity</span>
+                                        </td>
+                                    </tr>
+                                }
+
+                                <tr>
+                                    <td valign="top"></td>
+                                    <td valign="top">
+                                        <input type="text" value="" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                        <span class="spnProductName">&nbsp;</span>
+                                    </td>
+                                    <td valign="top">
+                                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDesc" />
+                                        <span class="spnProductDesc">&nbsp;</span>
+                                    </td>
+                                    <td valign="top">
+                                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductQuantity" />
+                                        <span class="spnProductQuantity">&nbsp;</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="OtherInfos">
+                    @*<div class="col-md-12">
+                        &nbsp;
+                    </div>*@
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="width-70p avp_invoice_padd_top">
+                                <div class="col-md-12">
+                                    &nbsp;
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="span-style">
+                                            <span><b>@Localize.T("Description")</b></span>
+                                        </div>
+                                        <p id="PurchaseOrderWarehouse_Description" class="InvoiceMessage">@Model.PurchaseOrderWarehouse.Description</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="span-style">
+                                            <span><b>@Localize.T("Message")</b></span>
+                                        </div>
+                                        <p id="PurchaseOrderWarehouse_Message" class="InvoiceMessage">@Model.PurchaseOrderWarehouse.Message</p>
+
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">&nbsp;</div>
+                                </div>
+                            </div>
+                            <div class="width-30p avp_amount_calc_pad">
+                                <div class="InvoiceCalculationsDiv">
+                                </div>
+                            </div>
+                        </div>
+                    </div> 
+                </div>
+                <div class="col-md-12">
+                    &nbsp;
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="AddInvoiceLoader hidden">
+        <div class='invoice-loader'><div><div class="lds-css ng-scope"><div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div></div></div></div>
+        @*<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>*@
+    </div>
+</div>
+

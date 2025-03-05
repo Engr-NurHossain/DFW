@@ -1,0 +1,331 @@
+﻿@model List<HS.Entities.EquipmentTypeListViewByFilterModel>
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+@Styles.Render("~/styles/Mmrs")
+@Styles.Render("~/styles/ProductCategory")
+@*@Scripts.Render("~/scripts/ProductCategory")*@
+<link href="~/Content/Css/Report/PartnerReports.css" rel="stylesheet" />
+<script src="~/Content/Js/ProductCategory/ProductCategory.js"></script>
+<script>
+    $("#CategoryOrderBy").val('@ViewBag.OrderBy');
+</script>
+<style>
+    .pro-table-width {
+        width: 100%;
+        float:left;
+    }
+        .pro-table-width th {
+            background-color: #f8f8f8;
+            border-bottom:1px solid #ccc;
+        }
+        .pro-table-width th,
+        .pro-table-width td {
+            /*  padding:0px;*/
+        }
+            .pro-table-width td {
+                padding:0px;
+            }
+    .pro-class-right {
+        float: right;
+        width: 90px;
+        text-align: left;
+        padding-top: 4px;
+    }
+        .pro-class-right .item-delete {
+            float: left;
+        }
+    .pro-class-left {
+        margin-left: 50px;
+        float: left;
+        padding-top: 4px;
+    }
+    .pro-class-center {
+        text-align:left;
+        float:left;
+        /*margin-left: 250px;*/
+    }
+    .border-top-bottom {
+       /* padding-bottom: 2px;
+        border-bottom: 1px dotted #eae9e9;*/
+    }
+    .treeview_custom {
+        padding-top:0px !important
+    }
+        .treeview_custom li {
+            margin-top:0px;
+        }
+        .treeview_custom ul {
+            padding-left: 15px;
+        }
+        .treeview_custom .prod_cat_first_ul:nth-child(odd) {
+            background-color: #f4f5f8;
+        }
+    .prod_cat_first_ul ul li {
+        border-top: 1px dashed #ccc;
+    }
+    .prod_cat_partial_container {
+        width: 100%;
+        float: left;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .pcp_name {
+        width:auto;
+        position:relative;
+    }
+    .pcp_count {
+        position: absolute;
+        width: auto;
+        background-color: #2ca01c;
+        color: #ffffff;
+        padding: 4px;
+        border-radius: 50%;
+        font-size: 9px;
+        border: 1px solid #cccccc;
+    }
+</style>
+
+@helper GetTreeView(List<HS.Entities.EquipmentTypeListViewByFilterModel> partners, int EquipmentTyped)
+{
+    foreach (var i in partners.Where(x => x.ParentId.Equals(EquipmentTyped)))
+    {
+<li>
+    @{ var submenu = partners.Where(x => x.ParentId.Equals(i.Id)).Count();}
+    @if (submenu > 0)
+    {
+        <span class="collapse collapsible">&nbsp;</span>
+    }
+    else
+    {
+        <span style="width:15px; display:inline-block">&nbsp;</span>
+    }
+
+<span class="pcp_name">
+    <a href="javascript:void(0)" onclick="LoadProductCategoryPage(@i.Id)" class="name-anchor-style" data-id="@i.Id">
+        @i.Name
+    </a>
+    @if (submenu > 0)
+    {
+        <span class="pcp_count">@submenu</span>
+    }
+</span>
+   
+    <span class="pro-class-right">
+        @if (PermissionChecker.IsPermitted(PermissionList.ProductsPermissions.ProductCategoryDelete))
+        {
+            <a href="javascript:void(0)" class="item-delete" id="@i.Id" onclick="DeleteProduct(@i.Id)" title="@Localize.T("Delete")">
+                <i class="fa fa-trash-o" aria-hidden="true"></i>
+            </a>
+        }
+    </span>
+    @if (submenu > 0)
+    {
+        <ul>
+            @GetTreeView(partners, i.Id)
+        </ul>
+    }
+</li>
+    }
+}
+
+
+
+
+
+
+    <div class=" prod_cat_partial_container">
+            <table class="pro-table-width">
+                <thead class="">
+                    <tr>
+                        <th class="thead-th-style sorting">
+                            <span class="pro-class-left">@Localize.T("Name")</span>
+                            <span class="customer-header-icon pro-class-center"><i onclick="SortFilterCategoryResult('asc')" class="fa fa-angle-up icon_sort_customer"></i><i onclick="SortFilterCategoryResult('desc')" class="fa fa-angle-down icon_sort_customer"></i></span>
+                            <span class="pro-class-right">@Localize.T("Actions")</span>
+                        </th>
+                    </tr>
+                </thead>
+        <tbody>
+    <tr>
+        <td>
+            <div class="treeview treeview_custom">
+
+                @if (Model != null && Model.Count() > 0)
+                {
+                    foreach (var item in Model.Where(x => (x.ParentId == 0)))
+                    {
+                        <ul class="prod_cat_first_ul">
+                            <li class="border-top-bottom">
+                                @{ var submenu = Model.Where(x => x.ParentId.Equals(item.Id)).Count();}
+                                @if (submenu > 0)
+                                {
+                                    <span class="collapse collapsible">&nbsp;</span>
+                                }
+                                else
+                                {
+                                    <span style="width:15px; display:inline-block">&nbsp;</span>
+                                }
+                            <span class="pcp_name">
+                                <a href="javascript:void(0)" onclick="LoadProductCategoryPage(@item.Id)" class="name-anchor-style" data-id="@item.Id">
+                                    @item.Name
+                                </a>
+                                @if (submenu > 0)
+                                {
+                                    <span class="pcp_count">@submenu</span>
+                                }
+                            </span>
+                             
+                                    <span class="pro-class-right">
+                                        @if (PermissionChecker.IsPermitted(PermissionList.ProductsPermissions.ProductCategoryDelete))
+                                        {
+                                            <a href="javascript:void(0)" class="item-delete" id="@item.Id" onclick="DeleteProduct(@item.Id)" title="@Localize.T("Delete")">
+                                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                            </a>
+                                        }
+                                    </span>
+                                    <ul>
+                                        @GetTreeView(Model, item.Id)
+                                    </ul>
+                                </li>
+                        </ul>
+                    }
+
+                }
+            </div>
+            </td>
+        </tr>
+            </tbody>
+        </table>
+            </div>
+     
+
+<div class="AgentListPagination">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="PaginationFilterCategoryResult(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="PaginationFilterCategoryResult(2)">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="PaginationFilterCategoryResult(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="PaginationFilterCategoryResult(2)">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="PaginationFilterCategoryResult(3)">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="PaginationFilterCategoryResult(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>

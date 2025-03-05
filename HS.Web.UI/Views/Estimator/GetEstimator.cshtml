@@ -1,0 +1,296 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+<html>
+<head>
+    <style>
+        .CloseButtonDiv {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            cursor: pointer;
+        }
+
+            .CloseButtonDiv img {
+                width: 25px;
+            }
+
+        .HeadContents {
+            padding-top: 20px;
+            padding-left: 30px;
+        }
+            .HeadContents h4 {
+                margin-bottom:5px;
+            }
+                .HeadContents_agreement {
+                padding-top: 10px;
+                padding-left: 15px;
+            }
+
+        .btnCancel {
+            color: black;
+            border: 1px solid #6b6c72;
+            -webkit-border-radius: 3px;
+            -moz-border-radius: 3px;
+            border-radius: 3px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            padding-left: 20px;
+            padding-right: 20px;
+            background-color: white;
+        }
+
+            .btnCancel:hover {
+                padding-top: 5px;
+                padding-bottom: 5px;
+                padding-left: 19px;
+                padding-right: 19px;
+                border: 2px solid #6b6c72;
+            }
+        .btnPrint {
+            float:right;
+        }
+        .btnPrint, .btnemail_send {
+            color: white;
+            border: 1px solid #6b6c72;
+            -webkit-border-radius: 3px;
+            -moz-border-radius: 3px;
+            border-radius: 3px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            padding-left: 20px;
+            padding-right: 20px;
+            background-color: #2ca01c;
+            /*float: right;*/
+            margin-right: 30px;
+        }
+
+            .btnPrint:hover, .btnemail_send:hover {
+                background-color: #2ca01c !important;
+            }
+
+        .btnIAgree {
+            color: white;
+            border: 1px solid #6b6c72;
+            -webkit-border-radius: 3px;
+            -moz-border-radius: 3px;
+            border-radius: 3px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            padding-left: 20px;
+            padding-right: 20px;
+            background-color: #2ca01c;
+            float: right;
+            margin-right: 30px;
+        }
+
+        /*.btnIAgree:hover {
+            background-color: #108000 !important;
+        }*/
+
+        .error-IAgree-warning {
+            position: absolute;
+            left: 425px;
+            top: 150px;
+            color: red;
+            font-style: italic;
+            font-size: 12px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .footerContents {
+            width: 100%;
+            position: absolute;
+            bottom: 20px;
+            padding-left: 30px;
+            padding-right: 20px;
+            box-sizing: border-box;
+        }
+
+        .bodyConentsDiv {
+            width: 93%;
+            -webkit-overflow-scrolling: touch;
+            height: 430px;
+            margin-top: 15px;
+            margin-left: 30px;
+            overflow: hidden;
+        }
+
+        .bodyConentsDiv1 {
+            width: 93%;
+            overflow-y: scroll;
+            height: 430px !important;
+            margin-top: 15px;
+            margin-left: 30px;
+        }
+
+        .pdf-styles {
+            width: 100%;
+            height: 430px;
+        }
+
+        .cus-padding-top10p {
+            padding-top: 10px;
+        }
+        #iframePdf #searchifyProgress,
+        #iframePdf cr-toast {
+            display: none;
+        }
+    </style>    
+    <script src="~/Content/Jquery-ui/jquery.js"></script>
+
+    <script src="~/Content/Js/Login/domainurl.js"></script>
+
+    <script>
+        var Currency = "@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)";
+        var Id = '@ViewBag.Id';
+        var Email = '@ViewBag.Email';
+        String.prototype.replaceAll = function (search, replacement) {
+            var target = this;
+            return target.split(search).join(replacement);
+        };
+        function printFrame(id) {
+            var frm = document.getElementById(id).contentWindow;
+            frm.focus();// focus on contentWindow is needed on some ie versions
+            frm.print();
+            return false;
+        }
+        var CreateEstimatorPdf = function () {
+            console.log("CreateEstimatorPdf");
+            console.log("Test 01", parent.$("#InvoiceDescriptionestimator").val());
+            var DetailList = [];
+            var ServiceList = [];
+            parent.$("#CustomerEstimateTab .HasItem").each(function () {
+                var PARTNumberTemp = $(this).find('.selPartNumber option:selected').text();
+                var PARTNumber = "";
+                var Variation = "";
+
+                if ($(this).find('.selPartNumber').val() == "-1") {
+                    PARTNumber = "";
+                }
+                else {
+                    PARTNumber = PARTNumberTemp.split(' - ')[0];
+                    if (PARTNumberTemp.split(' - ').length > 1) {
+                        Variation = PARTNumberTemp.split(' - ')[1];
+                    }
+                    console.log("part NO : "+ PARTNumber);
+                    console.log("variation : " +Variation);
+                }
+
+                DetailList.push({
+                    EquipmentId: $(this).attr('data-id'),
+                    //ManufacturerId: $(this).find('.selManufacturer').val(),
+                    //ManufacturerVal: $(this).find('.selManufacturer option:selected').text(),
+                    Qunatity: $(this).find('.txtQunatity').val(),
+                    UnitCost: $(this).find('.txtUnitCost').val().trim().replaceAll(',', ''),
+                    Profit: $(this).find('.txtProfit').val().trim().replaceAll(',', ''),
+                    Overhead: $(this).find('.txtOverhead').val().trim().replaceAll(',', ''),
+                    TotalCost: $(this).find('.txtTotalCost').val().trim().replaceAll(',', ''),
+                    TotalPrice: $(this).find('.txtTotalPrice').val().trim().replaceAll(',', ''),
+                    CategoryVal: $(this).find('.selCategory option:selected').text(),
+                    SupplierVal: $(this).find('.selSupplier option:selected').text(),
+                    CategoryId: $(this).find('.selCategory').val(),
+                    SupplierId: $(this).find('.selSupplier').val(),
+                    Unit: $(this).find('.selUnit').val(),
+                    PartDescription: $(this).find('.txtPartDescription').val(),
+                    SKU: $(this).find('.spnsku').text(),
+                    //PartNumber: $(this).find('.txtPartNumber').val(),
+                    PartNumber: PARTNumber,
+                    Variation: Variation,
+                    //InventoryId: '00000000-0000-0000-0000-000000000000',
+                    CreatedDate: '1-1-2017',
+                    EstimatorId: parent.EstimatorId
+                });
+            });
+            parent.$("#CustomerServiceTable .HasItem").each(function () {
+                ServiceList.push({
+                    EquipmentId: $(this).attr('data-id'),
+                    EquipmentName: $(this).find('.ProductName').val(),
+                    Amount: $(this).find('.txtProductAmount').val(),
+                    Quantity: $(this).find('.txtProductQuantity').val(),
+                    UnitPrice: $(this).find('.txtUnitPrice').val(),
+                    IsTaxable: $(this).find('.chkTaxable').is(":checked"),
+                    EstimatorId: parent.EstimatorId,
+                });
+            });
+            var url = domainurl + "/Estimator/SaveEstimatorPdf";
+            var param = JSON.stringify({
+                "Estimator.EstimatorId": parent.EstimatorId,
+                "Estimator.BillingAddress": parent.tinyMCE.get('Estimator_BillingAddress').getContent(),
+                "Estimator.ProjectAddress": parent.tinyMCE.get('Estimator_ProjectAddress').getContent(),
+                "Estimator.StartDate": $("#Estimator_StartDate").val(),
+                "Estimator.CustomerId": parent.$("#InvoiceCustomerId").val(),
+
+                "Estimator.PaymentTerm": parent.$("#Estimator_PaymentTerm option:selected").text(),
+                "Estimator.CompletionDate": parent.$("#Estimator_CompletionDate").val(),
+                "Estimator.EmailAddress": $("#Estimator_EmailAddress").val(),
+                "Estimator.Description": parent.$("#InvoiceDescriptionestimator").val(),
+                "Estimator.TaxPercnetage": parent.TaxPercnetage,
+                "Estimator.TaxAmount": parent.TaxAmount,
+                "Estimator.TotalPrice": parent.TotalPrice,
+                "Estimator.PoriftPercentage": 0, //will be taken from the new field
+                "Estimator.TotalProfitAmount": parent.TotalProfit,
+                "Estimator.OverheadCostPercentage": 0,//will be taken from the new field
+                "Estimator.TotalOverheadCostAmount": parent.TotalOverHead,
+                "Estimator.TotalCost": parent.TotalCost,
+                "Estimator.DefaultOverheadRate": $(".MaterialMarkup").val(),
+                "Estimator.DefaultProfitRate": $(".LaborProfit").val(),
+                estimatorDetails: DetailList,
+                estimatorServices: ServiceList,
+                _EstimatorPDFFilter: parent.CheckValue
+
+            });
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    $("#iframePdf").attr('src', data.filePath);
+                    $("#iframePdf").removeClass('hidden');
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            });
+        }
+        var SendEstimator = function () {
+            parent.OpenEstimatorSend();
+            parent.ClosePopup();
+        }
+
+        $(document).ready(function () {
+            if (typeof (PdfLocation) == 'undefined'
+                || PdfLocation.trim() == '' || PdfLocation.trim() == '/') {
+                CreateEstimatorPdf();
+            }
+        });
+/**/</script>
+
+</head>
+<body style="overflow:hidden;">
+
+    <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+        <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+    </div>
+    <div class="HeadContents">
+        <h4>Print preview</h4>
+        <span>To print, right-click the preview and select Print. Or, click the Print icon if you see one below.</span>
+
+    </div>
+    <div class="bodyConentsDiv">
+        <iframe class="pdf-styles" id="iframePdf" src=""></iframe>
+    </div>
+    <div class="footerContents">
+        <button onclick="parent.ClosePopup()" class="btnCancel">Cancel</button>
+        <button onclick="SendEstimator()" class="btnCancel">Send</button>
+        <button onclick="printFrame('iframePdf')" class="btnPrint">Print</button>
+    </div>
+</body>
+</html>

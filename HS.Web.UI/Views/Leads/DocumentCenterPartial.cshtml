@@ -1,0 +1,212 @@
+﻿@{
+    Layout = null;
+    var CurrentLoggedInUser = ((HS.Web.UI.Helper.CustomPrincipal)(User));
+}
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.CustomerFile>
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using HS.Framework
+
+<script src="~/Content/datatable/jquery.dataTables.min.js"></script>
+<script src="~/Content/datatable/dataTables.bootstrap.js"></script>
+<script src="~/Content/Js/FileDownload/jquery.fileDownload.js"></script>
+<link href="~/Content/datatable/dataTables.bootstrap.css" rel="stylesheet" />
+<link href="~/Content/Css/Lead/DocumentCenterPartial.css" rel="stylesheet" />
+
+<script>
+    var DataTablePageSize = 50;
+    var CustomerId = '@ViewBag.CustomerId';
+    var CustomerGuidId = '@ViewBag.CustomerGuidId';
+
+    var ActiveFileLoad = function () {
+        var SearchText = $("#srch-term").val();
+
+        $.ajax({
+            url: "/Leads/DocumentCenterPartial",
+            type: "GET",
+            data: {
+                id: CustomerId,
+                SearchText: SearchText
+            },
+            success: function (data) {
+                $(".LoadCustomerFilesAndDoc").html(data);
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error("Error loading files:", textStatus, errorThrown);
+            }
+        });
+    }
+    var AddLeadFileUpload = function () {
+        OpenRightToLeftModal(domainurl + "/Leads/AddLeadDocument/?id=" + CustomerId);
+        //history.pushState({ urlpath: window.location.pathname }, window.location.hash, "#addLeadFile");
+    }
+    $(document).ready(function () {
+        var tableDocumentList = $('#tblinfo').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            },
+            "order": [[1, "desc"]]
+        });
+
+        $(".searchFile").click(function () {
+            ActiveFileLoad();
+        });
+
+        $("#srch-term").on('keypress', function(e) {
+            if(e.which == 13) { // Enter key pressed
+                ActiveFileLoad();
+            }
+        });
+
+        $(".item-send").click(function () {
+            var fileid = $(this).attr('data-id');
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/File/SendFileForCustomerReview/?id=" + fileid);
+        });
+
+        $(".item-delete").click(function () {
+            var itemId = $(this).attr('data-id');
+            OpenConfirmationMessageNew("", "Are you sure you want to delete this item?", function () {
+                DeleteFile(CustomerId, itemId);
+            });
+        });
+    });
+
+    var DeleteFile = function (CustomerId, FileId) {
+        $.ajax({
+            url: "@(AppConfig.DomainSitePath)/File/DeleteCustomerFile",
+            data: {
+                id: FileId,
+                CustomerId: CustomerId,
+                CusId: CustomerGuidId
+            },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("", data.message, function () {
+                        ActiveFileLoad();
+                    });
+                } else {
+                    OpenErrorMessageNew("", data.message, function () {
+                        ActiveFileLoad();
+                    });
+                }
+            },
+            error: function () {
+                console.error("Error deleting file");
+            }
+        });
+    }
+</script>
+
+<div class="document_center_container">
+    <div class="row row-custom">
+      
+        <div class="col-custom-12">
+            <div class="searchbardiv" style="margin-top:0px;">
+                <div class="input-group txt-input add-on">
+                    <input class="form-control" placeholder="Search a file with Description" name="srch-term" id="srch-term" type="text">
+                    <div class="input-group-btn">
+                        <button class="btn custom-btn green_button searchFile" title="@Localize.T("Search")">
+                            <i class="glyphicon glyphicon-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            @if (!PermissionChekcer.IsPermitted(Permissions.UserMgmtPermissions.CustomerViewOnly) || ViewBag.SoldBy == CurrentLoggedInUser.UserId.ToString())
+            {
+                <button class="btn btn-default" id="AddNewLeadDocumentFileUpload" onclick="AddLeadFileUpload()"><i class="fa fa-upload" aria-hidden="true"></i> @Localize.T(" Upload File")</button>
+            }
+        </div>
+
+        <div class="col-md-12 col-custom-12">
+            <div class="dcp_table_container">
+                <table class="display document_center_partial_table" id="tblinfo">
+                    <thead class="table-head-border">
+                        <tr>
+                            <th class="thead-th-style sorting">@Localize.T("File Id")</th>
+                            <th class="thead-th-style">
+                                @Localize.T("File Description")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Date")
+                            </th>
+                            <th class="thead-th-style custom-th-lead-note">
+                                @Localize.T("Actions")
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr class="tr-style">
+                                <td valign="top">
+                                    <div class="lacf_device">@Localize.T("File Id") <span>:</span></div>
+                                    <div class="lacf_info"><span>FILE@(item.Id)</span></div>
+                                </td>
+                                @{
+                                    var NameFile = item.Filename.Split('.');
+                                }
+                                @if (NameFile.Count() > 1)
+                                {
+                                    if (NameFile[1].ToLower() == "pdf")
+                                    {
+                                        <td class="table-body-td-style" valign="top">
+                                            <div>@Localize.T("File Description")<span>:</span></div>
+                                            <div> <a class="fileDownloadCustom cus-anchor" href="~/Download/?@(HttpUtility.UrlEncode( HS.Framework.DESEncryptionDecryption.EncryptPlainTextToCipherText(item.Id.ToString())))" id="down-file" target="_blank" data-id="@item.Id"><img class="size-img" src="/Content/Icons/pdf.png" />@item.FileDescription</a></div>
+                                        </td>
+                                    }
+                                    else if (NameFile[1].ToLower() == "jpg" || NameFile[1].ToLower() == "png")
+                                    {
+                                        <td class="table-body-td-style" valign="top">
+                                            <div>@Localize.T("File Description")<span>:</span></div>
+                                            <div><a class="fileDownloadCustom cus-anchor" href="~/Download/?@(HttpUtility.UrlEncode( HS.Framework.DESEncryptionDecryption.EncryptPlainTextToCipherText(item.Id.ToString())))" id="down-file" target="_blank" data-id="@item.Id"><img class="size-img" src="~/Content/Icons/jpeg.png" />@item.FileDescription</a></div>
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td class="table-body-td-style" valign="top">
+                                            <div>@Localize.T("File Description")<span>:</span></div>
+                                            <div><a class="fileDownloadCustom cus-anchor" href="~/Download/?@(HttpUtility.UrlEncode( HS.Framework.DESEncryptionDecryption.EncryptPlainTextToCipherText(item.Id.ToString())))" id="down-file" target="_blank" data-id="@item.Id"><img class="size-img" src="~/Content/Icons/docx.png" />@item.FileDescription</a></div>
+                                        </td>
+                                    }
+                                }
+                                else
+                                {
+                                    <td class="table-body-td-style" valign="top">
+                                        <div>@Localize.T("File Description")<span>:</span></div>
+                                        <div><a class="fileDownloadCustom cus-anchor" href="~/Download/?@(HttpUtility.UrlEncode( HS.Framework.DESEncryptionDecryption.EncryptPlainTextToCipherText(item.Id.ToString())))" id="down-file" target="_blank" data-id="@item.Id"><img class="size-img" src="~/Content/Icons/file.png" />@item.FileDescription</a></div>
+                                    </td>
+                                }
+
+                                <td class="table-body-td-style" valign="top" data-order="@item.Uploadeddate.Value.ToString("MM/dd/yy")">
+                                    <div>@Localize.T("Date")<span>:</span></div>
+                                    <div><span>@item.Uploadeddate.Value.UTCToClientTime().ToString("MM/dd/yy") @item.Uploadeddate.Value.UTCToClientTime().ToString("hh:mm tt")</span></div>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <div>@Localize.T("Actions")<span>:</span></div>
+                                    <div>
+                                        <a href="javascript:void(0)" class="item-send cus-anchor" data-id="@item.Id">
+                                            <i class="fa fa-send-o" aria-hidden="true"></i>
+                                            @Localize.T("Send")
+                                        </a>
+                                        @if (PermissionChekcer.IsPermitted(Permissions.LeadPermissions.LeadFileDelete))
+                                        {
+                                            <a href="jvascript:void(0)" class="item-delete" data-id="@item.Id" title="@Localize.T("Delete")"><i class="fa fa-trash-o"></i></a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+

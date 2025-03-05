@@ -1,0 +1,395 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.TimeClockFilterModel
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+@using HS.Framework
+<link href="~/Content/Css/Pagination.css" rel="stylesheet" />
+<link href="~/Content/Css/TimeClockPto/TimeClockPartialList.css" rel="stylesheet" />
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var table = $(".time_clock_partial_list_table").DataTable({
+        "ordering": false,
+        searching: false, paging: false, info: false
+    })
+
+    var LastUpdatedClockInTimeClock = function (item, Name, date) {
+        console.log(Name);
+        if (Name.length > 0) {
+            var MessageUser = Name + " Updated on" + date;
+            $("#tooltipmsgUserClockIn_" + item).html("");
+            $("#tooltipmsgUserClockIn_" + item).html(MessageUser);
+            $(".tooltipareaUser").addClass("payable_info_hover");
+            $(".payable_tooltip_div").css("background-color", "green");
+        }
+        else {
+            $(".tooltipareaUser").removeClass("payable_info_hover");
+        }
+    }
+    var LastUpdatedClockOutTimeClock = function (item, Name, date) {
+        console.log(Name);
+        if (Name.length > 0) {
+            var MessageUser = Name + " Updated on" + date;
+            $("#tooltipmsgUserClockOut_" + item).html("");
+            $("#tooltipmsgUserClockOut_" + item).html(MessageUser);
+            $(".tooltipareaUser").addClass("payable_info_hover");
+            $(".payable_tooltip_div").css("background-color", "green");
+        }
+        else {
+            $(".tooltipareaUser").removeClass("payable_info_hover");
+        }
+    }
+    $(document).ready(function () {
+        var idlist = [{ id: ".ClockMapPopUp", type: 'iframe', width: 500, height: 500 }];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+        $(".OpenMapPopup").click(function () {
+            console.log("hi");
+            var latval = $(this).attr('data-lat');
+            var lngval = $(this).attr('data-lng');
+            var mapLoadUrl = "@(AppConfig.DomainSitePath)/App/OpenPosition/?lat=" + latval + "&lng=" + lngval;
+            $(".ClockMapPopUp").attr("href", mapLoadUrl);
+            $(".ClockMapPopUp").click();
+        });
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            FilterPayrollPaging(pageno, orderval);
+        })
+    })
+</script>
+<table class="time_clock_partial_list_table">
+    <thead>
+        <tr>
+            @if (!string.IsNullOrWhiteSpace(ViewBag.order))
+            {
+                if (ViewBag.order == "ascending/timeclockdate" || ViewBag.order == "descending/timeclockdate")
+                {
+                    <th class="th_timeclock"><div>@Localize.T("Date")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timeclockdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timeclockdate"></i></div></th>
+                }
+                else
+                {
+                    <th class="th_timeclock_pre"><div>@Localize.T("Date")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timeclockdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timeclockdate"></i></div></th>
+                }
+                if (ViewBag.order == "ascending/clockintime" || ViewBag.order == "descending/clockintime")
+                {
+                    <th class="th_timeclock"><div>@Localize.T("Clock In Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockintime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockintime"></i></div></th>
+                }
+                else
+                {
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock In Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockintime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockintime"></i></div></th>
+                }
+                if (ViewBag.order == "ascending/clockinnote" || ViewBag.order == "descending/clockinnote")
+                {
+                    <th class="th_timeclock"><div>@Localize.T("Clock In Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockinnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockinnote"></i></div></th>
+                }
+                else
+                {
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock In Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockinnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockinnote"></i></div></th>
+                }
+                <th class="th_timeclock_pre"><div>@Localize.T("Clock In Position")</div></th>
+
+                if (ViewBag.order == "ascending/clockouttime" || ViewBag.order == "descending/clockouttime")
+                {
+                    <th class="th_timeclock"><div>@Localize.T("Clock Out Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockouttime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockouttime"></i></div></th>
+                }
+                else
+                {
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock Out Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockouttime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockouttime"></i></div></th>
+                }
+                if (ViewBag.order == "ascending/clockoutnote" || ViewBag.order == "descending/clockoutnote")
+                {
+                    <th class="th_timeclock"><div>@Localize.T("Clock Out Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockoutnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockoutnote"></i></div></th>
+                }
+                else
+                {
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock Out Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockoutnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockoutnote"></i></div></th>
+                }
+                <th class="th_timeclock_pre"><div>@Localize.T("Clock Out Position")</div></th>
+
+                if (ViewBag.order == "ascending/timespent" || ViewBag.order == "descending/timespent")
+                {
+                    <th class="th_timeclock"><div>@Localize.T("Time Spent")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timespent"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timespent"></i></div></th>
+                }
+                else
+                {
+                    <th class="th_timeclock_pre"><div>@Localize.T("Time Spent")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timespent"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timespent"></i></div></th>
+                }
+                <th class="th_timeclock_pre"><div>@Localize.T("Total Hours")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timespent"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timespent"></i></div></th>
+            }
+            else
+            {
+                <th class="th_timeclock_pre"><div>@Localize.T("Date")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timeclockdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timeclockdate"></i></div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock In Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockintime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockintime"></i></div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock In Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockinnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockinnote"></i></div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock In Position")</div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock Out Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockouttime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockouttime"></i></div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock Out Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockoutnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockoutnote"></i></div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock Out Position")</div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Time Spent")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timespent"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timespent"></i></div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Total Hours")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timespent"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timespent"></i></div></th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.ListTimeClock.Count() > 0)
+        {
+            DateTime Today = new DateTime();
+            foreach (var item in Model.ListTimeClock)
+            {
+                <tr>
+                    <td>
+                        <div>@Localize.T("Date") <span>:</span></div>
+                        <div>
+                            @if (Today != item.ClockInTime.UTCToClientTime().SetZeroHour())
+                            {
+                                Today = item.ClockInTime.UTCToClientTime().SetZeroHour();
+                                <span>@item.ClockInTime.UTCToClientTime().ToString("MM/dd/yy")</span>
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        @if (item.ClockInTime != new DateTime())
+                        {
+                            <div>@Localize.T("Clock In Time")<span>:</span></div>
+                            <div> @item.ClockInTime.UTCToClientTime().ToString("hh:mm:ss tt")</div>
+                        }
+                    </td>
+                    <td @*onmouseover="LastUpdatedClockInTimeClock('@item.Id','@item.LastUpdatedName','@item.LastUpdatedDate.UTCToClientTime()')"*@ class="tooltipareaUser">
+                        <div>@Localize.T("Clock In Note")<span>:</span></div>
+                        <div>@item.ClockInNote</div>
+                        <div class="payable_tooltip_div">
+                            <span id="tooltipmsgUserClockIn_@item.Id"></span>
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Clock In Position")<span>:</span></div>
+                        <div>
+                            @if (!string.IsNullOrWhiteSpace(item.ClockInLat) && !string.IsNullOrWhiteSpace(item.ClockInLng) && item.ClockInLat != "0" && item.ClockInLng != "0")
+                            {
+                                <img class="OpenMapPopup" style="max-width:20px;" data-lat="@item.ClockInLat" data-lng="@item.ClockInLng" src="~/Content/Icons/rmr_map_marker.png" />
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </div>
+                    </td>
+                    
+                    <td>
+                        @if (item.ClockOutTime.HasValue && item.ClockOutTime != new DateTime())
+                        {
+                            <div>@Localize.T("Clock Out Time")<span>:</span></div>
+                            <div> @item.ClockOutTime.Value.UTCToClientTime().ToString("hh:mm:ss tt")</div>
+                        }
+                    </td>
+                    <td @*onmouseover="LastUpdatedClockOutTimeClock('@item.Id','@item.LastUpdatedName','@item.LastUpdatedDate.UTCToClientTime()')"*@ class="tooltipareaUser">
+                        <div>@Localize.T("Clock Out Note")<span>:</span></div>
+                        <div>@item.ClockOutNote</div>
+                        <div class="payable_tooltip_div">
+                            <span id="tooltipmsgUserClockOut_@item.Id"></span>
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Clock Out Position")<span>:</span></div>
+                        <div>
+                            @if (!string.IsNullOrWhiteSpace(item.ClockOutLat) && !string.IsNullOrWhiteSpace(item.ClockOutLng) && item.ClockOutLat != "0" && item.ClockOutLng != "0")
+                            {
+                                <img class="OpenMapPopup" style="max-width:20px;" data-lat="@item.ClockOutLat" data-lng="@item.ClockOutLng" src="~/Content/Icons/rmr_map_marker.png" />
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        @if (item.ClockOutTime.HasValue && item.ClockOutTime != new DateTime())
+                        {
+                            <div>@Localize.T("Time Spent")<span>:</span></div>
+                            <div>
+                                @if (item.ClockedInSeconds > 0)
+                                {
+                                    TimeSpan t = TimeSpan.FromSeconds(Convert.ToDouble(item.ClockedInSeconds));
+
+                                    string answer = string.Format("{0:D2}:{1:D2}:{2:D2}",
+                                    t.Hours,
+                                    t.Minutes,
+                                    t.Seconds);
+                                    <span>@answer</span>
+
+                                }
+                                else
+                                {
+                                    <span>00:00:00</span>
+
+                                }
+                            </div>
+                        }
+                    </td>
+                    <td>
+                        @{
+                            if (item.ClockOutTime.HasValue && item.ClockOutTime != new DateTime())
+                            {
+                                <div>@Localize.T("Total Hours")<span>:</span></div>
+                                <div>
+                                    @if (item.ClockedInSeconds > 0)
+                                    {
+                                        TimeSpan t = TimeSpan.FromSeconds(Convert.ToDouble(item.ClockedInSeconds));
+
+                                        string answer = string.Format("{0:D2}:{1:D2}:{2:D2}",
+                                        t.Hours,
+                                        t.Minutes,
+                                        t.Seconds);
+                                        <span>@string.Format("{0:00.00}", (t.TotalHours + (t.Minutes > 0 ? t.Minutes / 60 : 0))) hrs</span>
+
+                                    }
+                                    else
+                                    {
+                                        <span>00.00 hrs</span>
+
+                                    }
+                                </div>
+                            }
+                        }
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+<div class="AgentListPagination">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount == 1)
+            {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">@Localize.T("Previous")</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="FilterPayrollPaging(@(ViewBag.PageNumber), '@(ViewBag.order)')">1</button>
+            </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationrightButtons disabledBtn">@Localize.T("Next")</button>
+                    </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FilterPayrollPaging(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), '@(ViewBag.order)')">@Localize.T("Previous")</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FilterPayrollPaging(1, '@(ViewBag.order)')">1</button>
+            </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FilterPayrollPaging(2, '@(ViewBag.order)')">2</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationrightButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="FilterPayrollPaging(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""), '@(ViewBag.order)')">@Localize.T("Next")</button>
+                    </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FilterPayrollPaging(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), '@(ViewBag.order)')">@Localize.T("Previous")</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FilterPayrollPaging(1, '@(ViewBag.order)')">1</button>
+            </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FilterPayrollPaging(2, '@(ViewBag.order)')">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="FilterPayrollPaging(3, '@(ViewBag.order)')">3</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationrightButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="FilterPayrollPaging(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""), '@(ViewBag.order)')">@Localize.T("Next")</button>
+                    </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterPayrollPaging(@(ViewBag.PageNumber-1), '@(ViewBag.order)')">@Localize.T("Previous")</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterPayrollPaging(@(ViewBag.PageNumber-2), '@(ViewBag.order)')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterPayrollPaging(@(ViewBag.PageNumber-1), '@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="FilterPayrollPaging(@(ViewBag.PageNumber), '@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons disabledBtn" onclick="FilterPayrollPaging()">@Localize.T("Next")</button>
+                        </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterPayrollPaging(@(ViewBag.PageNumber-1), '@(ViewBag.order)')">@Localize.T("Previous")</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterPayrollPaging(@(ViewBag.PageNumber+1), '@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterPayrollPaging(@(ViewBag.PageNumber + 2), '@(ViewBag.order)')">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons" onclick="FilterPayrollPaging(@(ViewBag.PageNumber+1), '@(ViewBag.order)')">@Localize.T("Next")</button>
+                        </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterPayrollPaging(@(ViewBag.PageNumber-1), '@(ViewBag.order)')">@Localize.T("Previous")</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterPayrollPaging(@(ViewBag.PageNumber-1), '@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterPayrollPaging(@(ViewBag.PageNumber + 1), '@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons" onclick="FilterPayrollPaging(@(ViewBag.PageNumber+1), '@(ViewBag.order)')">@Localize.T("Next")</button>
+                        </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterPayrollPaging(@(ViewBag.PageNumber-1), '@(ViewBag.order)')">@Localize.T("Previous")</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterPayrollPaging(@(ViewBag.PageNumber - 1), '@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="FilterPayrollPaging(@(ViewBag.PageNumber), '@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterPayrollPaging(@(ViewBag.PageNumber + 1), '@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons" onclick="FilterPayrollPaging(@(ViewBag.PageNumber+1), '@(ViewBag.order)')">@Localize.T("Next")</button>
+                        </div>
+            }
+        }
+    </div>
+    @if (ViewBag.PageCount > 0)
+            {
+        <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+    }
+</div>
+
+<div class="displayNone">
+    <a href="" class="ClockMapPopUp"></a>
+</div>

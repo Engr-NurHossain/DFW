@@ -1,0 +1,104 @@
+﻿@{
+    Layout = null;
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.TransactionHistory>
+<script>
+    var DataTablePageSize = 50;
+    var PaymentRecStartDatePicker;
+    var PaymentRecEndDatePicker;
+    $(document).ready(function () {
+        $("#PaymentReceivedReportTab .invoice-loader").hide();
+         
+        PaymentRecStartDatePicker = new Pikaday({
+            format: 'MM/DD/YYYY',
+            yearRange: [2017, (new Date()).getFullYear()],
+            field: $('#report_PaymnetRecStartDate')[0]
+        });
+
+        PaymentRecEndDatePicker = new Pikaday({
+            format: 'MM/DD/YYYY',
+            yearRange: [2017, (new Date()).getFullYear()],
+            field: $('#report_PaymnetRecEndDate')[0]
+        }); 
+        var table = $('#PaymentRecReportTable').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        $("#btnDownloadPaymentRecReport").click(function () {
+            var StartDate = $("#report_PaymnetRecStartDate").val();
+            var EndDate = $("#report_PaymnetRecEndDate").val();
+
+            if (StartDate.trim().length == 10 && EndDate.trim().length == 10) {
+                StartDate = StartDate.replaceAll('/', '_');
+                EndDate = EndDate.replaceAll('/', '_');
+                location.href = domainurl + "/Reports/PaymentReceivedReportPartial/?Start=" + StartDate + "&End=" + EndDate + "&GetReport=true";
+            } else {
+                location.href = domainurl + "/Reports/PaymentReceivedReportPartial/?GetReport=true";
+            }
+        });
+        $("#PaymentRecFilterButton").click(function () {
+            var StartDate = $("#report_PaymnetRecStartDate").val();
+            var EndDate = $("#report_PaymnetRecEndDate").val();
+            StartDate = StartDate.replaceAll('/', '_');
+            EndDate = EndDate.replaceAll('/', '_');
+            $("#PaymentReceivedReportTab").html(TabsLoaderText);
+            $("#PaymentReceivedReportTab").load(domainurl + "/Reports/PaymentReceivedReportPartial/?Start=" + StartDate + "&End=" + EndDate);
+        });
+
+
+    });
+</script>
+<link href="~/Content/Css/Report/PaymentReceivedReportPartial.css" rel="stylesheet" />
+<div class="prpp_border">
+    <div class="col-md-12 prrp_payment_recv">
+        @Localize.T("Total Payment Received :") @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.TotalPaymentReceived) <span class="prrp_payment_info">in @ViewBag.TotalTransactions Transactions </span>
+    </div> 
+</div>
+@*<div class="col-md-12">
+    <a href="/Reports/PaymentReceivedReportPartial/?GetReport=true" target="_blank">Download</a>
+</div>*@
+
+<div class="prrp_top_bar">
+<div class="prpp_FilterDiv">
+            <label class="prpp_margin_top">@Localize.T("Filter by dates")</label>      
+            <input class="form-control" type="text" value="@ViewBag.Start" id="report_PaymnetRecStartDate" placeholder="Start Date" />     
+            <input class="form-control" type="text" value="@ViewBag.End" id="report_PaymnetRecEndDate" placeholder="End Date" />
+            <button class="report_btn filter_btn_report" id="PaymentRecFilterButton"><i class="fa fa-filter" aria-hidden="true"></i>@Localize.T(" Filter")</button>      
+    </div>
+    @if (PermissionChekcer.IsPermitted(Permissions.ReportsPermissions.PaymentReceivedReportDownload))
+    {
+       
+            <button title="@Localize.T(" Download")" class="report_btn prpp_float_right" id="btnDownloadPaymentRecReport"><i class="fa fa-download" aria-hidden="true"></i></button>
+      
+    }
+</div>
+
+    <table id="PaymentRecReportTable">
+        <thead>
+            <tr>
+                <th>@Localize.T("Invoice No.")</th>
+                <th>@Localize.T("Customer Name")</th>
+                <th>@Localize.T("Amount Paid")</th>
+                <th>@Localize.T("Balance Due")</th>
+                <th>@Localize.T("Transaction Date")</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.InvoiceNumber</td>
+                    <td>@item.CustomerName</td>
+                    <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amout)</td> 
+                    <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Balance)</td>
+                    <td>@item.TransacationDate.ToString("MM/dd/yy")</td>
+                </tr>
+            }
+        </tbody>
+    </table>

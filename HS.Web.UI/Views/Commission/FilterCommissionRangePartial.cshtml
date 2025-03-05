@@ -1,0 +1,98 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.CommisionRange>
+@using AppConfig = HS.Framework.Utils.AppConfig
+<script>
+    var DataTablePageSize = 50;
+    var selectedDeleteId = 0;
+    var DeleteCommissionRange = function () {
+        var delitem = selectedDeleteId;
+        $.ajax({
+            url: "@(AppConfig.DomainSitePath)/Commission/DeleteCommissionRange",
+            data: { Id: delitem },
+            type: "Post",
+            dataType: "Json",
+            success: function (result) {
+                parent.$("#CommissionRangeTab").load("@(AppConfig.DomainSitePath)/Commission/CommissionRangePartial");
+            },
+            error: function () {
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $(".header-content").show();
+        $(".LoaderWorkingDiv").hide();
+        var table = $('#tblCRange').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        $('#tblCRange tbody').on('click', 'tr', function () {
+            if ($(this).hasClass('selected')) {
+                $(this).removeClass('selected');
+            }
+            else {
+                table.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+            }
+        });
+        $("#Commission-Range-srch-term").keyup(function () {
+            $("#tblCRange_filter input").val($("#Commission-Range-srch-term").val());
+            $("#tblCRange_filter input").trigger('keyup');
+        });
+        $(".item-deleterange").click(function () {
+            selectedDeleteId = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this Commission Range?", DeleteCommissionRange);
+        })
+        $(".item-editrange").click(function () {
+            var typeval = $(this).attr('data-id');
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/Commission/AddCommissionRange?id=" + typeval);
+        })
+    })
+</script>
+
+<div class="table-CommissionType-range1">
+    <table id="tblCRange" class="ui celled table" cellspacing="0">
+        <thead>
+            <tr>
+                <th class="thead-th-style">@Localize.T("Type")</th>
+                <th class="thead-th-style">@Localize.T("Season")</th>
+                <th class="thead-th-style">@Localize.T("Range Start")</th>
+                <th class="thead-th-style">@Localize.T("Range End")</th>
+                <th class="thead-th-style">@Localize.T("Upfront")</th>
+                <th class="thead-th-style">@Localize.T("Backend")</th>
+                <th class="thead-th-style">@Localize.T("Bonus")</th>
+                <th class="thead-th-style">@Localize.T("Rent Bonus")</th>
+                <th class="thead-th-style">@Localize.T("Action")</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                foreach (var item in Model)
+                {
+                    <tr class="tr-style">
+                        <td class="table-body-td-style" valign="top">@item.TypeName</td>
+                        <td class="table-body-td-style" valign="top">@item.SessionName</td>
+                        <td class="table-body-td-style" valign="top">@item.RangeStart</td>
+                        <td class="table-body-td-style" valign="top">@item.RangeEnd</td>
+                        <td class="table-body-td-style" valign="top">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Upfront.Value)</td>
+                        <td class="table-body-td-style" valign="top">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Backend.Value)</td>
+                        <td class="table-body-td-style" valign="top">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Bonus.Value)</td>
+                        <td class="table-body-td-style" valign="top">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount( item.RentBonus)</td>
+                        <td class="table-body-td-style" valign="top">
+                            <a href="javascript:void(0)" class="item-editrange" data-id="@item.Id"><i class="fa fa-edit" aria-hidden="true"></i>@Localize.T("Edit")</a>
+                            <a href="javascript:void(0)" class="item-deleterange" data-id="@item.Id" title="@Localize.T("Delete")">
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,342 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.CustomerServiceEqpBillingModel
+
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+    <script src="~/Content/Js/Site/Validation.js"></script>
+<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+<link href="~/Content/Css/Customer/LoadMoveCustomerServiceEqpBilling.css" rel="stylesheet" />
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>
+<script>
+    var type = '@ViewBag.type';
+    var ServiceList = [];
+    var EquipmentList = [];
+    var customerId = '@Model.CustomerModel.CustomerId';
+    var listservice = '@Model.ListCustomerService.Count';
+    var listequipment = '@Model.ListCustomerEquipment.Count';
+    var servicecheckedcount;
+    var eqpcheckedcount;
+    var SaveMoveCustomerServiceEqp = function () {
+        if (CommonUiValidation()){
+            $(".chk_service_customer").each(function () {
+                if ($(this).prop("checked")) {
+                    ServiceList.push($(this).attr('data-id'));
+                }
+            });
+            $(".chk_eqp_customer").each(function () {
+                if ($(this).prop("checked")) {
+                    EquipmentList.push($(this).attr('data-id'));
+                }
+            });
+            var url = "/Customer/SaveMoveCustomerServiceEqp";
+            var param = JSON.stringify({
+                CustomerId: customerId,
+                ServiceList: ServiceList,
+                EquipmentList: EquipmentList,
+                Billing: $("#chk_billing_customer").prop("checked"),
+                Street: $("#Street").val(),
+                Zip: $("#ZipCode").val(),
+                City: $("#City").val(),
+                State: $("#State").val()
+            });
+            $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+                success: function (data) {
+                    if (data.result == true) {
+
+                    OpenSuccessMessageNew("Success !", data.message, function () {
+
+                        if (data.leadId != null) {
+                            if (data.type == "customer") {
+                                window.location.href = domainurl + "/Customer/Customerdetail/?id=" + data.leadId;
+                            CloseTopToBottomModal();
+                            }
+                            else if (data.type == "lead") {
+                                window.location.href = domainurl + "/Lead/Leadsdetail/?id=" + data.leadId;
+                            CloseTopToBottomModal();
+                            }
+                        }
+                    });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+        }
+    }
+    var SaveTransferCustomerServiceEqp = function () {
+        if (CommonUiValidation()) {
+            $(".chk_service_customer").each(function () {
+                if ($(this).prop("checked")) {
+                    ServiceList.push($(this).attr('data-id'));
+                }
+            });
+            $(".chk_eqp_customer").each(function () {
+                if ($(this).prop("checked")) {
+                    EquipmentList.push($(this).attr('data-id'));
+                }
+            });
+            var param = JSON.stringify({
+                CustomerId: customerId,
+                ServiceList: ServiceList,
+                EquipmentList: EquipmentList,
+                BusinessName: $("#BusinessName").val(),
+                DBA: $("#DBA").val(),
+                FirstName: $("#FirstName").val(),
+                LastName: $("#LastName").val()
+            })
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: "/Customer/TransferCustomerToLead",
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        window.location.href = domainurl + "/Lead/Leadsdetail/?id=" + data.id;
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+        }
+    }
+    $(document).ready(function () {
+        $(".chk_service_customer").click(function () {
+            console.log("service");
+            servicecheckedcount = 0;
+            if ($(this).prop("checked")) {
+                $(".chk_service_customer").each(function () {
+                    if ($(this).prop("checked")) {
+                        servicecheckedcount += 1;
+                    }
+                    else {
+                        servicecheckedcount = servicecheckedcount - 1;
+                    }
+                })
+                if (parseInt(listservice) == servicecheckedcount) {
+                    $(".chk_service_all").prop("checked", true);
+                }
+            }
+            else {
+                $(".chk_service_all").removeAttr("checked");
+            }
+        })
+        $(".chk_eqp_customer").click(function () {
+            eqpcheckedcount = 0;
+            if ($(this).prop("checked")) {
+                $(".chk_eqp_customer").each(function () {
+                    if ($(this).prop("checked")) {
+                        eqpcheckedcount += 1;
+                    }
+                    else {
+                        eqpcheckedcount = eqpcheckedcount - 1;
+                    }
+                })
+                if (parseInt(listequipment) == eqpcheckedcount) {
+                    $(".chk_eqp_all").prop("checked", true);
+                }
+            }
+            else {
+                $(".chk_eqp_all").removeAttr("checked");
+            }
+        })
+        $(".lmcseb_inner_height").height(window.innerHeight - 112);
+        if (parseInt(listservice) > 0) {
+            $(".chk_service_all").prop("checked", true);
+        }
+        if (parseInt(listequipment) > 0) {
+            $(".chk_eqp_all").prop("checked", true);
+        }
+        $(".chk_service_all").click(function () {
+            if ($(this).prop("checked") == true) {
+                $(".chk_service_customer").each(function () {
+                    $(this).prop("checked", true);
+                })
+            }
+            else {
+                $(".chk_service_customer").each(function () {
+                    $(this).removeAttr("checked");
+                })
+            }
+        })
+        $(".chk_eqp_all").click(function () {
+            if ($(this).prop("checked") == true) {
+                $(".chk_eqp_customer").each(function () {
+                    $(this).prop("checked", true);
+                })
+            }
+            else {
+                $(".chk_eqp_customer").each(function () {
+                    $(this).removeAttr("checked");
+                })
+            }
+        })
+    })
+</script>
+
+<div class="lmcseb_container">
+    <div class="lmcseb_header">@Model.CustomerModel.FirstName @Model.CustomerModel.LastName</div>
+    <div class="lmcseb_inner_height">
+        <div class="lmcseb_inner">
+            @if (ViewBag.type == "Move")
+            {
+                <div class="lmcseb_block">
+                    <div class="lmcseb_block_header">@Localize.T("Address")</div>
+                    <div class="lmcseb_info">
+                        <div class="form-group clearfix col-md-4">
+                            <label class="span-style">@Localize.T("Street")</label>
+                            <input type="text" id="Street" name="Street" class="form-control" placeholder=@Localize.T("Street") datarequired="true" />
+                            <label rel="Street" class="label hidden red position-absolute">@Localize.T("*Street Required")</label>
+                        </div>
+                        <div class="form-group clearfix CityState_insert_div col-md-4">
+                            <label class="span-style">@Localize.T("Zip Code")</label>
+                            <input onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" datarequired="true" type="text" id="ZipCode" name="ZipCode" class="form-control" placeholder=@Localize.T("Zip Code") />
+                            <div class='tt-menu'>
+                                <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                            </div>
+                            <label rel="ZipCode" class="label hidden red position-absolute">@Localize.T("*Zip Code Required")</label>
+                        </div>
+                        <div class="form-group clearfix col-md-4">
+                            <label class="span-style">@Localize.T("City")</label>
+                            <input type="text" id="City" name="City" class="form-control" placeholder=@Localize.T("City") />
+                        </div>
+                        <div class="form-group clearfix col-md-4">
+                            <label class="span-style">@Localize.T("State")</label>
+                            <input type="text" id="State" name="State" class="form-control" placeholder=@Localize.T("State") />
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="lmcseb_block">
+                    <div class="lmcseb_block_header">@Localize.T("Personal Information")</div>
+                    <div class="lmcseb_info">
+                        @if (Model.CustomerModel.Type == "Commercial")
+                        {
+                            <div class="form-group clearfix col-md-4">
+                                <label class="span-style">@Localize.T("Business Name")</label>
+                                <input type="text" id="BusinessName" name="BusinessName" class="form-control" placeholder=@Localize.T("Business Name") datarequired="true" />
+                                <label rel="BusinessName" class="label hidden red position-absolute">@Localize.T("*Business Name Required")</label>
+                            </div>
+                            <div class="form-group clearfix col-md-4">
+                                <label class="span-style">@Localize.T("Doing Business As (DBA)")</label>
+                                <input type="text" id="DBA" name="DBA" class="form-control" placeholder=@Localize.T("Doing Business As (DBA)") datarequired="true" />
+                                <label rel="DBA" class="label hidden red position-absolute">@Localize.T("*Doing Business As (DBA) Required")</label>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="form-group clearfix col-md-4">
+                                <label class="span-style">@Localize.T("First Name")</label>
+                                <input type="text" id="FirstName" name="FirstName" class="form-control" placeholder=@Localize.T("First Name") datarequired="true" />
+                                <label rel="FirstName" class="label hidden red position-absolute">@Localize.T("*First Name Required")</label>
+                            </div>
+                            <div class="form-group clearfix col-md-4">
+                                <label class="span-style">@Localize.T("Last Name")</label>
+                                <input type="text" id="LastName" name="LastName" class="form-control" placeholder=@Localize.T("Last Name") datarequired="true" />
+                                <label rel="LastName" class="label hidden red position-absolute">@Localize.T("*Last Name Required")</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            <div class="lmcseb_block">
+                <div class="lmcseb_block_header">@Localize.T("Service")</div>
+                <div class="lmcseb_info">
+                    @{
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" class="chk_service_all" /> @Localize.T("All")</th>
+                                    <th>@Localize.T("Service")</th>
+                                    <th>@Localize.T("Quantity")</th>
+                                    <th>@Localize.T("Unit Price")</th>
+                                    <th>@Localize.T("Total")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.ListCustomerService)
+                                {
+                                    <tr>
+                                        <td><input type="checkbox" class="chk_service_customer" checked data-id="@item.Id" /></td>
+                                        <td>@item.EquipName</td>
+                                        <td>@item.Quantity</td>
+                                        <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.UnitPrice)</td>
+                                        <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalPrice)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+            <div class="lmcseb_block">
+                <div class="lmcseb_block_header">@Localize.T("Equipment")</div>
+                <div class="lmcseb_info">
+                    @{
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" class="chk_eqp_all" /> @Localize.T("All")</th>
+                                    <th>@Localize.T("Product")</th>
+                                    <th>@Localize.T("Quantity")</th>
+                                    <th>@Localize.T("Unit Price")</th>
+                                    <th>@Localize.T("Total")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.ListCustomerEquipment)
+                                {
+                                    <tr>
+                                        <td><input type="checkbox" class="chk_eqp_customer" checked data-id="@item.Id" /></td>
+                                        <td>@item.EquipName</td>
+                                        <td>@item.Quantity</td>
+                                        <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.UnitPrice)</td>
+                                        <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalPrice)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+            @{
+                if (ViewBag.type == "Move")
+                {
+                    <div class=""><input type="checkbox" id="chk_billing_customer" /> <label for="chk_billing_customer">@Localize.T("Billing")</label></div>
+                }
+            }
+        </div>
+    </div>
+    @{
+        if (ViewBag.type == "Move")
+        {
+            <div class="lmcseb_footer">
+                <button class="btn" onclick="SaveMoveCustomerServiceEqp()">@Localize.T("Move")</button>
+            </div>
+        }
+        else
+        {
+            <div class="lmcseb_footer">
+                <button class="btn" onclick="SaveTransferCustomerServiceEqp()">@Localize.T("Transfer")</button>
+            </div>
+        }
+    }
+</div>

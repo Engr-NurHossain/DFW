@@ -1,0 +1,125 @@
+﻿@{
+    ViewBag.Title = "Customer";
+    Layout = null;
+    int i = 1;
+    int j = 1;
+    string SitePath = HS.Framework.Utils.AppConfig.DomainSitePath;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.CustomerTabModel>
+    <script>
+    var CustomerLoadId;
+    var CustomerLoadGuid;
+    var TabLink = '@ViewBag.tablink';
+    var NoteId = '@ViewBag.noteid';
+    var TimeVal = '@ViewBag.time';
+    var complete = '@ViewBag.complete'; 
+    var IsLead = false;
+    var OpenCustomerCreditTransactions = function (customerGid) {
+        OpenRightToLeftLgModal(domainurl + "/Customer/CustomerCreditBalanceTransactions/?CustomerId=" + customerGid);
+    }
+
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide();
+        CustomerLoadId = $(".customer_tabs_container .tab-list.active").attr('data-id');
+        CustomerLoadGuid = $(".customer_tabs_container .tab-list.active").attr('data-Guid');
+
+        $(".customer_tabs_container .tab-pane.active").load(domainurl + String.format("/Customer/CustomerDetails/?id={0}&tab={1}&noteid={2}&timeval={3}&IsComplete={4}", CustomerLoadId, TabLink, NoteId, TimeVal, complete));
+
+        $(".customer_tabs_container .tab-list a").click(function (e) {
+            e.preventDefault();
+            if (cntrlIsPressed) {
+                var href = $(e.target).attr('href');
+                window.open(href, '_blank');
+            }
+        });
+
+        $(".customer_tabs_container .tab-list").click(function (e) {
+            //$(".customer_tabs_container .tab-pane").html("");
+            CustomerLoadId = $(e.currentTarget).attr('data-id');
+            CustomerLoadGuid = $(e.currentTarget).attr('data-Guid');
+
+            history.pushState(null, null, domainurl + String.format("/Customer/CustomerDetail/?id={0}", CustomerLoadId));
+            if ($("#customer_tab_" + CustomerLoadId).html().trim() == "") {
+                $("#customer_tab_" + CustomerLoadId).load(domainurl + String.format("/Customer/CustomerDetails/?id={0}", CustomerLoadId));
+            }
+            if ($("#customer_tab_" + CustomerLoadId + " " + ".customer-options-tabs li.FilesTab").hasClass('active')) {
+                OpenFilesTab();
+            }
+        });
+
+        $(".tabCloseCustomer").click(function () {
+            if ($(".customer_tabs_container li.tab-list").length == 1) {
+                /*If cookie length ==1 just remove cookie*/
+                $.cookie("__Customer", "", { expires: -1, path: '/' });
+                location.href = "/Customer";
+            }
+            else {
+                /*Remove DOM*/
+                if ($(this).parent().parent().hasClass('active')) {
+                    $(this).parent().parent().removeClass('active');
+                    $(".customer_tabs_container .tab-content .tab-pane").removeClass('active');
+
+                    $(".customer_tabs_container li.tab-list:first-child").addClass('active');
+
+                    CustomerLoadId = $(".customer_tabs_container .tab-list.active").attr('data-id');
+                    CustomerLoadGuid = $(".customer_tabs_container .tab-list.active").attr('data-Guid');
+
+                    $("#customer_tab_" + CustomerLoadId).addClass('active');
+
+                    history.pushState(null, null, domainurl + String.format("/Customer/CustomerDetail/?id={0}&tab={1}&noteid={2}&timeval={3}&IsComplete={4}", CustomerLoadId, TabLink, NoteId, TimeVal, complete));
+                    $(".customer_tabs_container .tab-pane.active").load(domainurl + String.format("/Customer/CustomerDetails/?id={0}&tab={1}&noteid={2}&timeval={3}&IsComplete={4}", CustomerLoadId, TabLink, NoteId, TimeVal, complete));
+                }
+                var ClosedCustomerId = $(this).attr('data-id');
+
+                $(this).parent().parent().remove();
+                $("#customer_tab_" + ClosedCustomerId).remove();
+
+                /*Remove Customer Data From Cookie*/
+                if ($.cookie('__Customer') != null && $.cookie('__Customer') != '' && $.cookie('__Customer') != 'null')
+                {
+                    var cookie = $.cookie('__Customer');
+                    cookie = cookie.split('|');
+                    var NewCookie = "";
+                    $(cookie).each(function () {
+                        if (this.indexOf(ClosedCustomerId+'~') > -1) {
+                            /*dont add to new cookie*/
+                        } else {
+                            if (this != '') {
+                                NewCookie += this + "|";
+                            }
+                        }
+                    });
+                    $.cookie("__Customer", NewCookie, { expires: 2, path: '/' });
+                }
+            }
+
+        });
+    });
+    </script>
+<div class="customer_tabs_container"> 
+    @if (Model.Count() > 0)
+    {
+        <ul class="nav nav-tabs customer_details_main_nav">
+            @foreach (var item in Model)
+            {
+                <li class="tab-list @(i==1?"active":"")" data-id="@item.CustomerId" data-Guid="@item.CustomerGuid">
+                    <a href="@(SitePath)/Customer/CustomerDetail/?id=@item.CustomerId" data-target="#customer_tab_@item.CustomerId" data-id="@item.CustomerId" data-Guid="@item.CustomerGuid" data-toggle="tab">
+                        <i class="fa fa-user fa-fw"></i>
+                        @item.CustomerName
+                        <div title="Close" class="tab_close_style tabCloseCustomer" data-id="@item.CustomerId"></div>
+                    </a>
+                </li>
+                i++;
+            }
+        </ul>
+
+        <div class="tab-content">
+            @foreach (var item in Model)
+            {
+                <div class="tab-pane @(j == 1 ? "active" : "")" data-id="@item.CustomerId" data-Guid="@item.CustomerGuid" id="customer_tab_@item.CustomerId"></div>
+                j++;
+            }
+        </div>
+    }
+</div>

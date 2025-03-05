@@ -1,0 +1,393 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.UserMgmtListModel
+@using Localize = HS.Web.UI.Helper.LanguageHelper;
+@using Permissions = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+<script>
+    var currentemp = '@ViewBag.currentemp';
+</script>
+<script src="~/Content/Js/JquerySession.js"></script>
+@Styles.Render("~/styles/UserList")
+@Scripts.Render("~/scripts/UserList")
+<script>
+    var pageno = '@ViewBag.PageNumber';
+
+    $(document).ready(function () {
+        $(".loader-div").hide();
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            UserListLoad(pageno, orderval);
+        });
+    });
+</script>
+
+<link href="~/Content/Css/UserManagement/UserList.css" rel="stylesheet" />
+<div class="loader-div"" style="margin-top:0px">
+    @*<div class='uil-ring-css' style='transform:scale(1);'>
+            <div></div>
+        </div>*@
+
+    @*<div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div>*@
+    <div style='position: fixed;left: 0px;top: 0px;width: 100%;height: 100%;'>
+        <div class="lds-css ng-scope">
+            <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+        </div>
+    </div>
+
+
+</div>
+<div class="user_list_search_bar">
+    <div class="user_list_search_inner">
+        @if (!PermissionChecker.IsPermitted(Permissions.MenuPermissions.QuickMenuManageUserHideUserGroup))
+        {
+            @Html.DropDownList("UserGroupDropDown", ViewBag.UserGroupList as List<SelectListItem>, new { @class = "form-control" })
+        }
+        @if (!PermissionChecker.IsPermitted(Permissions.MenuPermissions.QuickMenuManageUserHideEmployeeStatus))
+        {
+            @Html.DropDownList("CurrentEmployee", ViewBag.EmployeeStatus as List<SelectListItem>, new { @class = "form-control", id = "CurrentEmployee" })
+        }
+        <div class="input-group add-on">
+            <input class="form-control" placeholder="Find a User" value="@Model.SearchText" name="srch-term" id="UserSearchText" type="text">
+            <div class="input-group-btn">
+                <button class="btn custom-btn green_button" id="btnSearchUser" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+            </div>
+        </div>
+    </div>
+    @if (!PermissionChecker.IsPermitted(Permissions.MenuPermissions.QuickMenuManageUserHideDownloadUserButton))
+    {
+        <div class="dropdown manage_user_export">
+            <button class="btn download_btn dropdown-toggle" data-toggle="dropdown">
+                <i title="Download" class="glyphicon glyphicon-download-alt"></i>
+            </button>
+            <ul class="dropdown-menu ImportPanel">
+                <li>
+                    <button class="btn" id="PdfImport" onclick="PrintUser()"><i class="fa fa-file-pdf-o"></i> @Localize.T("Pdf") </button>
+                </li>
+                <li>
+                    <button class="btn" id="ExcelImport"><i class="fa fa-file-excel-o"></i> @Localize.T("Excel")</button>
+                </li>
+
+            </ul>
+        </div>
+    }
+
+</div>
+<div class="custom-top-padding">
+</div>
+
+<div class="custom-table user_list_mgmt">
+    <table class="display userlist_table" id="tblUserList">
+        <thead class="table-head-border">
+            <tr>
+                <th class="thead-th-style">
+                    <div>@Localize.T("Contact Name")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ContactName"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ContactName"></i></div>
+                </th>
+                @if (PermissionChecker.IsPermitted(Permissions.MenuPermissions.QuickMenuMyCompanyManageUserShowRouteList))
+                {
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Route List")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/RouteList"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/RouteList"></i></div>
+                    </th>
+                }
+                else
+                {
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Supervisor")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/Supervisor"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/Supervisor"></i></div>
+                    </th>
+                }
+                <th class="thead-th-style">
+                    <div>@Localize.T("Email Address")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/Email"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/Email"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("User Role")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/UserRole"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/UserRole"></i></div>
+                </th>
+                <th class="status_user thead-th-style">
+                    <div>@Localize.T("Status")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/Status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/Status"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("Current Employee")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/CurrentEmployee"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/CurrentEmployee"></i></div>
+                </th>
+                <th class="act_user thead-th-style">
+                    @Localize.T("Actions")
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.UserMgmtList)
+            {
+                <tr class="tr-style">
+
+                    <td class="table-body-td-style" valign="top">
+                        <div class="user_list_device_header">@Localize.T("Contact Name")<span>:</span></div>
+                        <a class="name-anchor-style User_list_info" @*target="_blank"*@ @*onclick="LoadUserInfo(@item.Id, true)"*@ href="/UserInformation/?Id=@item.Id" id="@(item.Id)">
+                            <span>@item.ContactName</span>
+                            @if (item.IsCalendar)
+                            {
+                                <i class="fa fa-calendar" aria-hidden="true"></i>
+                                <div class="user_custom_calendar_color" style="background-color: #@item.CalendarColor "></div>
+                            }
+                            @if (item.EmpType == "W2")
+                            {
+                                <span class="i_w2" title="W-2">
+                                    W-2
+                                </span>
+                            }
+                            else if (item.EmpType == "1099")
+                            {
+                                <span class="i_1099" title="1099">
+                                    1099
+                                </span>
+                            }
+                        </a>
+                    </td>
+                    @if (PermissionChecker.IsPermitted(Permissions.MenuPermissions.QuickMenuMyCompanyManageUserShowRouteList))
+                    {
+                        if (item.AccessRights == "Employee")
+                        {
+                            <td class="table-body-td-style" valign="top">
+                                <div class="user_list_device_header">@Localize.T("Route List")<span>:</span></div>
+                                @item.RouteList
+                            </td>
+                        }
+                        else
+                        {
+                            <td class="table-body-td-style" valign="top">
+                                <div class="user_list_device_header">@Localize.T("Route List")<span>:</span></div>
+                                You Have Access To All Routes
+                            </td>
+                        }
+
+                    }
+                    else
+                    {
+                        <td class="table-body-td-style" valign="top">
+                            <div class="user_list_device_header">@Localize.T("Supervisor")<span>:</span></div>
+                            @item.Supervisor
+                        </td>
+                    }
+                    <td class="table-body-td-style" valign="top">
+                        <div class="user_list_device_header">@Localize.T("Email Address")<span>:</span></div>
+                        <span class="User_list_info">@item.Email</span>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div class="user_list_device_header">@Localize.T("User Role")<span>:</span></div>
+                        <span class="User_list_info">@item.AccessRights</span>
+                        @*@if (item.AccessRights == "Recruit")
+                            {
+                                <br />
+                                <span class="cus-anchor assign_forms" onclick="AssignForms(@item.Id)">@Localize.T("Assign Forms")</span>
+                            }*@
+
+                        @if (item.Tags.ToLower().IndexOf(HS.Web.UI.Helper.LabelHelper.UserTags.Recruit.ToLower()) > -1)
+                        {
+                            <br />
+                            <span class="cus-anchor assign_forms" onclick="AssignForms(@item.Id)">@Localize.T("Assign Forms")</span>
+                        }
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div class="user_list_device_header">@Localize.T("Status")<span>:</span></div>
+                        <span class="User_list_info">
+                            @{
+                                if (item.IsActive)
+                                {
+                                    <span style="color:#2ca01c;font-weight:600">@Localize.T("Active")</span>
+                                }
+                                else if (item.IsDeleted == true)
+                                {
+                                    <span style="color:red;font-weight:600">@Localize.T("Deleted")</span>
+                                }
+                                else
+                                {
+                                    <span style="color:#c9c90d;font-weight:600">@Localize.T("Invited") &nbsp;&nbsp;</span>
+
+                                    <button class="btn btn-success activate_user" onclick="ActivateUser(@item.Id)"><i class="fa fa-check" aria-hidden="true"></i>@Localize.T(" Activate")</button>
+                                    @*<a class="cus-anchor" href="/UserMgmt/ActivateUser/?userid=@item.Id">(Activate)</a>*@
+                                }
+                            }
+                        </span>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div class="user_list_device_header">@Localize.T("Current Employee")<span>:</span></div>
+                        <span class="User_list_info">
+                            @{
+                                if (item.IsCurrentEmployee == true)
+                                {
+                                    <span class="User_list_info">@Localize.T("Yes")</span>
+                                }
+                                else
+                                {
+                                    <span class="User_list_info">@Localize.T("No")</span>
+                                }
+                            }
+                        </span>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div class="user_list_device_header">@Localize.T("Actions")<span>:</span></div>
+                        <div class="User_list_info">
+                            @if (!item.IsActive && item.IsDeleted == false)
+                            {
+                                if (PermissionChecker.IsPermitted(Permissions.UserMgmtPermissions.UserResendEmail))
+                                {
+                                    <button class="btn btn-success" onclick="ResendInvitationMail(@item.Id)"><i class="fa fa-envelope" aria-hidden="true"></i>@Localize.T(" Resend Email")</button>
+                                }
+                            }
+                            else if (item.IsActive == false && item.IsDeleted == true)
+                            {
+                                <button class="btn btn-success activate_user" onclick="ActivateUser(@item.Id)"><i class="fa fa-check" aria-hidden="true"></i>@Localize.T(" Activate")</button>
+                            }
+                            else
+                            {
+                                if (PermissionChecker.IsPermitted(Permissions.UserMgmtPermissions.DeactivateUser))
+                                {
+                                    <button class="form-control btn-danger activate_user deactivate_btn" onclick="DeactivateUser(@item.Id)"><i class="fa fa-ban" aria-hidden="true"></i>@Localize.T(" Deactivate")</button>
+                                }
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @*@if (Model != null && Model.Count > 0)
+        {
+            <div class="EmployeeCounter">Total: @Model.Count</div>
+        }*@
+</div>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="UserListLoad(@(ViewBag.PageNumber))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="UserListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="UserListLoad(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="UserListLoad(2)">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="UserListLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="UserListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="UserListLoad(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="UserListLoad(2)">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="UserListLoad(3)">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="UserListLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UserListLoad(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UserListLoad(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UserListLoad(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="UserListLoad(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="UserListLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UserListLoad(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UserListLoad(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UserListLoad(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="UserListLoad(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UserListLoad(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UserListLoad(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UserListLoad(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="UserListLoad(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UserListLoad(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UserListLoad(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="UserListLoad(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UserListLoad(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="UserListLoad(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>

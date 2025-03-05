@@ -1,0 +1,247 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@model HS.Entities.CustomerListWithCountModel
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework
+
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    
+    var totalcount = '@Localize.T("Total:") @string.Format("{0:#,##0}", ViewBag.TotalLeads)';
+    $(document).ready(function () {
+        parent.$(".lead_total_color").html(totalcount);
+          $(".icon_sort_timeclock").click(function () {
+
+            var orderval = $(this).attr('data-val');
+            console.log(orderval);
+            LoadConvertedCustomerReport(pageno, orderval);
+        });
+    })
+</script>
+
+<table id="LeadsReportTable">
+    <thead>
+        <tr>
+            <th>
+                <div>@Localize.T("Customer")</div> 
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customer"></i></div>
+
+            </th>
+            <th>
+                <div>@Localize.T("Convertion Date")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/convertiondate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/convertiondate"></i></div>
+
+            </th>
+            <th>
+                <div>@Localize.T("Sales Person")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/salesperson"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/salesperson"></i></div>
+
+            </th>
+
+            <th>
+                <div>@Localize.T("Lead Source")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/leadsource"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/leadsource"></i></div>
+
+            </th>
+            <th>
+                <div>@Localize.T("Convertion Type")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/convertiontype"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/convertiontype"></i></div>
+
+            </th>
+            <th>
+                <div>@Localize.T("Lead Creation Date")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/creationdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/creationdate"></i></div>
+
+            </th>
+
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.CustomerList)
+            {
+            <tr>
+                <td>
+                    <div>@Localize.T("Customer") <span>:</span></div>
+                    <div>
+                        <a href="javascript:void(0)" class="lead_click_item" data-id="@item.CustomerId" onclick="LeadServiceEquipment('@item.CustomerId')">@item.Name</a> <br />
+                        <b>@Localize.T("Id"):</b><a target="_blank" href="/Customer/CustomerDetail/?id=@item.Id" data-id="@item.Id" class="lead_click_item">@item.Id</a>
+                    </div>
+
+                    @*<div><a href="javascript:void(0)" class="lead_click_item" data-id="@item.Id" onclick="EditCustomer('@item.Id')" >@item.Id</a></div>*@
+                </td>
+               
+                @*<td>
+                    <div>@Localize.T("Email Address") <span>:</span></div>
+                    <div>@item.EmailAddress</div>
+                </td>*@
+                <td>
+                    <div>@Localize.T("Convertion Date") <span>:</span></div>
+                    @if (item.ConvertionDate != new DateTime())
+                    {
+                        <div>@string.Format(item.ConvertionDate.UTCToClientTime().ToString("MM/dd/yy"))</div>
+                    }
+
+                </td>
+                <td>
+                    <div>@Localize.T("Sales Person") <span>:</span></div>
+                    <div>@item.CreatedByVal</div>
+                </td>
+                <td>
+                    <div>@Localize.T("Lead Source") <span>:</span></div>
+                    @if (!string.IsNullOrEmpty(item.LeadSourceVal) && item.LeadSourceVal != "-1" && item.LeadSourceVal != "Select One")
+                    {
+                        <div>@item.LeadSourceVal</div>
+                    }
+
+                </td>
+                <td>
+                    <div>@Localize.T("Convertion Type") <span>:</span></div>
+                    @if (!string.IsNullOrEmpty(item.ConvertionType))
+                    {
+                        <div>@item.ConvertionType</div>
+                    }
+
+                </td>
+                <td>
+                    <div>@Localize.T("Lead Creation Date") <span>:</span></div>
+                    @if (item.CreatedDate != new DateTime())
+                    {
+                        <div>@item.CreatedDate.UTCToClientTime().ToString("MM/dd/yy")</div>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<div class="AgentListPagination">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+            {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+            {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber))">1</button>
+            </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadConvertedCustomerReport(1)">1</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadConvertedCustomerReport(2)">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadConvertedCustomerReport(1)">1</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadConvertedCustomerReport(2)">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="LoadConvertedCustomerReport(3)">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="LoadConvertedCustomerReport()">Next</button>
+                    </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="LoadConvertedCustomerReport(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+            }
+        }
+    </div>
+</div>

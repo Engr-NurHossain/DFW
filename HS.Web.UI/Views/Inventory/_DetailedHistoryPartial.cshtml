@@ -1,0 +1,159 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Css/Inventory/PurchaseOrderPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Inventory/BadInventoryPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script>
+    var listSelet = '@Html.Raw(Json.Encode(@ViewBag.selectsts))';
+    var EstimatorId = '@ViewBag.EstimatorId';
+    listSelet = JSON.parse(listSelet);
+    var selectedTechsList = '@Html.Raw(Json.Encode(@ViewBag.selectedTechsList))';
+    selectedTechsList = JSON.parse(selectedTechsList);
+    var StartDate = $(".min-date").val();
+    var EndDate = $(".max-date").val();
+
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var OpenDetailsByEquipment = function (pagenoTickets, pagenoTransfers, eqList, order) {
+        StartDate = $(".min-date").val();
+        EndDate = $(".max-date").val();
+        OpenTopToBottomModal(domainurl + "/Inventory/DetailedHistory/?EmployeeIds=" + $("#TechList").val() + "&EquipmentIds=" + eqList 
+            + "&Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&PageNo=" + pagenoTickets + "&PageNoTransfers=" + pagenoTransfers + "&OpenTab=Ware");
+    }
+    
+    var POListLoad = function (pageNo, order, eqList, mfgList, getReport) {
+        if (typeof (pageNo) != "undefined") {
+            var setectSts = encodeURI($("#poStatus").val());
+            //if (EstimatorId == null || EstimatorId == "undefined" || EstimatorId =="") {
+            //    EstimatorId = $("#EstimatorId").val();
+            //}
+
+            StartDate = $(".min-date").val();
+            EndDate = $(".max-date").val();
+            
+            EstimatorId = $("#EstimatorId").val();
+            //console.log(eqList);
+            //var LoadUrl = domainurl + "/Inventory/DetailedHistoryListPartial/?SearchText=" + encodeURI($(".PoSearchText").val()) + "&selectsts=" + setectSts
+            var LoadUrl = domainurl + "/Inventory/DetailedHistoryList2Partial/?SearchText=" + encodeURI($(".PoSearchText").val()) + "&selectsts=" + setectSts
+                + "&PageNo=" + pageNo + "&order=" + order + "&EstimatorId=" + EstimatorId + "&EmployeeIds=" + $("#TechList").val()
+                + "&EquipmentIds=" + eqList + "&ManufacturerIds=" + mfgList + "&GetReport=" + getReport + "&Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate);
+            //console.log(LoadUrl);
+            $(".PurchaseOrderTable").html(TabsLoaderText);
+            $(".PurchaseOrderTable").load(LoadUrl);
+        }
+    }
+
+    var DataListDownload = function (pageNo, order, eqList, mfgList, getReport) {
+        StartDate = $(".min-date").val();
+        EndDate = $(".max-date").val();
+
+        if (typeof (pageNo) != "undefined") {
+            var setectSts = encodeURI($("#poStatus").val());
+            EstimatorId = $("#EstimatorId").val();
+            window.location.href = domainurl + "/Inventory/DetailedHistoryList2Partial/?SearchText=" + encodeURI($(".PoSearchText").val()) + "&selectsts=" + setectSts
+                + "&PageNo=" + pageNo + "&order=" + order + "&EstimatorId=" + EstimatorId + "&EmployeeIds=" + $("#TechList").val()
+                + "&EquipmentIds=" + eqList + "&ManufacturerIds=" + mfgList + "&GetReport=" + getReport + "&Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate);
+        }
+    }
+
+    var ResetFilter = function () {
+        //$("#poStatus").selectpicker("val", "");
+        //$(".PoSearchText").val("");
+        $("#EstimatorId").val("-1");
+        POListLoad(1);
+    }
+    $(document).ready(function () {
+        $('.bi_single_filter_div_style').css('width', '15em');
+        $('.dateviewed').css('margin-left', '20px');
+        //if (listSelet.length != 0) {
+        //    $("#poStatus").selectpicker('val', listSelet);
+        //}
+        //else {
+        //    $("#poStatus").selectpicker('val', '');
+        //}
+        //console.log(selectedTechsList);
+        $("#TechList").attr("data-live-search", "true");
+        $("#TechList").attr("data-selected-text-format", "count");
+        if (selectedTechsList.length != 0) {
+            $("#TechList").selectpicker('val', selectedTechsList);
+        }
+        else {
+            $("#TechList").selectpicker('val', '');
+        }
+        $('.selectpicker').selectpicker('refresh');
+
+        
+        $("#TechList").change(function () {
+
+            if ($("#TechList").is(":visible")) {
+                //console.log($("#TechList").val());
+            }
+            POListLoad(1, null);
+        });
+
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            //var DateFrom = $(".min-date").val();
+            //var DateTo = $(".max-date").val();
+            UpdatePtoCookie();
+
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+
+            POListLoad(1, null);
+        });
+        POListLoad(1, null);
+    });
+</script>
+
+<div class="purchase_order_partial_container">
+    <div class="purchase_order_partial_search_add">
+        @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.TechDropDownEditable))
+        {
+            <div class="bi_single_filter_div_style filter_fill" style="width: auto; float: left; margin-left: 0px; width: 150px">
+                @Html.DropDownList("TechList", ViewBag.TechList as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple", @title = "Technician" })
+            </div>
+        }
+        else
+        {
+            <div class="bi_single_filter_div_style filter_fill" style="width: auto; float: left; margin-left: 0px">
+                @ViewBag.LoggedUserName
+                <input type="hidden" id="TechList" value="@ViewBag.LoggedUserId" />
+            </div>
+        }
+
+        @*@Html.DropDownListFor("NewTechList", new SelectList((IEnumerable<SelectListItem>)Model.Status, "Value", "Text", Model.selectedStatus), htmlAttributes: new { @class = "js-example-theme-multiple", multiple = "multiple", id = "select" })*@
+
+        <div class="dateviewed" style="width: auto; margin-left: 20px">
+            @{Html.RenderAction("DateViewPartial", "Customer");}
+        </div>
+        @*<div class="bi_single_filter_div_style filter_fill" style="width: auto; float: left; margin-left: 20px; margin-top: 5px">
+            <span>Show All Data </span>
+            <input type="checkbox" class="ChkShowAllMassRestock" />
+        </div>*@
+
+        </div>
+        <div class="PurchaseOrderTable">
+
+        </div>
+    </div>
+
+

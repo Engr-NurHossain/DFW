@@ -1,0 +1,606 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.CustomerListWithCountModel
+@*@model List<HS.Entities.Customer>*@
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework
+
+<link href="~/Content/Css/Inventory/BadInventoryPartial.css" rel="stylesheet" />
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+@*<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+    <link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+    <script src="~/Content/Select2/Select2.min.js"></script>
+    <script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>*@
+<script>
+    var DataTablePageSize = 50;
+    var LeadsStartDatepicker;
+    var LeadsEndDatepicker;
+    var statusval = '@ViewBag.statusval';
+   var pageno = '@ViewBag.PageNumber';
+    var leadval = '@ViewBag.leadval';
+    @*var marketval = '@Html.Raw(Json.Encode(@ViewBag.valmarket))';
+    marketval = JSON.parse(marketval);
+    var listStatus = '@Html.Raw(Json.Encode(@ViewBag.StatusList))';
+    listStatus = JSON.parse(listStatus);*@
+    var listSalesrep = '@Html.Raw(Json.Encode(@ViewBag.SalesRepList))';
+    listSalesrep = JSON.parse(listSalesrep);
+    var listFinrep = '@Html.Raw(Json.Encode(@ViewBag.FinRepList))';
+    listFinrep = JSON.parse(listFinrep);
+    var my_date_format = function (input) {
+        console.log(input+" r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    //var LeadServiceEquipment = function (idval) {
+    //    //var idval = $(this).attr('data-id');
+    //    var mapLoadurl = domainurl + "/Reports/GetLeadsServiceAndEquipment?customerid=" + idval;
+    //    OpenTopToBottomModal(mapLoadurl);
+    //}
+    var CustomerSearchKeyUp = function (pageno,order)
+    {
+         var SalesRep = encodeURI($("#Salesrep").val());
+         var FinRep = encodeURI($("#Financerep").val());
+
+         var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+        var status = $("#lead_status").val();
+                    var SearchText = $(".finance_search_text").val();
+           var fundingcompany = $(".financedeals_filter_fundingcompany").val();
+              var financeterm = $(".financedeals_filter_financeterm").val();
+        var market = $("#lead_market").val();
+        var leads = $("#lead_source").val();
+           var soldmaxdate = $("#finance_soldmaxdate").val();
+        var soldmindate = $("#finance_soldmindate").val();
+           var installmaxdate = $("#finance_installmaxdate").val();
+        var installmindate = $("#finance_installmindate").val();
+         var schedulemaxdate = $("#finance_schedulemaxdate").val();
+        var schedulemindate = $("#finance_schedulemindate").val();
+        $("#CustomerFinancedReportTab").html(TabsLoaderText);
+
+        $("#CustomerFinancedReportTab").load(domainurl + "/Reports/LoadFinancedReport/?pageno=" + pageno + "&pagesize=" + DataTablePageSize + "&status=" + status + "&market=" + market + "&leads=" + leads + "&Start=" + StartDateVal + "&End=" + EndDateVal + "&SearchText=" + encodeURI(SearchText) + "&FundingCompany=" + encodeURI(fundingcompany) + "&FinanceTerm=" + financeterm + "&SalesRep=" + SalesRep+"&order="+order+"&installmaxdate=" + encodeURI(installmaxdate) + "&installmindate=" + encodeURI(installmindate)+ "&soldmaxdate=" + encodeURI(soldmaxdate)+ "&soldmindate=" + encodeURI(soldmindate)+"&FinRep=" + FinRep + "&schedulemaxdate=" + encodeURI(schedulemaxdate)+ "&schedulemindate=" + encodeURI(schedulemindate));
+    }
+      var ResetFilter = function () {
+        $(".finance_cus").val("");
+        $(".finance_cus_drp").selectpicker("val", "");
+       // $(".finance_cus_drp").val("-1");
+        $(".finance_search_text").val("");
+        CustomerSearchKeyUp(1);
+    }
+
+    $(document).ready(function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".LoaderWorkingDiv").hide();
+        $("#CustomerFinancedReportTab .invoice-loader").hide();
+
+        $(".bi_single_filte_info_container").hide();
+        $(".btn-filter").click(function () {
+
+            if ($(".bi_single_filte_info_container").is(":visible")) {
+                $(".bi_single_filte_info_container").hide();
+
+            } else {
+                $(".bi_single_filte_info_container").show();
+
+            }
+        });
+             if (listSalesrep != null) {
+            if (listSalesrep.length != 0) {
+                $("#Salesrep").selectpicker('val', listSalesrep);
+            }
+            else {
+                $("#Salesrep").selectpicker('val', '');
+            }
+        }
+         if (listFinrep != null) {
+            if (listFinrep.length != 0) {
+                $("#Financerep").selectpicker('val', listFinrep);
+            }
+            else {
+                $("#Financerep").selectpicker('val', '');
+            }
+        }
+          $(".filtersearchcustomerfinance").click(function () {
+            var StartDateVal = $(".min-date").val();
+              var EndDateVal = $(".max-date").val();
+              var fundingcompany = $(".financedeals_filter_fundingcompany").val();
+              var financeterm = $(".financedeals_filter_financeterm").val();
+            var status = $("#lead_status").val();
+            var market = $("#lead_market").val();
+              var leads = $("#lead_source").val();
+              var SalesRep = encodeURI($("#Salesrep").val());
+             var FinRep = encodeURI($("#Financerep").val());
+
+       var soldmaxdate = $("#finance_soldmaxdate").val();
+        var soldmindate = $("#finance_soldmindate").val();
+           var installmaxdate = $("#finance_installmaxdate").val();
+              var installmindate = $("#finance_installmindate").val();
+           var schedulemaxdate = $("#finance_schedulemaxdate").val();
+        var schedulemindate = $("#finance_schedulemindate").val();
+            var SearchText = $(".finance_search_text").val();
+            $("#CustomerFinancedReportTab").html(TabsLoaderText);
+            $("#CustomerFinancedReportTab").load(domainurl + "/Reports/LoadFinancedReport/?Start=" + StartDateVal + "&End=" + EndDateVal + "&SearchText=" + encodeURI(SearchText) +"&pageno=" + pageno + "&pagesize=50" + "&status=" + status + "&market=" + market + "&leads=" + leads + "&FundingCompany=" + encodeURI(fundingcompany) + "&FinanceTerm=" + financeterm + "&SalesRep=" + SalesRep+"&installmaxdate=" + encodeURI(installmaxdate) + "&installmindate=" + encodeURI(installmindate)+ "&soldmaxdate=" + encodeURI(soldmaxdate)+ "&soldmindate=" + encodeURI(soldmindate)+"&FinRep=" + FinRep + "&schedulemaxdate=" + encodeURI(schedulemaxdate)+ "&schedulemindate=" + encodeURI(schedulemindate));
+    })
+         // });
+        //if (listStatus != null) {
+        //    if (listStatus.length != 0) {
+        //        $("#StatusID").selectpicker('val', listStatus);
+        //    }
+        //    else {
+        //        $("#StatusID").selectpicker('val', '');
+        //    }
+        //}
+
+        if (StartDate != "" && EndDate != "")
+        {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        $("#btnDownloadfinanceReport").click(function () {
+             var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            var searchtext = $(".finance_search_text").val();
+                   var SalesRep = encodeURI($("#Salesrep").val());
+                  var FinRep = encodeURI($("#Financerep").val());
+
+                var fundingcompany = $(".financedeals_filter_fundingcompany").val();
+              var financeterm = $(".financedeals_filter_financeterm").val();
+            var status = $("#lead_status").val();
+            var market = $("#lead_market").val();
+            var leads = $("#lead_source").val();
+                   var soldmaxdate = $("#finance_soldmaxdate").val();
+        var soldmindate = $("#finance_soldmindate").val();
+           var installmaxdate = $("#finance_installmaxdate").val();
+            var installmindate = $("#finance_installmindate").val();
+               var schedulemaxdate = $("#finance_schedulemaxdate").val();
+        var schedulemindate = $("#finance_schedulemindate").val();
+            //if (StartDateVal.trim().length == 10 && EndDateVal.trim().length == 10) {
+            //    StartDateVal = StartDateVal.replaceAll('/', '_');
+            //    EndDateVal = EndDateVal.replaceAll('/', '_');
+                location.href = (domainurl + "/Reports/LoadFinancedReport/?Start=" + StartDateVal + "&End=" + EndDateVal + "&GetReport=true&pageno=" + pageno + "&pagesize=50" + "&status=" + status + "&market=" + market + "&leads=" + leads + "&SearchText=" + encodeURI(searchtext) + "&FundingCompany=" + encodeURI(fundingcompany) + "&FinanceTerm=" + financeterm + "&SalesRep=" + SalesRep+"&installmaxdate=" + encodeURI(installmaxdate) + "&installmindate=" + encodeURI(installmindate)+ "&soldmaxdate=" + encodeURI(soldmaxdate)+ "&soldmindate=" + encodeURI(soldmindate)+"&FinRep=" + FinRep +"&schedulemaxdate=" + encodeURI(schedulemaxdate)+ "&schedulemindate=" + encodeURI(schedulemindate));
+    })
+
+              //  location.href = (domainurl + "/Reports/LoadHudsonFollowupReport/?GetReport=true&pageno=" + pageno + "&pagesize=50" +"&Start="+ StartDateVal + "&End=" + EndDateVal+ "&status=" + status + "&market=" + market + "&leads=" + leads+"&SearchText=" + encodeURI(searchtext)+"&StatusIDList=" + StatusIDList);
+
+        //});
+        //    $(".Techbtnsearchtext").click(function () {
+        //    BIListLoad(1, null);
+        //});
+             $("#btn_finance_search").click(function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            var status = $("#lead_status").val();
+            var market = $("#lead_market").val();
+            var leads = $("#lead_source").val();
+           var SalesRep = encodeURI($("#Salesrep").val());
+             var FinRep = encodeURI($("#Financerep").val());
+
+            var SearchText = $(".finance_search_text").val();
+            $("#CustomerFinancedReportTab").html(TabsLoaderText);
+            $("#CustomerFinancedReportTab").load(domainurl + "/Reports/LoadFinancedReport/?Start=" + StartDateVal + "&End=" + EndDateVal + "&SearchText=" + encodeURI(SearchText) +"&pageno=" + pageno + "&pagesize=50" + "&status=" + status + "&market=" + market + "&leads=" + leads + "&SalesRep=" + SalesRep+"&FinRep=" + FinRep);
+             })
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            UpdatePtoCookie();
+            var status = $("#lead_status").val();
+            var market = $("#lead_market").val();
+            var leads = $("#lead_source").val();
+            $("#CustomerFinancedReportTab").html(TabsLoaderText);
+            $("#CustomerFinancedReportTab").load(domainurl + "/Reports/LoadFinancedReport/?Start=" + StartDateVal + "&End=" + EndDateVal + "&pageno=" + pageno + "&pagesize=50" + "&status=" + status + "&market=" + market + "&leads=" + leads);
+        });
+
+           $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            CustomerSearchKeyUp(pageno, orderval);
+           });
+         new Pikaday({ format: 'MM/DD/YYYY', field: $('#finance_installmindate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#finance_installmaxdate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#finance_soldmindate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#finance_soldmaxdate')[0] });
+          new Pikaday({ format: 'MM/DD/YYYY', field: $('#finance_schedulemindate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#finance_schedulemaxdate')[0] });
+
+               $(".finance_search_text").keydown(function (e) {
+
+                if (e.which == 13) {
+                    CustomerSearchKeyUp(1);
+                }
+            });
+    });
+
+
+
+
+</script>
+<style>
+    .lead_market_width {
+        width: 200px;
+        float: left;
+        margin-right: -3px;
+    }
+</style>
+<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
+
+
+<div class="row lrp_bottom_border">
+    <div class="lead_total_color"> @Localize.T("Total Financed:") @string.Format("{0:#,##0}", ViewBag.TotalLeads)</div>
+</div>
+
+
+<div class="row followup_report_top_bar lhlr_top_bar">
+    <div class="input-group add-on">
+
+        <input value="@TempData["data"]" class="form-control filterinput border_radius_0 finance_search_text" placeholder="Search by Name">
+
+        <div class="input-group-btn">
+            <button class="btn green_button btn_finance_search" id="btn_finance_search"><i class="fa fa-search"></i></button>
+        </div>
+
+    </div>
+    <div class="bi_single_filter_div_style filter_fill">
+        <button class="btn btn-filter green_button" title="Filter">
+            <i class="glyphicon glyphicon-filter"></i>
+        </button>
+    </div>
+    <button title="@Localize.T(" Download")" class="report_btn lrp_float_right" id="btnDownloadfinanceReport"><i class="fa fa-download" aria-hidden="true"></i></button>
+
+</div>
+<div class="bi_single_filte_info_container">
+    <div class="bi_single_filter_info_inner">
+        <div class="row">
+           
+            <div class="form-group clearfix col-md-3">
+                <label>@Localize.T("Sales Rep")</label>
+                @Html.DropDownList("Salesrep", ViewBag.userlist as List<SelectListItem>, new { @class = "form-control finance_cus_drp", @multiple = "multiple", @title = "Select Sales Rep" })
+            </div>
+
+           
+          
+            <div class="form-group clearfix col-md-3">
+                <label>@Localize.T("Finance Rep")</label>
+                @Html.DropDownList("Financerep", ViewBag.financereplist as List<SelectListItem>, new { @class = "form-control finance_cus_drp", @multiple = "multiple", @title = "Select Finance Rep" })
+            </div>
+
+         
+            @*<div class="col-md-6">*@
+                <div class="form-group clearfix col-md-3">
+                    <label>@Localize.T("Install Min Date")</label>
+                    <input class="form-control finance_cus" value="@ViewBag.InstallMinDate" placeholder="Install Min Date" id="finance_installmindate" />
+                </div>
+                <div class="form-group clearfix col-md-3">
+                    <label>@Localize.T("Install Max Date")</label>
+                    <input class="form-control finance_cus" value="@ViewBag.InstallMaxDate" placeholder="Install Max Date" id="finance_installmaxdate" />
+                </div>
+            </div>
+            @*<div class="col-md-4"> @Html.DropDownList("Status", ViewBag.TicketStatus as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Select Ticket Status" })</div>*@
+
+        @*</div>*@
+        <div class="row">
+            @*<div class="col-md-6">*@
+                <div class="form-group clearfix col-md-3">
+                    <label>@Localize.T("Sold Min Date")</label>
+                    <input class="form-control finance_cus"  value="@ViewBag.SoldMinDate" placeholder="Sold Min Date" id="finance_soldmindate" />
+                </div>
+                <div class="form-group clearfix col-md-3">
+                    <label>@Localize.T("Sold Max Date")</label>
+                    <input class="form-control finance_cus" value="@ViewBag.SoldMaxDate" placeholder="Sold Max Date" id="finance_soldmaxdate" />
+                </div>
+             <div class="form-group clearfix col-md-3">
+                    <label>@Localize.T("Schedule Min Date")</label>
+                    <input class="form-control finance_cus"  value="@ViewBag.ScheduleMinDate" placeholder="Schedule Min Date" id="finance_schedulemindate" />
+                </div>
+                <div class="form-group clearfix col-md-3">
+                    <label>@Localize.T("Schedule Max Date")</label>
+                    <input class="form-control finance_cus" value="@ViewBag.ScheduleMaxDate" placeholder="Schedule Max Date" id="finance_schedulemaxdate" />
+                </diV>
+            @*</div>*@
+        </div>
+
+
+
+        @*<div class="bi_single_filter_info_inner_content"> @Html.DropDownList("StatusID", ViewBag.StatussList as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Select Status" })</div>*@
+    </div>
+    <div class="bi_single_filter_info_footer">
+        <button class="btn search_BI_btn green_button filtersearchcustomerfinance" title="@Localize.T("Apply Filter")"><i class="fa fa-check" aria-hidden="true"></i>@Localize.T(" Apply")</button>
+        <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilter()">@Localize.T("Reset")</button>
+
+    </div>
+</div>
+
+
+
+<div class="leads_report_table HudsonleadsReportTable">
+    <table id="LeadsReportTable" class="loadHudsonleadsReportTable">
+        <thead>
+            <tr>
+                <th class="lhlr_add">
+                    <div>@Localize.T(" Name ")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/name"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/name"></i></div>
+
+                </th>
+                <th class="lhlr_add">
+                    <div>@Localize.T("Sales Rep ")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/salesrep"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/salesrep"></i></div>
+
+                </th>
+                <th class="lhlr_add">
+                    <div>@Localize.T("Finance Rep")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/financerep"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/financerep"></i></div>
+
+                </th>
+                <th class="lhlr_stat">
+                    <div>@Localize.T("Amount")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/amount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/amount"></i></div>
+
+                </th>
+                <th class="lhlr_stat">
+                    <div>@Localize.T("Sold Date")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/solddate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/solddate"></i></div>
+
+                </th>
+                <th class="lhlr_stat">
+                    <div>@Localize.T("Schedule Date")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/scheduledate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/scheduledate"></i></div>
+
+                </th>
+                <th class="lhlr_stat">
+                    <div>@Localize.T("Install Date")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/installdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/installdate"></i></div>
+
+                </th>
+
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.CustomerList)
+            {
+                <tr>
+                    <td>
+                        <div>@Localize.T(" Name") <span>:</span></div>
+                        @{
+                            if (!string.IsNullOrWhiteSpace(item.BusinessName))
+                            {
+                                <div><a href="/Customer/Customerdetail/?id=@item.Id" class="lead_click_item" data-id="@item.CustomerId" target="_blank">@item.BusinessName</a></div>
+                                <br />
+                                <div>ID: <a href="/Customer/Customerdetail/?id=@item.Id" class="lead_click_item" data-id="@item.CustomerId" target="_blank">@item.Id</a></div>
+
+                            }
+                            else
+                            {
+                                <div>ID: <a href="/Customer/Customerdetail/?id=@item.Id" class="lead_click_item" data-id="@item.CustomerId" target="_blank">@item.Id</a></div>
+                            }
+                        }
+                    </td>
+                    <td>
+
+                        <div>@Localize.T("Sales Rep") <span>:</span></div>
+                        @{
+                            if (!string.IsNullOrWhiteSpace(item.PersonSales))
+                            {
+                                <div>@item.PersonSales</div>
+                            }
+                        }
+                    </td>
+                    <td>
+
+                        <div>@Localize.T("Finance Rep") <span>:</span></div>
+                        @{
+                            if (!string.IsNullOrWhiteSpace(item.FinanceRepValue))
+                            {
+                                <div>@item.FinanceRepValue</div>
+                            }
+                        }
+                    </td>
+                    <td>
+                        <div>@Localize.T("Amount") <span>:</span></div>
+
+                        @if (!item.FinancedAmount.HasValue || item.FinancedAmount == 0)
+                        {
+                            <div>$0.00</div>
+                        }
+                        else
+                        {
+                            <div>$@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.FinancedAmount)</div>
+                            @*<div>$@Math.Round(item.FinancedAmount.Value, 2) </div>*@
+                        }
+
+
+                    </td>
+
+                    <td>
+                        <div>@Localize.T("Sold Date") <span>:</span></div>
+                        @if (item.SalesDate != null && item.SalesDate != new DateTime())
+                        {
+                            <div>@item.SalesDate.Value.ToString("M/d/yy")</div>
+                        }
+                    </td>
+                    <td>
+                        <div>@Localize.T("Schedule Date") <span>:</span></div>
+                        @if (item.CreatedDate != null && item.CreatedDate != new DateTime())
+                        {
+                            <div>@item.CreatedDate.ToString("M/d/yy")</div>
+                        }
+                    </td>
+                    <td>
+                        <div>@Localize.T("Install Date") <span>:</span></div>
+                        @if (item.InstallDate != null && item.InstallDate != new DateTime())
+                        {
+                            <div>@item.InstallDate.Value.ToString("M/d/yy")</div>
+                        }
+
+
+                    </td>
+
+                </tr>
+            }
+            <tr class="table_total_bg">
+                <td colspan="3">
+                    <b class="float_right">
+                        @Localize.T("Total Financed Amount:")
+                    </b>
+                </td>
+                <td colspan="4">
+                    <div>@Localize.T("Total Financed Amount") <span>:</span></div>
+                    <div><b>$@Model.TotalAmountByPage.ToString("#,##0.00")</b></div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="AgentListPagination">
+        <div class="paginationContainer">
+            @if (ViewBag.PageCount > 0)
+            {
+                <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+            }
+            @if (ViewBag.PageCount == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons disabledBtn">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">1</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="CustomerSearchKeyUp(3)">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount > 3)
+            {
+                if (ViewBag.PageNumber == ViewBag.PageCount)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="CustomerSearchKeyUp()">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+
+

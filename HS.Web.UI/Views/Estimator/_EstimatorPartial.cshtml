@@ -1,0 +1,157 @@
+﻿@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.EstimatorDashboard
+@*@model IEnumerable<HS.Entities.Estimator>*@
+@{ Layout = null;
+                DateTime EndDate = (DateTime)ViewBag.EndDate;
+                DateTime StartDate = (DateTime)ViewBag.StartDate; }
+@using HS.Framework
+
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@Styles.Render("~/styles/EstimatePartialCS")
+
+<script>
+    var date = new Date();
+    var datetime = date.getDate() + "/"
+                + (date.getMonth() + 1) + "/"
+                + date.getFullYear();
+    var insdate;
+    var customerid;
+    var detailId;
+    var StartDatepicker;
+    var EndDatepicker;
+    var FirstDayOfWeek = '@ViewBag.FirstDayOfWeek';
+    var FirstDayOfMonthForAll = '@ViewBag.FilterStartDate';
+    @*var IsLead = '@ViewBag.IsLead';*@
+    $(document).ready(function () { 
+        $(".DuplicateInvoice").click(function () {
+            if ($(".estimate_list_first_colmn .CheckItems:checked").length > 0) { 
+                $(".estimate_list_first_colmn .CheckItems:checked").each(function () { 
+                    EstimatePartial.EstimatorClone($(this).attr('data-id'));
+                });
+            } else { 
+                OpenErrorMessageNew("", "No estimate has been selected.");
+            } 
+        });  
+    })
+</script>
+<script src="~/Content/Js/Estimator/Estimator.js"></script>
+<script src="~/Content/Js/Estimator/EstimatorPartial.js"></script>
+@*@using (Html.BeginForm())
+    {
+        <p>
+            PartNumber: @Html.TextBox("Search") <br />
+            <input type="submit" value="Filter" />
+        </p>
+    }*@
+<div class="page-content-wrap cus-padding-top10p all_estimatePartial_Container">
+    <ul class="nav nav-tabs invoices-tabs" id="myEstimatorTab">
+        <li class="active openestimatorTab" data-tab="Open">
+            <a data-target=".openestimateTab_Load" data-toggle="tab" onclick="OpenEstimatorTabLoad()">
+                @Localize.T("Open")
+                <span class="EstimatorOpenCounter">@(Model.OpenCount > 0 ? string.Format("({0})", Model.OpenCount) : "")</span>
+                @*<span class="EstimatorCounter">1</span>*@
+            </a>
+
+        </li>
+        <li class="acceptedestimatorTab" data-tab="Accepted">
+            <a data-target=".acceptedestimatorTab_Load" data-toggle="tab" onclick="AcceptedEstimatorTabLoad()">
+                @Localize.T("Accepted")
+                <span class="EstimatorAcceCounter">@(Model.AcceptedCount > 0 ? string.Format("({0})", Model.AcceptedCount) : "")</span>
+            </a>
+        </li>
+        <li class="pendingestimatorTab" data-tab="Pending">
+            <a data-target=".pendingestimatorTab_Load" data-toggle="tab" onclick="PendingEstimatorTabLoad()">
+                @Localize.T("Declined")
+                <span class="EstimatorOpenCounter">@(Model.PendingCount > 0 ? string.Format("({0})", Model.PendingCount) : "")</span>
+            </a>
+        </li>
+    </ul>
+    <div class="estimate_partial_search_container">
+        <div class="estimator_partial_searchbar">
+
+            <input type="text" value="@StartDate.ToString("MM/dd/yy")" placeholder="Start Date" id="StatDate" class="form-control border-radius-0 EstimateFilterStartDate" />
+
+            <input type="text" value="@EndDate.ToString("MM/dd/yy")" placeholder="Completion Date" id="EndDate" class="form-control border-radius-0 EstimateFilterEndDate" />
+
+
+
+            <div class="input-group add-on">
+                @Html.DropDownList("PTOFilter", (List<SelectListItem>)ViewBag.PTOFilterOptions, new { @class = "form-control PTOFilter", id = "PTOFilterVal" })
+
+                <div class="input-group-btn">
+                    <button class="btn PayrollFilterBtn green_button" title="@Localize.T("Search")">
+                        <i class="glyphicon glyphicon-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="estimate_partial_other_option">
+            <div>
+
+
+
+                @if (Request.Browser.IsMobileDevice)
+                {
+                    <span class="InvPrintForPhone">
+                        @*<a title="Print" class="InvoicePrint" href=""><i class="fa fa-print" aria-hidden="true"></i></a>*@
+                    </span> }
+                else
+                {
+                    <span class="InvPrint">
+                        @*<a title="Print" class="InvoicePrint" href=""><i class="fa fa-print" aria-hidden="true"></i></a>*@
+                    </span>
+                    }
+                
+                @if(PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerEstimatorClone))
+                {
+                    <button class="btn green_button DuplicateInvoice" cancelled="false">@Localize.T("Clone")</button>
+                }
+                 
+                <button class="btn download_btn" id="InvExport" style="margin-right:5px;">
+                    <i title="Download" class="glyphicon glyphicon-download-alt EstimatorReport"></i>
+                </button>
+            </div>
+
+
+            <button class="btn btn-primary btn-add-estimator text-right" id="AddEstimator" type="button" data-toggle="modal">
+                <i class="fa fa-plus-circle" aria-hidden="true"></i> &nbsp;@Localize.T("New")
+            </button>
+
+        </div>
+    </div>
+    <div class="header-section">
+        <div class="row">
+            <div class="col-md-12 tableEstimate">
+                <div class="width-50p">
+                    @*<div class="btn-group black-border">
+                            <button class="btn background-color-ffffff">@Localize.T("Batch Actions")</button>
+                            <button data-toggle="dropdown" class="btn dropdown-toggle background-color-ffffff" type="button" aria-expanded="false">
+                                <span class="caret"></span>
+                            </button>
+                            <ul style="min-width:inherit; margin-top:0px !important; border-radius:4px !important; border-color: #b1b4bb !important;" class="dropdown-menu customer-dropdown-ul-style">
+                                <li class="Edit-Customer"><a class="dropallign" href="javascript:void(0)">@Localize.T("Send Estimates")</a></li>
+                                <li class="Delete-Customer"><a class="dropallign" href="javascript:void(0)">@Localize.T("Print Estimates")</a></li>
+                            </ul>
+                        </div>*@
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="loadestimatorlist">
+
+
+    </div>
+    <div class="tab-content">
+        <div class="tab-pane active openestimateTab_Load">
+
+        </div>
+        <div class="tab-pane pendingestimatorTab_Load">
+
+        </div>
+        <div class="tab-pane acceptedestimatorTab_Load">
+
+        </div>
+    </div>
+</div>
+

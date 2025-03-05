@@ -1,0 +1,192 @@
+﻿
+@{
+    Layout = null;
+}
+
+@model HS.Entities.UserProfile
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<style>
+    .ChooseUserTypeHeader {
+        text-align: left;
+        background-color: #e4e4e4;
+    }
+
+        .ChooseUserTypeHeader div {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            padding-left: 10px;
+            font-size: 2rem;
+        }
+
+    .content-div {
+        padding-left: 10px;
+        padding-right: 10px;
+        margin-top: 10px;
+    }
+
+    .SaveCancelDiv {
+        width: 95%;
+        padding-top: 8px;
+    }
+
+    .footer-section {
+        background: #eceef1;
+        height: 50px;
+        position: fixed;
+        width: 100%;
+        bottom: 0%;
+    }
+
+    .btn-rnote {
+        float: right;
+        background-color: green;
+        color: white;
+    }
+
+        .btn-rnote:hover {
+            color: white;
+        }
+</style>
+<script>
+    var DoActivateUserRecruit = function () {
+        var url = domainurl + "/UserMgmt/ActivateUserRecruit/";
+        var param = JSON.stringify({
+            FirstName: $("#Employee_FirstName").val(),
+            UserName: $("#UserLogin_UserName").val(),
+            LastName: $("#Employee_LastName").val(),
+            Password: $("#UserLogin_Password").val(),
+            Id: $("#UserLogin_Id").val(),
+            empid: $("#Employee_Id").val(),
+            olduser: $("#Employee_UserName").val()
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                $('.close').trigger('click');
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message, LoadRecruit(true));
+                } else {
+                    OpenErrorMessageNew("Error!", data.message, LoadRecruit(true));
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    var IsUserExists = function () {
+        var url = domainurl + "/UserMgmt/IsUserExists/";
+        var param = JSON.stringify({
+            email: $("#UserLogin_UserName").val(),
+            Id: 0
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data == true) {
+                    $('.close').trigger('click');
+                    OpenErrorMessageNew("Error!", "User already exist, please check another one", "");
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $("#UserLogin_UserName").blur(function () {
+            IsUserExists();
+        })
+        $("#ConfirmPassword").keyup(function () {
+            if ($("#UserLogin_Password").val() != $("#ConfirmPassword").val()) {
+                $(".lblcontentpass").removeClass('hidden');
+            }
+            else {
+                $(".lblcontentpass").addClass('hidden');
+            }
+        })
+        $("#UserLogin_Password").keyup(function () {
+            if (($("#UserLogin_Password").val()).length < 6) {
+                $(".lblpass").removeClass('hidden');
+            }
+            else {
+                $(".lblpass").addClass('hidden');
+            }
+        })
+        $("#DoActivateUserRecruit").click(function () {
+            if (CommonUiValidation() && $("#UserLogin_UserName").val() != "" && ($("#UserLogin_Password").val() == $("#ConfirmPassword").val())) {
+                DoActivateUserRecruit();
+            }
+            else if ($("#UserLogin_Password").val() != $("#ConfirmPassword").val()) {
+                $(".lblcontentpass").removeClass('hidden');
+            }
+            else if (($("#UserLogin_Password").val() == "" && $("#ConfirmPassword").val() == "") && $("#UserLogin_UserName").val() == "") {
+                $("#UserLogin_UserName").css("border-color", "red");
+            }
+            else {
+                $("#UserLogin_UserName").css("border-color", "#ccc");
+                $("#UserLogin_Password").css("border-color", "red");
+                $("#ConfirmPassword").css("border-color", "red");
+            }
+        })
+    })
+</script>
+@Html.HiddenFor(x => x.UserLogin.Id)
+@Html.HiddenFor(x => x.Employee.Id)
+@Html.HiddenFor(x => x.Employee.UserName)
+<div class="ChooseUserTypeHeader">
+    <div>@Localize.T("Active Recruit User")</div>
+</div>
+<div class="form-group clearfix content-div">
+    <label>@Localize.T("Email Address / Username ")<span class="red">*</span></label>
+    @if (Model.UserLogin.UserName.Length != 36)
+    {
+        @Html.TextBoxFor(x => x.UserLogin.UserName, new { @class = "form-control", datarequired = "true" })
+    }
+    else
+    {
+        <input class="form-control" id="UserLogin_UserName" type="text" placeholder="Email-Address" />
+    }
+</div>
+<div class="form-group clearfix content-div">
+    <label>@Localize.T("First Name ")<span class="red">*</span></label>
+    @Html.TextBoxFor(x => x.Employee.FirstName, new { @class = "form-control", autofocus = "autofocus", @placeholder = "First Name", datarequired = "true" })
+</div>
+<div class="form-group clearfix content-div">
+    <label>@Localize.T("Last Name ")<span class="red">*</span></label>
+    @Html.TextBoxFor(x => x.Employee.LastName, new { @class = "form-control", @placeholder = "Last Name", datarequired = "true" })
+</div>
+<div class="form-group clearfix content-div">
+    <label>@Localize.T("Password ")<span class="red">*</span></label>
+    @Html.TextBoxFor(x => x.UserLogin.Password, new { @class = "form-control Password", @placeholder = "Password", datarequired = "true", dataformat = "password", type = "password" })
+    <label class="lblpass hidden" style="color:red">@Localize.T("minimum password length 6")</label>
+</div>
+<div class="form-group clearfix content-div">
+    <label>@Localize.T("Confirm Password ")<span class="red">*</span></label>
+    @Html.TextBoxFor(x => x.UserLogin.Password, new { @class = "form-control ConfirmPassword", @id = "ConfirmPassword", @placeholder = "Confirm Password", type = "password" })
+    <label class="lblcontentpass hidden" style="color:red">@Localize.T("Password does not match")</label>
+</div>
+
+<section class="footer-section">
+    <footer class="footer">
+        <div class="SaveCancelDiv">
+            <button class="btn btn-rnote" id="DoActivateUserRecruit"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+        </div>
+    </footer>
+</section>
+
+

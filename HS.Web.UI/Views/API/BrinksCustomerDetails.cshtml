@@ -1,0 +1,740 @@
+﻿@model HS.Entities.Custom.SetupBrinks
+@{
+    Layout = null;
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Css/API/UCCCustomerDetails.css" rel="stylesheet" />
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+<script>
+    $("#editSite").click(function () {
+
+        OpenTopToBottomModal("/Api/AddBrinksAccount?CustomerId=" + CustomerLoadGuid)
+
+    })
+    var SiteStatus = '@Model.sitestat_id';
+
+    var FundingResult = '@ViewBag.FundingData';
+    var CsNo = '@Model.cs_no';
+    var RemoveUnassociateCus = function (syncid) {
+        var url = domainurl + '/API/RemoveUnassociateCus';
+        var param = JSON.stringify({
+            CustomerGuidId: CustomerLoadGuid,
+            Platform: "Brinks"
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result == true) {
+                    OpenSuccessMessageNew("", data.message, function () {
+                            OpenBrinksDetails();
+                    })
+                }
+                else {
+                    OpenErrorMessageNew("", data.message, function () {
+
+                    })
+
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var PlaceAccountOutOfServiceConfirm = function () {
+    OpenConfirmationMessageNew("", "Do you want to place this account out of service?", function () {
+        PlaceAccountOutOfService();
+    })
+}
+var PlaceAccountOutOfService = function () {
+
+    var url = domainurl + '/API/PlaceAccountOutOfService';
+    var param = JSON.stringify({
+        CustomerGuidId: CustomerLoadGuid,
+
+    })
+    $.ajax({
+        type: "POST",
+        ajaxStart: $(".loader-div").show(),
+        url: url,
+        data: param,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+        success: function (data) {
+            if (data.result == true) {
+                OpenSuccessMessageNew("", data.message, function () { });
+
+            }
+            else {
+                OpenErrorMessageNew("", data.message, function () {
+
+                })
+
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(errorThrown);
+        }
+    });
+}
+    $(document).ready(function () {
+
+        console.log(FundingResult);
+         console.log(SiteStatus);
+        if (SiteStatus != '') {
+            if (SiteStatus.replace(/\s/g, "") == 'C') {
+                $("#OutOfService").hide();
+                $(".HasTerminate").show();
+            }
+        }
+
+            $("#OutOfService").click(function () {
+
+                PlaceAccountOutOfServiceConfirm();
+            });
+           $("#CheckEventHistory").click(function () {
+             window.open('/API/GetBrinksEventHistory?CSNumber='+CsNo, '_blank');
+           })
+
+        $(".Unassociate").click(function () {
+            OpenConfirmationMessageNew("", "Do you want to remove this site?", function () {
+                RemoveUnassociateCus();
+            })
+         })
+        //$("#CmnFundingCheck").click(function () {
+
+        //      var param = {
+        //        "CSNumber": CsNo,
+        //    };
+
+        //    console.log(param);
+        //    $.ajax({
+        //        type: "POST",
+        //        ajaxStart: $(".loader-div").show(),
+        //        url: "/API/GetCommonFundingResult",
+        //        data: JSON.stringify(param),
+        //        contentType: "application/json; charset=utf-8",
+        //        dataType: "json",
+        //        cache: false,
+        //        success: function (data) {
+        //            if (data.result == true) {
+        //                OpenSuccessMessageNew("", date.message, function () { })
+        //            }
+        //            else {
+        //                  OpenErrorMessageNew("", data.message, function () { })
+        //            }
+        //        },
+        //        error: function (jqXHR, textStatus, errorThrown) {
+        //            $(".loader-div").hide();
+        //            console.log(errorThrown);
+        //        }
+        //    });
+        //})
+    })
+</script>
+<div class="brinks_cust_detail_container">
+    <div class="btn_brinks">
+        <button class="btn green_button" id="OutOfService">Place Account Out Of Service</button>
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.BrinksUnassociateCustomer))
+        {
+            <button class="btn green_button Unassociate" @*id="TerminateCustomer"*@>@Localize.T("Unassociate Data")</button>
+        }
+        <button id="CheckEventHistory" type="button" class="btn green_button">Event Histories</button>
+    </div>
+
+    @if (Model != null)
+    {
+        @*<div>
+                <button id="sendEcontract">Send Econtract</button>
+            </div>*@
+        <div style="display:none" class="HasTerminate">This account is <span class="terminated">terminated</span></div>
+        <div class="ucc_info_holder">
+            <div class="ucc_info_block">
+                <div class="ucc_info_block_header">
+                    @Localize.T("General Information")
+                    <button class="btn edit-button editUccCustomer green-tooltip green_button" id="editSite" title="@Localize.T("Edit information")"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></button>
+                </div>
+
+                <div class="ucc_info_block_info">
+                    <table class="table">
+                        <tbody>
+                            @if (!string.IsNullOrEmpty(Model.cs_no))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Cs No")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.cs_no</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.site_name))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Site Name")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.site_name</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.sitetype_id))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Sitetype Id")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.sitetype_id</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.sitestat_id))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Sitestat Id")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.sitestat_id</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.site_addr1))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Site Address1")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.site_addr1</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.site_addr2))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Site Address2")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.site_addr2</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.city_name))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("City Name")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.city_name</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.county_name))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("County Name")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.county_name</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.state_id))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("State Id")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.state_id</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.zip_code))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Zip Code")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.zip_code</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.phone1))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Phone1")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.phone1</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.timezone_descr))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Timezone Description")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.timezone_descr</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.servco_no))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Servco No")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.servco_no</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.install_servco_no))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Install Servco No")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.install_servco_no</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.cspart_no))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Cspart No")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.cspart_no</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.subdivision))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Subdivision")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.subdivision</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.cross_street))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Cross Street")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.cross_street</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.codeword1))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Codeword1")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.codeword1</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.codeword2))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Codeword2")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.codeword2</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (Model.install_date != null)
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Install Date")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.install_date</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (Model.orig_install_date != null)
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Orig Install Date")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.orig_install_date</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.lang_id))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Lang Id")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.lang_id</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.systype_id))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Systype Id")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.systype_id</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.sec_systype_id))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Sec Systype Id")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.sec_systype_id</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.panel_phone))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Panel Phone")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.panel_phone</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.panel_location))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Panel Location")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.panel_location</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.receiver_phone))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Receiver Phone")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.receiver_phone</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.ati_hours))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Ati Hours")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.ati_hours</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.ati_minutes))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Ati Minutes")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.ati_minutes</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.panel_code))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Panel Code")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.panel_code</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.twoway_device_id))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Twoway Device Id")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.twoway_device_id</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.alkup_cs_no))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Alkup Cs No")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.alkup_cs_no</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.blkup_cs_no))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Blkup Cs No")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.blkup_cs_no</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.ontest_flag))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Ontest Flag")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.ontest_flag</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.ontest_expire_date))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Ontest Expire Date")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.ontest_expire_date</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.oos_flag))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Oos Flag")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.oos_flag</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.monitor_type))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Monitor Type")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.monitor_type</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(ViewBag.FundingStatus))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Funding Status")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@ViewBag.FundingStatus</div>
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Funding Status")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>Not Submitted</div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+
+            </div>
+
+
+        </div>
+        <div class="ucc_info_holder">
+            <div class="ucc_info_block">
+                <div class="ucc_info_block_header">
+                    @Localize.T("Emergency Contacts")
+                    @*<button class="btn" id="UpdateSiteContact">Update</button>*@
+                </div>
+                <div class="ucc_info_block_info">
+                    <table>
+                        <thead>
+                            @if (Model.contactList != null && Model.contactList.Count > 0)
+                            {
+                                <tr>
+
+                                    <th>@Localize.T("First Name")</th>
+                                    <th>@Localize.T("Last Name")</th>
+                                    <th>@Localize.T("Phone")</th>
+
+                                </tr>
+                            }
+                        </thead>
+                        <tbody>
+                            @if (Model.contactList != null && Model.contactList.Count > 0)
+                            {
+                                foreach (var item in Model.contactList)
+                                {
+                                    <tr>
+
+                                        <td>
+                                            @item.first_name
+                                        </td>
+
+                                        <td>
+                                            @item.last_name
+                                        </td>
+
+                                        <td>
+                                            @item.phone1
+
+                                        </td>
+
+
+                                    </tr>
+
+                                }
+                            }
+                            else
+                            {
+                                <span>No record found.</span>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="ucc_info_block">
+                <div class="ucc_info_block_header">@Localize.T("Security Zones")</div>
+                <div class="ucc_info_block_info">
+                    <table class="ucc_cust_equipment_table">
+                        <thead>
+                            @if (Model.ZoneObjectList != null && Model.ZoneObjectList.Count > 0)
+                            {
+                                <tr>
+                                    <th>@Localize.T("Zone Number")</th>
+                                    <th>@Localize.T("Event Code")</th>
+                                    <th>@Localize.T("Equiptype Type")</th>
+                                    <th>@Localize.T("Equiptype Location")</th>
+                                    <th>@Localize.T("Description")</th>
+                                </tr>
+                            }
+                        </thead>
+                        <tbody>
+
+                            @if (Model.ZoneObjectList != null && Model.ZoneObjectList.Count > 0)
+                            {
+
+                                foreach (var Zone in Model.ZoneObjectList)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div>@Localize.T("Zone Number") <span>:</span> </div>
+                                            <div> @Zone.zone_id</div>
+                                        </td>
+                                        <td>
+                                            <div>@Localize.T("Event Code") <span>:</span> </div>
+                                            <div> @Zone.event_id</div>
+                                        </td>
+                                        <td>
+                                            <div>@Localize.T("Equiptype Type") <span>:</span> </div>
+                                            <div> @Zone.equiptype_id</div>
+                                        </td>
+                                        <td>
+                                            <div>@Localize.T("Equiptype Location") <span>:</span> </div>
+                                            <div> @Zone.equiploc_id</div>
+                                        </td>
+                                        <td>
+                                            <div>@Localize.T("Description") <span>:</span> </div>
+                                            <div> @Zone.zone_comment</div>
+                                        </td>
+
+                                    </tr>
+                                }
+
+                            }
+                            else
+                            {
+
+                                <div style="padding-left: 20px;">
+                                    <span>No records found...</span>
+                                </div>
+                            }
+
+
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div>
+                <span style="font-weight:bold;padding-top:10px;">Common Funding Result : </span>
+                <span>@ViewBag.FundingData</span>
+            </div>
+        </div>
+
+
+
+    }
+    else
+    {
+        <div style="padding-left: 20px;">
+            <span>No record found...</span>
+        </div>
+    }
+</div>

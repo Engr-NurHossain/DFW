@@ -1,0 +1,158 @@
+﻿@model List<HS.Entities.Customer>
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Report/LoadRecurringBillingList.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script>
+    var billingdate = '@ViewBag.billingdate';
+    var searchtext = '@ViewBag.searchtext';
+    var methodtype = '@ViewBag.methodtype';
+    var FilterRecurringBill = function () {
+        OpenTopToBottomModal("/Reports/LoadRecurringBillingList/?billingdate=" + billingdate + "&searchtext=" + encodeURI($("#filter_search_txt").val()) + "&methodtype=" + encodeURI($("#invofor").val()));
+    }
+    $(document).ready(function () {
+        $(".load_recur_bil_list_inner").height(window.innerHeight - $(".load_recur_bil_list_header").height() - 25);
+        $("#filter_search_txt").val(searchtext);
+        $("#invofor").val(methodtype);
+        $("#filter_search_txt").keyup(function (event) {
+            event.preventDefault();
+            if (event.keyCode == 13) {
+                FilterRecurringBill();
+            }
+        });
+    });
+</script>
+<style>
+    .recurring_bill_list_filter{
+        margin-bottom:10px;
+    }
+    #filter_search_txt{
+        width:20%;
+        float:left;
+    }
+    #invofor{
+        width:20%;
+        float:left;
+    }
+</style>
+<div class="load_recur_bil_list_container">
+    <div class="load_recur_bil_list_header"> @Localize.T("Customer Name") </div>
+    <div class="load_recur_bil_list_inner">
+        <div class="recurring_bill_list_filter">
+            <input class="form-control" id="filter_search_txt" type="text" placeholder="Search" />
+            @Html.DropDownList("invofor", ViewBag.invoicefor as List<SelectListItem>, new { @class = "form-control " })
+            <div class="input-group-btn">
+                <button class="btn" id="btn_recurring_bill" onclick="FilterRecurringBill()"><i class="fa fa-search"></i></button>
+            </div>
+        </div>
+        <table class="loadticketreportlist_table">
+            <thead class="table-head-border">
+                <tr>
+                    <th class="thead-th-style"> <div>@Localize.T("Customer Name")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ticketid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ticketid"></i></div></th>
+                    <th class="thead-th-style"> <div>@Localize.T("Total Sales")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ticketid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ticketid"></i></div></th>
+                    @*<th class="thead-th-style">
+                            <div>@Localize.T("Total RMR")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customername"></i></div>
+                        </th>*@
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Total Tax")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customername"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Sales After Tax")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customername"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Payment Method")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customername"></i></div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+            {
+                    <tr class="tr-style">
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Customer Name")</div>
+                            <div class="ticket_list_partial_device_info"> 
+                                <span>@item.FirstName @item.LastName</span>
+                                @{
+                                    if (!string.IsNullOrWhiteSpace(item.AuthorizeRefId))
+                                    {
+                                        <br><span><strong>@Localize.T("Subscription ID: ")</strong>@item.AuthorizeRefId</span>
+                                    }
+                                }
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Total Sales")</div>
+                            <div class="ticket_list_partial_device_info">
+                                @{
+                                    if (item.TotalSales > 0)
+                                    {
+                                        <span>$@string.Format("{0:#,###.00}", item.TotalSales)</span>
+                                    }
+                                    else
+                                    {
+                                        <span>$0.00</span>
+                                    }
+                                }
+
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Total Tax")</div>
+                            <div class="ticket_list_partial_device_info">
+                                @{
+                                    if (item.TotalTax > 0)
+                                    {
+                                        <span>$@string.Format("{0:#,###.00}", item.TotalTax)</span>
+                                    }
+                                    else
+                                    {
+                                        <span>$0.00</span>
+                                    }
+                                }
+
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Sales After Tax")</div>
+                            <div class="ticket_list_partial_device_info">
+                                @{
+                                    if (item.SalesAfterTax > 0)
+                                    {
+                                        <span>$@string.Format("{0:#,###.00}", item.SalesAfterTax)</span>
+                                    }
+                                    else
+                                    {
+                                        <span>$0.00</span>
+                                    }
+                                }
+
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Payment Method")</div>
+                            <div class="ticket_list_partial_device_info"> @item.MethodPayment</div>
+                        </td>
+                    </tr>
+                                    }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+

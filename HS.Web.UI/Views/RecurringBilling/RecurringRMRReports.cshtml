@@ -1,0 +1,216 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+
+<script>String.prototype.replaceAll = function (search, replacement) {
+        var target = this;
+        return target.split(search).join(replacement);
+    };
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var Currency = '@Currency';
+    var DataTablePageSize = 50;
+    var PayrollStartDatepicker;
+    var PayrollEndDatepicker;
+    var startTab = '@ViewBag.StartTab'
+    var LoadRecurringReportTab = function () {
+        //var StartDate = $(".min-date").val();
+        //var EndDate = $(".max-date").val();
+        var StartDate = '';//$(".min-date").val();
+        var EndDate = '';//$(".max-date").val(); 
+        var Searchtext = $("#rmr_billing_txt_search").val();
+        var BillDay = $("#BillDay").val();
+        var BillingStatus = $("#BillingStatus").val();
+        var BillingMethod = $("#BillingMethod").val(); 
+        $(".Load_Recurring_Report").html(TabsLoaderText);
+        $(".Load_Recurring_Report").load(domainurl + "/RecurringBilling/LoadRecurringReportPartial?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&pageno=1&pagesize=50");
+    }
+    var LoadRmrAuditTab = function () {
+        var StartDate = $(".min-date").val() || '';
+        var EndDate = $(".max-date").val() || '';
+        var SearchText = $("#rmr_billing_txt_search").val();
+
+        $(".Load_Rmr_Audit").html(TabsLoaderText);
+
+        $(".Load_Rmr_Audit").load(domainurl + "/RecurringBilling/LoadRmrAuditPartial?" +
+            "FirstDate=" + encodeURIComponent(StartDate) +
+            "&LastDate=" + encodeURIComponent(EndDate) +
+            "&SearchText=" + encodeURIComponent(SearchText), function (response, status, xhr) {
+                if (status == "error") {
+                    $(".Load_Rmr_Audit").html("<p>Error loading data.</p>");
+                }
+            });
+    };
+    //var LoadRmrAuditTab = function () {
+    //    var filter = {
+    //        StartDate: $(".min-date").val() || '',
+    //        EndDate: $(".max-date").val() || '',
+    //        SearchText: $("#rmr_billing_txt_search").val()
+           
+    //    };
+
+    //    $(".Load_Rmr_Audit").html(TabsLoaderText);
+
+    //    $.ajax({
+    //        url: domainurl + "/RecurringBilling/LoadRmrAuditPartial",
+    //        type: "POST",
+    //        contentType: "application/json",
+    //        data: JSON.stringify(filter),
+    //        success: function (response) {
+    //            $(".Load_Rmr_Audit").html(response);
+    //        },
+    //        error: function (xhr, status, error) {
+    //            $(".Load_Rmr_Audit").html("<p>Error loading data.</p>");
+    //        }
+    //    });
+    //}
+    var LoadRmrMarginTab = function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".Load_Rmr_Margin").html(TabsLoaderText);
+        $(".Load_Rmr_Margin").load(domainurl + "/RecurringBilling/LoadRmrMarginPartial?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate));
+    }
+    //var LoadRmrMarginTab = function () {
+    //    var filter = {
+    //        StartDate: $(".min-date").val() || '',
+    //        EndDate: $(".max-date").val() || '',
+    //        SearchText: $("#rmr_billing_txt_search").val()
+           
+    //    };
+
+    //    $(".Load_Rmr_Margin").html(TabsLoaderText);
+
+    //    $.ajax({
+    //        url: domainurl + "/RecurringBilling/LoadRmrMarginPartial",
+    //        type: "POST",
+    //        contentType: "application/json",
+    //        data: JSON.stringify(filter),
+    //        success: function (response) {
+    //            $(".Load_Rmr_Audit").html(response);
+    //        },
+    //        error: function (xhr, status, error) {
+    //            $(".Load_Rmr_Margin").html("<p>Error loading data.</p>");
+    //        }
+    //    });
+    //}
+
+    
+    
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide(); 
+
+        if (startTab == "RecurringReportRMRTab") {
+
+            LoadRecurringReportTab();
+        }
+        
+        $(".RecurringReportTab").click(function () {
+            LoadRecurringReportTab();
+        });
+        $(".RmrAuditTab").click(function () {
+            LoadRmrAuditTab();
+        });
+        $(".RmrMarginTab").click(function () {
+            LoadRmrMarginTab();
+        });
+        //$("#rmr_billing_txt_search").keyup(function (event) {
+        //    event.preventDefault();
+        //    if (event.keyCode == 13) {
+        //        FilterRecurringBilling(1);
+        //    }
+        //})
+        $(".page-wrapper-contents").scroll(function (e) {
+            var orderval = $(this).attr('data-val');
+
+            e.preventDefault();
+
+            //if ($(e.target).scrollTop() + $(e.target).innerHeight() >= $(e.target)[0].scrollHeight) {
+            //    $("#myTab li").each(function () {
+            //        if ($(this).hasClass('RecurringReportTab active')) {
+            //            FilterRecurringBilling(1, orderval);
+            //        } 
+            //    })
+            //}
+        })
+        $('ul.payroll_report_top_nav li a').click(function (e) {
+            if (!TabPopStateCheck) {
+                window.history.pushState({ urlPath: window.location.pathname }, "", $(e.target).attr('tabname'));
+            }
+            TabPopStateCheck = false;
+        });
+        if (top.location.hash != '') {
+            if ($("[tabname='" + top.location.hash + "']").length > 0) {
+                TabPopStateCheck = true;
+                $("[tabname='" + top.location.hash + "']").click();
+            }
+        }
+       
+    });
+    </script>
+<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Report/ReportsPartial.css" rel="stylesheet" />
+<div class="ReportsTitle">
+    @Localize.T("RMR Report")
+    <div class="dateviewed">
+        @{Html.RenderAction("DateViewPartial", "Customer");}
+    </div>
+</div>
+ 
+<div class="col-xs-12 Report-Tabs">
+    <div class="nav-detail-contents">
+        <ul class="nav nav-tabs payroll_report_top_nav" id="myTab">
+            <li class="RecurringReportTab active">
+                <a tabname="#RecurringReportTab" idval="" data-target="#RecurringReportTab" data-toggle="tab">@Localize.T("Recurring Billing")</a>
+            </li>
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.RMRTemplateRMRAuditTab))
+            {
+                <li class="RmrAuditTab">
+                    <a tabname="#RmrAuditTab" idval="" data-target="#RmrAuditTab" data-toggle="tab">
+                        RMR Audit
+                    </a>
+                </li>
+            }
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.RMRMarginTab))
+            {
+                <li class="RmrMarginTab">
+                    <a tabname="#RmrMarginTab" idval="" data-target="#RmrMarginTab" data-toggle="tab">
+                        Margin
+                    </a>
+                </li>
+             
+            }
+
+        </ul>
+        <div class="tab-content reports_tab_content">
+            <div class="tab-pane active" id="RecurringReportTab">
+
+                <div class="Load_Recurring_Report">
+
+                </div>
+            </div>
+            <div class="tab-pane active" id="RmrAuditTab">
+
+                <div class="Load_Rmr_Audit">
+
+                </div>
+            </div>
+            <div class="tab-pane active" id="RmrMarginTab">
+
+                <div class="Load_Rmr_Margin">
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+

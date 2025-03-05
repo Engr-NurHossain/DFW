@@ -1,0 +1,135 @@
+﻿@model IEnumerable<HS.Entities.CustomerNote>
+@{
+    Layout = null;
+    var count = 1;
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using HS.Framework
+<link href="~/Content/Css/CustomerDetails/CustomerAccountActivityDetails.css" rel="stylesheet" />
+<script>
+    var NoteIdList = [];
+    var UpdateNoteBoxSort = function () {
+        var url = domainurl + "/Customer/UpdateNoteBoxSort";
+        $(".note_box_container .cus_note_sort_container").each(function () {
+            NoteIdList.push({
+                Id: $(this).attr('data-id'),
+                OrderBy: $(this).attr('data-order')
+            });
+        });
+        var param = JSON.stringify({
+            'NoteList': NoteIdList
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        //$('[data-toggle="tooltip"]').tooltip();
+        $(".note_box_container").sortable({
+            update: function () {
+                var i = 1;
+                $(".note_box_container .cus_note_sort_container").each(function () {
+                    $(this).attr('data-order', i);
+                    i += 1;
+                });
+                UpdateNoteBoxSort();
+            }
+        }).disableSelection();
+    });
+</script>
+<style>
+    .cus_note_sort_container {
+        width: 100%;
+        float: left;
+    }
+</style>
+<div class="ci_block ci_margin_top">
+    <div class="ci_header">
+        @Localize.T("Notes Overview")
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerOverviewNoteAdd))
+        {
+            <button class="btn add_notes_reminder green-tooltip green_button" data-toggle="tooltip" title="@Localize.T("Add Note")" onclick="NewNotesLoad('fromdetails')"><i class="fa fa-plus"></i></button>
+        }
+    </div>
+    <div class="ci_info note_box_container">
+        @foreach (var item in Model)
+        {
+            var fnote = "";
+            if (item.Notes.Length > 200)
+            {
+                fnote = item.Notes.Substring(0, 200) + ".....";
+            }
+            else
+            {
+                fnote = item.Notes;
+            }
+            <div class="cus_note_sort_container" data-order="@count" data-id="@item.Id">
+                <div class="customer_note_box_details customer_note_box_details_custom">
+                    <div class="info-table-tr note_text_color">
+
+                        @if (item.IsFollowUp != true && item.IsShedule != true)
+                        {
+                            if (item.IsPin == true)
+                            {
+                                <div title="@Html.Raw(item.Notes)"> <i class="fa fa-sticky-note-o" style="color:#2CA01C;"></i> @Html.Raw(fnote)</div>
+                            }
+                            else
+                            {
+                                <div title="@Html.Raw(item.Notes)"> <i class="fa fa-sticky-note-o"></i> @Html.Raw(fnote)</div>
+                            }
+
+                        }
+                        else
+                        {
+                            <div title="@Html.Raw(item.Notes)"><i class="fa fa-clock-o"></i> @Html.Raw(fnote)</div>
+                        }
+
+
+                    </div>
+                    <div class="info-table-tr notes_padd">
+                        <div class="tr-title">
+                            <div class="note-color" style="background-color:#@item.Color">
+
+                            </div>
+                            <div>
+                                @item.NoteTypeValue
+                                @{
+                                    if (item.ReferenceTicketId > 0)
+                                    {
+                                        <a class="cus-anchor" herf="javascript:void(0)" onclick="OpenTicketById(@item.ReferenceTicketId)">@Localize.T("Ticket #")@item.ReferenceTicketId</a>
+                                    }
+                                }
+                            </div>
+                        </div>
+                        <div class="tr-data note_text_right">
+                            On @item.CreatedDate.UTCToClientTime().ToString("MM/dd/yy hh:mm tt") by
+                            <div class="user_profile_pic_div">
+                                <img src="/EmpShow/W50H50X@(item.CreatedByUid)" />
+                            </div>
+                            @item.empName
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            count = count + 1;
+        }
+
+    </div>
+</div>

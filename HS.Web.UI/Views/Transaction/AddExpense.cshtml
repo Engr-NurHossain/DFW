@@ -1,0 +1,471 @@
+﻿@{ 
+    Layout = null;
+}
+@model HS.Entities.TransactionExpense
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+<link href="~/Content/Css/AddFile/AddFile.css" rel="stylesheet" />
+
+
+<style>
+    .add_expense_header {
+        width: 100%;
+        background-color: #f4f5f8;
+        padding: 15px 15px 10px 15px;
+        font-size: 2rem;
+        font-weight: 400;
+        color: #393a3d;
+    }
+    .add_expense_inner {
+        width:100%;
+        float:left;
+        padding:5px 15px;
+        overflow:scroll;
+    }
+    .add_expense_inner .add_expense_row {
+        width:100%;
+        float:left;
+        margin-bottom:8px;
+    }
+    .add_expense_inner .add_expense_row label {
+        margin-bottom:0px;
+    }
+    .add_footer_section {
+        background: #eceef1;
+        height: 50px;
+        position: fixed;
+        width: 100%;
+        bottom: 0%;
+
+    }
+    #SaveExpenseBtn {
+        float: right;
+        background: #2ca01c;
+        color: #fff;
+    }
+    .SaveCancelDiv {
+        width: 95%;
+        padding-top: 8px;
+    }
+     div.show-image {
+        position: relative;
+        float: left;
+        /*margin:5px;*/
+    } 
+    div.show-image input {
+        position: absolute;
+        display: block;
+    }
+
+    div.show-image input.deleteDoc {
+        top: 0;
+        left: 91%;
+        background-color: #d0d0d0;
+        border-radius: 27px;
+    }
+</style>
+<script>
+    var InvoiceDatepicker;
+    var From = '@ViewBag.From';
+    //var Status = '@Model.Status';
+    //var ExpenseType = '@Model.ExpenseType';
+    var User = '@Model.UserId';
+    var RefType = '@Model.RefType';
+    var UserFileUploadjqXHRData = [];
+
+    var SaveExpense = function () {
+        var url = domainurl + "/Transaction/AddExpense/";
+        var param = JSON.stringify({ 
+            Id : $("#ExpnenseId").val(),
+            CustomerId : $("#ExpenseCustomerId").val(),
+            Amount: $("#ExpenseAmount").val(),
+            //Status: $("#ExpenseStatus").val(),
+            StrExpenseDate: $("#ExpenseDate").val(),
+            CardTransactionId: $("#ExpenseTransactionId").val(),
+            PaymentMethod: $("#ExpensePaymentMethod").val(),
+            CheckNo: $("#ExpenseCheckNO").val(),
+            ReferenceNo: $("#ExpenseReferenceNo").val(),
+            TicketNo: $("#ExpenseTicketNo").val(),
+            Description: $("#ExpenseDescription").val(),
+            ExpenseType: $("#ExpenseCategory").val(),
+            UserId: $("#User").val(),
+            Status: $("#ExpensePayee").val(),
+            FilePath: $("#UploadedPath").val(),
+        });
+
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".AddInvoiceLoader").removeClass('hidden'),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    if (From == "")
+                    {
+                        OpenSuccessMessageNew("", data.message);
+                        FilterExpense(1);
+                        $(".modal-header .close").click();
+                    }
+                    else {
+                        $('.close').trigger('click');
+                        OpenSuccessMessageNew("Success!", data.message, function () {
+                            setTimeout(function () {
+                                $(".Expense-list").load(domainurl + "/Expense/ExpenseListPartial");
+                            }, 600);
+                        });
+                    }
+                  
+                } else {
+                    OpenSuccessMessageNew("", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+                 
+            }
+        });
+
+
+    }
+    var ExpenseImageProcessing = function (filePath) {
+        var spfile = filePath.split('.');
+        $("#UploadSuccessMessage").removeClass('hidden');
+        $("#UploadedPath").val(filePath); 
+        $(".fileborder").removeClass('red-border');
+        $("#uploadfileerror").addClass("hidden");
+
+        var index = spfile.length - 1;
+        if (spfile[index] == "png" || spfile[index] == "PNG" || spfile[index] == "jpg" || spfile[index] == "JPG" || spfile[index] == "jpeg" || spfile[index] == "JPEG") {
+            $("#UploadCustomerFileBtn").attr('src', filePath)
+            $(".chooseFilebtn").addClass("hidden");
+            $(".changeFilebtn").removeClass("hidden");
+            $(".deleteDoc").removeClass("hidden");
+            $("#UploadCustomerFileBtn").addClass('custom-file');
+            $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+            $(".fileborder").addClass('border_none');
+        }
+        else if (spfile[index] == "pdf") {
+            $(".chooseFilebtn").addClass("hidden");
+            $(".changeFilebtn").removeClass("hidden");
+            $(".deleteDoc").removeClass("hidden");
+            $("#UploadCustomerFileBtn").attr('src', domainurl+ '/Content/Icons/pdf.png');
+            $("#UploadCustomerFileBtn").addClass('otherfileposition');
+            $("#UploadCustomerFileBtn").removeClass('custom-file');
+            $(".fileborder").removeClass('border_none');
+        }
+        else if (spfile[index] == "doc" || spfile[index] == "docx") {
+            $(".chooseFilebtn").addClass("hidden");
+            $(".changeFilebtn").removeClass("hidden");
+            $(".deleteDoc").removeClass("hidden");
+            $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+            $("#UploadCustomerFileBtn").addClass('otherfileposition');
+            $("#UploadCustomerFileBtn").removeClass('custom-file');
+            $(".fileborder").removeClass('border_none');
+        }
+        else if (spfile[index] == "mp4" || spfile[index] == "mov") {
+            $(".chooseFilebtn").addClass("hidden");
+            $(".changeFilebtn").removeClass("hidden");
+            $(".deleteDoc").removeClass("hidden");
+            $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/mp4.png');
+            $(".fileborder").removeClass('border_none');
+        }
+        else {
+            $(".chooseFilebtn").addClass("hidden");
+            $(".changeFilebtn").removeClass("hidden");
+            $(".deleteDoc").removeClass("hidden");
+            $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+            $("#UploadCustomerFileBtn").addClass('otherfileposition');
+            $("#UploadCustomerFileBtn").removeClass('custom-file');
+            $(".fileborder").removeClass('border_none');
+        }
+    }
+    $(document).ready(function () {
+        console.log("dsfdfsdfsdf");
+        $(".add_expense_inner").height(window.innerHeight - 100);
+        InvoiceDatepicker = new Pikaday({
+            field: $('#ExpenseDate')[0],
+            trigger: $('#ExpenseDateCustom')[0],
+            format: 'MM/DD/YYYY',
+            firstDay: 1
+        });
+        $("#SaveExpenseBtn").click(function () {
+            if (CommonUiValidation()) {
+                SaveExpense();
+            }
+        });
+        $("#ExpenseStatus").change(function () {
+            $(".ifPaid").addClass("hidden");
+            if ($("#ExpenseStatus").val() == "Paid") { 
+                $(".paymentmethodExpense").removeClass("hidden");
+            } 
+        });
+        if ($("#ExpensePaymentMethod").val() == "CreditCard"
+              || $("#ExpensePaymentMethod").val() == "ACH") {
+            $(".ExpTransactionId").removeClass("hidden");
+            $(".expCheckNO").addClass("hidden");
+        } else if ($("#ExpensePaymentMethod").val() == "Check") {
+            $(".ExpTransactionId").addClass("hidden");
+            $(".expCheckNO").removeClass("hidden");
+        } else {
+            $(".ExpTransactionId").addClass("hidden");
+            $(".expCheckNO").addClass("hidden");
+        }
+        $("#ExpenseCategory").change(function () {
+            if (CommonUiValidation()) {
+            }
+        });
+        $("#ExpensePaymentMethod").change(function () {
+            if (CommonUiValidation()) {
+                if ($("#ExpensePaymentMethod").val() == "CreditCard"
+                || $("#ExpensePaymentMethod").val() == "ACH") {
+                $(".ExpTransactionId").removeClass("hidden");
+                $(".expCheckNO").addClass("hidden");
+            } else if ($("#ExpensePaymentMethod").val() == "Check") {
+                $(".ExpTransactionId").addClass("hidden");
+                $(".expCheckNO").removeClass("hidden");
+            } else {
+                $(".ExpTransactionId").addClass("hidden");
+                $(".expCheckNO").addClass("hidden");
+            }
+            }
+            
+        });
+        /*
+         Uload File Part
+         */
+        $("#UploadCustomerFileBtn").click(function () { 
+            $("#UploadedFile").click();
+            $("#UploadSuccessMessage").addClass('hidden');
+        });
+        $(".change-picture-logo").click(function () {
+            $("#UploadedFile").click();
+            $("#UploadSuccessMessage").addClass('hidden');
+        });
+        $('#UploadedFile').fileupload({
+            pasteZone: null,
+            url: domainurl + '/File/ExpenseFileUpload',
+            dataType: 'json',
+            add: function (e, data) {
+                UserFileUploadjqXHRData = data;
+                /*
+                 * //Extention Check
+                var ext = data.files[0].name.split(".");
+                if ($("#description").val() == "") {
+                    var filename = data.fileInput[0].value.split('\\').pop();
+                    $("#description").val(filename);
+                }
+                if (ext[1] == 'xls' || ext[1] == 'xlsx') {
+
+                    if (data.files[0].size <= 500000000) {
+                        UserFileUploadjqXHRData = data;
+                    }
+                    else {
+                        OpenErrorMessageNew("Error!", "File size is more then 50 mb.", function () {
+                            $(".close").click();
+                        })
+                    }
+                }
+                else {
+                    OpenErrorMessageNew("Error!", "File format not valid.", function () {
+                        $(".close").click();
+                    })
+                }
+                */
+            },
+            progress: function (e, data) {
+                var percentVal = parseInt(data.loaded / data.total * 100, 10);
+                $(".file-progress").show();
+                $(".file-progress .progress-bar").animate({
+                    width: percentVal + "%"
+                }, 40);
+                $(".file-progress .progress-bar span").text(percentVal + '%');
+            },
+            done: function (event, data) {
+
+                console.log(data);
+                setTimeout(function () {
+                    $(".file-progress").hide();
+                    $(".file-progress .progress-bar").animate({
+                        width: 0 + "%"
+                    }, 0);
+                    $(".file-progress .progress-bar span").text(0 + '%');
+                }, 500);
+
+                if ((typeof (data.result.isUploaded) != "undefined") && data.result.isUploaded == true) {
+                    ExpenseImageProcessing(data.result.filePath);
+                }
+            },
+            fail: function (event, data) {
+            
+            }
+        });
+        $("#UploadedFile").on("change", function () {
+            if (UserFileUploadjqXHRData) {
+                UserFileUploadjqXHRData.submit();
+            }
+            return false;
+        });
+        $(".deleteDoc").click(function () {
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this file?", function () {
+                $(".Upload_Doc").removeClass('hidden'); 
+                $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/blank_thumb_file.png');
+                $(".chooseFilebtn").removeClass("hidden");
+                $(".changeFilebtn").addClass("hidden");
+                $(".deleteDoc").addClass("hidden");
+                $("#Preview_Doc").attr('src', "");
+                $("#Frame_Doc").attr('src', "");
+                $("#UploadSuccessMessage").hide();
+                $("#description").val("");
+                $("#UploadedPath").val('');
+                $(".fileborder").addClass('border_none');
+                $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+            });
+        });
+
+        ExpenseImageProcessing($("#UploadedPath").val());
+        /*
+         Upload File Part End
+         */
+
+    });
+    
+</script>
+<div class="TransactionExpenseContainer">
+<div class="add_expense_header">
+    @Localize.T("Add Expense")
+</div>
+<div class="add_expense_inner">
+    <input type="hidden" id="ExpnenseId" value="@Model.Id" />
+    <input type="hidden" id="ExpenseCustomerId" value="@Model.CustomerId" />
+
+    <div class="add_expense_row">
+        <label>@Localize.T("Amount")</label>
+        <div class="shipping-amount-span currency_style">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">
+                        @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)
+                    </span>
+                </div>
+                <input class="form-control" type="text" id="ExpenseAmount" value="@Model.Amount" />
+            </div>
+        </div>
+
+    </div>
+    <div class="add_expense_row">
+        <label>@Localize.T("Date")</label>
+        <div class="input_group_for_date add-on" id="ExpenseDateCustom">
+            <input class="form-control" type="text" id="ExpenseDate" value="@(Model.ExpenseDate == new DateTime()? "": Model.ExpenseDate.ToString("MM/dd/yy") )" />
+            <div class="input-group-btn">
+                <btn class="btn">
+                    <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                </btn>
+            </div>
+        </div>
+
+    </div>
+    <div class="add_expense_row">
+        <label>@Localize.T("Ticket No")</label>
+        <input class="form-control" type="number" id="ExpenseTicketNo" value="@Model.TicketNo" />
+    </div>
+    <div class="add_expense_row">
+        <label>@Localize.T("Job Name")</label>
+        <input class="form-control" type="text" id="ExpenseReferenceNo" value="@Model.ReferenceNo" />
+    </div>
+    <div class="add_expense_row">
+        <label>@Localize.T("Description")</label>
+        <textarea rows="3" style="height:unset;" class="form-control" id="ExpenseDescription">@Model.Description</textarea>
+    </div>
+    <div class="paymentmethodExpense add_expense_row">
+        <label>@Localize.T("Expensed By")</label>
+        @Html.DropDownListFor(x => x.UserId, ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control", Id = "User" })
+    </div>
+    <div class="paymentmethodExpense add_expense_row">
+        <label>@Localize.T("Category")</label>
+        @Html.DropDownListFor(x => x.ExpenseType, ViewBag.ExpenseCategory as List<SelectListItem>, new { @class = "form-control", datarequired = "true", Id = "ExpenseCategory" })
+    </div>
+
+    @*<div class="add_expense_row">
+            <label>@Localize.T("Status")</label>
+            @Html.DropDownListFor(x => x.Status, ViewBag.ExpenseStatusList as List<SelectListItem>, new { @class = "form-control", Id = "ExpenseStatus" })
+        </div>*@
+    <div class="add_expense_row">
+        <label>@Localize.T("Payee/Vendor")</label>
+        <input class="form-control" type="text" id="ExpensePayee" value="@Model.Status" />
+    </div>
+    <div class="ifPaid paymentmethodExpense add_expense_row">
+        <label>@Localize.T("Payment Method")</label>
+        @Html.DropDownListFor(x => x.PaymentMethod, ViewBag.ExpensePaymentMethodList as List<SelectListItem>, new { @class = "form-control", datarequired = "true", Id = "ExpensePaymentMethod" })
+    </div>
+    <div class="ifPaid hidden ExpTransactionId add_expense_row">
+        <label>@Localize.T("Transaction Id/CC NO.")</label>
+        <input class="form-control" type="text" id="ExpenseTransactionId" value="@Model.CardTransactionId" />
+    </div>
+    <div class="ifPaid hidden expCheckNO add_expense_row">
+        <label>@Localize.T("Check NO")</label>
+        <input class="form-control" type="text" id="ExpenseCheckNO" value="@Model.CheckNo" />
+    </div>
+    <div class="add_expense_row">
+        <div>
+            <br />
+        </div>
+        <div class="txt-form Upload_Doc">
+            <div class="col-md-12 padding-left-0">
+                <div class="fileborder border_none">
+                    <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="~/Content/Icons/blank_thumb_file.png" />
+                </div>
+                <div class="deleteDoc cursor-pointer hidden">
+                    <img src="~/Content/Icons/cross-image-delete.png" />
+                </div>
+                <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                    <span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                    <span class="changeFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                </div>
+                <div class="LoadPreviewDocument hidden">
+                    <div class="show-image PropertyLogoPreviewPic">
+                        <div class="image-delete" data-id="">
+                            <img src="~/Content/Icons/cross-image-delete.png" />
+                        </div>
+                        <img class="Preview_Doc T360image-photo T360image" src="" />
+                    </div>
+                    <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                        <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+                <div class="progress progress-striped active">
+                    <div class="progress-bar progress-bar-success" style="width:0%">
+                        <span> 0%</span>
+                    </div>
+                </div>
+            </div>
+            <label class="label red position-relative hidden" id="uploadfileerror">*@Localize.T("File required")</label>
+        </div>
+        <div class="LoadPreviewDocument hidden">
+            <div class="show-image">
+                <img id="Preview_Doc" src="" />
+                <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+            </div>
+            <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                <span><img src="~/Content/Icons/edit-icon.png" /></span>
+            </div>
+        </div>
+    </div>
+    <div class="">
+        <input type="hidden" id="UploadedPath" value="@Model.FilePath" />
+        <input type="file" name="ExpenseFiles" class="hidden" id="UploadedFile" />
+    </div>
+</div>
+    <section class="add_footer_section">
+        <footer class="footer">
+            <div class="SaveCancelDiv">
+                <button class="btn" id="SaveExpenseBtn"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")</button>
+            </div>
+        </footer>
+    </section>
+</div>

@@ -1,0 +1,378 @@
+﻿@model HS.Entities.CustomerCompany
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using System.Text.RegularExpressions;
+@{
+    var AgreeUrl = AppConfig.DomainSitePath + "/File/IAgreeSetup/";
+    Layout = "~/Views/Shared/_PublicLayout.cshtml";
+    List<HS.Entities.GlobalSetting> globalSetting = (List<HS.Entities.GlobalSetting>)ViewBag.CustomerUiSetting;
+     
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using System.Collections;
+@section styles{
+    @Styles.Render("~/styles/PublicAgreement")
+    <script src="~/Content/Js/Layout/Device.js"></script>
+    <link href="~/Content/Css/Public/LeadsAgreementDocument.css" rel="stylesheet" />
+    <link href="~/Content/Css/Layout/Loader.css" rel="stylesheet" />
+}
+@section scripts{
+    <script>
+        var IsACHOrCCAddPermit = '@ViewBag.ACHOrCCAddInfo';
+        var IsMobile = '';
+        IsMobile = IsMobile.toLocaleLowerCase();
+        var clicked = false;
+        var companyid = '@ViewBag.CompanyId';
+        var customerguidid = '@ViewBag.CustomerGuidId';
+        var sigclicked = false;
+        var globalval = parseInt('@ViewBag.AgreementDocumentHeight');
+        var LeadConvertId = "@ViewBag.LeadId";
+        var isSigned = "@ViewBag.IsSigned";
+        var FileId = "@ViewBag.FileTemplateId";
+        var UserId="@ViewBag.UserId"
+        var EmailAddress = "@ViewBag.emailAddress";
+        var oldPath = "@ViewBag.CustomerSignature";
+        var codeagreement = '@ViewBag.Code';
+        var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+        var printFrame = function (id) {
+            var frm = document.getElementById(id).contentWindow;
+            frm.focus();// focus on contentWindow is needed on some ie versions
+            frm.print();
+            return false;
+        }
+        var IAgree = function () {
+            IAgreeSetup(LeadConvertId);
+        }
+        var PaymentTypeChange = function () {
+            if (typeof (IsACHOrCCAddPermit) != "undefined" && IsACHOrCCAddPermit == "true") {
+                if ($("#PaymentType").val() == "ACH") {
+                    OpenRightToLeftModal("/Public/PublicACHAddViewPaymentMethod?customerid=" + customerguidid + "&companyid=" + companyid);
+                }
+                else if ($("#PaymentType").val() == "CC") {
+                    OpenRightToLeftModal("/Public/PublicCCAddViewPaymentMethod?customerid=" + customerguidid + "&companyid=" + companyid);
+                }
+            }
+
+}
+        var LoadHtmlForMobileAgreement = function () {
+            $(".btnSign").removeAttr("disabled");
+            //var Url = domainurl + "/File/FileInstallation/?FileTemplateId=@ViewBag.FileTemplateId&CustomerId=@ViewBag.LeadId&UserId=@ViewBag.UserId";
+            //$("#AggrementDiv_mobile").load(Url);
+            //window.location.href = Url;
+            window.open(domainurl + "/File/FileInstallation/?FileTemplateId=@ViewBag.FileTemplateId&CustomerId=@ViewBag.LeadId&UserId=@ViewBag.UserId","_blank");
+        }
+        var EventDocumentClick = function () {
+            var inFormOrLink;
+            $('a').on('click', function () { inFormOrLink = true; });
+            $('form').on('submit', function () { inFormOrLink = true; });
+
+            $(window).on("beforeunload", function () {
+                return inFormOrLink ? "Do you really want to close?" : null;
+            })
+        };
+        var IAgreeSetup = function (idval) {
+            var cusid = idval;
+            var fileid = FileId;
+            var PrefferedEmail = EmailAddress;
+            var userId=UserId;
+            $(".LoadImgDiv").removeClass('hidden');
+            $(".LoadImgDiv_mobile").removeClass('hidden');
+            $.ajax({
+                url: "@AgreeUrl",
+                data: { cusid, PrefferedEmail, fileid,userId },
+                type: "Post",
+                dataType: "Json"
+            }).done(function () {
+                $(".LoadImgDiv").addClass('hidden');
+                $(".LoadImgDiv_mobile").addClass('hidden');
+                if (IsMobile) {
+                    var ifr = $('iframe')[0];
+                    if (typeof (ifr) != "undefined" && ifr != null && ifr != "") {
+                        ifr.src = ifr.src;
+                    }
+                    OpenSuccessMessageNew("Success!", "File has been signed and sent to our office. You will also receive an email confirmation with your signed file!", function () {
+                        $(".footerContents-agreement").addClass('hidden');
+                        $(".sign-div").addClass('hidden');
+                        $(".load_signature_img").addClass("hidden");
+                    })
+                }
+                else {
+                    console.log("LoadImgDiv");
+
+                    var ifr = $('iframe')[0];
+                    ifr.src = ifr.src
+                    OpenSuccessMessageNew("Success!", "File has been signed and sent to our office. You will also receive an email confirmation with your signed file!", function () {
+                        $(".footerContents-agreement").addClass('hidden');
+                        $(".sign-div").addClass('hidden');
+                    })
+                }
+            });
+        }
+        var counter = 0;
+        $(document).ready(function () {
+            console.log('robiul ke dhor')
+            if (Device.All()) {
+                $('.desktop-content').remove();
+                $(".btnSign").attr("disabled", true);
+            }
+            else {
+                $('.mobile-content').remove();
+            }
+            $(".DisclousureDiv").hide();
+Currentzone = jstz.determine();
+timezone = Currentzone.name();
+var calcheight = window.innerHeight - $(".HeadContents").height() - $('.sign-div').height() - $('.footerContents-agreement').height() - $(".navbar").height() - 84;
+            $("#AggrementDiv").height(calcheight);
+            $(".btnSign").click(function () {
+                $(".bodyConentsDiv1").addClass('hidden');
+                $(".bodyConentsDiv1_mobile").addClass('hidden');
+                $(".sign-document").removeClass('hidden');
+                $(".footerContents-agreement").addClass('hidden');
+});
+                    var canvas = $('#signature-pad');
+                    var ctx = $('#signature-pad')[0].getContext('2d');
+                    var signaturePad = new SignaturePad($('#signature-pad')[0]);
+                    function resizeCanvas() {
+                        var ratio = Math.max(1, 1);
+                        canvas.width = canvas.offsetWidth * ratio;
+                        canvas.height = canvas.offsetHeight * ratio;
+                        canvas[0].getContext("2d").scale(ratio, ratio);
+                    }
+                    resizeCanvas();
+                    var img = new Image();
+                    img.onload = function () {
+                        ctx.drawImage(img, 0, 0);
+                    };
+                    img.crossOrigin = 'anonymous';
+                    function download(dataURL, filename) {
+                        var blob = dataURLToBlob(dataURL);
+                        var url = window.URL.createObjectURL(blob);
+
+                        var a = document.createElement("a");
+                        a.style = "display: none";
+                        a.href = url;
+                        a.download = filename;
+
+                        document.body.appendChild(a);
+                        a.click();
+
+                        window.URL.revokeObjectURL(url);
+                    }
+                    function dataURLToBlob(dataURL) {
+                        var parts = dataURL.split(';base64,');
+                        var contentType = parts[0].split(":")[1];
+                        var raw = window.atob(parts[1]);
+                        var rawLength = raw.length;
+                        var uInt8Array = new Uint8Array(rawLength);
+
+                        for (var i = 0; i < rawLength; ++i) {
+                            uInt8Array[i] = raw.charCodeAt(i);
+                        }
+
+                        return new Blob([uInt8Array], { type: contentType });
+                }
+            $('#clear').click(function () {
+                    signaturePad.clear();
+                });
+            $("#save-png").click(function () {
+                    if (signaturePad.isEmpty()) {
+                        OpenErrorMessageNew("Error!", "Please Draw Your Signature");
+                    }
+                    else {
+                        sigclicked = true;
+                        counter += 1;
+                        var data = signaturePad.toDataURL('image/png');
+                        var url = domainurl + "/File/LoadCustomerSignatureImage";
+                    $.ajax({
+                        url: url,
+                        data: { data, LeadConvertId, FileId, oldPath },
+                        type: "Post",
+                        dataType: "Json",
+                        success: function (data) {
+                                if (data.uploadImage == true) {
+                                    EventDocumentClick();
+                                    OpenSuccessMessageNew("Success!", "Signature added successfully. Scroll at the bottom to fully review and submit document.", function () {
+
+                                        if (!Device.All()) {
+                                        $(".sign-document").addClass('hidden');
+                                        $(".bodyConentsDiv1").removeClass('hidden');
+                                        $(".bodyConentsDiv1_mobile").removeClass('hidden');
+                                        $(".LoadImgDiv").removeClass('hidden');
+                                        $(".footerContents-agreement").removeClass('hidden');
+                                        $(".DisclousureDiv").show();
+                                            var ifr = $('iframe')[0];
+                                            ifr.src = ifr.src
+                                        }
+                                        else {
+                                        $(".sign-document").addClass('hidden');
+                                        $(".bodyConentsDiv1").removeClass('hidden');
+                                        $(".bodyConentsDiv1_mobile").removeClass('hidden');
+                                        $(".LoadImgDiv_mobile").removeClass('hidden');
+                                        $(".footerContents-agreement").removeClass('hidden');
+                                        $(".DisclousureDiv").show();
+                                            //LoadHtmlForMobileAgreement();
+                                        }
+                                        $(".btnIAgree").removeAttr("disabled");
+                                        $(".btnSign").html("<i class='fa fa-sign-in' aria-hidden='true'></i> Re-sign Document");
+                                     $(".load_signature_img").addClass('hidden');
+                                    $(".bodyConentsDiv1_mobile").append("<div class='load_signature_img'><img src="  + data.UploadFilePath + " /></div>");
+                                    });
+                                    setTimeout(function () {
+                                    $(".LoadImgDiv").addClass('hidden');
+                                    $(".LoadImgDiv_mobile").addClass('hidden');
+                                    }, 10000);
+                                }
+                                else {
+                                    OpenErrorMessageNew("Error!", data.message);
+                                }
+                            },
+                        error: function (jqXHR, textStatus, errorThrown) {
+                                console.log(errorThrown);
+                            }
+                        })
+                }
+                })
+
+            $(".btnIAgree").attr("disabled", true);
+
+            $(".btnIAgree").click(function () {
+                    if (!signaturePad.isEmpty() || isSigned == "IsSigned") {
+                        clicked = true;
+                        IAgree();
+                    }
+                    else {
+                        if (signaturePad.isEmpty()) {
+                        $(".wrapper").css("border-color", "red");
+                            OpenErrorMessageNew("Error!", "Please press sign document.");
+                        }
+                        if (!signaturePad.isEmpty() && isSigned == "") {
+                            OpenErrorMessageNew("Error!", "Please Save your signature first.");
+                        $(".wrapper").css("border-color", "#ccc");
+                        }
+                    }
+                })
+            $("#AggrementDiv").scroll(function () {
+                    if (!Device.All()) {
+                        console.log("test");
+                        var MathScroll = ($("#AggrementDiv iframe").height() - $("#AggrementDiv").scrollTop());
+                        console.log(MathScroll);
+                        if (MathScroll <= 550) {
+                    $(".btnIAgree").removeAttr("disabled");
+                        }
+                        else {
+                    $(".btnIAgree").attr("disabled", true);
+                    $(".btnIAgree").addClass('DisablebtnAgree');
+                        }
+                    }
+                })
+        })
+    </script>
+}
+
+
+@{
+    Hashtable dataTemplate1 = new Hashtable();
+    dataTemplate1.Add("ContractTerm", ViewBag.termid);
+    dataTemplate1.Add("TermMonth", ViewBag.TermMonth);
+} 
+    <div id="body_id" class="mobile-content">
+        <div class="hidden LoadImgDiv_mobile">
+            <div class="lds-css ng-scope">
+                <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+            </div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(ViewBag.CustomerSignRequired) && ViewBag.CustomerSignRequired == "false")
+        {
+            <div class="custom-body_id_mobile">
+                <div class="bodyConentsDiv1_mobile" id="AggrementDiv_mobile">
+                    <div><button class="btn green_button" id="view_pdf" onclick="LoadHtmlForMobileAgreement()"><i class="fa fa-eye"></i> View Document</button></div>
+                </div>
+
+            </div>
+        }
+        else
+        {
+            <div class="custom-body_id_mobile">
+                @if (ViewBag.ACHOrCCAddInfo == "true")
+                {
+                    <div class="ACH_CC_Div">
+                        <label style="margin-bottom:0px; margin-bottom: 0px;float: left;width: 100%;margin-left: 30px;margin-top: 25px;"> ACH/CC Info</label>
+                        <div class="sign-div" style="float:left;margin-bottom:10px;margin-left:30px;">
+                            @Html.DropDownList("PaymentType", (List<SelectListItem>)ViewBag.PaymentMethodType, new { @id = "PaymentType", onchange = "PaymentTypeChange()", @class = "form-control PaymentType" })
+                        </div>
+                    </div>
+                }
+
+
+                <div class="sign-div" style="float:left;margin-bottom:10px;margin-left:30px; margin-top:10px; width:100%;">
+                    <button class="btnSign"><i class="fa fa-sign-in" aria-hidden="true"></i>&nbsp;Sign Document</button>
+                </div>
+                <div class="sign-document hidden" style="width: 100%;float: left;margin-top: -5px; margin-left: 30px;">
+                    <div class="wrapper">
+                        <canvas id="signature-pad" class="signature-pad" width=300 height=100 style="float:left;"></canvas>
+                    </div>
+                    <button class="btn all_button" id="save-png"><i class="fa fa-plus-circle" aria-hidden="true"></i>&nbsp;Add to file</button>
+                    <button class="btn all_button" id="clear"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp;Clear</button>
+                </div>
+                <div class="bodyConentsDiv1_mobile" id="AggrementDiv_mobile">
+                    <div><button class="btn green_button" id="view_pdf" onclick="LoadHtmlForMobileAgreement()"><i class="fa fa-eye"></i> View Document</button></div>
+                </div>
+                <div class="footerContents-agreement bodyConentsDiv1_mobile_footer">
+                    <div class="DisclousureDiv">
+                        By signing this document, you agree to our conditions.
+                    </div>
+                    <button class="btnIAgree all_button"><i class="fa fa-check-square" aria-hidden="true"></i>&nbsp;Submit Document</button>
+                </div>
+
+            </div>
+        }
+
+    </div>
+     <div id="body_id" class="desktop-content">
+        <div class="hidden LoadImgDiv">
+            <div class="lds-css ng-scope">
+                <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+            </div>
+        </div>
+        <div class="custom-body_id">
+            @if (ViewBag.ACHOrCCAddInfo == "true")
+            {
+                <div class="ACH_CC_Div">
+
+                    <label style="margin-bottom:0px; margin-bottom: 0px;float: left;width: 100%;margin-left: 30px;margin-top: 25px;"> ACH/CC Info</label>
+
+                    <div class="sign-div" style="float:left;margin-bottom:0px;margin-left:30px;">
+                        @Html.DropDownList("PaymentType", (List<SelectListItem>)ViewBag.PaymentMethodType, new { @id = "PaymentType", onchange = "PaymentTypeChange()", @class = "form-control PaymentType" })
+                    </div>
+                </div>
+            }
+
+            <div class="sign-div" style="float:left;margin-bottom:10px;margin-left:30px; margin-top:10px; width:100%;">
+                <button class="btnSign"><i class="fa fa-sign-in" aria-hidden="true"></i>&nbsp;Sign Document</button>
+            </div>
+            <div class="sign-document hidden" style="width: 100%;float: left;margin-top: -5px; margin-left: 30px;">
+                <div class="wrapper">
+                    <canvas id="signature-pad" class="signature-pad" width=300 height=100 style="float:left;"></canvas>
+                </div>
+                <button class="btn all_button" id="save-png"><i class="fa fa-plus-circle" aria-hidden="true"></i>&nbsp;Add to file</button>
+                <button class="btn all_button" id="clear"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp;Clear</button>
+            </div>
+            <div class="bodyConentsDiv1" id="AggrementDiv" style="overflow: scroll;">
+                <iframe name="iframe" class="pdf-styles file_template_iframe_height" style="overflow-x: hidden;" id="iframePdf" src="@(AppConfig.DomainSitePath)/File/FileInstallation/?FileTemplateId=@ViewBag.FileTemplateId &CustomerId=@ViewBag.LeadId &UserId=@ViewBag.UserId"></iframe>
+            </div>
+            <div class="footerContents-agreement">
+                <div class="DisclousureDiv" style="float:left;padding-top:10px;padding-left:30px">
+                    By signing this document, you agree to our conditions.
+                </div>
+                <div style="float:right; display:table; padding-top: 10px;">
+                    <button class="btnIAgree all_button"><i class="fa fa-check-square" aria-hidden="true"></i>&nbsp;Submit Document</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+
+
+
+

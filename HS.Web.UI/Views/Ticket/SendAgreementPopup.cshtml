@@ -1,0 +1,223 @@
+﻿@{
+    Layout = null;
+}
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.SendAgreementPopup
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+<link href="~/Content/Css/API/SenEcontractWithSurvey.css" rel="stylesheet" />
+<link href="~/Content/Css/Lead/EmergencyContactPartial.css" rel="stylesheet" />
+<script>
+    var ContractType = '@Model.ContractType';
+    var CustomerIntId = @Model.CustomerId;
+    var TicketIntId = @Model.TicketId;
+    var CustomerContractTerm = '@Model.ContractTerm';
+    var From = '@ViewBag.From';
+    var loadFirstPage = function () {
+    var loadUrl = domainurl + "/SmartLeads/GetSmartLeadsForPopUp?LeadId=" + CustomerIntId + "&grant=false" + "&templateid=0" + "&firstpage=true&ticketid=" + TicketIntId;
+        $(".FirstPageAgreementDocument").attr('href', loadUrl);
+        $(".FirstPageAgreementDocument").click();
+    }
+    var RecreateAgreement = function (id, ticketid) {
+
+        var url = domainurl + "/Ticket/UpdateAgreementInfo";
+        var ContractTeam = $("#ContractTerm").val();
+        if (ContractTeam == "Custom") {
+            ContractTeam = "";
+            var CustomContactTerm = $(".CustomContactTerm").val();
+            if (CustomContactTerm != "" && CustomContactTerm != undefined) {
+                ContractTeam = parseInt(CustomContactTerm) / parseInt(12);
+            }
+        }
+        var ContractDate= $("#ContractDate").val();
+        var Param = JSON.stringify({
+            CustomerId: CustomerIntId,
+            ContractTerm: ContractTeam,
+            ActivationFee: $("#ActivationFee").val(),
+            NonConfirmingFee: $("#NonConfirmingFee").val(),
+            OrginalContractDate: $("#OrginalContractDate").val(),
+            VerbalPassword: $("#VerbalPass").val(),
+            RenewalTerm: $("#RenewalTerm").val(),
+            ContractType: $("#ContractType").val()
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".sewsLoader").removeClass("hidden"),
+            url: url,
+            data: Param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                $(".sewsLoader").addClass("hidden");
+                if (data.result == true) {
+                    console.log(From);
+                    if (From == "FirstPage") {
+                        loadFirstPage();
+                    }
+                    else {
+                        var loadUrl = domainurl + "/SmartLeads/GetSmartLeadsForPopUp?LeadId=" + CustomerIntId + "&grant=false" + "&templateid=0" + "Modelodeldeldelfirstpage=false&ticketid=" + TicketIntId + "&recreate=true"; //&ContractDate=" + ContractDate;
+                        $(".FirstPageAgreementDocument").attr('href', loadUrl);
+                        $(".FirstPageAgreementDocument").click();
+                    }
+
+                }
+                else {
+                    OpenErrorMessageNew("", data.Message, function () {
+
+                    });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+
+            }
+        });
+
+    }
+      var LoadEmergencyContactList = function () {
+        $("#EmergencyContactList").load(domainurl + "/Leads/EmergencyContactListPartial?LeadId=" + GuidCustomer);
+    }
+    var LoadAddNewEmergencyContactDiv = function () {
+        $("#AddNewEmgContactPartial").show();
+        $("#AddNewEmgContactPartial").load(domainurl + "/Leads/AddEmergencyContact?LeadId=" + GuidCustomer + "&EmgId=0");
+    }
+    var EditEmergencyContactDiv = function (emgId) {
+        $("#AddNewEmgContactPartial").show();
+        $("#AddNewEmgContactPartial").load(domainurl + "/Leads/AddEmergencyContact?LeadId=" + GuidCustomer + "&EmgId=" + emgId);
+    }
+
+    var HideNewEmgContactPartial = function () {
+        $("#AddNewEmgContactPartial").hide();
+    }
+
+    $(document).ready(function () {
+    if (ContractType != "") {
+        $("#ContractType").val(ContractType);
+    }
+    var Popupwidth = 920;
+    if (window.innerWidth < 920) {
+        Popupwidth = window.innerWidth;
+    }
+         var idlist = [
+            { id: ".FirstPageAgreementDocument", type: 'iframe', width: Popupwidth, height: 650 },
+    ];
+    jQuery.each(idlist, function (i, val) {
+        magnificPopupObj(val);
+    });
+
+    OrginalContractDate = new Pikaday({
+        format: 'MM/DD/YYYY',
+        yearRange: [1920, 2010],
+        field: $('.Org-datepicker')[0],
+
+        firstDay: 1
+    });
+    LoadEmergencyContactList();
+     $("#btnAddNewEmgContact").click(function () {
+            LoadAddNewEmergencyContactDiv();
+    });
+    if ($("#ContractTerm").val() == "-1" && CustomerContractTerm != '') {
+        $("#ContractTerm").val("Custom");
+        $(".custom-contactterm").removeClass("hidden");
+        $(".CustomContactTerm").val(parseFloat(CustomerContractTerm) * 12);
+    }
+    if ($("#ContractTerm").val() == "Custom") {
+        $(".custom-contactterm").removeClass("hidden");
+    }
+    $("#ContractTerm").change(function () {
+        if ($(this).val() == "Custom") {
+            $(".custom-contactterm").removeClass("hidden");
+        }
+        else {
+            $(".custom-contactterm").addClass("hidden");
+
+        }
+    });
+
+        $(".sews_inner_height").height(window.innerHeight - 98);
+
+
+    });
+</script>
+
+<div class="sewsLoader hidden">
+    <div class="loader-background"></div>
+    <div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>
+</div>
+<div class="sews_container">
+    <div class="sews_header">
+        Create Agreement
+    </div>
+    <div class="sews_inner_height">
+        <div class="sews_inner">
+            <div class="PGDetails">
+                <div class="form-group">
+                    <div class="aba_header">@Localize.T("Contract Type")</div>
+                    @Html.DropDownList("ContractType", ViewBag.ContractType as List<SelectListItem>, new { @class = "form-control setfirstvalue", id = "ContractType" })
+                </div>
+            </div>
+        </div>
+        <div class="sews_inner">
+            <div class="PGDetails">
+                <div class="form-group">
+                    <div class="aba_header">Contract term</div>
+                    @Html.DropDownListFor(x => x.ContractTerm, (List<SelectListItem>)ViewBag.ContractTermList, new { @class = "form-control", id = "ContractTerm" })
+                </div>
+                <div class="form-group custom-contactterm hidden">
+                    <div class="aba_header">Contract Term (Month)</div>
+                    <input type="text" class="form-control CustomContactTerm" placeholder="Contract Term (Month)" />
+                </div>
+                <div class="form-group">
+                    <div class="aba_header">Activation Fee</div>
+                    <input type="text" id="ActivationFee" value="@Model.ActivationFee" class="form-control" name="address1" placeholder="Activation Fee" />
+                </div>
+                <div class="form-group">
+                    <div class="aba_header">Non-Confirming Fee</div>
+                    <input type="text" id="NonConfirmingFee" value="@Model.NonConfirmingFee" name="NonConfirmingFee" class="form-control" placeholder="Non Confirming Fee" />
+
+                </div>
+                <div class="form-group">
+                    <div class="aba_header">Effective Contract Date</div>
+                    <input type="text" class="form-control Org-datepicker" id="OrginalContractDate" name="OrginalContractDate" value="@Model.OrginalContractDate" datarequired="true" placeholder="Effective Contract Date" />
+                </div>
+                <div class="form-group CityState_insert_div">
+                    <div class="aba_header">Verbal Password</div>
+                    <input type="text" class="" name="VerbalPass" value="@Model.VerbalPassword" id="VerbalPass" placeholder="VerbalPass" />
+                </div>
+                <div class="col-sm-4 new_margin1">
+                    <span class="text-custom">@Localize.T("Renewal Term (Month)")</span>
+                    <input id="RenewalTerm" name="RenewalTerm" type="text" @(PermissionChecker.IsPermitted(PermissionList.LeadPermissions.SmartSetUpRenewalTerm) ? "" : "disabled") class="form-control" placeholder="@Localize.T("Renewal Term (Month)")" value="@Model.RenewalTerm" />
+                </div>
+            </div>
+        </div>
+        <div class="smart_agreementDetails_container">
+            <div class="em_con_list_header_container">
+                <div class="em_con_list_header">
+                    <div>@Localize.T("Emergency Contact")</div>
+                    <button type="button" class="btn" id="btnAddNewEmgContact">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" New")
+                    </button>
+                </div>
+            </div>
+
+            <div class="" id="AddNewEmgContactPartial">
+
+            </div>
+            <div id="EmergencyContactList">
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <div class="sews_footer">
+        <button type="button" id="CreateAgreement" onclick="RecreateAgreement(@Model.CustomerId, @Model.TicketId)" class="btn green_button">
+            Create Agreement
+        </button>
+    </div>
+
+</div>
+<a href="" style="display:none" class="FirstPageAgreementDocument">@Localize.T("First Page")</a>

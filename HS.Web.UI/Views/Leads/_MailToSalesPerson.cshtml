@@ -1,0 +1,270 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.Customer
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Tiny/tiny.js"></script>
+<script>
+    var SalesPersonListLeadEmailArray;
+    var id = '@Model.Id';
+    @*var mailaddress = '@Model.EmailAddress';*@
+    var CustomerGuid = '@Model.CustomerId';
+    /*Remove one @@ if add to .js file*/
+    var pattern = /^[a-z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)?@@[a-z][a-zA-Z-0-9]*\.[a-z]+(\.[a-z]+)?$/;
+    
+    $(document).ready(function () {
+        $(".mail_to_sp_inner").height(window.innerHeight - 146);
+        //$('.selectpicker').selectpicker();
+        $(".emailTextTemplateList").hide();
+        $(".emailTextTemplateList").load(domainurl + "/Leads/ShowEmailTextTemplateListPartial");
+        $(".btn-show-email-tmp-list").click(function () {
+            $(".emailTextTemplateList").toggle();
+        });
+        $("#MailToSupplier").click(function () {
+            var customerName = $("#MailToSupplier").attr('idval');
+            var customerId = $("#MailToSupplier").attr('idval2');
+            var supplierId = $('.sales-person-id').val();
+            var mailBody = $('.txtAreaMailBody').val();
+            var subject = $('#SubjectList').val();
+            var ccMail = $("#ccMail").val();
+            var mailaddress = $("#Correspondence_Email").val();
+            //if (mailBody == "" || subject == "" || mailaddress == "") {
+            //    OpenErrorMessageNew("Error!", "Please fill Emailbody and subject line and Email addresss", "");
+            //} 
+            if (mailBody == "") {
+                OpenErrorMessageNew("Error!", "Please fill email body", "");
+            }
+            else {
+                if (CommonUiValidation()) {
+                    if (ccMail != "" && !pattern.test(ccMail)) {
+                        OpenErrorMessageNew("Error!", "CC field replaced by ';' after each valid email address", "");
+                    } else {
+                        $.ajax({
+                            url: domainurl + "/Leads/MailToSalesperson/",
+                            data: { customerName, customerId, supplierId, mailBody, subject, SalesPersonListLeadEmailArray, ccMail, EmailAddress: $("#Correspondence_Email").val() },
+                            type: "Post",
+                            dataType: "Json"
+                        }).done(function (data) {
+                            if (data.result == true) {
+                                $('.close').trigger('click');
+                                setTimeout(function () {
+                                    OpenSuccessMessageNew("Success!", "Email sent successfully.");
+                                    if (typeof (OpenCorrespondenceTab) != "undefined") {
+                                        OpenCorrespondenceTab();
+                                    } else {
+                                        $(".Lead_Send_Email_Tab").load(domainurl + "/Leads/CorrespondenceList/?CustomerId=" + CustomerGuid);
+                                        parent.$("#CorrespondenceTab").load(domainurl + "/Leads/CorrespondenceList?CustomerId=" + CustomerGuid);
+                                        LeadDetailTabCount();
+                                    }
+                                }, 600);
+                            }
+                            else {
+                                $('.close').trigger('click');
+                                setTimeout(function () {
+                                    OpenErrorMessageNew("Error!", data.message);
+                                }, 600);
+                            }
+                        });
+                    }
+                }
+            }
+        });
+        $($(".email_body a")[0]).removeAttr('href')
+
+        $("#SubjectList").keyup(function () {
+            if ($("#SubjectList").val() == "") {
+                $("#SubjectList").addClass("required")
+            } else {
+                $("#SubjectList").removeClass("required")
+            }
+        })
+        $("#Correspondence_Email").keyup(function () {
+            if ($("#Correspondence_Email").val() == "") {
+                $("#Correspondence_Email").addClass("required")
+            } else {
+                $("#Correspondence_Email").removeClass("required")
+            }
+        })
+    });
+    $(window).resize(function () {
+        $(".mail_to_sp_inner").height(window.innerHeight - 146);
+    })
+</script>
+<style>
+    .email_body {
+        width: 100%;
+        float: left;
+        overflow: auto;
+        height: 72vh;
+        border: 1px solid #ccc;
+        padding: 8px;
+    }
+    .email_body table{
+        width:100%;
+        float:left;
+        min-width:unset !important;
+    }
+    /*.email_body table tbody tr:nth-child(2) td:nth-child(1),
+    .email_body table tbody tr:nth-child(2) td:nth-child(3){
+       width:0px !important;
+    }*/
+    .email_body table tbody tr:nth-child(1),
+    .email_body table tbody tr:nth-child(2),
+    .email_body table tbody tr:nth-child(3){
+        height:0 !important;
+    }
+    .mail_to_sp_container {
+        width:100%;
+        float:left;
+    }
+    .mail_to_sp_header {
+        width:100%;
+        float:left;
+        background-color:#f4f5f8;
+        border-bottom:1px solid #ccc;
+        font-size:20px;
+        text-align:left;        
+        padding:15px 10px;
+    }
+    .mail_to_sp_inner {
+         width:100%;
+        float:left;
+         padding:15px 10px;
+         overflow-x:hidden;
+         overflow-y:auto;
+    }
+    .mail_to_sp_inner .span-style,
+    .mail_to_sp_inner .txtsubject {
+        font-weight:bold;
+    }
+    .mail_to_sp_footer {
+         width:100%;
+        float:left;
+        background-color:#f4f5f8;
+        border-top:1px solid #ccc;
+        text-align:right;
+        padding: 10px 15px;
+    }
+</style>
+<div class="mail_to_sp_container">
+    <div class="mail_to_sp_header">
+        @if (Model.LeadCorrespondence == null)
+        {
+            @Localize.T("New Email")
+        }
+        else
+        {
+            @Localize.T("View Email")
+        }
+    </div>
+    <div class="mail_to_sp_inner">
+        <div class="slaesPersonContainer">
+            @if (Model.LeadCorrespondence != null)
+            {
+                if (Model.LeadCorrespondence.IsSystemAutoSent == true)
+                {
+                    <span><b>To: </b>@Html.Raw(Model.LeadCorrespondence.ToEmail)</span>
+                }
+                else
+                {
+                    <span class="span-style">@Localize.T("Email")</span>
+                    @Html.TextBoxFor(x => x.LeadCorrespondence.ToEmail, new { @class = "form-control", id = "Correspondence_Email", datarequired = "true" })
+                }
+            }
+            else
+            {
+                <span class="span-style">@Localize.T("Email")</span><span class="red">*</span>
+                @Html.TextBoxFor(x => x.EmailAddress, new { @class = "form-control", id = "Correspondence_Email", datarequired = "true" })
+            }
+        </div>
+        <div class="form-group clearfix" style="margin-top: 15px;">
+            @if (Model.LeadCorrespondence != null)
+            {
+                if (Model.LeadCorrespondence.IsSystemAutoSent == true)
+                {
+                    if (!string.IsNullOrWhiteSpace(Model.LeadCorrespondence.CcEmail))
+                    {
+                        <span><b>CC:</b> @Html.Raw(Model.LeadCorrespondence.CcEmail)</span>
+                    }
+                }
+                else
+                {
+                    <span class="span-style">@Localize.T("CC")</span>
+                    <input type="text" class="form-control" id="ccMail" value="@Model.LeadCorrespondence.CcEmail" />
+                }
+            }
+            else
+            {
+                <span class="span-style">@Localize.T("CC")</span>
+                <input type="text" class="form-control" id="ccMail" />
+            }
+        </div>
+        <div class="form-group">
+            @if (Model.LeadCorrespondence != null)
+            {
+                if (Model.LeadCorrespondence.IsSystemAutoSent == true)
+                {
+                    <span><b>Subject:</b> @Html.Raw(Model.LeadCorrespondence.Subject)</span>
+                }
+                else
+                {
+                    <div class="txtsubject">@Localize.T("Subject")</div>
+                    <input type="text" class="form-control" id="SubjectList" value="@Model.LeadCorrespondence.Subject" />
+                }
+            }
+            else
+            {
+                <div class="txtsubject">@Localize.T("Subject")<span class="red">*</span></div>
+                <input type="text" class="form-control" id="SubjectList" datarequired="true" />
+            }
+        </div>
+
+        <div class="form-group clearfix positionRel">
+            @if (Model.LeadCorrespondence == null)
+            {
+
+                <div class="emailTextTemplateList">
+
+                </div>
+            }
+            else if (Model.LeadCorrespondence != null && Model.LeadCorrespondence.IsSystemAutoSent == false)
+            {
+
+                <div class="emailTextTemplateList">
+
+                </div>
+            }
+            @if (Model.LeadCorrespondence != null)
+            {
+                if (Model.LeadCorrespondence.IsSystemAutoSent == true)
+                {
+                    <div class="email_body">@Html.Raw(Model.LeadCorrespondence.BodyContent)</div>
+                }
+                else
+                {
+                    <span class="span-style">@Localize.T("Message Body")</span>
+                    @Html.TextAreaFor(x => x.LeadCorrespondence.BodyContent, new { @class = "form-control txtAreaMailBody", placeholder = "Please add something to your mail body", id = "mailBody" })
+                }
+            }
+            else
+            {
+                <span class="span-style">@Localize.T("Message Body")</span>
+                @Html.TextArea("mailBody", new { @class = "form-control txtAreaMailBody", placeholder = "Please add something to your mail body" })
+            }
+        </div>
+    </div>
+@if (Model.LeadCorrespondence == null)
+            {
+    <div class="mail_to_sp_footer">          
+            
+                    <button type="button" id="MailToSupplier" idval2="@Model.CustomerId" idval="@Model.FirstName @Model.LastName" class="btn green_button">
+                        @Localize.T("Send Email")
+                    </button>
+                      
+      
+    </div>
+}
+ 
+</div>

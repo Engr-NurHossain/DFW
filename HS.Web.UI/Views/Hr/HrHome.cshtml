@@ -1,0 +1,280 @@
+﻿@{ Layout = null; }
+@using PermissionHelper = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+<link href="~/Content/Css/UserManagement/UserInformation.css" rel="stylesheet" />
+<script>
+    var isavability = '@PermissionChekcer.IsPermitted(Permissions.UserMgmtPermissions.EmployeeAvailibilitySection)';
+    var isCommission = 'True';@*'@PermissionChekcer.IsPermitted(Permissions.UserMgmtPermissions.CommissionTab)';*@
+    @*var IsGetCommission = '@Model.IsGetCommission';*@
+    var TimeZoneValue = function (dt) {
+        return (-dt.getTimezoneOffset() < 0 ? '-' : '+') + (Math.abs(dt.getTimezoneOffset() / 60) < 10 ? '0' : '') + (Math.abs(dt.getTimezoneOffset() / 60)) + '00';
+    }
+    var loadtotalHrs = function (userId, date) {
+        console.log(date);
+        if (date == 'undefined' || date == null || date == '') {
+            date = new Date();
+            var zone = String(TimeZoneValue(date));
+            var firstChar = zone.charAt(0);
+            if (firstChar == '-') {
+                date.setDate(date.getDate() + 1);
+            }
+            var ny = date.getFullYear();
+            var nm = (date.getMonth() + 1).toString();
+            if (nm.length == 1) { nm = 0 + nm; }
+            date = ny + '-' + nm + '-01';
+        }
+        $.ajax({
+            url: "/Hr/GetHours",
+            data: {
+                UserId: userId,
+                SelectedDate: date
+            },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result) {
+                    $("#ttlhr").html(data.total);
+                }
+                else {
+                    $("#ttlhr").html('0');
+                }
+            }
+        });
+    }
+    var PreviousButton = function () {
+        var pd = $('#CurrentDate').val();
+        var pred = new Date(pd);
+        var zone = String(TimeZoneValue(pred));
+        var firstChar = zone.charAt(0);
+        if (firstChar == '-') {
+            pred.setDate(pred.getDate() + 1);
+        }
+         pred.setMonth(pred.getMonth() - 1);
+         var py = pred.getFullYear();
+         var pm = (pred.getMonth() + 1).toString();
+         if (pm.length == 1) { pm = 0 + pm; }
+        pred = py + '-' + pm + '-01';
+        $("#AvailibilityPanel").load(domainurl + "/Hr/AvailibilityPanel?userId=" + userId + "&date=" + pred);
+        loadtotalHrs(userId, pred);
+    }
+    var NextButton = function () {
+        var nd = $('#CurrentDate').val();
+        var nxd = new Date(nd);
+        var zone = String(TimeZoneValue(nxd));
+        var firstChar = zone.charAt(0);
+        if (firstChar == '-') {
+            nxd.setDate(nxd.getDate() + 1);
+        }
+        nxd.setMonth(nxd.getMonth() + 1);
+        var ny = nxd.getFullYear();
+        var nm = (nxd.getMonth() + 1).toString();
+        if (nm.length == 1) { nm = 0 + nm; }
+        nxd = ny + '-' + nm + '-01';
+
+        $("#AvailibilityPanel").load(domainurl + "/Hr/AvailibilityPanel?userId=" + userId + "&date=" + nxd);
+        loadtotalHrs(userId, nxd);
+    }
+    var isbool = false;
+    var WeeklyViewButton = function () {
+        isbool = true;
+        $('.monthshow').hide();
+        $('.weekbtn').removeClass('active-btn');
+        $('.monthbtn').addClass('active-btn');
+        var date = new Date();
+        var strdate = date.getFullYear() + '/' + (parseInt(date.getMonth()) + 1) + '/' + date.getDate();
+        $("#AvailibilityPanel").load(domainurl + "/Hr/WeeklyAvailibilityPanel?userId=" + userId + '&strdate=' + strdate);
+    }
+    var MonthViewButton = function () {
+        isbool = false;
+        $('.monthshow').show();
+        $('.weekbtn').addClass('active-btn');
+        $('.monthbtn').removeClass('active-btn');
+        $("#AvailibilityPanel").load(domainurl + "/Hr/AvailibilityPanel?userId=" + userId);
+        loadtotalHrs(userId);
+    }
+
+    $(document).ready(function () {
+       
+        $("#HumanresLoad").load(domainurl + "/Hr/HrHumanRes?userId=" + userId);
+        $("#InsuranceLoad").load(domainurl + "/Hr/HrInsurance?userId=" + userId);
+        $("#CommissionLoad").load(domainurl + "/Hr/HrCommission?userId=" + userId); 
+        $("#ComputerPanel").load(domainurl + "/Hr/ComputerPanel?userId=" + userId);
+        $("#VehiclePanel").load(domainurl + "/Hr/VehiclePanel?userId=" + userId);
+        $("#AvailibilityPanel").load(domainurl + "/Hr/AvailibilityPanel?userId=" + userId);
+        loadtotalHrs(userId);
+        $("#EmergencyContactLoad").load(domainurl + "/Hr/HrEmergencyContact");
+
+        $("#btnSaveHrAllData").click(function () {
+            SaveThisHrComputerForHrHomeValidation();
+        });
+        MonthViewButton();
+        $("#hr_settngs").click(function () {
+            OpenTopToBottomModal(domainurl + "/Hr/EmployeePtoAccrualRateSetting"); 
+        });
+        
+    });
+    
+    var SaveThisHrComputerForHrHomeValidation = function () {
+        //if ($("#ComputerName").val() != "" && $("#ComputerPassword").val() != "") {
+        //    $("#ComputerName").removeClass("required");
+        //    $("#lblComputerName").addClass("hidden");
+        //    $("#ComputerPassword").removeClass("required");
+        //    $("#lblComputerPassword").addClass("hidden");
+
+
+        //}
+        SaveThisHrHumanResForHrHome();
+        SaveThisHrInsuranceForHrHome();
+        SaveThisHrComputerForHrHome();
+        SaveThisVehicleForHrHome(false);
+        //if (isCommission == 'True') {
+        //    SaveThisCommission();
+        //}
+        
+        //if (isavability !== 'True') {
+        //    SaveEmpOperationsForHrHome();
+        //}
+        if (isbool == true) {
+            SaveEmpOperationsForHrHome();
+        }
+
+        //if ($("#ComputerName").val() == "") {
+        //    $("#ComputerName").addClass("required");
+        //    $("#lblComputerName").removeClass("hidden");
+
+        //}
+        //else {
+        //    $("#ComputerName").removeClass("required");
+        //    $("#lblComputerName").addClass("hidden");
+        //}
+        //if ($("#ComputerPassword").val() == "") {
+        //    $("#ComputerPassword").addClass("required");
+        //    $("#lblComputerPassword").removeClass("hidden");
+        //}
+        //else {
+        //    $("#ComputerPassword").removeClass("required");
+        //    $("#lblComputerPassword").addClass("hidden");
+        //}
+    }
+
+
+</script>
+<div class="Hr_Home_Container">
+    <span id="hr_settngs">
+        <button class="btn green_button">
+            <i title="Accrual Rate" class="fa fa-cog"></i>
+        </button>
+    </span>
+    <div class="Hr_Home_inner_content">
+        <div class="udi_information_block">
+            <div class="ci_block udi_pad_bottom">
+                <div class="ci_header clearfix">
+                    <div>@Localize.T("HR")</div>
+                </div>
+                <div class="udi_info">
+                    <div id="HumanresLoad">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="Hr_Home_inner_content">
+        <div class="ci_block udi_pad_bottom">
+            <div class="ci_header clearfix">
+                <div>@Localize.T("Insurance")</div>
+            </div>
+            <div class="udi_info">
+                <div id="InsuranceLoad">
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="Hr_Home_inner_content" id="computer_panel">
+        <div class="udi_information_block" style="border:1px solid #ddd;">
+            <div class=".ci_computer_block udi_pad_bottom">
+                <div class="ci_header clearfix">
+                    <div>@Localize.T("Employee Computer")</div>
+                </div>
+                <div class="udi_info">
+                    <div id="ComputerPanel">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="Hr_Home_inner_content" id="EmpVehicle">
+        <div class="udi_information_block" style="border:1px solid #ddd;">
+            <div class=".ci_computer_block udi_pad_bottom">
+                <div class="ci_header clearfix">
+                    <div>@Localize.T("Employee Vehicle")</div>
+                </div>
+                <div class="udi_info">
+                    <div id="VehiclePanel">
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    @if (PermissionChekcer.IsPermitted(Permissions.UserMgmtPermissions.EmployeeAvailibilitySection))
+    {
+        <div class="Hr_Home_inner_content hrea_container" id="EmpAvailibility">
+            <div class="udi_information_block" style="border:1px solid #ddd;">
+                <div class=".ci_computer_block udi_pad_bottom">
+                    <div class="ci_header clearfix">
+                        <span class="ci_title">@Localize.T("Employee Availibility")</span>
+                        <span class="month_name monthshow" id="monthName">
+                            @DateTime.Now.ToString("MMMM yyyy")
+                        </span>
+                        <div class="btn-group monthshow" role="group">
+                            <button type="button" class="btn btn-default" onclick="PreviousButton()"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span></button>
+                            <button type="button" class="btn btn-default" onclick="NextButton()"><span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></button>
+                        </div>
+
+                        <div class="btn-group left-space" role="group">
+                            <button type="button" class="btn btn-default weekbtn active-btn" onclick="WeeklyViewButton()">@Localize.T("Weekly")</button>
+                            <button type="button" class="btn btn-default monthbtn" onclick="MonthViewButton()">@Localize.T("Monthly")</button>
+                        </div>
+                    </div>
+                    <div class="udi_info">
+                        <div id="AvailibilityPanel">
+
+                        </div>
+                        <div class="tot_ava_hr"> <span>Total available hours this month: </span><span id="ttlhr"></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="width-100pn">
+        <div class="" style="float: right;padding-right: 10px;">
+            <button class="style-btn-custom" id="btnSaveHrAllData"><i class="fa fa-floppy-o" aria-hidden="true"></i> Save</button>
+        </div>
+    </div>
+
+
+    <div class="width-100pn">
+        <div class="udi_information_block margin-top-15">
+            <div class="ci_block udi_pad_bottom">
+                <div class="ci_header clearfix">
+                    @Localize.T("Emergency Contacts")
+                </div>
+                <div class="udi_info">
+                    <div id="EmergencyContactLoad">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>

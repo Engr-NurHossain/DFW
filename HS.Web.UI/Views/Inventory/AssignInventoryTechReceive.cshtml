@@ -1,0 +1,214 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.AssignedInventoryTechReceived
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<style>
+    .tech_receive_header {
+        width: 100%;
+        background-color: #f4f5f8;
+        font-size: 2rem;
+        font-weight: 400;
+        color: #393a3d;
+        padding: 12px 10px;
+    }
+
+    .SaveCancelDiv {
+        width: 95%;
+    }
+
+    .footer-section {
+        background: #eceef1;
+        height: 50px;
+        position: fixed;
+        width: 100%;
+        bottom: 0%;
+        padding: 10px 15px;
+    }
+
+    #btn_tech_receive, #btn_tech_approve {
+        float: right;
+        background-color: green;
+        color: white;
+    }
+</style>
+<script>
+    var eqpid = '@ViewBag.Equipmentid';
+    var qtycount = '@ViewBag.QtyCount';
+    var techid = '@ViewBag.technicianid';
+    var approve = false;
+    var SaveTechInventoryReceive = function (request) {
+        var url = '/Inventory/SaveTechInventoryReceive';
+        /*
+        var param = {
+            EquipmentId: eqpid,
+            TechnicianId: $("#TechnicianId").val(),
+            Quantity: $("#Quantity").val(),
+            IsReceived: false,
+            ReceivedBy: techid,
+            IsApprove: approve
+        };
+        */
+        var param = {
+            EquipmentId: eqpid,
+            TechnicianId: techid,
+            Quantity: $("#Quantity").val(),
+            IsReceived: false,
+            ReceivedBy: $("#TechnicianId").val(),
+            IsApprove: approve
+        };
+        $('#btn_tech_receive').prop('disabled', true);
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify({ 'model': param, 'request': request, 'TotalQty': qtycount }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenRightToLeftModal(false);
+                    OpenSuccessMessageNew("Success", "", new function () {
+                      
+                          var isLocation = @Html.Raw(Json.Encode(ViewBag.IsLocation));
+
+                        if (isLocation == false) {
+                            OpenTopToBottomModal('/Inventory/TechEquipmentDetailPartial?Id=' + eqpid);
+                        } else {
+                            OpenTopToBottomModal('/Inventory/LocEquipmentDetailPartial?Id=' + eqpid);
+                        }
+                    });
+                }
+                else {
+                    if (data.request && data.result == false) {
+                        OpenErrorMessageNew("Error", "");
+                    }
+                    else {
+                        OpenConfirmationMessageNew("Confirmation", data.message, function () {
+                            SaveTechInventoryReceive(true);
+                        })
+                    }
+                }
+                $('#btn_tech_receive').prop('disabled', false);
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+                $('#btn_tech_receive').prop('disabled', false);
+            }
+        });
+    }
+    var SaveTechInventoryApprove = function () {
+        var url = '/Inventory/SaveTechInventoryApprove';
+        var param = JSON.stringify({
+            EquipmentId: eqpid,
+            TechnicianId: techid,
+            Quantity: $("#Quantity").val(),
+            IsReceived: false,
+            IsApprove: approve
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data) {
+                    OpenRightToLeftModal(false);
+                    OpenSuccessMessageNew("Success", "Sent request successfully");
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $("#btn_tech_receive").click(function () {
+            if ($("#TechnicianId").val() != '00000000-0000-0000-0000-000000000000') {
+                if (parseInt($("#Quantity").val()) > parseInt(qtycount)) {
+                    OpenErrorMessageNew("Error", "Transfer quantity can't be more than OnHand quantity.");
+                    Proceed = false;
+                    return 0;
+                }
+                 if (parseInt($("#Quantity").val())<=0) {
+                     OpenErrorMessageNew("Error", "Transfer quantity can't be Negative or Zero.");
+                     Proceed = false;
+                     return 0;
+                }
+                else {
+                    //approve = true;
+                    SaveTechInventoryReceive(false);
+                }
+            }
+            else {
+                OpenErrorMessageNew("Error", "Please select technician");
+            }
+        })
+        $("#btn_tech_approve").click(function () {
+            if (parseInt($("#Quantity").val()) <= parseInt(qtycount) && $("#Quantity").val() != "0") {
+                SaveTechInventoryApprove();
+            }
+            else {
+                OpenErrorMessageNew("Error", "Quantity not equal to zero and not limit exceed");
+                Proceed = false;
+                return 0;
+            }
+        })
+    })
+</script>
+
+<div class="tech_receive_header">
+    <span>@Localize.T("Assign Inventory Tech")</span>
+</div>
+<div class="container-fluid">
+    @{
+        if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.TechReceiveAction))
+        {
+            <div class="form-group clearfix">
+                <span>@Localize.T("Assign Technician")</span>
+                @Html.DropDownListFor(m => m.TechnicianId, ViewBag.TechnicianList as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+            </div>
+            <div class="form-group clearfix">
+                <span>@Localize.T("Quantity")</span>
+                @Html.TextBoxFor(m => m.Quantity, new { @class = "form-control", datarequired = "true", type = "number" })
+            </div>
+        }
+        else
+        {
+            <div class="form-group clearfix">
+                <span>@Localize.T("Quantity")</span>
+                @Html.TextBoxFor(m => m.Quantity, new { @class = "form-control", datarequired = "true", type = "number" })
+            </div>
+        }
+    }
+</div>
+@{
+    if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.TechReceiveAction))
+    {
+        <section class="footer-section">
+            <footer class="footer">
+                <div class="SaveCancelDiv">
+                    <button id="btn_tech_receive" type="button" class="btn"><i class="fa fa-floppy-o"></i> @Localize.T("Save")</button>
+                </div>
+            </footer>
+        </section>
+    }
+    else
+    {
+        <section class="footer-section">
+            <footer class="footer">
+                <div class="SaveCancelDiv">
+                    <button id="btn_tech_approve" type="button" class="btn"><i class="fa fa-floppy-o"></i> @Localize.T("Save")</button>
+                </div>
+            </footer>
+        </section>
+    }
+}
+

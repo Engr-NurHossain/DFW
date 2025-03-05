@@ -1,0 +1,102 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.AssignedInventoryTechReceived
+
+<style>
+    .tech_receive_header {
+        width: 100%;
+        background-color: #f4f5f8;
+        font-size: 2rem;
+        font-weight: 400;
+        color: #393a3d;
+        padding: 12px 10px;
+    }
+
+    .SaveCancelDiv {
+        width: 95%;
+    }
+
+    .footer-section {
+        background: #eceef1;
+        height: 50px;
+        position: fixed;
+        width: 100%;
+        bottom: 0%;
+        padding: 10px 15px;
+    }
+
+    #btn_tech_approve_confirm {
+        float: right;
+        background-color: green;
+        color: white;
+    }
+</style>
+<script>
+    var qty = '@ViewBag.qty';
+    var tqty = '@ViewBag.tqty';
+    var techid = '@Model.ReceivedBy';
+    var SaveTechInventoryApproveConfirm = function () {
+        var url = '/Inventory/SaveTechInventoryApproveConfirm';
+        var param = JSON.stringify({
+            Id: $("#receive_id").val(),
+            EquipmentId: $("#EquipmentId").val(),
+            TechnicianId: $("#ReceivedBy").val(),
+            Quantity: $("#Quantity").val(),
+            IsReceived: false,
+            ReceivedBy: $("#TechnicianId").val(),
+            IsApprove: true
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                OpenRightToLeftModal(false);
+                OpenSuccessMessageNew("Success", "Approve confirm successfully", function () {
+                    TechReceiveListLoadOwn(techid, 1, null);
+                });
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $("#btn_tech_approve_confirm").click(function () {
+            if (parseInt($("#Quantity").val()) <= parseInt(tqty) && $("#Quantity").val() != "0") {
+                SaveTechInventoryApproveConfirm();
+            }
+            else {
+                OpenErrorMessageNew("Error", "Quantity not equal to zero and not limit exceed");
+            }
+        })
+    })
+</script>
+
+@Html.TextBoxFor(x => x.Id, new { @class = "hidden", id = "receive_id" })
+@Html.TextBoxFor(x => x.EquipmentId, new { @class = "hidden" })
+@Html.TextBoxFor(x => x.TechnicianId, new { @class = "hidden" })
+@Html.TextBoxFor(x => x.ReceivedBy, new { @class = "hidden" })
+<div class="tech_receive_header">
+    <span>@Localize.T("Assign Inventory Tech")</span>
+</div>
+<div class="container-fluid">
+    <div class="form-group clearfix">
+        <span>@Localize.T("Quantity")</span>
+        @Html.TextBoxFor(m => m.Quantity, new { @class = "form-control", datarequired = "true", type = "number" })
+    </div>
+</div>
+<section class="footer-section">
+    <footer class="footer">
+        <div class="SaveCancelDiv">
+            <button id="btn_tech_approve_confirm" type="button" class="btn"><i class="fa fa-floppy-o"></i> @Localize.T("Save")</button>
+        </div>
+    </footer>
+</section>

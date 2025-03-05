@@ -1,0 +1,146 @@
+﻿@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.AdditionalMembersAppointment
+
+<script src="~/Content/JQuery/jquery-3.2.1.min.js"></script>
+<link href="~/Content/Css/Ticket/RescheduleTicketPopup.css" rel="stylesheet" />
+<script>
+    var AppointmentId = '@Model.AppointmentId'
+    var AppointmentDate = '@Model.AppointmentDate'
+    var CustomerId = '@Model.CustomerId'
+    var TimeCheckValidation = function () {
+        $("#AppointmentStartTime").removeClass("required");
+        $("#AppointmentEndTime").removeClass("required");
+
+        if ($("#AppointmentEndTime").val() == "-1"
+            && $("#AppointmentStartTime").val() == "-1") {
+            $("#AppointmentStartTime").removeClass("required");
+            $("#AppointmentEndTime").removeClass("required");
+            return true;
+        }
+        else if ($("#AppointmentEndTime").val() == "-1"
+            && $("#AppointmentStartTime").val() != "-1") {
+            $("#AppointmentEndTime").addClass("required");
+            return false;
+        }
+        else if ($("#AppointmentEndTime").val() != "-1"
+            && $("#AppointmentStartTime").val() == "-1") {
+            $("#AppointmentStartTime").addClass("required");
+            return false;
+        }
+        else if (new Date("05/30/2018" + " " + $("#AppointmentEndTime").val()) > new Date("05/30/2018" + " " + $("#AppointmentStartTime").val())) {
+            $("#AppointmentStartTime").removeClass("required");
+            $("#AppointmentEndTime").removeClass("required");
+            return true;
+        }
+
+        $("#AppointmentEndTime").addClass("required");
+        $("#AppointmentStartTime").addClass("required");
+        return false;
+
+    }
+    var AddAppointmentTime = function () {
+        var url = "/Ticket/AddMemberAppointmentTime/";
+        var param = JSON.stringify({
+            AppointmentStartTime: $("#AppointmentStartTime").val(),
+            AppointmentEndTime: $("#AppointmentEndTime").val(),
+            AppointmentId: AppointmentId,
+            CustomerId: CustomerId,
+            AppointmentDate: AppointmentDate,
+            EmployeeId: $("#EmployeeId").val()
+
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                parent.OpenSuccessMessageNew("", "Appointment saved successfully.", function () {
+                    //parent.ReloadTicket();
+                    parent.ClosePopup();
+                
+                })
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+
+        $("#SaveAppointment").click(function () {
+            console.log("tt");
+            if (TimeCheckValidation() == true)
+            {
+                AddAppointmentTime();
+            }
+           
+        })
+    })
+</script>
+<script src="~/Content/Js/TIcket/RescheduleTicket.js"></script>
+<div class="resch_ticket_header">
+    @Localize.T("Appointment")
+</div>
+<div class="resch_mem_ticket_container">
+    <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+        <img title="@Localize.T(" Close")" src="~/Content/Icons/cross_update.png" />
+    </div>
+    @if (ViewBag.HasUser != "false")
+    {
+        <table>
+            <tr>
+                <td>
+                    Additional Members <span>:</span>
+                </td>
+                <td>
+                    @Html.DropDownListFor(x => x.EmployeeId, ViewBag.EmpList as List<SelectListItem>, new { @class = "form-control", id = "EmployeeId" })
+
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    Appointment Start Time <span>:</span>
+                </td>
+                <td>
+                    @Html.DropDownListFor(x => x.AppointmentStartTime, ViewBag.AppointmentTime as List<SelectListItem>, new { @class = "form-control", id = "AppointmentStartTime" })
+                </td>
+            </tr>
+
+
+            <tr>
+                <td>
+                    Appointment End Time <span>:</span>
+                </td>
+                <td>
+                    @Html.DropDownListFor(x => x.AppointmentEndTime, ViewBag.AppointmentTime as List<SelectListItem>, new { @class = "form-control", id = "AppointmentEndTime" })
+                </td>
+            </tr>
+
+        </table>
+    }
+    else
+    {
+        <div class="caution_message">
+            <i class="fa fa-exclamation-triangle"></i> <br /> <br />
+            <span>Please select at least one additional member.</span>
+        </div>
+    }
+</div>
+
+@if (ViewBag.HasUser != "false")
+{
+    <div class="resch_ticket_footer">
+        <button id="SaveAppointment">Save</button>
+        </div>
+        }
+
+
+
+
+

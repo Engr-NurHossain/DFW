@@ -1,0 +1,237 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@model HS.Entities.RestaurantCoupons
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@Styles.Render("~/styles/AddCustomer")
+<script src="~/Content/Js/Site/Validation.js"></script>
+<style>
+    .add_site_location_inner .form-group {
+        width: 100%;
+        float: left;
+        padding: 0px 15px;
+        margin-top: 10px;
+    }
+</style>
+<script>
+    var couponid = '@Model.Id';
+    var redeemreq = '@Model.ReedemRequired';
+    var distype = '@Model.DiscountType';
+    var statusval = '@Model.Status';
+    var StartDatepicker;
+    var EndDatepicker;
+    var sdate = '@Model.StartDate.ToString("MM/dd/yyyy")';
+    var edate = '@Model.EndDate.ToString("MM/dd/yyyy")';
+    var SaveCoupons = function () {
+        if (CommonUiValidation()) {
+            var url = domainurl + "/Order/SaveCoupons";
+        var param = JSON.stringify({
+            Id: couponid,
+            CouponCode: $("#CouponCode").val(),
+            StartDate: $("#StartDate").val(),
+            EndDate: $("#EndDate").val(),
+            Discount: $("#Discount").val(),
+            MinimumOrder: $("#MinimumOrder").val(),
+            ReedemRequired: $("#ReedemRequiredval").val(),
+            Status: $("#coupon_Status").val() == "1" ? true : false,
+            DiscountType: $("#discountType").val()
+        });
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data) {
+                        OpenRightToLeftModal(false);
+                        LoadCouponsTab(1);
+                    }
+                    else {
+                        OpenErrorMessageNew("Error", $("#CouponCode").val() + " coupon code exist");
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+        }
+    }
+    $(document).ready(function () {
+        var ndate = new Date();
+        var todaysdate = ndate.getMonth() + 1 + "/" + ndate.getDate() + "/" + ndate.getFullYear();
+        var nextday = ndate.setDate(ndate.getDate() + 1);
+        var nextdate = ndate.getMonth() + 1 + "/" + ndate.getDate() + "/" + ndate.getFullYear();
+        var sdaysadd = ndate.setDate(ndate.getDate() + 6);
+        var sdaysdate = ndate.getMonth() + 1 + "/" + ndate.getDate() + "/" + ndate.getFullYear();
+        if (typeof (trackstatus) != "undefined" && trackstatus != null && trackstatus != "") {
+            $("#track_number_status").val(trackstatus);
+        }
+        $(".add_site_location_inner_height").height(window.innerHeight - 94);
+        if (couponid == "0") {
+            StartDatepicker = new Pikaday({
+                format: 'MM/DD/YYYY',
+                field: $('#StartDate')[0],
+                firstDay: 1,
+                minDate: new Date(todaysdate)
+            });
+        }
+        else {
+            if (parseInt(sdate.replace("/", "").replace("/", "")) > parseInt(todaysdate.replace("/", "").replace("/", ""))) {
+                StartDatepicker = new Pikaday({
+                format: 'MM/DD/YYYY',
+                field: $('#StartDate')[0],
+                firstDay: 1,
+                minDate: new Date(todaysdate)
+            });
+            }
+            else {
+                StartDatepicker = new Pikaday({
+        format: 'MM/DD/YYYY',
+            field: $('#StartDate')[0],
+                firstDay: 1,
+                minDate: new Date(sdate)
+        });
+            }
+            
+        }
+        if (couponid == "0") {
+            EndDatepicker = new Pikaday({
+                format: 'MM/DD/YYYY',
+                field: $('#EndDate')[0],
+                firstDay: 1,
+                minDate: new Date(nextdate),
+                defaultDate: new Date(sdaysdate),
+                setDefaultDate: new Date(sdaysdate),
+            });
+        }
+        else {
+            EndDatepicker = new Pikaday({
+        format: 'MM/DD/YYYY',
+            field: $('#EndDate')[0],
+            firstDay: 1,
+            minDate: new Date(nextdate),
+        });
+        }
+        if (couponid == "0") {
+            $('#StartDate').val(todaysdate);
+            $('#EndDate').val(sdaysdate);
+        }
+        else {
+            $('#StartDate').val(sdate);
+            $('#EndDate').val(edate);
+        }
+        $("#ReedemRequired").change(function () {
+            if ($("#ReedemRequired").val().toLowerCase() == "custom") {
+                $("#ReedemRequiredval").parent().removeClass("hidden");
+            }
+            else {
+                $("#ReedemRequiredval").parent().addClass("hidden");
+                $("#ReedemRequiredval").val("0");
+            }
+        })
+        if (typeof (redeemreq) != "undefined" && redeemreq != null && redeemreq != "") {
+            if (redeemreq.toLowerCase() == "0") {
+                $("#ReedemRequiredval").parent().addClass("hidden");
+                $("#ReedemRequired").val("Unlimited");
+            }
+            else {
+                $("#ReedemRequiredval").parent().removeClass("hidden");
+                $("#ReedemRequired").val("Custom");
+                $("#ReedemRequiredval").val(redeemreq);
+            }
+        }
+        if (typeof (distype) != "undefined" && distype != null && distype != "") {
+            $("#discountType").val(distype);
+        }
+        if (typeof (statusval) != "undefined" && statusval != null && statusval != "") {
+            if (statusval == "True") {
+                $("#coupon_Status").val("1");
+            }
+            else {
+                $("#coupon_Status").val("0");
+            }
+        }
+    })
+    $(window).resize(function () {
+        $(".add_site_location_inner_height").height(window.innerHeight - 94);
+    });
+</script>
+<div class="add_site_location_container">
+    <div class="add_site_location_header">
+        @Localize.T("Add Coupon")
+    </div>
+    <div class="add_site_location_inner_height">
+        <div class="add_site_location_inner">
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Coupon Code")</span>
+                @if (Model.Id > 0)
+                {
+                    @Html.TextBoxFor(x => x.CouponCode, new { @class = "form-control", datarequired = "true", @readonly = "readonly" })
+                }
+                else
+                {
+                    @Html.TextBoxFor(x => x.CouponCode, new { @class = "form-control", datarequired = "true" })
+                }
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Start Date")</span>
+                @Html.TextBoxFor(x => x.StartDate, "{0:MM/dd/yyyy}", new { @class = "form-control" })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("End Date")</span>
+                @Html.TextBoxFor(x => x.EndDate, "{0:MM/dd/yyyy}", new { @class = "form-control" })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Discount")</span>
+                <div class="input-group">
+                    <div class="input-group-addon">
+                        <span class="input-group-text">
+                            <select id="discountType">
+                                <option value="dollar">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</option>
+                                <option value="percent">%</option>
+                            </select>
+                        </span>
+                    </div>
+                    @Html.TextBoxFor(x => x.Discount, new { @class = "form-control", type = "number", datarequired = "true" })
+                </div>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Minimum Order Val")</span>
+                <div class="input-group">
+                    <div class="input-group-addon">
+                        <span class="input-group-text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                    </div>
+                    @Html.TextBoxFor(x => x.MinimumOrder, new { @class = "form-control", type = "number", datarequired = "true" })
+                </div>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Redeem Type")</span>
+                <select class="form-control" id="ReedemRequired">
+                    <option value="Unlimited">Unlimited</option>
+                    <option value="Custom">Custom</option>
+                </select>
+            </div>
+            <div class="form-group clearfix hidden">
+                <span class="span-style">@Localize.T("Redeem Required")</span>
+                <input class="form-control" type="number" id="ReedemRequiredval" />
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Status")</span>
+                <select class="form-control" id="coupon_Status">
+                    <option value="1">Active</option>
+                    <option value="0">Inactive</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="add_site_location_footer">
+        <button class="btn btn-default" id="SaveWebLocation" onclick="SaveCoupons()"><i class="fa fa-save" aria-hidden="true"></i> @Localize.T("Save")</button>
+    </div>
+</div>

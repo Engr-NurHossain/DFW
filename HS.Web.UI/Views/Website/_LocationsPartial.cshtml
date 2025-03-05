@@ -1,0 +1,380 @@
+﻿@model List<HS.Entities.WebsiteLocation>
+@{
+    Layout = null;
+  
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HtmlAgilityPack;
+@*@Styles.Render("~/styles/MenuListPartial")*@
+@*@Scripts.Render("~/scripts/MenuList")*@
+<link href="~/Content/Css/Menu/MenuListPartial.css" rel="stylesheet" />
+
+<script>
+    var OpenSiteLocById = function (id) {
+        OpenTopToBottomModal(domainurl + "/Website/AddSiteLocation?id=" + id);
+    }
+    var FilterSiteLoc = function () {
+        pageno = 1;
+
+        var searchtext = $("#txt_search_siteloc").val();
+        $(".Load_Locations").html(TabsLoaderText);
+        $(".Load_Locations").load(domainurl + "/Website/LoadLocationsPartial?PageNo=" + pageno + "&PageSize=50" + "&SearchText=" + encodeURI(searchtext));
+        $("#txt_search_siteloc").val(searchtext);
+    }
+    //    var MenuListLoad = function (pageNo, order) {
+    //    if (typeof (pageNo) != "undefined") {
+
+    //        //var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+    //        //if (typeof (IsLead) != "undefined" && IsLead) {
+    //        //    LoadCustomerDiv = "";
+    //        //}
+    //        //var AssignedSearch = $(LoadCustomerDiv + ".Assigned_search").val();
+    //        //var TicketTypeSearch = $(LoadCustomerDiv + ".TicketType_Search").val();
+    //        //var TicketStatusSearch = $(LoadCustomerDiv + ".Ticket_Status_Search").val();
+    //        //var MyTicketSearch = $(LoadCustomerDiv + ".TicketFor_search").val();
+
+    //        var LoadUrl = domainurl + "/Website/LoadLocationsPartial?PageNo=" + pageNo
+    //            + "&SearchText=" + encodeURI($("#txt_search_siteloc").val())
+    //        +
+    //         "&order=" + order
+    //        $(".Load_Locations").html(TabsLoaderText);
+    //        $(".Load_Locations").load(LoadUrl);
+    //        //var LoadUrl = domainurl + "/MenuManagement/LoadMenusPartial?PageNo=" + 1 + "&PageSize=50" + "&SearchText=" + encodeURI(searchtext)
+    //        //    + "&order=" + order
+    //        //$(".Load_Menus").html(TabsLoaderText);
+    //        //$(".Load_Menus").load(LoadUrl);
+    //    }
+    //}
+    $(document).ready(function () {
+        $("#btnAddNewLocation").click(function () {
+            OpenTopToBottomModal(domainurl + "/Website/AddSiteLocation?id=0");
+        })
+        //     $(".icon_sort_timeclock").click(function () {
+        //    var orderval = $(this).attr('data-val');
+        //    MenuListLoad(pageno, orderval);
+        //})
+        $(".icon_sort_timeclock").click(function () {
+            var searchtext = $("#txt_search_siteloc").val();
+            var orderval = $(this).attr('data-val');
+            $(".Load_Locations").html(TabsLoaderText);
+            $(".Load_Locations").load(domainurl + "/Website/LoadLocationsPartial?PageNo=" + 1 + "&PageSize=50" + "&SearchText=" + encodeURI(searchtext) + "&order=" + encodeURI(orderval));
+        })
+        $(".item-del").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirmation", "Are you sure, you want to delete this item?", function () {
+                var url = domainurl + "/Website/DeleteSiteLocation";
+                var param = JSON.stringify({
+                    id: idval
+                })
+                $.ajax({
+                    type: "POST",
+                    ajaxStart: $(".loader-div").show(),
+                    url: url,
+                    data: param,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    cache: false,
+                    success: function (data) {
+                        if (data) {
+                            LoadLocationsTab(1, null);
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    }
+                })
+            })
+        })
+    })
+</script>
+<div class="menulist_container">
+    <div class="menulist_search_filter">
+        <div class="input-group add-on">
+            @*<input value="@Model.Searchtext" class="form-control filterinput border_radius_0 menu_search_text" placeholder="Search">*@
+            <input value= "@TempData["data"]" class="form-control filterinput border_radius_0 menu_search_text" placeholder="search" id="txt_search_siteloc">
+            <div class="input-group-btn"><button title="Search" class="btn search_menu_btn" id="btnsearchtext" onclick="FilterSiteLoc()"><i class="glyphicon glyphicon-search"></i></button></div>
+        </div>
+        <button title="@Localize.T("Create Location")" class="btn create_menu_btn btnAddNewLocation" id="btnAddNewLocation"><i class="fa fa-plus"></i>@Localize.T(" New")</button>
+    </div>
+
+
+    <div class="menu-table">
+        <table class="display all_menu menu_list_partial_info" id="tblSiteLoc">
+            <thead class="table-head-border">
+                <tr>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Location Name")</div>
+                        @if (ViewBag.order == "ascending/locationname" || ViewBag.order == "descending/locationname")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/locationname"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/locationname"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/locationname"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/locationname"></i></div>
+                        }
+
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Street Address")</div>
+                        @if (ViewBag.order == "ascending/streetaddress" || ViewBag.order == "descending/streetaddress")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/streetaddress"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/streetaddress"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/streetaddress"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/streetaddress"></i></div>
+
+                        }
+                    </th>
+                    @*<th class="thead-th-style">
+                            <div>@Localize.T("Address 2")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/address2"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/address2"></i></div>
+                        </th>*@
+                    <th class="thead-th-style">
+                        <div>@Localize.T("City")</div>
+                        @if (ViewBag.order == "ascending/city" || ViewBag.order == "descending/city")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/city"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/city"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/city"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/city"></i></div>
+                        }
+
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("State")</div>
+                        @if (ViewBag.order == "ascending/state" || ViewBag.order == "descending/state")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/state"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/state"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/state"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/state"></i></div>
+
+                        }
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Zip")</div>
+                        @if (ViewBag.order == "ascending/zip" || ViewBag.order == "descending/zip")
+                        {
+
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/zip"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/zip"></i></div>
+
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/zip"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/zip"></i></div>
+
+                        }
+                    </th>
+                    @*<th class="thead-th-style">
+                            <div>@Localize.T("Contact Name")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/contactname"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/contactname"></i></div>
+                        </th>
+                        <th class="thead-th-style">
+                            <div>@Localize.T("Contact Phone")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/contactphone"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/contactphone"></i></div>
+                        </th>
+                        <th class="thead-th-style">
+                            <div>@Localize.T("Contact Email")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/contactemail"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/contactemail"></i></div>
+                        </th>*@
+                    <th class="thead-th-style">
+                        @Localize.T("Action")
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                <tr class="tr-style">
+                    <td class="table-body-td-style" valign="top">
+                        <div class="menu_list_partial_device_header">@Localize.T("Location Name")<span>:</span></div>
+                        <div class="menu_list_partial_device_info">
+                            <a class="cus-anchor" onclick="OpenSiteLocById(@item.Id)" href="javascript:void(0)">@item.Name</a>
+                        </div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div class="menu_list_partial_device_header">@Localize.T("Street Address")<span>:</span></div>
+                        <div class="menu_list_partial_device_info"> <span>@item.Address</span></div>
+                    </td>
+                    @*<td class="table-body-td-style" valign="top">
+            <div class="menu_list_partial_device_header">@Localize.T("Address 2")<span>:</span></div>
+            <div class="menu_list_partial_device_info"><span>@item.Address2</span></div>
+        </td>*@
+                    <td class="table-body-td-style" valign="top">
+                        <div class="menu_list_partial_device_header">@Localize.T("City")<span>:</span></div>
+                        <div class="menu_list_partial_device_info"><span>@HS.Framework.Extentions.CapitalizeFirst(item.City)</span></div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div class="menu_list_partial_device_header">@Localize.T("State")<span>:</span></div>
+                        <div class="menu_list_partial_device_info"><span>@item.State</span></div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div class="menu_list_partial_device_header">@Localize.T("Zip")<span>:</span></div>
+                        <div class="menu_list_partial_device_info"><span>@item.Zipcode</span></div>
+                    </td>
+                    @*<td class="table-body-td-style" valign="top">
+            <div class="menu_list_partial_device_header">@Localize.T("Contact Name")<span>:</span></div>
+            <div class="menu_list_partial_device_info"><span>@item.ContactName</span></div>
+        </td>
+        <td class="table-body-td-style" valign="top">
+            <div class="menu_list_partial_device_header">@Localize.T("Contact Phone")<span>:</span></div>
+            <div class="menu_list_partial_device_info"><span>@item.ContactPhone</span></div>
+        </td>
+        <td class="table-body-td-style" valign="top">
+            <div class="menu_list_partial_device_header">@Localize.T("Contact Email")<span>:</span></div>
+            <div class="menu_list_partial_device_info"><span>@item.ContactEmail</span></div>
+        </td>*@
+                    @if (item.IsDefault == false)
+                    {
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Action")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"> <a class="cus-anchor item-del" href="javascript:void(0)" id="item-del" data-id="@item.Id" title="@Localize.T("Delete")"><i class="fa fa-trash-o"></i></a></div>
+                        </td>
+                    }
+                    else
+                    {
+                <td>
+                    <div class="menu_list_partial_device_header">@Localize.T("Action")<span>:</span></div>
+                    <div class="menu_list_partial_device_info"></div>
+                </td>
+                    }
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="LoadLocationsTab(@(ViewBag.PageNumber),'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadLocationsTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadLocationsTab(1, '@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadLocationsTab(2,'@(ViewBag.order)')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="LoadLocationsTab(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadLocationsTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadLocationsTab(1,'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadLocationsTab(2,'@(ViewBag.order)''@(ViewBag.order)')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="LoadLocationsTab(3,'@(ViewBag.order)')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="LoadLocationsTab(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadLocationsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadLocationsTab(@(ViewBag.PageNumber-2),'@(ViewBag.order)')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadLocationsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="LoadLocationsTab(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="LoadLocationsTab()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadLocationsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadLocationsTab(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadLocationsTab(@(ViewBag.PageNumber + 2),'@(ViewBag.order)')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="LoadLocationsTab(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadLocationsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadLocationsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadLocationsTab(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="LoadLocationsTab(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadLocationsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadLocationsTab(@(ViewBag.PageNumber - 1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="LoadLocationsTab(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadLocationsTab(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="LoadLocationsTab(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+@*<div class="ticket_export_confirm"></div>*@

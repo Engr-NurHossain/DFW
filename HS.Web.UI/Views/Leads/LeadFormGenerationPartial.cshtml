@@ -1,0 +1,241 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.LeadFormGeneration
+@Styles.Render("~/styles/LeadVerifyInfo")
+@Scripts.Render("~/scripts/LeadVerifyInfo")
+
+<script>
+    var GoogleMapAPIKey = '@ViewBag.GoogleMapAPIKey';
+</script>
+
+<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+<script src="~/Content/Js/Site/Validation.js"></script>
+<script src="~/Content/Js/LeadAddressMap/LeadAddressMap.js"></script>
+<script src="~/Content/Js/NumberFormet/NumberFormat.js"></script>
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>
+<style>
+    .txt-check {
+        vertical-align: middle;
+        color: rgba(0, 0, 0, 0.75);
+        position: absolute;
+        top: 14px;
+        padding-left: 4px;
+    }
+
+    .width-36p {
+        width: 36%;
+        float: left;
+    }
+</style>
+<script>
+    var soldby = '@ViewBag.soldby';
+    var customersoldby = '@Model.Customer.Soldby';
+    var LeadLoadId = '@ViewBag.LeadId';
+    var leadid = '@Model.Customer.Id';
+    var splitformval;
+    var date;
+    var LoadLead = function () {
+        var url = domainurl + "/Leads/GetCustomer/";
+        $.ajax({
+            url: url,
+            data: { LeadLoadId },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                for (var i = 0; i < $(".lead_detail_form").length; i++) {
+                    var formid = $($(".lead_detail_form")[i]).attr('data-id');
+                    var form = "#" + formid;
+                    var formval = data.result[formid];
+                    if (formval != null) {
+                        splitformval = formval.toString().split('/Date');
+                    }
+                    if (typeof (formval) != "undefined") {
+                        if (splitformval.length == 2) {
+                            if (formval != null) {
+                                date = new Date(parseInt(formval.replace("/Date(", "").replace(")/", ""), 10));
+                            }
+                            var day = date.getDate();
+                            var month = date.getMonth() + 1;
+                            var year = date.getFullYear();
+                            if (day < 10) {
+                                day = "0" + day;
+                            }
+                            if (month < 10) {
+                                month = "0" + month;
+                            }
+                            var fdate = month + "/" + day + "/" + year;
+                            $(form).val(fdate);
+                        }
+                        else if (formid == "Type") {
+                            $("#Lead_Type").val(data.result.Type);
+                        }
+                        else if (formid == "CustomerFunded" || formid == "Maintenance" || formid == "CellularBackup" || formid == "BillTax") {
+                            if (formval == true) {
+                                $(form).val("1");
+                            }
+                            else {
+                                $(form).val("0");
+                            }
+                        }
+                        else {
+                            if (typeof(formval) != null) {
+                                $(form).val(formval);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    var selectedID = 0;
+    var DeleteLead = function () {
+        var url = domainurl + "/Leads/DeleteLead";
+        $.ajax({
+            url: url,
+            data: { id: selectedID },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data == true) {
+                    LoadLeads(true);
+                }
+            }
+        });
+    }
+    $(document).ready(function () {
+        for (var i = 0; i < $('.calendar').length; i++) {
+            var idval = $($('.calendar')[i]).attr('id');
+            var Fid = "#" + idval;
+            new Pikaday({ format: 'MM/DD/YYYY', field: $(Fid)[0] });
+        }
+        if (customersoldby == "" && soldby != "") {
+            $("#Soldby").val(soldby);
+        }
+        $(".lead_form_drag").click(function () {
+            OpenRightToLeftModal(domainurl + "/Leads/LeadFormGeneratorSetting?leadid=" + leadid);
+        });
+        if (LeadLoadId != '') {
+            LoadLead();
+            $(".edit_lead_form").removeClass('hidden');
+            $(".create_lead_form").addClass('hidden');
+        }
+        $("#btnDeleteLead").click(function () {
+            selectedID = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this item?", DeleteLead);
+        })
+    })
+</script>
+<input type="hidden" value="@Model.Customer.CustomerSystemInfo.Id" id="sysid" />
+<input type="hidden" value="@ViewBag.geo" id="Geo" />
+<input type="hidden" value="@Model.Customer.Id" id="id" />
+<input type="hidden" value="@Model.Customer.Latlng" id="latLng" />
+<input type="hidden" value="@Model.Customer.Type" id="Type" />
+<input type="hidden" value="@Model.Customer.CustomerSpouse.Id" id="SpouseId" />
+<input type="hidden" value="@Model.Customer.CustomerSpouse.AddedDate" id="SpouseAddedDate" />
+<div class="container-fluid">
+    <div class="custom_container">
+        <div class="form-group">
+            <div class="form-group clearfix">
+                <div class="add_lead_info_container">
+                    <div class="add_lead_info_header">
+                        @if (Model.Customer.Id > 0)
+                        {
+                            @Localize.T("Edit Lead")
+                            <span class="lead_form_drag" style="cursor:pointer;float:right;"><i class="fa fa-cog"></i></span>
+                        }
+                        else
+                        {
+                            @Localize.T("Create Lead")
+                            <span class="lead_form_drag" style="cursor:pointer;float:right;"><i class="fa fa-cog"></i></span>
+                        }
+                    </div>
+                    <div class="add_lead_info_details_block">
+                        @{
+                            if (Model.ListFormGenerator.Count > 0)
+                            {
+                                <div class="row">
+                                    @foreach (var item in Model.ListFormGenerator)
+                                    {
+                                        <div class="col-md-3 bottom_pad_for_mobile lead_device_custom lead_detail_form" data-id="@item.FieldName">
+                                            @if (item.DataType == HS.Web.UI.Helper.LabelHelper.FormGenerationDataType.TextBox)
+                                            {
+                                                <div class="form-group clearfix">
+                                                    @{
+                                                        if (item.FieldName == "ZipCode")
+                                                        {
+                                                            <div><span class="text-custom">@Localize.T(item.FieldLabel)</span></div>
+                                                            <div class="CityState_insert_div">
+                                                                <input type="text" class="form-control style-textbox" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" value="" id="@item.FieldName" placeholder="@item.Placeholder" />
+                                                                <div class='tt-menu'>
+                                                                    <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                        else if (item.FieldName == "ZipCodePrevious")
+                                                        {
+                                                            <div><span class="text-custom">@Localize.T(item.FieldLabel)</span></div>
+                                                            <div class="CityState_insert_div_previous">
+                                                                <input type="text" class="form-control style-textbox" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" value="" id="@item.FieldName" placeholder="@item.Placeholder" />
+                                                                <div class='tt-menu'>
+                                                                    <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <div><span class="text-custom">@Localize.T(item.FieldLabel)</span></div>
+                                                            <div><input type="text" placeholder="@item.Placeholder" class="form-control style-textbox" id="@item.FieldName" value="" /></div>
+                                                        }
+                                                    }
+                                                </div>
+                                            }
+                                            @if (item.DataType == HS.Web.UI.Helper.LabelHelper.FormGenerationDataType.Calendar)
+                                            {
+                                                <div class="form-group clearfix">
+                                                    <div><span class="text-custom">@Localize.T(item.FieldLabel)</span></div>
+                                                    <div><input type="text" placeholder="@item.Placeholder" class="form-control style-textbox calendar" id="@item.FieldName" value="" /></div>
+                                                </div>
+                                            }
+                                            @if (item.DataType == HS.Web.UI.Helper.LabelHelper.FormGenerationDataType.DropDown)
+                                            {
+                                                <div class="form-group clearfix">
+                                                    <div><span class="text-custom">@Localize.T(item.FieldLabel)</span></div>
+                                                    @if (item.FieldName == "Type")
+                                                    {
+                                                        <div>@Html.DropDownListFor(x => item.FieldName, HS.Web.UI.Helper.LabelHelper.GetDropDownListByKey(item.DataKey), new { @class = "form-control style-textbox dropdown", id = "Lead_Type" })</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div>@Html.DropDownListFor(x => item.FieldName, HS.Web.UI.Helper.LabelHelper.GetDropDownListByKey(item.DataKey), new { @class = "form-control style-textbox dropdown", id = item.FieldName })</div>
+                                                    }
+                                                </div>
+                                            }
+                                            @if (item.DataType == HS.Web.UI.Helper.LabelHelper.FormGenerationDataType.TextArea)
+                                            {
+                                                <div class="form-group clearfix">
+                                                    <div><span class="text-custom">@Localize.T(item.FieldLabel)</span></div>
+                                                    <div><textarea placeholder="@item.Placeholder" class="form-control style-textbox" id="@item.FieldName" value=""></textarea></div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+                <div class="add_verify_info_btn_container" style="float:right;">
+                    <button type="button" class="btn create_lead_form" id="btnVerify">
+                        <i class="fa fa-check" aria-hidden="true"></i>  @Localize.T("Save/New")
+                    </button>
+                    <button type="button" class="btn create_lead_form" id="btnVerifyOnly"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save/Setup")</button>
+                    <button type="button" class="btn edit_lead_form hidden" id="btnVerifyOnly1"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+                    <button type="button" class="btn btn-danger edit_lead_form hidden" id="btnDeleteLead" data-id="@Model.Customer.Id"><i class="fa fa-trash-o" aria-hidden="true"></i>@Localize.T(" Delete")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

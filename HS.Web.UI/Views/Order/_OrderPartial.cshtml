@@ -1,0 +1,668 @@
+﻿@model List<HS.Entities.ResturantOrder>
+@{
+    Layout = null;
+    var QtyTotal = 0;
+    var CountInProg = 0;
+    var CountReject = 0;
+    var CountComplete = 0;
+    var CountCancel = 0;
+    var AmountAvg = 0.0;
+    var RevTotal = 0.0;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+    var OverallTotal = 0.0;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HtmlAgilityPack;
+<link href="~/Content/Css/Pagination.css" rel="stylesheet" />
+@Styles.Render("~/styles/MenuListPartial")
+@Scripts.Render("~/scripts/MenuList")
+<style>
+    .ieatery_isview_input {
+        width: 40px !important;
+        height: 20px;
+        color: white;
+        background-color: #2ca01c !important;
+        float: left;
+        margin-right: 5px;
+    }
+
+    .ieatery_order_customer_anchor {
+        color: #2ca01c;
+    }
+
+        .ieatery_order_customer_anchor:hover {
+            color: #2ca01c;
+            text-decoration: underline;
+        }
+        .filter_order_block{
+            width: 100%;
+    float: left;
+    margin-bottom: 10px;
+        }
+        .filter_order_block .input-group{
+            width:20%;
+            float:left;
+        }
+</style>
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var currentnumber = '@ViewBag.CurrentNumber';
+    var outnumber = '@ViewBag.OutOfNumber';
+    var valfilter = '@ViewBag.filter';
+    var IeateryIsviewChange = function (id) {
+        var url = "/Order/IeateryIsviewChange";
+        var param = JSON.stringify({
+            id: id
+        });
+        $.ajax({
+        type: "POST",
+        ajaxStart: $(".AddInvoiceLoader").removeClass('hidden'),
+        url: url,
+        data: param,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+            success: function (data) {
+                if (data) {
+                    $("#ieatery_isview_input_" + id).addClass("hidden");
+                }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(errorThrown);
+            $(".AddInvoiceLoader").addClass('hidden');
+        }
+    });
+    }
+    var LoadOrdersTab1 = function (pageno) {
+        if (typeof (pageno) == "undefined" && pageno == null && pageno == "") {
+            pageno = 1;
+        }
+        var filterval = $("#filter_order_opt").val();
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".Load_Orders").html(TabsLoaderText);
+        $(".Load_Orders").load(domainurl + "/Order/LoadOrdersPartial?PageNo=" + pageno + "&PageSize=10" + "&SearchText=&order=&startdate=" + StartDate + "&enddate=" + EndDate + "&filter=" + filterval);
+    }
+    var FilterOrderListByType = function (type, status) {
+        if (typeof (pageno) == "undefined" && pageno == null && pageno == "") {
+            pageno = 1;
+        }
+        var filterval = $("#filter_order_opt").val();
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".Load_Orders").html(TabsLoaderText);
+        $(".Load_Orders").load(domainurl + "/Order/LoadOrdersPartial?PageNo=" + pageno + "&PageSize=10" + "&SearchText=&order=&startdate=" + StartDate + "&enddate=" + EndDate + "&filter=" + filterval + "&ordertype=" + type + "&orderstatus=" + status);
+    }
+    $(document).ready(function () {
+        $(".DateFilterContents .btn-apply-Datefilter").click(function () {
+            LoadOrdersTab(1);
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+            UpdatePtoCookie();
+        });
+        if (currentnumber == outnumber) {
+        $(".PaginationrightButtons").hover(function () {
+            $(this).css("cursor", "not-allowed");
+            $(this).attr("disabled", "disabled");
+        })
+    }
+    if (pageno == "1") {
+        $(".PaginationButtons").hover(function () {
+            $(this).css("cursor", "not-allowed");
+            $(this).attr("disabled", "disabled");
+        })
+        }
+        $(".ieatery_isview_change").click(function () {
+            var idval = $(this).attr("data-id");
+            IeateryIsviewChange(idval);
+        })
+        $("#btnfilter_order_opt").click(function () {
+            LoadOrdersTab1(1);
+        })
+        $("#filter_order_opt").val(valfilter.toLowerCase());
+        if (valfilter.toLowerCase() == "true") {
+            $(".order_summery_block").attr("style", "display:none;");
+        }
+        else {
+            $(".order_summery_block").attr("style", "display:block;");
+        }
+    })
+</script>
+
+<div class="menulist_container">
+    @*@if (CurrentUser != null && (CurrentUser.UserRole.ToLower().IndexOf("admin") > -1 || CurrentUser.UserRole.ToLower().IndexOf("sysadmin") > -1))
+    {
+        <div class="filter_order_block">
+            <div class="input-group">
+                <select class="form-control" id="filter_order_opt">
+                    <option value="false">All</option>
+                    <option value="true">Cancelled</option>
+                </select>
+                <div class="input-group-btn">
+                    <button class="btn" id="btnfilter_order_opt"><i class="fa fa-search"></i></button>
+                </div>
+            </div>
+        </div>
+    }*@
+
+    <div class="order_partial_block order_summery_block">
+
+        <div class="order_partial_block_left">
+            <div class="ci_block">
+                <div class="ci_header">Orders Summary</div>
+                <div class="ci_info">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order Type</th>
+                                <th>Qty</th>
+                                <th>In Progress</th>
+                                <th>Rejected</th>
+                                <th>Completed</th>
+                                <th>Cancellation</th>
+                                <th>Avg Order</th>
+                                <th>Total Rev</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                @{
+                                    if (((List<HS.Entities.OrderSummeryDataModel>)ViewBag.OrderSummery).Count > 0)
+                                    {
+                                        var totalqty = 0;
+                                        var inprogcount = 0;
+                                        var rejectcount = 0;
+                                        var completecount = 0;
+                                        var cancelcount = 0;
+                                        var avgamount = 0.0;
+                                        var totalrev = 0.0;
+                                        foreach (var item in ((List<HS.Entities.OrderSummeryDataModel>)ViewBag.OrderSummery))
+                                        {
+                                            if (item.OrderType == "Pickup")
+                                            {
+                                                inprogcount = inprogcount + item.InProgressCount;
+                                                rejectcount = rejectcount + item.RejectedCount;
+                                                completecount = completecount + item.CompletedCount;
+                                                cancelcount = cancelcount + item.CancellationCount;
+                                                avgamount = avgamount + item.AverageOrder;
+                                                totalrev = totalrev + item.TotalRev;
+                                                totalqty = totalqty + 1;
+                                            }
+                                        }
+                                        if (totalqty > 0)
+                                        {
+                                            //if (completecount > 0)
+                                            //{
+                                            //    totalrev = ((avgamount / totalqty) * (completecount));
+                                            //}
+                                            QtyTotal = totalqty;
+                                            CountInProg = inprogcount;
+                                            CountReject = rejectcount;
+                                            CountComplete = completecount;
+                                            CountCancel = cancelcount;
+                                            if(completecount > 0)
+                                            {
+                                                AmountAvg = (avgamount / completecount);
+                                            }
+                                            else
+                                            {
+                                                AmountAvg = 0;
+                                            }
+                                            RevTotal = totalrev;
+                                            <td><a class="cus-anchor" onclick="FilterOrderListByType('Pickup', '')">Pickup</a></td>
+                                            <td>@totalqty</td>
+                                            if (inprogcount > 0)
+                                            {
+                                                <td><a class="cus-anchor" onclick="FilterOrderListByType('Pickup', 'Progress')">@inprogcount</a></td>
+                                            }
+                                            else
+                                            {
+                                                <td>@inprogcount</td>
+                                            }
+                                            if (rejectcount > 0)
+                                            {
+                                                <td><a class="cus-anchor" onclick="FilterOrderListByType('Pickup', 'Rejected')">@rejectcount</a></td>
+                                            }
+                                            else
+                                            {
+                                                <td>@rejectcount</td>
+                                            }
+                                            if (completecount > 0)
+                                            {
+                                                <td><a class="cus-anchor" onclick="FilterOrderListByType('Pickup', 'Pickedup')">@completecount</a></td>
+                                            }
+                                            else
+                                            {
+                                                <td>@completecount</td>
+                                            }
+                                            if (cancelcount > 0)
+                                            {
+                                                <td><a class="cus-anchor" onclick="FilterOrderListByType('Pickup', 'Cancelled')">@cancelcount</a></td>
+                                            }
+                                            else
+                                            {
+                                                <td>@cancelcount</td>
+                                            }
+                                            if (completecount > 0)
+                                            {
+                                                <td>$@HS.Web.UI.Helper.LabelHelper.FormatAmount((avgamount / completecount))</td>
+                                            }
+                                            else
+                                            {
+                                                <td>$0.00</td>
+                                            }
+                                            <td>$@HS.Web.UI.Helper.LabelHelper.FormatAmount(totalrev)</td>
+                                        }
+                                    }
+                                }
+                            </tr>
+                            <tr>
+                                @{
+                                    if (((List<HS.Entities.OrderSummeryDataModel>)ViewBag.OrderSummery).Count > 0)
+                                    {
+                                        var totalqty = 0;
+                                        var inprogcount = 0;
+                                        var rejectcount = 0;
+                                        var completecount = 0;
+                                        var cancelcount = 0;
+                                        var avgamount = 0.0;
+                                        var totalrev = 0.0;
+                                        foreach (var item in ((List<HS.Entities.OrderSummeryDataModel>)ViewBag.OrderSummery))
+                                        {
+                                            if (item.OrderType == "Delivery")
+                                            {
+                                                inprogcount = inprogcount + item.InProgressCount;
+                                                rejectcount = rejectcount + item.RejectedCount;
+                                                completecount = completecount + item.CompletedCount;
+                                                cancelcount = cancelcount + item.CancellationCount;
+                                                avgamount = avgamount + item.AverageOrder;
+                                                totalrev = totalrev + item.TotalRev;
+                                                totalqty = totalqty + 1;
+                                            }
+                                        }
+                                        if (totalqty > 0)
+                                        {
+                                            //if (completecount > 0)
+                                            //{
+                                            //    totalrev = ((avgamount / totalqty) * (completecount));
+                                            //}
+                                            QtyTotal = QtyTotal + totalqty;
+                                            CountInProg = CountInProg + inprogcount;
+                                            CountReject = CountReject + rejectcount;
+                                            CountComplete = CountComplete + completecount;
+                                            CountCancel = CountCancel + cancelcount;
+                                            if(completecount > 0)
+                                            {
+                                                AmountAvg = AmountAvg + (avgamount / completecount);
+                                            }
+                                            RevTotal = RevTotal + totalrev;
+                                            <td><a class="cus-anchor" onclick="FilterOrderListByType('Delivery', '')">Delivery</a></td>
+                                            <td>@totalqty</td>
+                                            if (inprogcount > 0)
+                                            {
+                                                <td><a class="cus-anchor" onclick="FilterOrderListByType('Delivery', 'Progress')">@inprogcount</a></td>
+                                            }
+                                            else
+                                            {
+                                                <td>@inprogcount</td>
+                                            }
+                                            if (rejectcount > 0)
+                                            {
+                                                <td><a class="cus-anchor" onclick="FilterOrderListByType('Delivery', 'Rejected')">@rejectcount</a></td>
+                                            }
+                                            else
+                                            {
+                                                <td>@rejectcount</td>
+                                            }
+                                            if (completecount > 0)
+                                            {
+                                                <td><a class="cus-anchor" onclick="FilterOrderListByType('Delivery', 'Delivered')">@completecount</a></td>
+                                            }
+                                            else
+                                            {
+                                                <td>@completecount</td>
+                                            }
+                                            if (cancelcount > 0)
+                                            {
+                                                <td><a class="cus-anchor" onclick="FilterOrderListByType('Delivery', 'Cancelled')">@cancelcount</a></td>
+                                            }
+                                            else
+                                            {
+                                                <td>@cancelcount</td>
+                                            }
+                                            if (completecount > 0)
+                                            {
+                                                <td>$@HS.Web.UI.Helper.LabelHelper.FormatAmount((avgamount / completecount))</td>
+                                            }
+                                            else
+                                            {
+                                                <td>$0.00</td>
+                                            }
+                                            <td>$@HS.Web.UI.Helper.LabelHelper.FormatAmount(totalrev)</td>
+                                        }
+                                    }
+                                }
+                            </tr>
+                            <tr>
+                                <td>Total Orders</td>
+                                <td>@QtyTotal</td>
+                                <td>@CountInProg</td>
+                                <td>@CountReject</td>
+                                <td>@CountComplete</td>
+                                <td>@CountCancel</td>
+                                <td>$@HS.Web.UI.Helper.LabelHelper.FormatAmount(AmountAvg)</td>
+                                <td>$@HS.Web.UI.Helper.LabelHelper.FormatAmount(RevTotal)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="order_partial_block">
+        <div class="ci_block">
+            <div class="ci_header">@Localize.T("Order Details")</div>
+            <div class="ci_info">
+                <table class="display all_menu menu_list_partial_info" id="tblMenu">
+                    <thead class="table-head-border">
+                        <tr>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Order")</div>
+                                @if (ViewBag.order == "ascending/orderid" || ViewBag.order == "descending/orderid")
+                                {
+                                    <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Order Date")</div>
+                                @if (ViewBag.order == "ascending/orderid" || ViewBag.order == "descending/orderid")
+                                {
+                                    <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i style="color: darkred; font-weight: bold " class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Customer")</div>
+                                @if (ViewBag.order == "ascending/ordercustomer" || ViewBag.order == "descending/ordercustomer")
+                                {
+                                    <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i style="color: darkred;
+        font-weight: bold
+    " class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i></div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Order Type")</div>
+                                @if (ViewBag.order == "ascending/ordertype" || ViewBag.order == "descending/ordertype")
+                                {
+                                    <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordertype"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordertype"></i></div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordertype"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordertype"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Amount")</div>
+                                @if (ViewBag.order == "ascending/amount" || ViewBag.order == "descending/amount")
+                                {
+                                    <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/amount"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/amount"></i></div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/amount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/amount"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Status")</div>
+                                @if (ViewBag.order == "ascending/status" || ViewBag.order == "descending/status")
+                                {
+                                    <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+
+                                }
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr class="tr-style CheckItems" idval="@item.Id">
+                                <td class="table-body-td-style" valign="top">
+                                    <div class="menu_list_partial_device_header">@Localize.T("Order")<span>:</span></div>
+                                    <div class="menu_list_partial_device_info">
+                                        @if (item.IsViewed == false)
+                                        {
+                                            <input type="text" class="form-control ieatery_isview_input" id="ieatery_isview_input_@item.Id" readonly="readonly" value="New" />
+                                        }
+                                        <a class="cus-anchor ieatery_isview_change" data-id="@item.Id" onclick="OpenTopToBottomModal('/Order/OrderDetailPartial/?id=@item.Id')">#@item.Id</a>
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <div class="menu_list_partial_device_header">@Localize.T("Order Date")<span>:</span></div>
+                                    @{
+                                        if (item.CreatedDate != new DateTime())
+                                        {
+                                            <div class="menu_list_partial_device_info">
+                                                <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yyyy") @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("hh:mm tt"))</span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="menu_list_partial_device_info">
+                                                <span>-</span>
+                                            </div>
+                                        }
+                                    }
+
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <div class="menu_list_partial_device_header">@Localize.T("Customer")<span>:</span></div>
+                                    <div class="menu_list_partial_device_info">
+                                        <span><a class="ieatery_order_customer_anchor" href="/Customer/CustomerDetail?id=@item.CustomerIntId">@item.CustomerName</a></span>
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <div class="menu_list_partial_device_header">@Localize.T("Order Type")<span>:</span></div>
+                                    <div class="menu_list_partial_device_info"><span>@item.OrderType</span></div>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <div class="menu_list_partial_device_header">@Localize.T("Amount")<span>:</span></div>
+                                    <div class="menu_list_partial_device_info"><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)</span></div>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <div class="menu_list_partial_device_header">@Localize.T("Status")<span>:</span></div>
+                                    @if (item.IsDeleted == true)
+                                    {
+                                        <div class="menu_list_partial_device_info"><span>Cancelled</span></div>
+                                    }
+                                    else
+                                    {
+                                        <div class="menu_list_partial_device_info"><span>@item.Status</span></div>
+                                    }
+                                </td>
+                            </tr>
+                                            OverallTotal = OverallTotal + item.Amount;
+                                        }
+                        <tr>
+                            <td colspan="4">Total</td>
+                            <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(OverallTotal)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+        <div class="AgentListPagination">
+            <div class="paginationContainer">
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="pagination_start_div">
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons disabledBtn">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="LoadOrdersTab(@(ViewBag.PageNumber))">1</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons disabledBtn">Next</button>
+                        </div>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadOrdersTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadOrdersTab(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadOrdersTab(2)">2</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationrightButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="LoadOrdersTab(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadOrdersTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadOrdersTab(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadOrdersTab(2)">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="LoadOrdersTab(3)">3</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationrightButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="LoadOrdersTab(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="LoadOrdersTab(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadOrdersTab(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadOrdersTab(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="LoadOrdersTab(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons disabledBtn" onclick="LoadOrdersTab()">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="LoadOrdersTab(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadOrdersTab(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadOrdersTab(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons" onclick="LoadOrdersTab(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 2)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="LoadOrdersTab(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadOrdersTab(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadOrdersTab(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons" onclick="LoadOrdersTab(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="LoadOrdersTab(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadOrdersTab(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="LoadOrdersTab(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadOrdersTab(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons" onclick="LoadOrdersTab(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                }
+            </div>
+            @if (ViewBag.PageCount > 0)
+            {
+                <div class="paginationtextdv"><span>@string.Format("{0:0,0}", ViewBag.CurrentNumber) of @string.Format("{0:0,0}", ViewBag.OutOfNumber)</span></div>
+            }
+        </div>
+    </div>
+</div>    @*<div class="ticket_export_confirm"></div>*@

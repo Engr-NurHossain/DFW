@@ -1,0 +1,86 @@
+﻿@model HS.Entities.Customer
+@{
+    Layout = null;
+    var DocURL = HS.Framework.DESEncryptionDecryption.EncryptPlainTextToCipherText(ViewBag.LeadId + "#" + ViewBag.agreementtempid);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+<script src="~/Content/Js/Login/domainurl.js"></script>
+<script src="~/Content/Jquery-ui/jquery.js"></script>
+@Styles.Render("~/styles/GetInvoice")
+<link href="~/Content/FontAwesome/css/font-awesome.min.css" rel="stylesheet" />
+
+<link href="~/Content/Css/SmartLeads/GetSmartLeadsForPopUp.css" rel="stylesheet" />
+<script>
+    var guidcustomer = '@Model.CustomerId';
+    var ticketId = '@Model.Ticket.TicketId';
+
+    var SendTicketSurvey = function (email, sms) {
+        var SurveyTicket = {};
+        SurveyTicket.SurveyId = parent.$("#Survey").val();
+        SurveyTicket.UserId = guidcustomer;
+        $.ajax({
+            type: "POST",
+            url: domainurl + "/Ticket/SaveSurveyForTicket",
+            data: '{SurveyTicket: ' + JSON.stringify(SurveyTicket) + ',TicketId: ' + JSON.stringify(ticketId) + ',Email: ' + JSON.stringify(email) + ',SMS: ' + JSON.stringify(sms) + '}',
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (response) {
+                if (response.result) {
+
+                    parent.OpenSuccessMessageNew("Success!", response.message, function () {
+                        parent.$(".add_survey_status").hide();
+                        parent.ClosePopup();
+                    });
+                }
+                else {
+                    OpenErrorMessageNew("Error!", response.message);
+                }
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $("#btnSendMail").click(function () {
+            var email = $("#EmailAddress").val();
+            SendTicketSurvey(email, "");
+        });
+        $("#btnSendSMS").click(function () {
+            var sms = $("#Phone_no").val();
+            SendTicketSurvey("", sms);
+        });
+        $("#btnSendMailAndSMS").click(function () {
+            var email = $("#EmailAddress").val();
+            var sms = $("#Phone_no").val();
+            SendTicketSurvey(email, sms);
+        });
+    });
+</script>
+
+<div id="body_id" class="ticket_survey_container">
+    <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+        <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+    </div>
+    <div class="HeadContents">
+        <h4>@Localize.T("Ticket Survey")</h4>
+    </div>
+    <div class="gslfp_footer">
+        <div class="gslfp_footer_inner">
+            <div class="input-group add-on">
+                <input type="text" value="@Model.EmailAddress" id="EmailAddress" placeholder="ex@mail.com;ex2@mail.com" class="form-control" />
+                <div class="input-group-btn">
+                    <button class="btn" id="btnSendMail" title="Send Email"><i class="fa fa-envelope" aria-hidden="true"></i>&nbsp;</button>
+                </div>
+            </div>
+            <div class="input-group add-on">
+                <input type="text" value="@Model.CellNo" id="Phone_no" placeholder="xxx-xxx-xxxx" class="form-control input-phone-format" />
+                <div class="input-group-btn">
+                    <button class="btn" id="btnSendSMS"title="Send Text"><i class="fa fa-commenting-o" aria-hidden="true"></i>&nbsp;</button>
+                </div>
+            </div>
+            <div class="input-group add-on"> <button class="btn" id="btnSendMailAndSMS">@Localize.T("Send To Both")</button></div>
+        </div>
+
+    </div>
+</div>
+

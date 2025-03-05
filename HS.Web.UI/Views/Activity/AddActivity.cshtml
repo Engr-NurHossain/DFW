@@ -1,0 +1,267 @@
+﻿@{ 
+    Layout = null;
+}
+@using Localize =HS.Web.UI.Helper.LanguageHelper
+@using HS.Framework
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@model HS.Entities.Activity
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/PikDay/js/Anotherpikaday.js"></script>
+<script src="~/Content/PikDay/js/bootstrap-timepicker.js"></script>
+<link href="~/Content/PikDay/css/bootstrap-timepicker.min.css" rel="stylesheet" />
+<script src="~/Content/Js/Activity/AddActivity.js"></script>
+<link href="~/Content/Activity/AddActivity.css" rel="stylesheet" />
+<link href="~/Content/PikDay/css/pikaday(old).css" rel="stylesheet" />
+
+
+<script>
+    var InitializeOpportunityDropdown = function (dropdownitem) {
+        $(dropdownitem).select2({
+            placeholder: 'Opportunity',
+            allowClear: true,
+            minimumInputLength: 1,
+            ajax: {
+                url: domainurl + "/Ticket/GetOpportunityList",
+                dataType: 'json',
+                type: "GET",
+                quietMillis: 50,
+                data: function (term) {
+                    return {
+                        q: term
+                    };
+                },
+                processResults: function (data, params) {
+                    return {
+                        results: $.map(data, function (item) {
+
+                            return {
+                                text: item.OpportunityName,
+                                id: item.OpportunityId
+                            }
+                        })
+                    };
+                }
+            }
+        });
+    }
+    var CustomerId = '@ViewBag.CustomerId';
+    var AssociateType = '@Model.AssociatedType';
+    var InitializeContactDropdown = function (dropdownitem) {
+        $(dropdownitem).select2({
+            placeholder: 'Customer',
+            allowClear: true,
+            minimumInputLength: 1,
+            ajax: {
+                url: domainurl + "/Ticket/GetContactList",
+                dataType: 'json',
+                type: "GET",
+                quietMillis: 50,
+                data: function (term) {
+                    return {
+                        q: term
+                    };
+                },
+                processResults: function (data, params) {
+                    return {
+                        results: $.map(data, function (item) {
+                            if (typeof (item.FirstName) != "undefined" && item.FirstName != null && item.FirstName != "") {
+                                return {
+                                    text: item.FirstName + " " + item.LastName,
+                                    id: item.ContactId
+                                }
+                            }
+
+
+
+                        })
+                    };
+                }
+            }
+        });
+        $(dropdownitem).on("select2:closing", function (e) {
+
+        });
+
+
+    }
+    $(document).ready(function () {
+        $(".add_activity_inner").height(window.innerHeight - $(".add_activity_header").height() - $(".add_activity_footer").height() - 48);
+
+        $("#SaveActivity").click(function () {
+            console.log("hlw");
+           
+        });
+
+        InitializeOpportunityDropdown($('.dropdown_opportunity'), "opportunity");
+        InitializeCustomerDropdown($('.dropdown_customar'), "customer");
+        InitializeCustomerDropdown($('.dropdown_lead'), "lead");
+        InitializeContactDropdown($('.dropdown_contact'), "contact");
+        $("#Type").change(function ()
+        {
+            if ($("#Type").val() != "-1")
+            {
+                $("#TypeLabel").addClass("hidden")
+            }
+            else {
+                $("#TypeLabel").removeClass("hidden")
+            }
+        })
+
+
+        $("#AssociatedType").change(function () {
+            if ($("#AssociatedType").val() == "Account") {
+                $(".OpportunityDiv").addClass("hidden");
+                $(".AccountDiv").removeClass("hidden");
+                $(".LeadDiv").addClass("hidden");
+            } else if ($("#AssociatedType").val() == "Lead") {
+                $(".OpportunityDiv").addClass("hidden");
+                $(".AccountDiv").addClass("hidden");
+                $(".LeadDiv").removeClass("hidden");
+                $(".ContactDiv").addClass("hidden");
+            } else if ($("#AssociatedType").val() == "Opportunity") {
+                $(".OpportunityDiv").removeClass("hidden");
+                $(".AccountDiv").addClass("hidden");
+                $(".LeadDiv").addClass("hidden");
+                $(".ContactDiv").addClass("hidden");
+            } else if ($("#AssociatedType").val() == "Contact") {
+                $(".OpportunityDiv").addClass("hidden");
+                $(".AccountDiv").addClass("hidden");
+                $(".LeadDiv").addClass("hidden");
+                $(".ContactDiv").removeClass("hidden");
+            }
+            else {
+                $(".OpportunityDiv").addClass("hidden");
+                $(".AccountDiv").addClass("hidden");
+                $(".LeadDiv").addClass("hidden");
+                $(".ContactDiv").addClass("hidden");
+            }
+        });
+        if(CustomerId != "")
+        {
+            if (AssociateType == "")
+            {
+                $("#AssociatedType").val('Account');
+                $("#AssociatedWith").val(CustomerId);
+            }
+        }
+
+    });
+    $(window).resize(function () {
+        $(".add_activity_inner").height(window.innerHeight - $(".add_activity_header").height() - $(".add_activity_footer").height() - 79);
+    });
+</script>
+
+<div class="hidden">
+    <input type="hidden" id="ActivityId" value="@Model.Id" />
+    <input type="hidden" id="ActivityGuid" value="@Model.ActivityId" />
+</div>
+@Html.HiddenFor(x => x.ActivityTab, new { id = "ActivityTab" })
+<div class="AddActivityContainer">
+    <div class="add_activity_header">@Localize.T("Activity Details")</div>
+    <div class="add_activity_inner">
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Activity Type")</span>
+            @Html.DropDownListFor(x => x.ActivityType, ViewBag.ActivityTypeList as List<SelectListItem>, new { @class = "form-control", id = "Type" })
+            <label rel="Type" id="TypeLabel" class="label hidden red position-absolute">*@Localize.T("Activity Type Required")</label>
+        </div>
+
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Assigned To")</span>
+            @Html.DropDownListFor(x => x.AssignedTo, ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control" })
+        </div>
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Due Date")</span>
+            <div class="input_group_for_date add-on" id="DueDateCustom">
+                <input type="text" id="DueDate" placeholder="MM/DD/YY" class="form-control" value="@((Model.DueDate.HasValue && Model.DueDate.Value != new DateTime())? Model.DueDate.Value.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"):"")" />
+
+                <div class="input-group-btn">
+                    <btn class="btn">
+                        <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                    </btn>
+                </div>
+            </div>
+
+        </div>
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Status")</span>
+            @Html.DropDownListFor(x => x.Status, ViewBag.ActivityStatusList as List<SelectListItem>, new { @class = "form-control" })
+        </div>
+
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Associated With")</span>
+            @Html.DropDownListFor(x => x.AssociatedType, ViewBag.AssociatedWithList as List<SelectListItem>, new { @class = "form-control" })
+        </div>
+        <div class="form-group OpportunityDiv @(Model.AssociatedType != "Opportunity" ? "hidden" : "")">
+            <span class="span_style">@Localize.T("Opportunity")</span>
+            @Html.DropDownListFor(x => x.AssociatedWith, (List<SelectListItem>)ViewBag.OpportunityList, new { @class = "form-control dropdown_opportunity", id = "OpportunityId" })
+        </div>
+        <div class="form-group LeadDiv @(Model.AssociatedType != "Lead" ? "hidden" : "")">
+            <span class="span_style">@Localize.T("Lead")</span>
+            @Html.DropDownListFor(x => x.AssociatedWith, (List<SelectListItem>)ViewBag.LeadList, new { @class = "form-control dropdown_lead", id = "LeadId" })
+        </div>
+        @if (ViewBag.CustomerId == null)
+        {
+            <div class="form-group AccountDiv @(Model.AssociatedType != "Account" ? "hidden" : "")">
+                <span class="span_style">@Localize.T("Account")</span>
+                @Html.DropDownListFor(x => x.AssociatedWith, (List<SelectListItem>)ViewBag.CustomerList, new { @class = "form-control dropdown_customar", id = "AccountId" })
+            </div>
+        }
+        else
+        {
+            <div class="form-group AccountDiv">
+                <span class="span_style">@Localize.T("Account")</span>
+                @Html.DropDownListFor(x => x.AssociatedWith, (List<SelectListItem>)ViewBag.CustomerList, new { @class = "form-control dropdown_customar", id = "AccountId" })
+            </div>
+        }
+
+        <div class="form-group ContactDiv @(Model.AssociatedType != "Contact" ? "hidden" : "")">
+            <span class="span_style">@Localize.T("Contact")</span>
+            @Html.DropDownListFor(x => x.AssociatedWith, (List<SelectListItem>)ViewBag.ContactList, new { @class = "form-control dropdown_contact", id = "ContactId" })
+        </div>
+
+
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Notify By")</span>
+            @Html.DropDownListFor(x => x.NotifyBy, ViewBag.notifybylist as List<SelectListItem>, new { @class = "form-control" })
+        </div>
+        @*<div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Origin")</span>
+            @Html.DropDownListFor(x => x.Origin, ViewBag.origin as List<SelectListItem>, new { @class = "form-control" })
+        </div>*@
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Department")</span>
+            @Html.DropDownListFor(x => x.Department, ViewBag.ActivityDepartment as List<SelectListItem>, new { @class = "form-control" })
+        </div>
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Stock/Unit#")</span>
+            @Html.TextBoxFor(x => x.Origin, new { @class = "form-control" })
+        </div>
+        <div class="form-group clearfix other_field">
+            <span class="span_style">@Localize.T("Note")</span>
+            @Html.TextAreaFor(x => x.Note, new { @class = "form-control", placeholder = "Note" })
+        </div>
+    </div>
+    
+    <div class="add_activity_footer"> 
+        <div class="delete_footer">
+            @if (Model.Id > 0)
+            {
+                <input type="button" value="Delete" id="btnDeleteActivity" onclick="DeleteActivity('@Model.Id')" />
+            }
+        </div>
+        <div class="save_footer">
+            @if (ViewBag.CustomerId == null)
+            {
+                <input type="button" value="Save" onclick="AddActivity('false')"  />
+            }
+            else
+            {
+                <input type="button" value="Save" onclick="AddActivity('true')"  />
+            }
+
+
+        </div>
+ 
+    </div>
+</div>

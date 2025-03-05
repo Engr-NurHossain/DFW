@@ -1,0 +1,699 @@
+﻿
+@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(Model.Estimator.CompanyId);
+
+    Hashtable datatemplate = new Hashtable();
+    datatemplate.Add("ComapnyName", Model.CompanyName);
+    datatemplate.Add("Address", Model.CompanyAddress);
+    datatemplate.Add("Street", Model.CompanyStreet);
+    datatemplate.Add("City", Model.CompanyCity);
+    datatemplate.Add("State", Model.CompanyState);
+    datatemplate.Add("Zip", Model.CompanyZip);
+    datatemplate.Add("CompanyPhone", HS.Web.UI.Helper.LabelHelper.PhoneNumFormat.Format(Model.CompanyPhone));
+    datatemplate.Add("EmailAddress", Model.CompanyEmail);
+    datatemplate.Add("WebAddress", Model.CompanyWebsite);
+
+    datatemplate.Add("CustomerName", Model.CustomerName);
+    datatemplate.Add("CustomerStreet", Model.CustomerStreet);
+    datatemplate.Add("CustomerCity", Model.CustomerCity);
+    datatemplate.Add("CustomerState", Model.CustomerState);
+    datatemplate.Add("CustomerZip", Model.CustomerZipCode);
+    datatemplate.Add("CustomerAccountNo", Model.CustomerNo);
+
+    string CompanyInfo = HS.Web.UI.Helper.LabelHelper.ParserHelper(Model.CompanyInfo, datatemplate);
+    string CustomerInfo = HS.Web.UI.Helper.LabelHelper.ParserHelper(Model.CustomerInfo, datatemplate);
+}
+@model HS.Entities.CreateEstimator
+@using System.Collections;
+
+
+@helper GetLineItems(List<HS.Entities.EstimatorDetail> estimatorDetails, string Currency, HS.Entities.EstimatorPDFFilter filters)
+{
+    double TotalCatagoryCost = 0;
+    foreach (HS.Entities.EstimatorDetail item in estimatorDetails)
+    {
+        TotalCatagoryCost += item.TotalPrice.HasValue ? item.TotalPrice.Value : 0.0;
+
+        <tr style="border-bottom:1px solid #ccc;">
+            <!--Product Name-->
+            <td style="padding:5px 0px 5px 40px;">
+                @if (filters.IncludeImage.HasValue && filters.IncludeImage.Value && item.EquipmentFile != null && !string.IsNullOrWhiteSpace(item.EquipmentFile.Filename))
+                {
+                    <img src="@item.EquipmentFile.Filename" alt="Alternate Text" style="width:25px;height:25px" />
+                }
+                @if (!string.IsNullOrWhiteSpace(item.PartDescription))
+                {
+                    <span>@item.PartDescription</span><br />
+                }
+                @if (filters.IncludeManufacturer.HasValue && filters.IncludeManufacturer.Value)
+                {
+                    <span>@item.Manufacturer</span>
+                }
+            </td>
+            <!--Product SKU-->
+            @*<td style="padding:5px 0px 5px 40px;">
+                    @if (!string.IsNullOrWhiteSpace(item.SKU))
+                    {
+                        <span>@item.SKU</span><br />
+                    }
+                    @if (filters.IncludeVariation.Value)
+                    {
+                        <span>@item.Variation</span>
+                    }
+                </td>*@
+            <!--Product QTY-->
+            <td style="padding:5px 0px 5px 40px;">
+                @if (item.Qunatity != null)
+                {
+                    <span>@item.Qunatity</span><br />
+                }
+            </td>
+            <!--Product COST-->
+            @if (filters.IncludeCost.HasValue && filters.IncludeCost.Value)
+            {
+                <td style="padding:5px 0px 5px 40px;">
+                    @if (item.UnitCost != null)
+                    {
+                        <span>@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.UnitCost)</span><br />
+                    }
+                </td>
+                <td style="padding:5px 0px 5px 40px;">
+                    @if (item.TotalCost != null)
+                    {
+                        <span>@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalCost)</span><br />
+                    }
+                </td>
+            }
+            <!--Product PROFIT/MARGIN-->
+            @if ((filters.IncludeProfit.HasValue && filters.IncludeProfit.Value) || (filters.IncludeMargin.HasValue && filters.IncludeMargin.Value))
+            {
+                <td style="padding:5px 0px 5px 40px;">
+                    @if (item.Profit != null)
+                    {
+                        <span>@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Profit)</span><br />
+                    }
+                </td>
+            }
+            <!--Product Overhead-->
+            @if (filters.IncludeOverhead.HasValue && filters.IncludeOverhead.Value)
+            {
+                <td>
+                    @if (item.Overhead != null)
+                    {
+                        <span>@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Overhead)</span><br />
+                    }
+                </td>
+            }
+            <!--Product PRICE-->
+            @if ((filters.WithoutPricing.HasValue && filters.WithoutPricing.Value)
+    || (filters.WithoutIndividualMaterialPricing.HasValue && filters.WithoutIndividualMaterialPricing.Value && item.CategoryVal != "Labor")
+    || (filters.WithoutIndividualLaborPricing.HasValue && filters.WithoutIndividualLaborPricing.Value && item.CategoryVal == "Labor"))
+            {
+
+            }
+            else
+            {
+                <td>
+                    @if (item.TotalPrice != null)
+                    {
+                        <span>@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalPrice / item.Qunatity)</span><br />
+                    }
+                </td>
+                <td style="text-align:right;">
+                    @if (item.TotalPrice != null)
+                    {
+                        <span>@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalPrice)</span><br />
+                    }
+                </td>
+            }
+        </tr>
+    }
+
+    @*if ((filters.WithoutPricing.HasValue && !filters.WithoutPricing.Value) && (filters.GroupedbyNone.HasValue && !filters.GroupedbyNone.Value))
+    {
+        <tr>
+            <td style="padding:5px 10px 5px 40px; text-align:right;" colspan="10">
+                <b><span>Sub Total: @Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(TotalCatagoryCost)</span></b>
+            </td>
+        </tr>
+        TotalCatagoryCost = 0;
+    }*@
+}
+
+<html>
+<head>
+    <STYLE TYPE="text/css">
+        .breakhere {
+            page-break-after: always;
+            display: block;
+            clear: both;
+        }
+        div {
+            box-sizing:border-box;
+        }
+        table tr th {
+            font-weight:normal;
+            text-transform:uppercase;
+        }
+    </STYLE>
+</head>
+<body style="font-family:sans-serif;">
+    @if (Model == null)
+    {
+        <h2>No Estimate found</h2>}
+    @if ((Model.Estimator.EstimatorFileList != null && Model.Estimator.EstimatorFileList.Count() > 0) || !string.IsNullOrWhiteSpace(ViewBag.CoverLetter))
+    {
+        if ((string.IsNullOrWhiteSpace(Model.Estimator.CoverLetterFile) || Model.Estimator.CoverLetterFile.ToLower().IndexOf(".pdf") == -1)
+         && !string.IsNullOrWhiteSpace(ViewBag.CoverLetter))
+        {
+            <table style="width:100%; float:left; box-sizing:border-box;">
+                <tr>
+                    <td style="width:50%; text-align:left;padding-left:40px;width:60%">
+                        @if (!string.IsNullOrWhiteSpace(Model.CompanyLogo))
+                        {
+                            <img src="@Model.CompanyLogo" style="width:200px;background-color:white;" />
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding-left:40px; width:50%;">
+                        @Html.Raw(CompanyInfo)
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="text-align:left;padding-left:40px;width:60%"></td>
+                    <td style="text-align:right;padding-right:40px;width:60%"><strong>Estimate # @Model.Estimator.EstimatorId</strong></td>
+                </tr>
+                <tr>
+                    <td style="text-align:left;font-weight:bold;padding-top:20px;padding-left:40px;width:60%">Billing Address</td>
+                    <td style="text-align:right;font-weight:bold;padding-top:20px;padding-right:40px;width:60%">Project Address</td>
+                </tr>
+                <tr>
+                    <td style="text-align:left;padding-left:40px;width:60%">
+                        @if (!string.IsNullOrWhiteSpace(Model.Estimator.BillingAddress))
+                        {
+                            @Html.Raw(Model.Estimator.BillingAddress)}
+                    </td>
+                    <td style="text-align:right;padding-right:40px;width:60%">
+                        @if (!string.IsNullOrWhiteSpace(Model.Estimator.ProjectAddress))
+                        {
+                            @Html.Raw(Model.Estimator.ProjectAddress)}
+                    </td>
+                </tr>
+                <tr>
+                    @if ((Model.Estimator.EstimatorFileList != null && Model.Estimator.EstimatorFileList.Count() == 0) && !string.IsNullOrWhiteSpace(ViewBag.CoverLetter))
+                    {
+                        <td>
+                            <br />
+                            <br />
+                            <br />
+                            <br />
+                            @Html.Raw(ViewBag.CoverLetter)
+                        </td>
+                    }
+                </tr>
+
+            </table> @*<div style="width:100%; float:left; position:relative;">@Html.Raw(Model.Estimator.CoverLetter)</div>*@
+            <div class="breakhere"></div>
+        }
+    }
+    @if (Model.estimatorDetails != null)
+    {
+        <div style="width:100%; float:left; position:relative;">
+            <div class="container">
+
+                <!--Estimate Headings-->
+                <div class="tblCompanyInfo">
+                    <table style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="2" style="text-align:center; font-size:35px; padding-bottom:10px;">CONFIDENTIAL PROPOSAL</td></tr>
+                            <tr>
+                                <td style="width: 300px; vertical-align: top; background-color: white; padding-left: 40px;">
+                                    @if (!string.IsNullOrWhiteSpace(Model.CompanyLogo))
+                                    {
+                                        <img src="~/Content/Icons/CompanyImages/dfw_estimator_logo.jpg" style="width:100%;background-color:white;" />
+                                     }
+                                </td>
+
+                                <td>
+                                    <div style="width:auto; float:right; text-align:left;">@Html.Raw(CompanyInfo)</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!--Estimator ADDRESS-->
+                <div class="tblInvoiceInfo">
+                    <table style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="width:30%; padding-left:40px;">
+                                    @if (string.IsNullOrWhiteSpace(Model.Estimator.BillingAddress))
+                                    {
+                                        @Html.Raw(CustomerInfo) }
+                                    else
+                                    {
+                                        @Html.Raw(Model.Estimator.BillingAddress)}
+                                </td>
+                                <td style="width:30%">
+                                    @if (Model.ShowEstimatorShippingAddress && !string.IsNullOrWhiteSpace(Model.Estimator.ProjectAddress))
+                                    {
+                                        @Html.Raw(Model.Estimator.ProjectAddress)}
+                                </td>
+                                <td style="width:40%">
+                                    <p style="background-color:#4c4c4c;height:30px;padding-top:10px;padding-left:10px; color:white"><b>Estimate</b> @Model.Estimator.EstimatorId</p>
+                                    @if (Model.Estimator.StartDate.HasValue)
+                                    {
+                                        <p style="background-color:#4c4c4c;height:30px;padding-top:10px;padding-left:10px;color:white"><b>DATE</b> @Model.Estimator.StartDate.Value.ToString("MM/dd/yy")</p>}
+                                   
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="height:10px;"></td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="padding-left:40px;">
+
+                                    @if (!string.IsNullOrWhiteSpace(Model.Estimator.Description))
+                                    {
+                                        @Model.Estimator.Description
+                                    } 
+                                </td>
+                                <td>
+                                    @if (Model.Estimator.CompletionDate.HasValue)
+                                    {
+                                        <i>Proposal valid through:  @Model.Estimator.CompletionDate.Value.ToString("M/d/yyyy")</i>
+                                    }
+
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <br />
+                <!--Estimator Items-->
+                <div style="margin-top:20px;width:100%;">
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background-color:#4c4c4c; color:white;width:100%; border:1px solid #4c4c4c;">
+                                <th style="width:40%;text-align:left;padding:5px 0px 5px 40px; border-right:1px solid #fff;">
+                                    PRODUCT
+                                </th>
+                                @*<th style="width:10%; padding:5px 0px; border-right:1px solid #fff;">SKU</th>*@
+                                <th style="width:5%; padding:5px 0px; border-right:1px solid #fff;">QTY</th>
+                                @if (Model._EstimatorPDFFilter.IncludeCost.HasValue && Model._EstimatorPDFFilter.IncludeCost.Value)
+                                {
+                                    <th style="width:8%; padding:5px 0px; border-right:1px solid #fff;">U COST</th>
+                                    <th style="width:8%; padding:5px 0px; border-right:1px solid #fff;">T COST</th>
+                                }
+                                @if (Model._EstimatorPDFFilter.IncludeProfit.HasValue && Model._EstimatorPDFFilter.IncludeProfit.Value)
+                                {
+                                    <th style="width:8%; padding:5px 0px; border-right:1px solid #fff;">PROFIT</th>
+                                }
+                                @if (Model._EstimatorPDFFilter.IncludeOverhead.HasValue && Model._EstimatorPDFFilter.IncludeOverhead.Value)
+                                {
+                                    <th style="width:8%; padding:5px 0px; border-right:1px solid #fff;">Overhead</th>
+                                }
+
+                                @if (Model._EstimatorPDFFilter.WithoutPricing.HasValue && !Model._EstimatorPDFFilter.WithoutPricing.Value)
+                                {
+                                    if ((Model._EstimatorPDFFilter.WithoutIndividualMaterialPricing.HasValue && !Model._EstimatorPDFFilter.WithoutIndividualMaterialPricing.Value) || (Model._EstimatorPDFFilter.WithoutIndividualLaborPricing.HasValue && !!Model._EstimatorPDFFilter.WithoutIndividualLaborPricing.Value))
+                                    {
+                                        <th style="width:8%; padding:5px 0px; border-right:1px solid #fff;">UNIT PRICE</th>
+                                        <th style="width:10%; padding:5px 0px;">TOTAL PRICE</th>
+                                    }
+                                }
+
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model._EstimatorPDFFilter.GroupedbyCategory.HasValue && Model._EstimatorPDFFilter.GroupedbyCategory.Value)
+                            {
+                                List<string> CategoryList = Model.estimatorDetails.GroupBy(x => x.CategoryVal).Select(x => x.Key).ToList();
+                                foreach (var Category in CategoryList)
+                                {
+                                    <tr style="border-bottom:1px solid #ccc;">
+                                        <td style="padding:5px 0px 5px 40px;"><strong><label>@(Category == "Category" ? "Uncategorized" : Category)</label></strong></td>
+                                    </tr>
+                                    @GetLineItems(Model.estimatorDetails.Where(x => x.CategoryVal == Category).ToList(), Currency, Model._EstimatorPDFFilter) }
+                            }
+                            else if (Model._EstimatorPDFFilter.GroupedbySupplier.HasValue && Model._EstimatorPDFFilter.GroupedbySupplier.Value)
+                            {
+                                List<string> SupplierList = Model.estimatorDetails.GroupBy(x => x.SupplierVal).Select(x => x.Key).ToList();
+                                foreach (var Supplierval in SupplierList)
+                                {
+                                    <tr>
+                                        <td style="padding:5px 0px 5px 40px;"><strong><label>@(Supplierval == "Supplier" ? "Others" : Supplierval)</label></strong></td>
+                                    </tr>
+                                    @GetLineItems(Model.estimatorDetails.Where(x => x.SupplierVal == Supplierval).ToList(), Currency, Model._EstimatorPDFFilter) }
+                            }
+                            else if ((Model._EstimatorPDFFilter.GroupedbyLabor.HasValue && Model._EstimatorPDFFilter.GroupedbyLabor.Value) || (Model._EstimatorPDFFilter.GroupedbyMaterial.HasValue && Model._EstimatorPDFFilter.GroupedbyMaterial.Value))
+                            {
+                                var Items = Model.estimatorDetails.Where(x => x.CategoryVal == "Labor").ToList();
+                                if (Model._EstimatorPDFFilter.GroupedbyMaterial.HasValue && Model._EstimatorPDFFilter.GroupedbyMaterial.Value)
+                                {
+                                    Items = Model.estimatorDetails.Where(x => x.CategoryVal != "Labor").ToList();
+                                }
+                                @GetLineItems(Items, Currency, Model._EstimatorPDFFilter) }
+                            else if (Model._EstimatorPDFFilter.GroupedbyLaborAndMaterial.HasValue && Model._EstimatorPDFFilter.GroupedbyLaborAndMaterial.Value)
+                            {
+                                <tr>
+                                    <td style="padding:5px 0px 5px 40px;"><strong><label>Labor</label></strong></td>
+                                </tr>
+                                var Items = Model.estimatorDetails.Where(x => x.CategoryVal == "Labor").ToList();
+                                @GetLineItems(Items, Currency, Model._EstimatorPDFFilter)
+                                <tr>
+                                    <td style="padding:5px 0px 5px 40px;"><strong><label>Material</label></strong></td>
+                                </tr>
+                                Items = Model.estimatorDetails.Where(x => x.CategoryVal != "Labor").ToList();
+                                @GetLineItems(Items, Currency, Model._EstimatorPDFFilter) }
+                            else
+                            {
+                                @GetLineItems(Model.estimatorDetails, Currency, Model._EstimatorPDFFilter)
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+
+                <!--Border-->
+                <div style="width:100%;height:50px;border-bottom:1px solid #4c4c4c;position:relative;"></div>
+
+                <!--Pricing-->
+                <div style="width:100%; float:left;">
+                    <div style="width:50%;float:left;padding-top:10px;">
+                       
+                    </div>
+                    <div style="width:50%;float:right;padding-top:10px;">
+                        @if ((Model._EstimatorPDFFilter.IncludeProfit.HasValue && Model._EstimatorPDFFilter.IncludeProfit.Value) || (Model._EstimatorPDFFilter.IncludeMargin.HasValue && Model._EstimatorPDFFilter.IncludeMargin.Value))
+                        {
+                            <div style="width:100%">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Total Profit/Margin</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Estimator.TotalProfitAmount)</h3>
+                                </div>
+                            </div>
+                        }
+                        @if (Model._EstimatorPDFFilter.IncludeOverhead.HasValue && Model._EstimatorPDFFilter.IncludeOverhead.Value)
+                        {
+                            <div style="width:100%">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Total Overhead</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Estimator.TotalOverheadCostAmount)</h3>
+                                </div>
+                            </div>
+                        }
+                        @if (Model._EstimatorPDFFilter.IncludeCost.HasValue && Model._EstimatorPDFFilter.IncludeCost.Value)
+                        {
+                            <div style="width:100%">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Total Cost</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Estimator.TotalCost)</h3>
+                                </div>
+                            </div>
+                        }
+
+
+                        @if (Model._EstimatorPDFFilter.GroupedbyLabor.HasValue && !Model._EstimatorPDFFilter.GroupedbyLabor.Value && Model._EstimatorPDFFilter.GroupedbyMaterial.HasValue && !Model._EstimatorPDFFilter.GroupedbyMaterial.Value
+                        && Model._EstimatorPDFFilter.WithoutPricing.HasValue && !Model._EstimatorPDFFilter.WithoutPricing.Value)
+                        {
+                            <div style="width:100%">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Sub Total</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Estimator.TotalPrice)</h3>
+                                </div>
+                            </div>
+                            <div style="width:100%">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Total Tax</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Estimator.TaxAmount)</h3>
+                                </div>
+                            </div>
+                            <div style="width:100%">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Total Amount</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Estimator.TotalPrice + Model.Estimator.TaxAmount)</h3>
+                                </div>
+                            </div>
+
+                        }
+                    </div>
+                    <div style="width: 100%; float:left; box-sizing: border-box; text-align: left; padding-left:40px;">
+                        @if (!string.IsNullOrWhiteSpace(Model.Estimator.PaymentTerm))
+                        {
+                            <span style="float:left; width:auto; margin-top:-50px;">
+
+                                Payment Terms: @Model.Estimator.PaymentTerm
+                            </span>
+                        }
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    }
+    @if (Model.estimatorServices != null)
+    {
+        if (Model._EstimatorPDFFilter.IncludeService.HasValue && Model._EstimatorPDFFilter.IncludeService.Value)
+        {
+            <div class="breakhere"></div>
+            <div style="width:100%; float:left; position:relative;">
+                <div class="container">
+
+                    <!--Estimator Headings-->
+                    <div class="tblCompanyInfo">
+                        <table style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="2" style="text-align: center; font-size: 35px; padding-bottom: 10px;">CONFIDENTIAL PROPOSAL</td></tr>
+                                <tr>
+                                    <td style="width: 380px; vertical-align: top; background-color: white; padding-left: 40px;">
+                                        @if (!string.IsNullOrWhiteSpace(Model.CompanyLogo))
+                                        {
+                                            <img src="~/Content/Icons/CompanyImages/dfw_estimator_logo.jpg" style="width:100%;background-color:white;" />
+                                          
+                                            @*@Model.CompanyLogo*@
+                                       }
+                                    </td>
+
+                                    <td>
+                                        <div style="width:auto; float:right; text-align:left;">@Html.Raw(CompanyInfo)</div>
+                                    </td>
+                                </tr>
+                               
+                            </tbody>
+                        </table>
+                    </div>
+                    <!--Estimator ADDRESS-->
+                    <div class="tblInvoiceInfo">
+                        <table style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="width:30%; padding-left:40px;">
+                                        @if (string.IsNullOrWhiteSpace(Model.Estimator.BillingAddress))
+                                        {
+                                            @Html.Raw(CustomerInfo) }
+                                        else
+                                        {
+                                            @Html.Raw(Model.Estimator.BillingAddress)
+                                        }
+                                    </td>
+                                    <td style="width:30%">
+                                        @if (Model.ShowEstimatorShippingAddress && !string.IsNullOrWhiteSpace(Model.Estimator.ProjectAddress))
+                                        {
+                                            @Html.Raw(Model.Estimator.ProjectAddress)
+                                        }
+                                    </td>
+                                    <td style="width:40%">
+                                        <p style="background-color:#4c4c4c;height:30px;padding-top:10px;padding-left:10px; color:white"><b>Estimate</b> @Model.Estimator.EstimatorId</p>
+                                        @if (Model.Estimator.StartDate.HasValue)
+                                        {
+                                            <p style="background-color:#4c4c4c;height:30px;padding-top:10px;padding-left:10px;color:white"><b>DATE</b> @Model.Estimator.StartDate.Value.ToString("MM/dd/yy")</p>}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="height:10px;"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="padding-left:40px;">
+                                        @if (!string.IsNullOrWhiteSpace(Model.Estimator.Description))
+                                        {
+                                            @Model.Estimator.Description
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (Model.Estimator.CompletionDate.HasValue)
+                                        {
+                                            <i>Proposal valid through:  @Model.Estimator.CompletionDate.Value.ToString("M/d/yyyy")</i>
+                                        }
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <br />
+                    <!--Estimator Items-->
+                    <div style="margin-top:20px;width:100%;">
+                        <table style="width:100%; border-collapse:collapse;">
+                            <thead>
+                                @*<tr style="width:40%;text-align:left;padding:5px 0px 5px 40px; border-right:1px solid #fff;">
+                                        Monthly Monitoring Fees
+                                    </tr>*@
+                                <tr style="background-color:#4c4c4c; color:white;width:100%; border:1px solid #4c4c4c;">
+                                    <th style="width:40%;text-align:left;padding:5px 0px 5px 40px; border-right:1px solid #fff;">
+                                        Service
+                                    </th>
+                                    <th style="width:5%; padding:5px 0px; border-right:1px solid #fff;">QTY</th>
+                                    <th style="width:10%; padding:5px 0px; border-right:1px solid #fff;">UNIT PRICE</th>
+                                    <th style="width:10%; padding:5px 0px;">TOTAL PRICE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.estimatorServices != null)
+                                {
+                                    foreach (var item in Model.estimatorServices)
+                                    {
+                                        <tr style="border-bottom:1px solid #ccc;">
+                                            <!--Service Name-->
+                                            <td style="padding:5px 0px 5px 40px;">
+                                                @if (!string.IsNullOrWhiteSpace(item.EquipmentName))
+                                                {
+                                                    <span>@item.EquipmentName</span><br />}
+                                            </td>
+                                            <!--Service QTY-->
+                                            <td style="padding:5px 0px 5px 40px;">
+                                                @if (item.Quantity > 0)
+                                                {
+                                                    <span>@item.Quantity</span><br />}
+                                            </td>
+                                            <!--Unit Price-->
+                                            <td style="padding:5px 0px 5px 40px;">
+                                                @if (item.UnitPrice != 0)
+                                                {
+                                                    <span>@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.UnitPrice)</span><br />}
+                                            </td>
+                                            <!--Service Amount-->
+                                            <td style="text-align:right;">
+                                                @if (item.Amount != 0)
+                                                {
+                                                    <span>@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)</span><br />}
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!--Border-->
+                    <div style="width:100%;height:50px;border-bottom:1px solid #4c4c4c;position:relative;"></div>
+                    <div style="width:50%; float:left; padding-top:10px;">
+                        &nbsp;
+                    </div>
+                    <div style="width:50%; float:left; padding-top:10px;">
+                        <div style="width:100%">
+                            <div style="width:70%;float:left;text-align:right">
+                                <span>Sub Total</span>
+                            </div>
+                            <div style="width:30%;float:left;text-align:right;">
+                                <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Estimator.ServiceTotalAmount)</h3>
+                            </div>
+                        </div>
+
+
+                        @if (Model.Estimator.ShowServicePlan.HasValue && Model.Estimator.ShowServicePlan.Value)
+                        {
+                            <div style="width:100%">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>@Model.Estimator.ServicePlanTypeName</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Estimator.ServicePlanAmount)</h3>
+                                </div>
+                            </div>
+                            <div style="width:100%">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Sub Total</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Estimator.ServiceTotalAmount + Model.Estimator.ServicePlanAmount)</h3>
+                                </div>
+                            </div>}
+                        <div style="width:100%">
+                            <div style="width:70%;float:left;text-align:right">
+                                <span>Total Tax</span>
+                            </div>
+                            <div style="width:30%;float:left;text-align:right;">
+                                <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Estimator.ServiceTaxAmount)</h3>
+                            </div>
+                        </div>
+                        <div style="width:100%">
+                            <div style="width:70%;float:left;text-align:right">
+                                <span>Total Amount</span>
+                            </div>
+                            <div style="width:30%;float:left;text-align:right;">
+                                <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Math.Round(Model.Estimator.ServiceTotalAmount.Value, 2) + Math.Round(Model.Estimator.ServiceTaxAmount.Value, 2) + Math.Round(Model.Estimator.ServicePlanAmount.Value, 2))</h3>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    @*<div style="width: 100%; box-sizing: border-box; text-align: left; padding-left: 40px;">
+                        @if (!string.IsNullOrWhiteSpace(Model.Estimator.PaymentTerm))
+                        {
+                            <span style="float:left; width:auto; margin-top:-50px;">
+
+                                Payment Terms: @Model.Estimator.PaymentTerm
+                            </span>
+                        }
+                    </div>*@
+                </div>
+            </div>
+        }
+    }
+</body>
+</html>
+
+
+

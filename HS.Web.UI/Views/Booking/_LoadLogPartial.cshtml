@@ -1,0 +1,386 @@
+﻿@using Localize = HS.Web.UI.Helper.LanguageHelper
+@{
+    Layout = null;
+}
+@using HS.Framework
+@model HS.Entities.UserActivityCustomerModel
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+@*<link href="~/Content/Css/UserActivityLog/Log.css" rel="stylesheet" />*@
+<script>
+    var Currency = "@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)";
+    var count3 = 1;
+    var orderval = '@ViewBag.orderval';
+    var pagesize;
+    var Totalpagesize = '@ViewBag.Totalpagesize';
+    var invstatus = '@Html.Raw(Json.Encode(@ViewBag.invstatus))';
+    invstatus = JSON.parse(invstatus);
+    var CurrentNumber = '@ViewBag.CurrentNumber';
+    var PageNumber = '@ViewBag.PageNumber';
+    var SearchText = '@ViewBag.searchtxt';
+    var TotalBookingIDCount = '@ViewBag.OutOfNumber';
+        var CustomerId = '@ViewBag.CustomerId';
+
+
+
+        var Getdetails = function () {
+            OpenTopToBottomModal(domainurl + "/Customer/getupdatedetails?Id=" +  @ViewBag.CustomerId );
+        }
+        var getupdatedeatails = function (idval, audittime) {
+            console.log("updatedetails");
+            $.ajax({
+                url: "/Customer/getupdatedetails",
+                  type: "get",
+                data: {
+                    Id: idval,
+                    Audittime: audittime,
+
+
+                },
+
+
+                success: function (data) {
+                    console.log("success");
+                    @*OpenTopToBottomModal(domainurl + "/Customer/getupdatedetails?Id=" + @ViewBag.CustomerId  );*@
+
+                            $(".close").trigger("click");
+                            OpenSuccessMessageNew("Success!", data.message, function () { })
+
+
+                },
+
+
+
+                error: function () {
+                }
+
+
+            });
+
+
+        }
+        $(document).ready(function () {
+                @*$(".item-getupdatedetails").click(function () {
+                    var idval = $(this).attr('data-id');
+                    var audittime = $(this).attr('data-statsdate');
+
+                console.log("hitted" + @ViewBag.CustomerId);
+                getupdatedeatails(idval, audittime);
+                })*@
+               $(".item-getupdatedetails").click(function () {
+            var idval = $(this).attr('data-id');
+            var audittime = $(this).attr('data-statsdate');
+                      OpenConfirmationMessageNew("Confirmation", "Are you sure, you want to view details update", function () {
+                getupdatedeatails(idval,audittime);
+            });
+
+
+
+               })
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#log_startdate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#log_enddate')[0] });
+        })
+
+</script>
+@Styles.Render("~/styles/_LoadLogPartialCS")
+
+
+<style>
+    #tblBooking > thead > tr > th:nth-child(3) {
+        width: 30% !important;
+    }
+
+    #tblBooking > thead > tr > th:nth-child(2) {
+        width: 20% !important;
+    }
+ 
+</style>
+@Scripts.Render("~/scripts/_LoadLogPartialJS")
+
+
+<div class="sales_container">
+    @*<div class="report_tab_top_container">
+            <div class="report_tab_top_content">
+
+                <div class="lead_total_color"> @Localize.T("Total Invoice :") @string.Format("{0:#,###}", ViewBag.OutOfNumber)</div>
+
+            </div>
+            <div class="report_tab_top_content">
+
+                <div class="lead_total_color">
+                    @Localize.T("Total Invoice Amount :")
+                    @{
+                        if (Model.TotalInvoiceAmountModel.TotalSalesAmount > 0)
+                        {
+                            <span>$@string.Format("{0:#,##0.00}", Model.TotalInvoiceAmountModel.TotalSalesAmount)</span>
+                        }
+                        else
+                        {
+                            <span>$0.00</span>
+                        }
+                    }
+
+                </div>
+
+            </div>
+            <div class="report_tab_top_content">
+
+                <div class="lead_total_color">
+                    @Localize.T("Total Open Balance:")
+                    @{
+                        if (Model.TotalInvoiceAmountModel.TotalDueAmount > 0)
+                        {
+                            <span>$@string.Format("{0:#,##0.00}", Model.TotalInvoiceAmountModel.TotalDueAmount)</span>
+                        }
+                        else
+                        {
+                            <span>$0.00</span>
+                        }
+                    }
+                </div>
+
+            </div>
+
+        </div>*@
+
+
+
+</div>
+
+<div class="page-content-wrap cus-padding-top10p">
+    <div class="log_partial_top_bar">
+        <input type="text" class="form-control" id="Log_txt_search" placeholder="Search"/>
+       
+            <input class="form-control convert_cus_inp" value="@ViewBag.LogstartDate" placeholder="Start Date" id="log_startdate"  />
+       
+        <div class="input-group add-on">
+
+            
+                <input class="form-control convert_cus_inp" value="@ViewBag.Logenddate"  placeholder="End Date" id="log_enddate" />
+           
+            <div class="input-group-btn"> <button title="Search" class="btn green_button" id="btn_sales" onclick="FilterLog2(1)"><i class="glyphicon glyphicon-search"></i></button></div>
+        </div>
+
+        @*<button title="@Localize.T(" Download")" class="btn load_log_download" id="btnDownloadLog"><i class="fa fa-download" aria-hidden="true"></i></button>*@
+
+    </div>
+   
+    <div class="detailszone">
+
+    </div>
+    <div class="Booking-table">
+        @if (Model.ListUserActivity != null && Model.ListUserActivity.Count() > 0)
+        {
+            <table class="display load_log_partial_table">
+                <thead class="table-head-border ep_hide_for_device">
+                    <tr>
+                        @*<th class="thead-th-style">
+                            <div>@Localize.T("Date")</div>
+                            <div> <i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/statsdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/statsdate"></i></div>
+                        </th>*@
+                        <th class="thead-th-style">
+                            <div>@Localize.T("User")</div>
+                            <div>  <i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/username"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/username"></i></div>
+                        </th>
+                        @*<th class="thead-th-style"> <div>@Localize.T("Type")</div>
+            <div> <i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/action"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/action"></i></div>
+        </th>*@
+                        <th class="thead-th-style">
+                            <div>@Localize.T("Details")</div>
+                            <div>  <i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/actiondisplytext"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/actiondisplytext"></i></div>
+                        </th>
+                        @*<th class="thead-th-style">
+
+                        </th>*@
+                    </tr>
+                </thead>
+                <tbody class="lodtest">
+
+                    @foreach (var item in Model.ListUserActivity)
+                    {
+                        <tr class="tr-style">
+                            @*<td class="table-body-td-style ep_device_row" valign="top">
+                                <div class="ep_device_header">@Localize.T("Date")<span>:</span></div>
+                                <div class="ep_device_info">
+                                    <span>@item.StatsDate.UTCToClientTime().ToString("M/d/yy hh:mm tt")</span>
+                                </div>
+                            </td>*@
+                            <td hidden>@item.StatsDate</td>
+                            <td class="table-body-td-style ep_device_row" valign="top">
+                                <div class="ep_device_header">@Localize.T("User")<span>:</span></div>
+                                <div class="ep_device_info">
+                                    <span>@item.UserName</span>
+                                </div>
+                                <span>@item.StatsDate.UTCToClientTime().ToString("M/d/yy hh:mm tt")</span>
+
+                            </td>
+
+                            @*<td class="table-body-td-style ep_device_row" valign="top">
+                                    <div class="ep_device_header">@Localize.T("Type")<span>:</span></div>
+                                    <div class="ep_device_info">
+                                        <span>@item.Action</span>
+                                    </div>
+                                </td>*@
+
+                            <td class="table-body-td-style ep_device_row" valign="top">
+                                <div class="ep_device_header">@Localize.T("Details")<span>:</span></div>
+                                <div class="ep_device_info">
+                                    <span>@Html.Raw(item.ActionDisplyText)</span>
+                                </div>
+                            </td>
+                           
+                            @*<td class="table-body-td-style ep_device_row" valign="top">
+                                @if (item.Action == "UpdateCustomer")
+                                {
+                                    <div class="ep_device_info">
+
+                                        <a href="javascript:void(0)" class="cus-anchor item-getupdatedetails" data-id="@ViewBag.CustomerId" data-statsdate="@item.StatsDate">View Update Details</a>
+
+                                    </div>
+                                }
+                                </td>*@
+                            
+                        </tr>
+                    }
+                </tbody>
+
+            </table>
+        }
+        else
+        {
+            <span>No data available</span>
+        }
+
+
+    </div>
+
+</div>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="FilterLog2(@(ViewBag.PageNumber),'@ViewBag.order')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FilterLog2(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FilterLog2(1, '@ViewBag.order')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FilterLog2(2,'@ViewBag.order')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="FilterLog2(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FilterLog2(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FilterLog2(1,'@ViewBag.order')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FilterLog2(2,'@ViewBag.order')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="FilterLog2(3,'@ViewBag.order')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="FilterLog2(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterLog2(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterLog2(@(ViewBag.PageNumber-2),'@ViewBag.order')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterLog2(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="FilterLog2(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="FilterLog2()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterLog2(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterLog2(@(ViewBag.PageNumber+1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterLog2(@(ViewBag.PageNumber + 2),'@ViewBag.order')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="FilterLog2(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterLog2(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterLog2(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterLog2(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="FilterLog2(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterLog2(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterLog2(@(ViewBag.PageNumber - 1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="FilterLog2(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterLog2(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="FilterLog2(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>

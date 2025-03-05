@@ -1,0 +1,1201 @@
+﻿
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@model HS.Entities.OpportunityListFilterModel
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<script>
+    var DataTablePageSize = 50;
+    var LeadsStartDatepicker;
+    var LeadsEndDatepicker;
+    var empval = '@Html.Raw(Json.Encode(@ViewBag.empval))';
+    empval = JSON.parse(empval);
+    var delivery = '@Html.Raw(Json.Encode(@ViewBag.delivery))';
+    delivery = JSON.parse(delivery);
+    var my_date_format = function (input) {
+        console.log(input + " r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var LeadServiceEquipment = function (idval) {
+        //var idval = $(this).attr('data-id');
+        var mapLoadurl = domainurl + "/Reports/GetLeadsServiceAndEquipment?customerid=" + idval;
+        OpenTopToBottomModal(mapLoadurl);
+    }
+    var CustomerSearchKeyUp = function (pageno) {
+        var accowner = encodeURI($("#account_owner").val());
+        $("#LeadReportTab").html(TabsLoaderText);
+
+        $("#LeadReportTab").load(domainurl + "/Reports/LoadSoftBacklogReportPartial/?pageno=" + pageno + "&pagesize=" + DataTablePageSize + "&Status=" + status + "&OppType=SoftBacklog" + "&accountOwner=" + accowner);
+    }
+    var EditOpportunity = function (id) {
+    OpenTopToBottomModal(domainurl + "/Opportunity/AddOpportunity?id=" + id);
+    }
+    var pageno = '@ViewBag.PageNumber';
+
+    $(document).ready(function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".LoaderWorkingDiv").hide();
+        $("#LeadReportTab .invoice-loader").hide();
+
+        //var table = $('#LeadsReportTable').DataTable({
+        //    "pageLength": DataTablePageSize,
+        //    "destroy": true,
+        //    "language": {
+        //        "emptyTable": "No data available"
+        //    }
+        //});
+        if (StartDate != "" && EndDate != "") {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        $("#btnDownloadLeadsReport").click(function () {
+            var value = $("#day_list").val();
+            var accowner = encodeURI($("#account_owner").val());
+            if (value != "-1") {
+                if (StartDate.trim().length == 10 && EndDate.trim().length == 10) {
+                    StartDate = StartDate.replaceAll('/', '_');
+                    EndDate = EndDate.replaceAll('/', '_');
+                    location.href = domainurl + "/Reports/LoadSoftBacklogReportPartial/?Start=" + StartDate + "&End=" + EndDate + "&GetReport=true&pageno=" + pageno + "&pagesize=50" + "&OppType=SoftBacklog" + "&delivery=" + value + "&accountOwner=" + accowner;
+                } else {
+                    location.href = domainurl + "/Reports/LoadSoftBacklogReportPartial/?GetReport=true&pageno=" + pageno + "&pagesize=50" + "&OppType=SoftBacklog" + "&delivery=" + value + "&accountOwner=" + accowner;
+                }
+            }
+            else {
+                if (StartDate.trim().length == 10 && EndDate.trim().length == 10) {
+                    StartDate = StartDate.replaceAll('/', '_');
+                    EndDate = EndDate.replaceAll('/', '_');
+                    location.href = domainurl + "/Reports/LoadSoftBacklogReportPartial/?Start=" + StartDate + "&End=" + EndDate + "&GetReport=true&pageno=" + pageno + "&pagesize=50" + "&OppType=SoftBacklog" + "&accountOwner=" + accowner;
+                } else {
+                    location.href = domainurl + "/Reports/LoadSoftBacklogReportPartial/?GetReport=true&pageno=" + pageno + "&pagesize=50" + "&OppType=SoftBacklog" + "&accountOwner=" + accowner;
+                }
+            }
+        });
+
+
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            UpdatePtoCookie();
+            $("#LeadReportTab").html(TabsLoaderText);
+            $("#LeadReportTab").load(domainurl + "/Reports/LoadSoftBacklogReportPartial/?Start=" + StartDateVal + "&End=" + EndDateVal + "&pageno=" + pageno + "&pagesize=50" + "&OppType=SoftBacklog");
+        });
+        //$(".lead_click_item").click(function () {
+
+        //})
+        $("#btn_soft").click(function () {
+            var value = $("#day_list").val();
+            var accowner = encodeURI($("#account_owner").val());
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            if (value != "-1") {
+                $("#LeadReportTab").html(TabsLoaderText);
+                $("#LeadReportTab").load(domainurl + "/Reports/LoadSoftBacklogReportPartial/?Start=" + StartDateVal + "&End=" + EndDateVal + "&pageno=" + pageno + "&pagesize=50" + "&OppType=SoftBacklog" + "&delivery=" + encodeURI(value) + "&accountOwner=" + accowner);
+            }
+            else {
+                var StartDateVal = $(".min-date").val();
+                var EndDateVal = $(".max-date").val();
+                $("#LeadReportTab").html(TabsLoaderText);
+                $("#LeadReportTab").load(domainurl + "/Reports/LoadSoftBacklogReportPartial/?Start=" + StartDateVal + "&End=" + EndDateVal + "&pageno=" + pageno + "&pagesize=50" + "&OppType=SoftBacklog" + "&accountOwner=" + accowner);
+            }
+        })
+        $(".selectpicker_delivery").selectpicker('val', delivery);
+        $('.selectpicker_owner').selectpicker('val', empval);
+    });
+</script>
+
+<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
+
+
+<div class="row lrp_bottom_border">
+    <div class="lead_total_color"> @Localize.T("Total Opportunities :") @string.Format("{0:#,##0}", Model.TotalOpportunityCountModel.TotalCount)</div>
+</div>
+
+
+<div class="lsbrr_top_bar">
+    <div class="lsbrr_top_bar_inner">
+        @if (PermissionChekcer.IsPermitted(Permissions.ReportsPermissions.ShowAllReportData))
+        {
+            <div class="account_owner_div">@Html.DropDownList("account_owner", ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control selectpicker_owner", @multiple = "multiple", id = "account_owner", title = "Select Account Owner" })</div>
+        }
+
+        <div class="day_list_lsbrr"> @Html.DropDownList("day_list", ViewBag.deliveryday as List<SelectListItem>, new { @class = "form-control selectpicker_delivery", @multiple = "multiple", title = "Select Delivery Day" })</div>
+
+
+        <button class="btn green_button" id="btn_soft" title="@Localize.T("Search")"><i class="fa fa-search"></i></button>
+
+
+    </div>
+    <button title="@Localize.T("Download")" class="report_btn lrp_float_right" id="btnDownloadLeadsReport"><i class="fa fa-download" aria-hidden="true"></i></button>
+</div>
+
+<div class="leads_report_table">
+    @{
+        if (Model.RevenueModel.Count > 0)
+        {
+            foreach (var itm in Model.RevenueModel)
+            {
+                if (itm.DeliveryDayDiff == "30")
+                {
+                    var count = 0;
+                    <div class="sbr_table_header">@Localize.T("Closing in ")@itm.DeliveryDayDiff@Localize.T(" days")</div>
+                    <table id="" class="loadHudsonleadsReportTable">
+                        <thead>
+                            <tr>
+                                <th>@Localize.T("Opportunity Name")</th>
+                                <th>@Localize.T("Account Name")</th>
+                                <th>@Localize.T("Delivery Days")</th>
+                                <th>@Localize.T("Campaign Source")</th>
+                                <th>@Localize.T("Stage/Status")</th>
+                                <th class="sbr_small">@Localize.T("Lead source")</th>
+                                <th class="sbr_small">@Localize.T("Revenue")</th>
+                                <th class="sbr_small">@Localize.T("Projected Gp")</th>
+                                <th class="sbr_small">@Localize.T("Points")</th>
+                                <th class="sbr_small">@Localize.T("Total Projected GP")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.ListOpportunity)
+                            {
+                                if (item.DeliveryDayDiff == "30")
+                                {
+                                    if (count >= 1)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>@Localize.T("Opportunity Name")</div>
+                                                <div><a class="cus-anchor" onclick="EditOpportunity(@item.Id)">@item.OpportunityName</a></div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Account Name")</div>
+                                                <div>
+                                                    @{
+                                                        if (!string.IsNullOrWhiteSpace(item.CustomerDBA))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerDBA</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(item.CustomerBusinessName))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerBusinessName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Delivery Days")</div>
+                                                <div>@item.DeliverydayVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Campaign Source")</div>
+                                                <div>@item.CampaignSourceVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Stage/Status")</div>
+                                                <div>@item.StatusVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Lead source")</div>
+                                                <div>@item.SourceLead</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Revenue")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Revenue)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.ProjectedGP)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Points")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Points)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Total Projected GP")</div>
+                                                <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.TotalProjectedGP)</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>@Localize.T("Opportunity Name")</div>
+                                                <div><a class="cus-anchor" onclick="EditOpportunity(@item.Id)">@item.OpportunityName</a></div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Account Name")</div>
+                                                <div>
+                                                    @{
+                                                        if (!string.IsNullOrWhiteSpace(item.CustomerDBA))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerDBA</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(item.CustomerBusinessName))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerBusinessName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Delivery Days")</div>
+                                                <div>@item.DeliverydayVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Campaign Source")</div>
+                                                <div>@item.CampaignSourceVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Stage/Status")</div>
+                                                <div>@item.StatusVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Lead source")</div>
+                                                <div>@item.SourceLead</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Revenue")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Revenue)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Projected GP")</div>
+                                                <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.ProjectedGP)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Points")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Points)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Total Projected GP")</div>
+                                                <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.TotalProjectedGP)</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    count = count + 1;
+                                }
+                            }
+                            <tr>
+                                <td class="lhbrp_total_row" colspan="6">
+                                    <strong>Total</strong>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Revenue (Total)") </div>
+                                    <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalRevenueVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Projected GP (Total)") </div>
+                                    <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalProjectedGPVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Points (Total)") </div>
+                                    <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalPointsVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Total Sum of Projected GP") </div>
+                                    <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.ProjectedGPTotalVal))</span></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                }
+                else if (itm.DeliveryDayDiff == "60")
+                {
+                    var count = 0;
+                    <div class="sbr_table_header">@Localize.T("Closing in ")@itm.DeliveryDayDiff@Localize.T(" days")</div>
+                    <table id="" class="loadHudsonleadsReportTable">
+                        <thead>
+                            <tr>
+                                <th>@Localize.T("Opportunity Name")</th>
+                                <th>@Localize.T("Account Name")</th>
+                                <th>@Localize.T("Delivery Days")</th>
+                                <th>@Localize.T("Campaign Source")</th>
+                                <th>@Localize.T("Stage/Status")</th>
+                                <th class="sbr_small">@Localize.T("Lead source")</th>
+                                <th class="sbr_small">@Localize.T("Revenue")</th>
+                                <th class="sbr_small">@Localize.T("Projected Gp")</th>
+                                <th class="sbr_small">@Localize.T("Points")</th>
+                                <th class="sbr_small">@Localize.T("Total Projected GP")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.ListOpportunity)
+                            {
+                                if (item.DeliveryDayDiff == "60")
+                                {
+                                    if (count >= 1)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>@Localize.T("Opportunity Name")</div>
+                                                <div><a class="cus-anchor" onclick="EditOpportunity(@item.Id)">@item.OpportunityName</a></div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Account Name")</div>
+                                                <div>
+                                                    @{
+                                                        if (!string.IsNullOrWhiteSpace(item.CustomerDBA))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerDBA</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(item.CustomerBusinessName))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerBusinessName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Delivery Days")</div>
+                                                <div>@item.DeliverydayVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Campaign Source")</div>
+                                                <div>@item.CampaignSourceVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Stage/Status")</div>
+                                                <div>@item.StatusVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Lead source")</div>
+                                                <div>@item.SourceLead</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Revenue")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Revenue)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.ProjectedGP)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Points")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Points)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Total Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.TotalProjectedGP)</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>@Localize.T("Opportunity Name")</div>
+                                                <div><a class="cus-anchor" onclick="EditOpportunity(@item.Id)">@item.OpportunityName</a></div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Account Name")</div>
+                                                <div>
+                                                    @{
+                                                        if (!string.IsNullOrWhiteSpace(item.CustomerDBA))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerDBA</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(item.CustomerBusinessName))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerBusinessName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Delivery Days")</div>
+                                                <div>@item.DeliverydayVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Campaign Source")</div>
+                                                <div>@item.CampaignSourceVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Stage/Status")</div>
+                                                <div>@item.StatusVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Lead source")</div>
+                                                <div>@item.SourceLead</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Revenue")</div>
+                                                <div>  @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Revenue)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.ProjectedGP)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Points")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Points)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Total Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.TotalProjectedGP)</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    count = count + 1;
+                                }
+                            }
+                            <tr>
+                                <td class="lhbrp_total_row" colspan="6">
+                                    <strong>Total</strong>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Revenue (Total)") </div>
+                                    <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalRevenueVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Projected GP (Total)") </div>
+                                    <div> <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalProjectedGPVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Points (Total)") </div>
+                                    <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalPointsVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Total Sum of Projected GP") </div>
+                                    <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.ProjectedGPTotalVal))</span></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                }
+                else if (itm.DeliveryDayDiff == "90")
+                {
+                    var count = 0;
+                    <div class="sbr_table_header">@Localize.T("Closing in ")@itm.DeliveryDayDiff@Localize.T(" days")</div>
+                    <table id="" class="loadHudsonleadsReportTable">
+                        <thead>
+                            <tr>
+                                <th>@Localize.T("Opportunity Name")</th>
+                                <th>@Localize.T("Account Name")</th>
+                                <th>@Localize.T("Delivery Days")</th>
+                                <th>@Localize.T("Campaign Source")</th>
+                                <th>@Localize.T("Stage/Status")</th>
+                                <th class="sbr_small">@Localize.T("Lead source")</th>
+                                <th class="sbr_small">@Localize.T("Revenue")</th>
+                                <th class="sbr_small">@Localize.T("Projected Gp")</th>
+                                <th class="sbr_small">@Localize.T("Points")</th>
+                                <th class="sbr_small">@Localize.T("Total Projected GP")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.ListOpportunity)
+                            {
+                                if (item.DeliveryDayDiff == "90")
+                                {
+                                    if (count >= 1)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>@Localize.T("Opportunity Name")</div>
+                                                <div><a class="cus-anchor" onclick="EditOpportunity(@item.Id)">@item.OpportunityName</a></div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Account Name")</div>
+                                                <div>
+                                                    @{
+                                                        if (!string.IsNullOrWhiteSpace(item.CustomerDBA))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerDBA</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(item.CustomerBusinessName))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerBusinessName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Delivery Days")</div>
+                                                <div>@item.DeliverydayVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Campaign Source")</div>
+                                                <div>@item.CampaignSourceVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Stage/Status")</div>
+                                                <div>@item.StatusVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Lead source")</div>
+                                                <div>@item.SourceLead</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Revenue")</div>
+
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Revenue)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Projected GP")</div>
+
+                                                <div>  @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.ProjectedGP)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Points")</div>
+
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Points)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Total Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.TotalProjectedGP)</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>@Localize.T("Opportunity Name")</div>
+                                                <div><a class="cus-anchor" onclick="EditOpportunity(@item.Id)">@item.OpportunityName</a></div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Account Name")</div>
+
+                                                <div>
+                                                    @{
+                                                        if (!string.IsNullOrWhiteSpace(item.CustomerDBA))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerDBA</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(item.CustomerBusinessName))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerBusinessName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Delivery Days")</div>
+                                                <div>@item.DeliverydayVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Campaign Source")</div>
+                                                <div>@item.CampaignSourceVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Stage/Status")</div>
+                                                <div>@item.StatusVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Lead source")</div>
+                                                <div>@item.SourceLead</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Revenue")</div>
+
+                                                <div>  @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Revenue)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Projected GP")</div>
+
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.ProjectedGP)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Points")</div>
+
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Points)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Total Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.TotalProjectedGP)</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    count = count + 1;
+                                }
+                            }
+                            <tr>
+                                <td class="lhbrp_total_row" colspan="6">
+                                    <strong>Total</strong>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Revenue (Total)") </div>
+                                    <div> <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalRevenueVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Projected GP (Total)") </div>
+                                    <div> <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalProjectedGPVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Points (Total)") </div>
+                                    <div> <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalPointsVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Total Sum of Projected GP") </div>
+                                    <div> <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.ProjectedGPTotalVal))</span></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                }
+                else if (itm.DeliveryDayDiff == "120")
+                {
+                    var count = 0;
+                    <div class="sbr_table_header">@Localize.T("Closing in ")@itm.DeliveryDayDiff@Localize.T(" days")</div>
+                    <table id="" class="loadHudsonleadsReportTable">
+                        <thead>
+                            <tr>
+                                <th>@Localize.T("Opportunity Name")</th>
+                                <th>@Localize.T("Account Name")</th>
+                                <th>@Localize.T("Delivery Days")</th>
+                                <th>@Localize.T("Campaign Source")</th>
+                                <th>@Localize.T("Stage/Status")</th>
+                                <th class="sbr_small">@Localize.T("Lead source")</th>
+                                <th class="sbr_small">@Localize.T("Revenue")</th>
+                                <th class="sbr_small">@Localize.T("Projected Gp")</th>
+                                <th class="sbr_small">@Localize.T("Points")</th>
+                                <th class="sbr_small">@Localize.T("Total Projected GP")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.ListOpportunity)
+                            {
+                                if (item.DeliveryDayDiff == "120")
+                                {
+                                    if (count >= 1)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>@Localize.T("Opportunity Name")</div>
+                                                <div><a class="cus-anchor" onclick="EditOpportunity(@item.Id)">@item.OpportunityName</a></div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Account Name")</div>
+                                                <div>
+                                                    @{
+                                                        if (!string.IsNullOrWhiteSpace(item.CustomerDBA))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerDBA</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(item.CustomerBusinessName))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerBusinessName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Delivery Days")</div>
+                                                <div>@item.DeliverydayVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Campaign Source")</div>
+                                                <div>@item.CampaignSourceVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Stage/Status")</div>
+                                                <div>@item.StatusVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Lead source")</div>
+                                                <div>@item.SourceLead</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Revenue")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Revenue)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.ProjectedGP)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Points")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Points)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Total Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.TotalProjectedGP)</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>@Localize.T("Opportunity Name")</div>
+                                                <div><a class="cus-anchor" onclick="EditOpportunity(@item.Id)">@item.OpportunityName</a></div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Account Name")</div>
+
+                                                <div>
+                                                    @{
+                                                        if (!string.IsNullOrWhiteSpace(item.CustomerDBA))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerDBA</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(item.CustomerBusinessName))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerBusinessName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Delivery Days")</div>
+                                                <div>@item.DeliverydayVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Campaign Source")</div>
+                                                <div>@item.CampaignSourceVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Stage/Status")</div>
+                                                <div>@item.StatusVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Lead source")</div>
+                                                <div>@item.SourceLead</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Revenue")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Revenue)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.ProjectedGP)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Points")</div>
+                                                <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Points)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Total Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.TotalProjectedGP)</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    count = count + 1;
+                                }
+                            }
+                            <tr>
+                                <td class="lhbrp_total_row" colspan="6">
+                                    <strong>Total</strong>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Revenue (Total)") </div>
+
+                                    <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalRevenueVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Projected GP (Total)") </div>
+
+                                    <div> <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalProjectedGPVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Points (Total)") </div>
+
+                                    <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalPointsVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Total Sum of Projected GP") </div>
+                                    <div> <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.ProjectedGPTotalVal))</span></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                }
+                else if (itm.DeliveryDayDiff == "> 120")
+                {
+                    var count = 0;
+                    <div class="sbr_table_header">@Localize.T("Closing in ")@itm.DeliveryDayDiff@Localize.T(" days")</div>
+                    <table id="" class="loadHudsonleadsReportTable">
+                        <thead>
+                            <tr>
+                                <th>@Localize.T("Opportunity Name")</th>
+                                <th>@Localize.T("Account Name")</th>
+                                <th>@Localize.T("Delivery Days")</th>
+                                <th>@Localize.T("Campaign Source")</th>
+                                <th>@Localize.T("Stage/Status")</th>
+                                <th class="sbr_small">@Localize.T("Lead source")</th>
+                                <th class="sbr_small">@Localize.T("Revenue")</th>
+                                <th class="sbr_small">@Localize.T("Projected Gp")</th>
+                                <th class="sbr_small">@Localize.T("Points")</th>
+                                <th class="sbr_small">@Localize.T("Total Projected GP")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.ListOpportunity)
+                            {
+                                if (item.DeliveryDayDiff == "> 120")
+                                {
+                                    if (count >= 1)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>@Localize.T("Opportunity Name")</div>
+                                                <div><a class="cus-anchor" onclick="EditOpportunity(@item.Id)">@item.OpportunityName</a></div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Account Name")</div>
+                                                <div>
+                                                    @{
+                                                        if (!string.IsNullOrWhiteSpace(item.CustomerDBA))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerDBA</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(item.CustomerBusinessName))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerBusinessName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Delivery Days")</div>
+                                                <div>@item.DeliverydayVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Campaign Source")</div>
+                                                <div>@item.CampaignSourceVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Stage/Status")</div>
+                                                <div>@item.StatusVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Lead source")</div>
+                                                <div>@item.SourceLead</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Revenue")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Revenue)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Projected GP")</div>
+                                                <div>  @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.ProjectedGP)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Points")</div>
+                                                <div>  @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Points)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Total Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.TotalProjectedGP)</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>@Localize.T("Opportunity Name")</div>
+                                                <div><a class="cus-anchor" onclick="EditOpportunity(@item.Id)">@item.OpportunityName</a></div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Account Name")</div>
+
+                                                <div>
+                                                    @{
+                                                        if (!string.IsNullOrWhiteSpace(item.CustomerDBA))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerDBA</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(item.CustomerBusinessName))
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerBusinessName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a href="/Customer/Customerdetail/?id=@item.CusIdInt" class="lead_click_item" target="_blank">@item.CustomerName</a><br />
+                                                            <span>@Localize.T("Account Owner: ")@item.EmpName</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Delivery Days")</div>
+                                                <div>@item.DeliverydayVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Campaign Source")</div>
+                                                <div>@item.CampaignSourceVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Stage/Status")</div>
+                                                <div>@item.StatusVal</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Lead source")</div>
+                                                <div>@item.SourceLead</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Revenue")</div>
+
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Revenue)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Projected GP")</div>
+
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.ProjectedGP)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Points")</div>
+
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.Points)</div>
+                                            </td>
+                                            <td>
+                                                <div>@Localize.T("Total Projected GP")</div>
+                                                <div> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Framework.ConversionBlock.ConvertStringToDouble(item.TotalProjectedGP)</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    count = count + 1;
+                                }
+                            }
+                            <tr>
+                                <td class="lhbrp_total_row" colspan="6">
+                                    <strong>Total</strong>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Revenue (Total)") </div>
+
+                                    <div> <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalRevenueVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Projected GP (Total)") </div>
+
+                                    <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalProjectedGPVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Points (Total)") </div>
+
+                                    <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.TotalPointsVal))</span></div>
+                                </td>
+                                <td>
+                                    <div>@Localize.T("Total Sum of Projected GP") </div>
+                                    <div> <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,##0.00}", Convert.ToDouble(itm.ProjectedGPTotalVal))</span></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                }
+            }
+        }
+    }
+
+    <div class="AgentListPagination">
+        <div class="paginationContainer">
+            @if (ViewBag.PageCount > 0)
+            {
+                <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+            }
+            @if (ViewBag.PageCount == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons disabledBtn">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">1</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="CustomerSearchKeyUp(3)">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount > 3)
+            {
+                if (ViewBag.PageNumber == ViewBag.PageCount)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="CustomerSearchKeyUp()">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>

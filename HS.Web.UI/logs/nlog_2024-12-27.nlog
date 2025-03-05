@@ -1,0 +1,127 @@
+2024-12-27 06:38:23.7817|ERROR|HS.Framework.DataAccess.BaseDataAccess|System.Data.SqlClient.SqlException (0x80131904): Procedure or function InsertUserActivity has too many arguments specified.
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.InternalExecuteNonQuery(TaskCompletionSource`1 completion, String methodName, Boolean sendToPipe, Int32 timeout, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.ExecuteNonQuery()
+   at HS.Framework.DataAccess.BaseDataAccess.ExecuteCommand(SqlCommand command) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 358
+   at HS.Framework.DataAccess.BaseDataAccess.InsertRecord(SqlCommand command) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 320
+   at HS.DataAccess.UserActivityDataAccess.Insert(UserActivityBase userActivityObject) in D:\USA Project\DFW Security\HS.DataAccess\Bases\UserActivityDataAccess.cs:line 71
+ClientConnectionId:4c3b3c9a-de44-44b9-83ae-990a2c80ba6f
+Error Number:8144,State:2,Class:16
+2024-12-27 06:44:24.7716|ERROR|HS.Framework.DataAccess.BaseDataAccess|
+                                Declare @SerchText nvarchar(100)
+                                set @SerchText = '%z'%'
+                                select
+                                DISTINCT
+                                Top 25
+                                eq.EquipmentId
+                                ,eq.SKU
+                                ,eq.Barcode
+		                        ,eq.Name as EquipmentName
+		                        ,eq.Retail as RetailPrice
+		                        ,eq.Reorderpoint
+		                        ,(select sum(Quantity) from Inventory where EquipmentId = eq.EquipmentId)  
+                                    as QuantityAvailable
+		                        ,et.Name as EquipmentType
+                                ,eq.Comments as EquipmentDescription
+                                ,eq.Id
+                                ,Round(ISNULL(ISNULL(ISNULL((select top(1) Cost from EquipmentVendor where IsPrimary =1 and equipmentid = eq.equipmentid) ,eq.SupplierCost),eq.Retail),0),2) as SupplierCost,
+                                ((Select ISNULL(SUM(invinner.Quantity),0) from InventoryTech invinner where invinner.EquipmentId=eq.EquipmentId and Type='Add'  And invinner.TechnicianId='457a676d-280a-4070-92ad-a203ccab3f83')
+                                -(Select ISNULL(SUM(invinner.Quantity),0) from InventoryTech invinner where invinner.EquipmentId=eq.EquipmentId and Type='Release'  And invinner.TechnicianId='457a676d-280a-4070-92ad-a203ccab3f83')
+                                -(select isnull(sum(Quantity),0) from dbo.AssignedInventoryTechReceived b where b.EquipmentId  = eq.EquipmentId and b.TechnicianId  = '457a676d-280a-4070-92ad-a203ccab3f83' and b.IsApprove = 0 and b.IsDecline = 0)
+                                ) QuantityOnHand
+                                ,((Select ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner 
+                                 where invinner.EquipmentId=eq.EquipmentId and Type='Add')
+                                 - (Select ISNULL(SUM(invinner2.Quantity),0) from InventoryWarehouse invinner2 
+                                 where invinner2.EquipmentId=eq.EquipmentId and Type='Release')) as WarehouseQTY
+                                ,mf.Name as ManufacturerName
+                                ,eq.Point
+                               ,ISNULL((select top(1) ev.Cost from EquipmentVendor ev  where ev.EquipmentId = eq.EquipmentId and IsPrimary = 1),0) as EquipmentVendorCost
+
+                                from Equipment eq
+								LEFT JOIN InventoryTech itech on itech.EquipmentId=eq.EquipmentId
+                                left join EquipmentType et
+                                on et.Id= eq.EquipmentTypeId
+                                left join Manufacturer mf
+								on mf.Id=eq.ManufacturerId
+                                where eq.EquipmentClassId=1 
+                                and (eq.Name like @SerchText OR eq.SKU like @SerchText OR eq.BarCode like @SerchText)  
+                                and eq.CompanyId ='c7e72006-6edf-4b5a-8589-bfd1b2dae7ba' and eq.IsActive=1
+                                |System.Data.SqlClient.SqlException (0x80131904): Incorrect syntax near '  And invinner.TechnicianId='.
+Unclosed quotation mark after the character string ' and eq.IsActive=1
+                                '.
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:25ef5016-b29d-45aa-ab63-203d37f4dfa1
+Error Number:102,State:1,Class:15
+2024-12-27 11:18:51.9367|ERROR|HS.Framework.DataAccess.BaseDataAccess|select rbs.CustomerId, rbs.Id, rbs.ScheduleId, rbs.TemplateName, rbs.StartDate, rbs.TotalBillAmount, rbs.BillCycle as Interval,
+                                   rbs.Status, rbs.PaymentMethod, rbs.LastRMRInvoiceRefId as LastInvoice,
+                                   CASE 
+                                    WHEN rbs.PaymentCollectionDate IS NULL THEN ' ' 
+                                    ELSE CAST(DAY(rbs.PaymentCollectionDate) AS VARCHAR(2)) 
+                                END AS BillDate
+                                into #tempRecurring from RecurringBillingSchedule rbs
+
+                                select cus.Id as CusId, cus.CustomerId, case when cus.BusinessName != '' then cus.BusinessName when cus.DBA != '' then cus.DBA else cus.FirstName+' '+ cus.LastName end as CustomerName
+                                into #tempCustomer from Customer cus where cus.CustomerId in (select CustomerId from #tempRecurring)
+
+                                select inv.Id as InvId, inv.InvoiceId, inv.InvoiceDate into #tempInvoice from Invoice inv where inv.InvoiceId in (select LastInvoice from #tempRecurring) and inv.IsARBInvoice =1
+
+                                select  r.Id, r.ScheduleId, r.TemplateName, r.StartDate, r.TotalBillAmount, 
+                                r.Interval, r.Status, r.PaymentMethod, r.LastInvoice, r.BillDate,
+                                c.CusId, c.CustomerId, c.CustomerName,i.InvId, i.InvoiceId, i.InvoiceDate into #tempList from #tempRecurring r 
+                                join #tempCustomer c on r.CustomerId = c.CustomerId 
+                                left join #tempInvoice i on i.InvoiceId = r.LastInvoice
+	                            where r.Status='Active'
+                                
+                                
+                                
+                                
+                                
+                                select inv.Id as Inv2Id, inv.Status, inv.BookingId into #tempInvoice2 from Invoice inv where inv.BookingId in (select cast(Id as nvarchar(20)) from #tempRecurring) and inv.IsARBInvoice =1 and inv.Status not in ('Paid','Cancel', 'Cancelled', 'Rolled Over', 'Init')
+
+                                select CustomerName As [Customer],TemplateName As [Template],	StartDate As [Satart Date],BillDate As [Bill Day],TotalBillAmount As [Total Amount],
+								[Interval],	[Status], LastInvoice [Last Invoice],InvoiceId [InvoiceId], 
+                                ISNULL((select count(inv2.Inv2Id) from #tempInvoice2 inv2 where inv2.BookingId = cast(tl.Id as nvarchar(20))), 0) as UnpaidCount
+                                from #rmrtemplist tl order by tl.Id desc
+                                select count(tl.Id) as TemplateCount, cast(sum(isnull(tl.TotalBillAmount,0)) as decimal(18,2)) as TotalAmount
+                                from #rmrtemplist tl
+
+                                drop table #tempRecurring
+                                drop table #tempCustomer
+                                drop table #tempInvoice
+                                drop table #tempInvoice2
+                                drop table #tempList
+								drop table #rmrtemplist|System.Data.SqlClient.SqlException (0x80131904): Invalid object name '#rmrtemplist'.
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:0dee03bf-dd6f-4b8d-bedf-948835bde046
+Error Number:208,State:0,Class:16

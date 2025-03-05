@@ -1,0 +1,370 @@
+﻿@model List<HS.Entities.WebsiteLocationOperation>
+@{
+    Layout = null;
+}
+<style>
+    .container-hoursofopt {
+        width: 100%;
+        float: left;
+        padding: 10px 10px;
+    }
+
+    .hoursofopt_header {
+        font-weight: 600;
+        font-size: 15px;
+    }
+
+    .item-plus {
+        color: #2ca01c;
+        border: 1px solid #ccc;
+        padding: 2px;
+        border-radius: 4px;
+    }
+
+    .item-edit_store {
+        color: #2ca01c;
+        border: 1px solid #ccc;
+        padding: 2px;
+        border-radius: 4px;
+        margin-left: 5px;
+    }
+
+    .hours_opt_div {
+        padding-bottom: 10px;
+    }
+    .hours_opt_div a{
+        float:right;
+    }
+    .item-del_store{
+        border: 1px solid #ccc;
+        padding: 2px;
+        border-radius: 4px;
+        margin-left: 5px;
+    }
+</style>
+<script>
+    var sttime = '@ViewBag.StartTime';
+    var endtime = '@ViewBag.EndTime';
+    var DeleteHoursOpt = function(id){
+        var url = "/Website/DeleteHoursOpt";
+        var param = JSON.stringify({
+            id: id
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    parent.$(".load_hours_opt_data").load("/Website/LoadHoursOfOPt?locid=" + data.locid);
+                    parent.$(".load_order_hours_opt_data").load("/Website/LoadOnlineOrderHoursOfOPt?locid=" + data.locid);
+                    parent.$(".load_hours_operation").load("/Website/LoadHoursOperation?daylist=" + String(parent.$("#selectDaysAvailable_loc").val()) + "&locid=" + data.locid);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        })
+    }
+    $(document).ready(function () {
+        $(".item-plus").click(function () {
+            var idval = $(this).attr('data-id');
+            var day = $(this).attr('data-day');
+            var locid = $(this).attr('data-locid');
+            OpenRightToLeftModal("/Website/AddHoursofOpt?id=" + 0 + "&type=store" + "&day=" + day + "&locid=" + locid);
+        })
+        $(".item-edit_store").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenRightToLeftModal("/Website/AddHoursofOpt?id=" + idval + "&starttime=" + optsttime + "&endtime=" + optendtime + "&type=store");
+        })
+        $(".item-del_store").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirmation", "Are you sure, you want to delete this item?", function () {
+                DeleteHoursOpt(idval);
+            });
+        })
+    })
+</script>
+<div class="container-fluid">
+    <div class="container-hoursofopt">
+        <div class="hoursofopt_header">
+            Hours of Operation
+        </div>
+        <table class="table table-bordered" id="tblwlo">
+            <thead>
+                <tr>
+                    <th>Operation Day</th>
+                    <th>Operation Duration</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Count > 0)
+                {
+                    var Monobj = Model.Where(x => x.HoursofOperation.ToLower() == "mon" && x.IsAdditional == true).ToList();
+                    if (Monobj != null && Monobj.Count > 0)
+                    {
+                        var dMonobj = Monobj.FirstOrDefault();
+                        <tr>
+                            <td>@dMonobj.HoursofOperation</td>
+                            <td>
+                                @foreach (var item in Monobj)
+                                {
+                                    <div class="hours_opt_div">
+                                        <span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationEndTimeVal)</span>
+                                        <a class="item-edit_store" href="javascript:void(0)" data-id="@item.Id"><i class="fa fa-edit"></i></a>
+                                        <a class="item-del_store" href="javascript:void(0)" data-id="@item.Id"> <i class="fa fa-trash"></i></a>
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <a class="item-plus" href="javascript:void(0)" data-id="@dMonobj.Id" data-day="@dMonobj.HoursofOperation" data-locid="@dMonobj.SiteLocationId"><i class="fa fa-plus"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        var Monobj1 = Model.Where(x => x.HoursofOperation.ToLower() == "mon" && x.IsAdditional == false).FirstOrDefault();
+                        if (Monobj1 != null)
+                        {
+                            <tr>
+                                <td>@Monobj1.HoursofOperation</td>
+                                <td><div class="hours_opt_div"><span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Monobj1.OperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Monobj1.OperationEndTimeVal)</span></div></td>
+                                <td>
+                                    <a class="item-del_store" href="javascript:void(0)" data-id="@Monobj1.Id"> <i class="fa fa-trash"></i></a>
+                                    <a class="item-plus" href="javascript:void(0)" data-id="@Monobj1.Id" data-day="@Monobj1.HoursofOperation" data-locid="@Monobj1.SiteLocationId"><i class="fa fa-plus"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    }
+
+                    var Tueobj = Model.Where(x => x.HoursofOperation.ToLower() == "tue" && x.IsAdditional == true).ToList();
+                    if (Tueobj != null && Tueobj.Count > 0)
+                    {
+                        var dTueobj = Tueobj.FirstOrDefault();
+                        <tr>
+                            <td>@dTueobj.HoursofOperation</td>
+                            <td>
+                                @foreach (var item in Tueobj)
+                                {
+                                    <div class="hours_opt_div">
+                                        <span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationEndTimeVal)</span>
+                                        <a class="item-edit_store" href="javascript:void(0)" data-id="@item.Id"><i class="fa fa-edit"></i></a>
+                                        <a class="item-del_store" href="javascript:void(0)" data-id="@item.Id"> <i class="fa fa-trash"></i></a>
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <a class="item-plus" href="javascript:void(0)" data-id="@dTueobj.Id" data-day="@dTueobj.HoursofOperation" data-locid="@dTueobj.SiteLocationId"><i class="fa fa-plus"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        var Tueobj1 = Model.Where(x => x.HoursofOperation.ToLower() == "tue" && x.IsAdditional == false).FirstOrDefault();
+                        if (Tueobj1 != null)
+                        {
+                            <tr>
+                                <td>@Tueobj1.HoursofOperation</td>
+                                <td><div class="hours_opt_div"><span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Tueobj1.OperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Tueobj1.OperationEndTimeVal)</span></div></td>
+                                <td>
+                                    <a class="item-del_store" href="javascript:void(0)" data-id="@Tueobj1.Id"> <i class="fa fa-trash"></i></a>
+                                    <a class="item-plus" href="javascript:void(0)" data-id="@Tueobj1.Id" data-day="@Tueobj1.HoursofOperation" data-locid="@Tueobj1.SiteLocationId"><i class="fa fa-plus"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    }
+
+                    var Wedobj = Model.Where(x => x.HoursofOperation.ToLower() == "wed" && x.IsAdditional == true).ToList();
+                    if (Wedobj != null && Wedobj.Count > 0)
+                    {
+                        var dWedobj = Wedobj.FirstOrDefault();
+                        <tr>
+                            <td>@dWedobj.HoursofOperation</td>
+                            <td>
+                                @foreach (var item in Wedobj)
+                                {
+                                    <div class="hours_opt_div">
+                                        <span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationEndTimeVal)</span>
+                                        <a class="item-edit_store" href="javascript:void(0)" data-id="@item.Id"><i class="fa fa-edit"></i></a>
+                                        <a class="item-del_store" href="javascript:void(0)" data-id="@item.Id"> <i class="fa fa-trash"></i></a>
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <a class="item-plus" href="javascript:void(0)" data-id="@dWedobj.Id" data-day="@dWedobj.HoursofOperation" data-locid="@dWedobj.SiteLocationId"><i class="fa fa-plus"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        var Wedobj1 = Model.Where(x => x.HoursofOperation.ToLower() == "wed" && x.IsAdditional == false).FirstOrDefault();
+                        if (Wedobj1 != null)
+                        {
+                            <tr>
+                                <td>@Wedobj1.HoursofOperation</td>
+                                <td><div class="hours_opt_div"><span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Wedobj1.OperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Wedobj1.OperationEndTimeVal)</span></div></td>
+                                <td>
+                                    <a class="item-del_store" href="javascript:void(0)" data-id="@Wedobj1.Id"> <i class="fa fa-trash"></i></a>
+                                    <a class="item-plus" href="javascript:void(0)" data-id="@Wedobj1.Id" data-day="@Wedobj1.HoursofOperation" data-locid="@Wedobj1.SiteLocationId"><i class="fa fa-plus"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    }
+
+                    var Thuobj = Model.Where(x => x.HoursofOperation.ToLower() == "thu" && x.IsAdditional == true).ToList();
+                    if (Thuobj != null && Thuobj.Count > 0)
+                    {
+                        var dThuobj = Thuobj.FirstOrDefault();
+                        <tr>
+                            <td>@dThuobj.HoursofOperation</td>
+                            <td>
+                                @foreach (var item in Thuobj)
+                                {
+                                    <div class="hours_opt_div">
+                                        <span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationEndTimeVal)</span>
+                                        <a class="item-edit_store" href="javascript:void(0)" data-id="@item.Id"><i class="fa fa-edit"></i></a>
+                                        <a class="item-del_store" href="javascript:void(0)" data-id="@item.Id"> <i class="fa fa-trash"></i></a>
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <a class="item-plus" href="javascript:void(0)" data-id="@dThuobj.Id" data-day="@dThuobj.HoursofOperation" data-locid="@dThuobj.SiteLocationId"><i class="fa fa-plus"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        var Thuobj1 = Model.Where(x => x.HoursofOperation.ToLower() == "thu" && x.IsAdditional == false).FirstOrDefault();
+                        if (Thuobj1 != null)
+                        {
+                            <tr>
+                                <td>@Thuobj1.HoursofOperation</td>
+                                <td><div class="hours_opt_div"><span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Thuobj1.OperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Thuobj1.OperationEndTimeVal)</span></div></td>
+                                <td>
+                                    <a class="item-del_store" href="javascript:void(0)" data-id="@Thuobj1.Id"> <i class="fa fa-trash"></i></a>
+                                    <a class="item-plus" href="javascript:void(0)" data-id="@Thuobj1.Id" data-day="@Thuobj1.HoursofOperation" data-locid="@Thuobj1.SiteLocationId"><i class="fa fa-plus"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    }
+
+                    var Friobj = Model.Where(x => x.HoursofOperation.ToLower() == "fri" && x.IsAdditional == true).ToList();
+                    if (Friobj != null && Friobj.Count > 0)
+                    {
+                        var dFriobj = Friobj.FirstOrDefault();
+                        <tr>
+                            <td>@dFriobj.HoursofOperation</td>
+                            <td>
+                                @foreach (var item in Friobj)
+                                {
+                                    <div class="hours_opt_div">
+                                        <span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationEndTimeVal)</span>
+                                        <a class="item-edit_store" href="javascript:void(0)" data-id="@item.Id"><i class="fa fa-edit"></i></a>
+                                        <a class="item-del_store" href="javascript:void(0)" data-id="@item.Id"> <i class="fa fa-trash"></i></a>
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <a class="item-plus" href="javascript:void(0)" data-id="@dFriobj.Id" data-day="@dFriobj.HoursofOperation" data-locid="@dFriobj.SiteLocationId"><i class="fa fa-plus"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        var Friobj1 = Model.Where(x => x.HoursofOperation.ToLower() == "fri" && x.IsAdditional == false).FirstOrDefault();
+                        if (Friobj1 != null)
+                        {
+                            <tr>
+                                <td>@Friobj1.HoursofOperation</td>
+                                <td><div class="hours_opt_div"><span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Friobj1.OperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Friobj1.OperationEndTimeVal)</span></div></td>
+                                <td>
+                                    <a class="item-del_store" href="javascript:void(0)" data-id="@Friobj1.Id"> <i class="fa fa-trash"></i></a>
+                                    <a class="item-plus" href="javascript:void(0)" data-id="@Friobj1.Id" data-day="@Friobj1.HoursofOperation" data-locid="@Friobj1.SiteLocationId"><i class="fa fa-plus"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    }
+
+                    var Satobj = Model.Where(x => x.HoursofOperation.ToLower() == "sat" && x.IsAdditional == true).ToList();
+                    if (Satobj != null && Satobj.Count > 0)
+                    {
+                        var dSatobj = Satobj.FirstOrDefault();
+                        <tr>
+                            <td>@dSatobj.HoursofOperation</td>
+                            <td>
+                                @foreach (var item in Satobj)
+                                {
+                                    <div class="hours_opt_div">
+                                        <span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationEndTimeVal)</span>
+                                        <a class="item-edit_store" href="javascript:void(0)" data-id="@item.Id"><i class="fa fa-edit"></i></a>
+                                        <a class="item-del_store" href="javascript:void(0)" data-id="@item.Id"> <i class="fa fa-trash"></i></a>
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <a class="item-plus" href="javascript:void(0)" data-id="@dSatobj.Id" data-day="@dSatobj.HoursofOperation" data-locid="@dSatobj.SiteLocationId"><i class="fa fa-plus"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        var Satobj1 = Model.Where(x => x.HoursofOperation.ToLower() == "sat" && x.IsAdditional == false).FirstOrDefault();
+                        if (Satobj1 != null)
+                        {
+                            <tr>
+                                <td>@Satobj1.HoursofOperation</td>
+                                <td><div class="hours_opt_div"><span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Satobj1.OperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Satobj1.OperationEndTimeVal)</span></div></td>
+                                <td>
+                                    <a class="item-del_store" href="javascript:void(0)" data-id="@Satobj1.Id"> <i class="fa fa-trash"></i></a>
+                                    <a class="item-plus" href="javascript:void(0)" data-id="@Satobj1.Id" data-day="@Satobj1.HoursofOperation" data-locid="@Satobj1.SiteLocationId"><i class="fa fa-plus"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    }
+
+                    var Sunobj = Model.Where(x => x.HoursofOperation.ToLower() == "sun" && x.IsAdditional == true).ToList();
+                    if (Sunobj != null && Sunobj.Count > 0)
+                    {
+                        var dSunobj = Sunobj.FirstOrDefault();
+                        <tr>
+                            <td>@dSunobj.HoursofOperation</td>
+                            <td>
+                                @foreach (var item in Sunobj)
+                                {
+                                    <div class="hours_opt_div">
+                                        <span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(item.StoreOperationEndTimeVal)</span>
+                                        <a class="item-edit_store" href="javascript:void(0)" data-id="@item.Id"><i class="fa fa-edit"></i></a>
+                                        <a class="item-del_store" href="javascript:void(0)" data-id="@item.Id"> <i class="fa fa-trash"></i></a>
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <a class="item-plus" href="javascript:void(0)" data-id="@dSunobj.Id" data-day="@dSunobj.HoursofOperation" data-locid="@dSunobj.SiteLocationId"><i class="fa fa-plus"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        var Sunobj1 = Model.Where(x => x.HoursofOperation.ToLower() == "sun" && x.IsAdditional == false).FirstOrDefault();
+                        if (Sunobj1 != null)
+                        {
+                            <tr>
+                                <td>@Sunobj1.HoursofOperation</td>
+                                <td><div class="hours_opt_div"><span>@HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Sunobj1.OperationStartTimeVal) - @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(Sunobj1.OperationEndTimeVal)</span></div></td>
+                                <td>
+                                    <a class="item-del_store" href="javascript:void(0)" data-id="@Sunobj1.Id"> <i class="fa fa-trash"></i></a>
+                                    <a class="item-plus" href="javascript:void(0)" data-id="@Sunobj1.Id" data-day="@Sunobj1.HoursofOperation" data-locid="@Sunobj1.SiteLocationId"><i class="fa fa-plus"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

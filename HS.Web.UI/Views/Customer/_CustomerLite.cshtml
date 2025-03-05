@@ -1,0 +1,483 @@
+﻿@model HS.Web.UI.Models.CustomerHeaderMoneyAndfliterBar
+@{
+    ViewBag.Title = "Customer";
+    Layout = null;
+    var currentuser = ((HS.Web.UI.Helper.CustomPrincipal)(User));
+
+    var dataFile = Server.MapPath(string.Format(AppConfig.CustomerTemplateFile, currentuser.CompanyId.ToString()));
+    var customertemplate = "";
+    using (StreamReader streamReader = File.OpenText(dataFile))
+    {
+        var ListFromFile = File.ReadAllLines(dataFile);
+        customertemplate = String.Join("\n", ListFromFile.ToArray());
+    }
+
+
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@Styles.Render("~/styles/customer")
+<link href="~/Content/Css/Customer/CustomerListLite.css" rel="stylesheet" />
+
+<script src="~/Scripts/handlebars.min.js"></script>
+<script src="~/Scripts/handlebars-helper-x.js"></script>
+<script>
+    var SalesDateFilter;
+    var FollowUpDateFilter;
+    var InstallationDateFilter;
+
+    var customerreportpopwinowwith = 600;
+    var customerreportpopwinowheight = 510;
+    var customerprintpopwinowwith = 920;
+    var customerprintpopwinowheight = 600;
+    var IsActiveFilter;
+    var SortByCol = "Id";
+    var TotalRMRFilter = false;
+    var TotalOpenInvoice = false;
+    var TotalDueInvoice = false;
+        var CustomerLeadImportFile = function () {
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/File/AddCustomerLeadImportFile/?isCustomer=true");
+        }
+    $(document).ready(function () {
+        var idlist = [{ id: ".ExportCustomerReport", type: 'iframe', width: customerreportpopwinowwith, height: customerreportpopwinowheight },
+        { id: ".customerlistprint", type: 'iframe', width: customerprintpopwinowwith, height: customerprintpopwinowheight }
+
+        ];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+            $(".customer-content-list").load(domainurl + "/Customer/CustomerViewList/?recent=true");
+            $(".btn_customerlist_filter").click(function () {
+                if ($('.customer-fliter-list').is(':visible')) {
+                    $(".customer-fliter-list").hide(300);
+                }
+                else {
+                    if ($(".customer-fliter-list").html().trim() == '') {
+                        $('#boxshinerfilter').show();
+                        $(".customer-fliter-list").load("/Customer/FilterCustomerLeadListGridSettingPartial?key=CustomerGrid", function () {
+                            $(".customer-fliter-list").show();
+                            $('#boxshinerfilter').hide();
+                        });
+                    }
+                    else {
+
+                        $(".customer-fliter-list").show();
+                    }
+
+                }
+            });
+            if (window.innerWidth < 421) {
+                $(".fixed_header").width(window.innerWidth - 30);
+            }
+            else if (window.innerWidth < 769) {
+                $(".fixed_header").width(window.innerWidth - $(".sidebar").width() - 29);
+            }
+            else {
+                $(".fixed_header").width(window.innerWidth - $(".sidebar").width() - 47);
+            }
+            $('.ListViewLoader').hide();
+            $('.ListContents').show();
+
+            CustomerSearchKeyUp(1);
+            $("#AddNewCustomerList").click(function () {
+                OpenTopToBottomModal(domainurl + "/Customer/AddCustomer");
+                /*$(".addManufacturerMagnific").click();*/
+                $(".NewCustomer-search").removeClass('hidden');
+            });
+            $("#srch-term").keyup(function (e) {
+                e.preventDefault();
+                if (e.keyCode == 13) {
+                    CustomerSearchKeyUp(1);
+                }
+            });
+
+            $("#CustomerReport").click(function () {
+                console.log("CustomerReport");
+                ColumnName = "";
+                //var checkboxs = $('.Export_excel_customerList');
+                //var selectid = [];
+                //for (var i = 0; i < checkboxs.length; i++) {
+                //    selectid.push(parseInt($(checkboxs[i]).attr('data-id')));
+                //}
+                var ids = "";
+                var idsAll = "";
+                var flag = 0;
+                console.log("fff");
+                $(".CheckItems").each(function () {
+                    idsAll += $(this).attr("idval") + ",";
+                    if ($(this).is(':checked')) {
+                        flag = 1;
+                        ids += $(this).attr("idval") + ","
+                    }
+
+                });
+                $('.th-customer').each(function () {
+                    if ($(this).attr('data-info') != "" && $(this).attr('data-info') != undefined && $(this).attr('data-info') != null) {
+                        ColumnName += $(this).attr('data-info').trim() + "," + $(this).text().trim() + "-";
+                    }
+                });
+                $(".ExportCustomerReport").attr('href', domainurl + "/Reports/ExportConfirm/?ColumnName=" + ColumnName + "&ReportFor=Customer&Ids=" + ids + "&IdsAll" + idsAll);
+
+                $(".ExportCustomerReport").click();
+            });
+            $(".btn-apply-Datefilter").click(function () {
+
+                var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+                var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+                if (StartDate == "NaN undefined, NaN") {
+                    StartDate = "All Time";
+                    EndDate = "";
+                }
+
+                $(".DateFilterContents .date-start").html("");
+                $(".DateFilterContents .date-end").html("");
+                $(".DateFilterContents .date-start").html(StartDate);
+                $(".DateFilterContents .date-end").html(EndDate);
+                $(".DateFilterContents .dropdown-filter").hide();
+                UpdatePtoCookie();
+                CustomerSearchKeyUp(1);
+            });
+            $("#CustomerSearchButton").click(function () {
+                CustomerSearchKeyUp(1);
+            });
+        $(document).click(function (e) {
+            var clickvalue = e.target.className;
+            if (clickvalue == "fa fa-angle-down icon_sort_customer" || clickvalue == "fa fa-angle-up icon_sort_customer") {
+                var orderval = e.target.dataset.val;
+                CustomerSearchKeyUp(1, null, orderval);
+            }
+
+                if ($($(e.target).parent()).hasClass('btn_customerlist_filter')
+                    || $(e.target).hasClass('btn_customerlist_filter')
+                    || $($(e.target).parent()).hasClass('btn_customerlist_filter')) {
+                    return;
+                }
+                /*else if ($(".customer-fliter-list").is(":visible")) {
+                    $(".customer-fliter-list").hide();
+                }*/
+            });
+        });
+    $(window).resize(function () {
+        setTimeout(function () {
+            if (window.innerWidth < 421) {
+                $(".fixed_header").width(window.innerWidth - 30);
+            }
+            else if (window.innerWidth < 769) {
+                $(".fixed_header").width(window.innerWidth - $(".sidebar").width() - 29);
+            }
+            else {
+                $(".fixed_header").width(window.innerWidth - $(".sidebar").width() - 47);
+            }
+        }, 50);
+
+    });
+    var CustomerFilterQuery = function () {
+        CustomerSearchKeyUp(1);
+    }
+    var CustomerSearchKeyUp = function (pageNumber, DateFileter, OrderValue = '') {
+        $('#customer-paging').html('');
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var UserList = $(".UserList").val();
+        var SourceList = $(".SourceList").val();
+        var firstdate = $(".min-date").val();
+        var lastdate = $(".max-date").val();
+
+
+        var TechnicianId = $("#TechUserList").val();
+        var SalesPersonId = $("#SalesUserList").val();
+        var PaymentMethod = encodeURIComponent($("#PaymentMethodLsit").val());
+        var SourceList = $(".SourceList").val();
+        var SalesDate = $("#SalesDateFilter").val();
+        var FollowUpDate = $("#FollowUpDateFilter").val();
+        var InstallationDate = $("#InstallationDate").val();
+        var FundingCompany = $("#FundingCompanyList").val();
+        var searchtext = encodeURI($("#srch-term").val());
+        $('#boxshiner').show();
+        $('#dvHeaderContent').hide();
+        $('.filter-list-customer').html(LoaderDom);
+        console.log("dsfsdffdsfsdf");
+        var paramlite = {
+            PageNo: pageNumber,
+            isLead: 0, SearchText: searchtext,
+            FirstDate: firstdate,
+            LastDate: lastdate,
+            IdText: $("#txt_id").length > 0 && $("#txt_id").val() != null  && $("#txt_id").val().trim() != '' ? $("#txt_id").attr('datakey') + '#' + $("#txt_id").val() : '',
+            FirstNameText: $("#txt_firstname").length > 0 && $("#txt_firstname").val() != null  && $("#txt_firstname").val() != null && $("#txt_firstname").val().trim() != '' ? $("#txt_firstname").attr('datakey') + '#' + $("#txt_firstname").val() : '',
+            LastNameText: $("#txt_lastname").length > 0 && $("#txt_lastname").val() != null  && $("#txt_lastname").val() != null && $("#txt_lastname").val().trim() != '' ? $("#txt_lastname").attr('datakey') + '#' + $("#txt_lastname").val() : '',
+            BusinessNameText: $("#txt_businessname").length > 0 && $("#txt_businessname").val() != null  && $("#txt_businessname").val() != null  &&  $("#txt_businessname").val().trim() != '' ? $("#txt_businessname").attr('datakey') + '#' + $("#txt_businessname").val() : '',
+            EmailText: $("#txt_emailaddress").length > 0 && $("#txt_emailaddress").val() != null  && $("#txt_emailaddress").val() != null  && $("#txt_emailaddress").val().trim() != '' ? $("#txt_emailaddress").attr('datakey') + '#' + $("#txt_emailaddress").val() : '',
+            StreetText: $("#txt_street").length > 0 && $("#txt_street").val() != null  && $("#txt_street").val() != null && $("#txt_street").val().trim() != '' ? $("#txt_street").attr('datakey') + '#' + encodeURIComponent($("#txt_street").val()) : '',
+
+            //SalesPersonText: $("#txt_soldby").length > 0 && $("#txt_soldby").val().trim() != '-1' && $("#txt_soldby").val().trim() != '' ? $("#txt_soldby").attr('datakey') + '#' + $("#txt_soldby").val() : '',
+
+
+            JoinDateText: $("#txt_joindate").length > 0 && $("#txt_joindate").val() != null  && $("#txt_joindate").val() != null && $("#txt_joindate").val().trim() != '' ? $("#txt_joindate").attr('datakey') + '#' + $("#txt_joindate").val() : '',
+            ActiveStatusText: $("#txt_isactive").length > 0 && $("#txt_isactive").val() != null  && $("#txt_isactive").val() != null && $("#txt_isactive").val().trim() != '-1' ? $("#txt_isactive").attr('datakey') + '#' + $("#txt_isactive").val() : '',
+            DisplayNameText: $("#txt_displayname").length > 0 && $("#txt_displayname").val() != null  && $("#txt_displayname").val() != null && $("#txt_displayname").val().trim() != '' ? $("#txt_displayname").attr('datakey') + '#' + $("#txt_displayname").val() : '',
+            FollowupDateText: $("#txt_followupdate").length > 0 && $("#txt_followupdate").val() != null  && $("#txt_followupdate").val() != null && $("#txt_followupdate").val().trim() != '' ? $("#txt_followupdate").attr('datakey') + '#' + $("#txt_followupdate").val() : '',
+            CustomerNoText: $("#txt_customerno").length > 0 && $("#txt_customerno").val() != null  && $("#txt_customerno").val() != null && $("#txt_customerno").val().trim() != '' ? $("#txt_customerno").attr('datakey') + '#' + $("#txt_customerno").val() : '',
+
+            CustomerTypeText: $("#txt_customertype").length > 0 && $("#txt_customertype").val() != null  && $("#txt_customertype").val() != null && $("#txt_customertype").val().trim() != '-1' ? $("#txt_customertype").attr('datakey') + '#' + $("#txt_customertype").val() : '',
+            PrimaryPhoneText: $("#txt_primaryphone").length > 0 && $("#txt_primaryphone").val() != null  && $("#txt_primaryphone").val() != null && $("#txt_primaryphone").val().trim() != '' ? $("#txt_primaryphone").attr('datakey') + '#' + $("#txt_primaryphone").val() : '',
+            SecondaryPhoneText: $("#txt_secondaryphone").length > 0 && $("#txt_secondaryphone").val() != null  && $("#txt_secondaryphone").val() != null && $("#txt_secondaryphone").val().trim() != '' ? $("#txt_secondaryphone").attr('datakey') + '#' + $("#txt_secondaryphone").val() : '',
+            CellNoText: $("#txt_cellno").length > 0 && $("#txt_cellno").val() != null  && $("#txt_cellno").val() != null && $("#txt_cellno").val().trim() != '' ? $("#txt_cellno").attr('datakey') + '#' + $("#txt_cellno").val() : '',
+            AccountNoText: $("#txt_accountno").length > 0 && $("#txt_accountno").val() != null  && $("#txt_accountno").val() != null && $("#txt_accountno").val().trim() != '' ? $("#txt_accountno").attr('datakey') + '#' + $("#txt_accountno").val() : '',
+            DbaText: $("#txt_dba").length > 0 && $("#txt_dba").val() != null  && $("#txt_dba").val() != null && $("#txt_dba").val().trim() != '' ? $("#txt_dba").attr('datakey') + '#' + $("#txt_dba").val() : '',
+            //BranchidText: $("#txt_branchid").length > 0 && $("#txt_branchid").val().trim() != '-1' ? $("#txt_branchid").attr('datakey') + '#' + $("#txt_branchid").val() : '',
+
+            //SalesLocationText: $("#txt_saleslocation").length > 0 && $("#txt_saleslocation").val().trim() != '-1' ? $("#txt_saleslocation").attr('datakey') + '#' + $("#txt_saleslocation").val() : '',
+
+            PlatformIdText: $("#txt_platformid").length > 0 && $("#txt_platformid").val() != null  && $("#txt_platformid").val() != null  && $("#txt_platformid").val().trim() != '' ? $("#txt_platformid").attr('datakey') + '#' + $("#txt_platformid").val() : '',
+            SettingOrderBy: OrderValue.trim() != '' && OrderValue != null ? OrderValue : '',
+            BusinessAccountTypeText: $("#txt_businessaccounttype").length > 0 && $("#txt_businessaccounttype").val() != null && $("#txt_businessaccounttype").val() != null && $("#txt_businessaccounttype").val().trim() != '-1' ? $("#txt_businessaccounttype").attr('datakey') + '#' + $("#txt_businessaccounttype").val() : '',
+
+
+            SalesPersonText: ($("#txt_soldby").length > 0 && $("#txt_soldby").val() != null) ? encodeURI($("#txt_soldby").val()) : '',
+            BranchidText: ($("#txt_branchid").length > 0 && $("#txt_branchid").val() != null) ? encodeURI($("#txt_branchid").val()) : '',
+            StatusText: ($("#txt_customerstatus").length > 0 && $("#txt_customerstatus").val() != null) ? encodeURI($("#txt_customerstatus").val()) : typeof($("#txt_customerstatus").val()) == "undefined" ? '6,42' : '',
+            SalesLocationText: ($("#txt_saleslocation").length > 0 && $("#txt_saleslocation").val() != null) ? encodeURI($("#txt_saleslocation").val()) : '',
+            LeadSourceText: ($("#txt_leadsource").length > 0 && $("#txt_leadsource").val() != null) ? encodeURI($("#txt_leadsource").val()) : '',
+            //LeadStatusText: $("#txt_leadstatus").length > 0 && $("#txt_leadstatus").val() != null && $("#txt_leadstatus").val() != null ? encodeURI($("#txt_leadstatus").attr('datakey') + '#' + $("#txt_leadstatus").val()) : '',
+            LeadStatusText: ($("#txt_leadstatus").length > 0 && $("#txt_leadstatus").val() != null) ? encodeURI($("#txt_leadstatus").val()) : '',
+        };
+        $.cookie("filter-customer-data", JSON.stringify(paramlite));
+        $.ajax({
+            type: "POST",
+            url: '/Customer/CustomerListFilteredLite',
+            data: JSON.stringify(paramlite),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                data.result.CustomerList = JSON.parse(data.result.CustomerListString);
+                console.log(data);
+                $('#boxshiner').hide();
+                $('#dvHeaderContent').show();
+                $('#dvHeaderContent').html(data.CustomerTopper);
+                var empTemplate = $("#hbCustomerTemplate").html();
+                if (Device.All())
+                    empTemplate = empTemplate.replace(/style=/g, "data-style=");
+                var sourceHtml = Handlebars.compile(empTemplate);
+                $("#customer-paging").html(data.paged);
+                $(".filter-list-customer").html(sourceHtml(data.result));
+
+                LoadEvents();
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+                OpenErrorMessageNew("Error!", "Sorry, but this page didn't load properly. Please try again.")
+
+            }
+        });
+        Handlebars.registerHelper("ifBill", function (a) {
+            console.log("ifBill fired");
+            var c;
+            var d = 0;
+
+            if (a.length !== d) {
+                return 'Billing: ' + a;
+            } else {
+                c = null;
+            }
+            return c;
+        });
+        Handlebars.registerHelper("date2", function (c) {
+            console.log("date fired");
+            var numb = c.match(/\d/g);
+            var numb1 = numb.join("");
+            var numb2 = numb1.substring(0, 10);
+            //var a =new Date();
+            //var formattedDate  = a.getDate(numb2) +
+            //    "-" +
+            //    (a.getMonth(numb2) + 1) +
+            //    "-" +
+            //    a.getFullYear(numb2);
+            console.log(numb2);
+            return new Date(numb2).toDateString();
+        });
+        Handlebars.registerHelper("signAgreement", function (a) {
+            console.log("signAgreement fired");
+
+            var c;
+            if (a !== true) {
+                return null;
+            } else {
+                c = 'Yes';
+            }
+            return 'Sign Agreement: ' + c;
+        });
+    }
+    var LoadEvents = function () {
+         setTimeout(function () {
+            $("#IsCheckVal1").click(function () {
+                if ($(this).is(':checked')) {
+                    $(".CheckItemsCustomer").each(function () {
+                        $(this).prop('checked', true);
+                    });
+                }
+                else {
+                    $(".CheckItemsCustomer").each(function () {
+                        $(this).prop('checked', false);
+                    });
+                }
+            });
+        },1000);
+    }
+    var CustomerLeadImportFile = function () {
+        OpenRightToLeftModal("@(AppConfig.DomainSitePath)/File/AddCustomerLeadImportFile/?isCustomer=true");
+    }
+    var GetCustomerMediaDetails = function (CustoemrId) {
+        OpenTopToBottomModal("Customer/CustomerMediaNoteDetails/?CustomerId=" + CustoemrId);
+    }
+</script>
+<div class="customer_lite_container" style="width:100%; float:left;">
+
+    <div class="row less_padding position-relative">
+        <div class="clearfix fixed_header manual_top">
+            <div class="customer_header_left_custom">
+                <h2 class="header_text_position">@Localize.T("Customers")</h2>
+            </div>
+            <div class="customer_header_right_custom">
+
+                <div class="AddNewBtnDiv customer_add_btn_div">
+
+                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ExportCustomerList))
+                    {
+                        <button id="CustomerReport" class="btn customer_report_btn" title="Download">
+                            <i class="glyphicon glyphicon-download-alt"></i>
+                        </button>
+                    }
+
+
+                    <div class="btn-group">
+                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerCreate))
+                        {
+                            <button class="btn customer-new" id="AddNewCustomerList" type="button" title="@Localize.T(" Add Customer")">
+                                <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" Customer")
+                            </button>
+                        }
+
+                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerImport))
+                        {
+                            <button data-toggle="dropdown" class="btn dropdown-toggle customer-btn-dropdown" type="button" aria-expanded="false" title="@Localize.T(" Import Customers")">
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu customer-dropdown-ul-style import_leads_dropdown">
+                                <li><a href="javascript:void(0)" onclick="CustomerLeadImportFile()">@Localize.T("Import Customers")</a></li>
+                            </ul>
+
+                        }
+                    </div>
+                </div>
+                <div class="dateviewed">
+                    @{Html.RenderAction("DateViewPartial", "Customer");}
+                </div>
+            </div>
+
+            <div style="position:fixed">
+                <ul class="dropdown-menu customer-dropdown-ul-style import_leads_dropdown">
+                    <li><a href="javascript:void(0)" onclick="CustomerLeadImportFile()">@Localize.T("Import Customers")</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="ListContents">
+        <div class="header-content custom_scroll">
+            <box id="boxshiner" class="shine"></box>
+            <div id="dvHeaderContent"></div>
+            <div class="clearfix"></div>
+            <div class="scroll-div">
+
+                <div class="customer_list_search">
+                    @if (currentuser.UserTags.ToLower().IndexOf("technician") != 0)
+                    {
+                        <div class="down_arrow_style arrow_hide">
+                            @*<i class="fa fa-arrow-down down_style" aria-hidden="true" ></i>*@
+                            <img src="~/Content/img/down_arrow.png" />
+                        </div>
+                    }
+
+                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerSearch))
+                    {
+                        @*<div class="info_style_div" title="@Localize.T("Search by Id, CustomerNo, Name, Business Name, Address, Cell/Phone, Email Address")">
+                            <i class="fa fa-info" aria-hidden="true"></i>
+                        </div>
+                        <div class="searchbardiv cl_search_bar">
+                            <div style="margin-top:-8px;" class="input-group add-on">
+                                <input class="form-control customer_search_text" placeholder="@Localize.T("Search")" name="srch-term" id="srch-term" type="text">
+                                <div class="input-group-btn">
+                                    <button class="btn btn-default custom-btn green_button" id="CustomerSearchButton" type="submit" title="@Localize.T("Search by Id, CustomerNo, Name, Business Name, Address, Cell/Phone, Email Address")"><i class="glyphicon glyphicon-search"></i></button>
+                                </div>
+                            </div>
+                        </div>*@
+                        if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerFilter))
+                        {
+                            <div class="customer-list-filter">
+                                <button title="Filter" class="btn btn_customerlist_filter btn_default green_button">
+                                    <span class="glyphicon glyphicon-filter"></span>
+                                </button>
+                            </div>
+                        }
+                    }
+                    @if (currentuser.UserTags.ToLower().IndexOf("technician") != 0)
+                    {
+                        <div class="customer-content-list"></div>
+                    }
+
+                </div>
+                <box id="boxshinerfilter" class="shine" style="display: none;"></box>
+                <div class="customer-fliter-list col-md-12 customer-fliter-list_Toggle">
+
+                </div>
+
+                <div class="custom-top-padding">
+
+                </div>
+                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerList))
+                {
+                    <div class="filter-list-customer">
+
+                    </div>
+                }
+            </div>
+            <div class="custom-pager hidden">
+                <ul class="pager">
+                    <li><a href="javascript:void(0)">@Localize.T("Previous")</a></li>
+                    <li><a href="javascript:void(0)">@Localize.T("Next")</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="hidden" style="display:none;">
+            <a href="" class="ExportCustomerReport"></a>
+        </div>
+        <div class="hidden" style="display:none;">
+            <a href="" class="customerlistprint"></a>
+        </div>
+        <div class="hidden" style="display:none;">
+            <a href="" class="systemnolist"></a>
+        </div>
+    </div>
+    <div id="customer-paging" class="AgentListPagination">
+
+    </div>
+</div>
+
+<div class="ListViewLoader">
+    <div>
+        <div class="lds-css ng-scope">
+            <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+        </div>
+    </div>
+</div>
+<div class="displayNone">
+    <a href="@(AppConfig.DomainSitePath)/Customer/AddCustomer" class="addManufacturerMagnific">@Localize.T("Add New Customer")</a>
+</div>
+
+@Html.Raw(customertemplate)
+

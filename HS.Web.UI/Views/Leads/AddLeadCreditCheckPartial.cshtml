@@ -1,0 +1,453 @@
+﻿@{ 
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.Customer
+<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>
+<style>
+    .massage-dob-lead{
+        display: none;
+        color:red;
+        position : absolute;
+        font-weight: 700;
+        font-size: 75%;
+    }
+    .massage-dob-spouse{
+        display: none;
+        color:red;
+        position : absolute;
+        font-weight: 700;
+        font-size: 75%;
+    }
+    .text-custom {
+    font-size: 13px;
+    font-weight: 600;
+    color: #615b5b;
+}
+    .SaveCancelDiv {
+        width: 95%;
+        padding-top: 8px;
+    }
+
+    .footer-section {
+        background: #eceef1;
+        height: 50px;
+        position: fixed;
+        width: 100%;
+        bottom: 0%;
+    }
+
+    .btn-leadnote {
+        float: right;
+        background-color: green;
+        color: white;
+    }
+
+        .btn-leadnote:hover {
+            color: white;
+        }
+        .add_note_header {
+        font-size: 2rem;
+        font-weight: 400;
+        color: #393a3d;
+        padding: 12px 10px;
+        }
+        .add_note_header_container {
+            width:100%;
+            background-color:#f4f5f8;
+        }
+</style>
+<script>
+    var cusid = '@Model.Id';
+    var DobDatepicker;
+    var SpouseDate;
+    var Sfname = '@Model.CustomerSpouse.FirstName';
+    var Slname = '@Model.CustomerSpouse.LastName';
+    var prestreet = '@Model.StreetPrevious';
+    var precity = '@Model.CityPrevious';
+    var prestate = '@Model.StatePrevious';
+    var prezip = '@Model.ZipCodePrevious';
+    var customerspouseid = '@Model.CustomerSpouse.Id';
+    var customerDob = '@Model.DateofBirth';
+    var customerSsn = '@Model.SSN';
+    var dat = new Date();
+    var month = dat.getMonth() + 1;
+    var datval = (month < 10 ? '0' : '') + month + '/' + (dat.getDate() < 10 ? '0' : '') + dat.getDate() + "/" + dat.getFullYear();
+    function FormateSSNNumber(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-  ]/g, '');
+            if (Value.length == 9) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{2})\-?(\d{4})/, "$1-$2-$3");
+                $("#SSN").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 9) {
+                ValueClean = Value;
+                $("#SSN").css({ "border": "1px solid red" });
+            }
+            else {
+                ValueClean = Value;
+                $("#SSN").css({ "border": "1px solid #babec5" });
+            }
+        }
+        return ValueClean;
+    }
+    function FormateSSNNumber1(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-  ]/g, '');
+            if (Value.length == 9) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{2})\-?(\d{4})/, "$1-$2-$3");
+                $("#SpouseSSN").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 9) {
+                ValueClean = Value;
+                $("#SpouseSSN").css({ "border": "1px solid red" });
+            }
+            else {
+                ValueClean = Value;
+                $("#SpouseSSN").css({ "border": "1px solid #babec5" });
+            }
+        }
+        return ValueClean;
+    }
+    var SaveLeadCreditCheck = function () {
+        var url = domainurl + "/Leads/SaveLeadCreditCheck";
+        var param;
+        if ($("#leadpresent").prop('checked') == true) {
+            param = {
+                Id: $("#Id").val(),
+                DateofBirth: $("#DateofBirth").val(),
+                SSN: $("#SSN").val(),
+                StreetPrevious: $("#StreetPrevious").val(),
+                ZipCodePrevious: $("#ZipCodePrevious").val(),
+                CityPrevious: $("#CityPrevious").val(),
+                StatePrevious: $("#StatePrevious").val()
+            };
+        }
+        else {
+            param = {
+                Id: $("#Id").val(),
+                DateofBirth: $("#DateofBirth").val(),
+                SSN: $("#SSN").val(),
+                StreetPrevious: $("#StreetPrevious").val(""),
+                ZipCodePrevious: $("#ZipCodePrevious").val(""),
+                CityPrevious: $("#CityPrevious").val(""),
+                StatePrevious: $("#StatePrevious").val("")
+            };
+        }
+        var param1 = {
+            CustomerId: $("#CustomerId").val(),
+            FirstName: $("#SpouseFirstName").val(),
+            LastName: $("#SpouseLastName").val(),
+            DateofBirth: $("#SpouseDOB").val(),
+            SSN: $("#SpouseSSN").val(),
+            CheckSpouse: $("#leadspouse").prop('checked')
+        };
+        var cusparam = JSON.stringify({
+            'cus': param, 'spouse': param1
+        })
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: cusparam,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.cusres == true && data.delres == true) {
+                    LoadLeadsDetail(cusid, true);
+                }
+                else if (data.result == false && data.delres == true) {
+                    $('.close').trigger('click');
+                    LoadLeadsDetail(cusid, true);
+                }
+                else {
+                    $('.close').trigger('click');
+                    LoadLeadsDetail(cusid, true);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        DobDatepicker = new Pikaday({ format: 'MM/DD/YYYY', yearRange: [1920, 1999], field: $('#DateofBirth')[0] });
+        SpouseDate = new Pikaday({ format: 'MM/DD/YYYY', yearRange: [1920, 1999], field: $('#SpouseDOB')[0] });
+        $("#SaveCreditCheck").click(function () {
+            if ($("#leadspouse").prop('checked') == true && ($("#DateofBirth").val() != "" || $("#SSN").val() != "")) {
+                if ($("#SpouseFirstName").val() != "" && $("#SpouseLastName").val() != "" && $("#SpouseDOB").val() != "" && $("#SpouseSSN").val() != "") {
+                    if ($("#DateofBirth").val() != "" && $("#SSN").val() != "") {
+                        OpenErrorMessageNew("Error!", "You have selected Date of birth and SSN, please setect an one option", "");
+                    }
+                    else {
+                        var x = $("#DateofBirth").val().split("/");
+                        var b = parseInt(x[2]);
+                        var a = 1999;
+                        if (b > a) {
+                            $(".lead-dob").css("color", "red");
+                            $(".massage-dob-lead").show();
+                        }
+                        else if ($("#SSN").val() != "" && $("#SpouseSSN").val() != "") {
+                            if ($("#SSN").val().length == 11 && $("#SpouseSSN").val().length == 11) {
+                                SaveLeadCreditCheck();
+                            }
+                        }
+                        else {
+                            SaveLeadCreditCheck();
+                        }
+                    }
+                }
+                else {
+                    OpenErrorMessageNew("Error!", "Spouse firstname and lastname and date of birth and ssn required", "");
+                }
+            }
+            else if ($("#DateofBirth").val() != "" || $("#SSN").val() != "") {
+                var x = $("#DateofBirth").val().split("/");
+                var b = parseInt(x[2]);
+                var a = 1999;
+                if (b > a) {
+                    $(".lead-dob").css("color", "red");
+                    $(".massage-dob-lead").show();
+                }
+                else if ($("#SSN").val() != "") {
+                    if ($("#SSN").val().length == 11) {
+                        SaveLeadCreditCheck();
+                    }
+                }
+                else if ($("#DateofBirth").val() != "" && $("#SSN").val() != "") {
+                    OpenErrorMessageNew("Error!", "You have selected Date of birth and SSN, please setect an one option", "");
+                }
+                else {
+                    SaveLeadCreditCheck();
+                }
+            }
+            else {
+                OpenErrorMessageNew("Error!", "Date of birth or SSN required for credit check", "");
+            }
+        })
+        $("#DateofBirth").focusout(function () {
+            var x = $("#DateofBirth").val().split("/");
+            var b = parseInt(x[2]);
+            var a = 1999;
+            if (b > a) {
+                $(".lead-dob").css("color", "red");
+                $(".massage-dob-lead").show();
+            }
+            else {
+                $(".lead-dob").css("color", "#615b5b");
+                $(".massage-dob-lead").hide();
+            }
+            $(".check-one-itemSelected").css("color", "#333");
+        });
+        $("#SpouseDOB").focusout(function () {
+            var x = $("#SpouseDOB").val().split("/");
+            var b = parseInt(x[2]);
+            var a = 1999;
+            if (b > a) {
+                $(".dob-div").css("color", "red");
+                $(".massage-dob-spouse").show();
+            }
+            else {
+                $(".dob-div").css("color", "#615b5b");
+                $(".massage-dob-spouse").hide();
+            }
+            $(".check-one-itemSelected").css("color", "#333");
+        })
+        $("#SSN").focusout(function () {
+            $(".check-one-itemSelected").css("color", "#333");
+        });
+        $("#SSN").keyup(function () {
+            var SSNNumber = $(this).val();
+            if (SSNNumber != undefined && SSNNumber != null && SSNNumber != "") {
+                var cleanSSNNumber = FormateSSNNumber(SSNNumber);
+                $(this).val(cleanSSNNumber);
+            }
+        });
+        $("#SpouseSSN").keyup(function () {
+            var SSNNumber1 = $(this).val();
+            if (SSNNumber1 != undefined && SSNNumber1 != null && SSNNumber1 != "") {
+                var cleanSSNNumber1 = FormateSSNNumber1(SSNNumber1);
+                $(this).val(cleanSSNNumber1);
+            }
+        })
+        $("#leadspouse").click(function () {
+            if ($("#StreetPrevious").val() != "" && $("#ZipCodePrevious").val() != "" && $("#CityPrevious").val() != "" && $("#StatePrevious").val() != "" && $("#leadpresent").prop('checked') == true) {
+                OpenErrorMessageNew("Error!", "you have already selected an option", "");
+                $("#leadspouse").attr('checked', false);
+            }
+            else if ($("#leadspouse").prop('checked') == false) {
+                $("#SpouseFirstName").val("");
+                $("#SpouseLastName").val("");
+                $("#SpouseDOB").val("");
+                $("#SpouseSSN").val("");
+                $(".dob-div").addClass('hidden');
+                $(".ssn_div").addClass('hidden');
+                SaveLeadCreditCheck();
+            }
+            else if ($("#leadspouse").prop('checked') == true) {
+                console.log("true");
+                $(".dob-div").removeClass('hidden');
+                $(".ssn_div").removeClass('hidden');
+            }
+            else {
+                console.log("false");
+                $(".dob-div").addClass('hidden');
+                $(".ssn_div").addClass('hidden');
+            }
+        })
+        $("#leadpresent").click(function () {
+            if ($("#SpouseFirstName").val() != "" && $("#SpouseLastName").val() != "" && $("#SpouseDOB").val() != "" && $("#SpouseSSN").val() != "" && $("#leadspouse").prop('checked') == true) {
+                OpenErrorMessageNew("Error!", "you have already selected an option", "");
+                $("#leadpresent").attr('checked', false);
+            }
+            else if ($("#leadpresent").prop('checked') == true) {
+                $(".Streetdiv").show();
+                $(".zip-div").show();
+                $(".city-div").show();
+                $(".state-div").show();
+            }
+            else {
+                $(".Streetdiv").hide();
+                $(".zip-div").hide();
+                $(".city-div").hide();
+                $(".state-div").hide();
+                SaveLeadCreditCheck();
+            }
+        })
+        if (prestreet == "" && prestate == "" && precity == "" && prezip == "") {
+            $("#leadpresent").attr('checked', false);
+            $(".Streetdiv").hide();
+            $(".zip-div").hide();
+            $(".city-div").hide();
+            $(".state-div").hide();
+        }
+        if (Sfname == "" && Slname == "") {
+            $("#SpouseDOB").val("");
+            $("#leadspouse").attr('checked', false);
+            $(".dob-div").addClass('hidden');
+            $(".ssn_div").addClass('hidden');
+        }
+    })
+</script>
+@Html.HiddenFor(x => x.Id)
+@Html.HiddenFor(x => x.CustomerId)
+<div class="form-group add_note_header_container">
+    <div class="add_note_header">@Localize.T("Lead Credit Check")</div>
+</div>
+<div class="container-fluid">
+    <div class="form-group clearfix">
+        <span class="text-custom">@Localize.T("Date of Birth")</span>
+        @Html.TextBoxFor(x => x.DateofBirth, "{0:MM/dd/yy}", new { @class = "form-control dob_lead", id = "DateofBirth", placeholder = "Date of Birth", tabindex = "13" })
+        <span class="massage-dob-lead">@Localize.T("Age must be 18+")</span>
+    </div>
+    <div class="form-group clearfix">
+        <span class="text-custom">@Localize.T("Social Security Number (required for credit check)")</span>
+        @Html.TextBoxFor(x => x.SSN, new { @class = "style-textbox form-control", id = "SSN", placeholder = "xxx-xx-xxxx", dataformat = "phone", tabindex = "14" })
+        <label class="label hidden red absolute lblssn" rel="PrimaryPhone">@Localize.T("Please enter Valid No."). </label>
+    </div>
+    <div class="clearfix">
+        <div class="row">
+            <div class="col-md-2" style="padding-right:0;">
+                <label for="leadspouse" class="label-cbx">
+                    <input type="checkbox" id="leadspouse" @((Model.CustomerSpouse != null && Model.CustomerSpouse.Id > 0) ? "checked" : "") class="invisible checkitemfortext" autocomplete="off">
+                    <div class="checkbox">
+                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                            <polyline points="4 11 8 15 16 6"></polyline>
+                        </svg>
+                    </div>
+                </label>
+            </div>
+            <div class="col-md-10" style="padding-top:14px;padding-left:0;">
+                <span class="txt-check">@Localize.T("SPOUSE ONLY")</span>
+            </div>
+        </div>
+    </div>
+    <div class="clearfix">
+        <div class="col-md-6 dob-div @((Model.CustomerSpouse != null && Model.CustomerSpouse.Id > 0) ? "" : "hidden")" style="padding-left:0;">
+            <span class="text-custom">
+                @Localize.T("First Name*")
+            </span>
+            @Html.TextBoxFor(x => x.CustomerSpouse.FirstName, new { @class = "form-control", id = "SpouseFirstName", placeholder = "First Name", tabindex = "13" })
+        </div>
+        <div class="col-md-6 ssn_div @((Model.CustomerSpouse != null && Model.CustomerSpouse.Id > 0) ? "" : "hidden")" style="padding-left:0;padding-right:0">
+            <span class="text-custom">@Localize.T("Last Name")<span class="red">*</span></span>
+            @Html.TextBoxFor(x => x.CustomerSpouse.LastName, new { @class = "form-control", id = "SpouseLastName", placeholder = "Last Name", tabindex = "14" })
+        </div>
+    </div>
+    <div class="form-group clearfix">
+        <div class="col-md-6 dob-div @((Model.CustomerSpouse != null && Model.CustomerSpouse.Id > 0) ? "" : "hidden")" style="padding-top:10px;padding-left:0;">
+            <span class="text-custom">
+                @Localize.T("Date of Birth")
+            </span>
+            @if (Model.CustomerSpouse.DateofBirth != new DateTime())
+            {
+                @Html.TextBoxFor(x => x.CustomerSpouse.DateofBirth, "{0:MM/dd/yy}", new { @class = "form-control", id = "SpouseDOB", placeholder = "Date of Birth", tabindex = "13" })
+            }
+            else
+            {
+                @Html.TextBox("SpouseDOB", "{0:MM/dd/yy}", new { @class = "form-control", placeholder = "Date of Birth", tabindex = "13" })
+            }
+            <span class="massage-dob-spouse">
+                @Localize.T("Age must be 18+")
+            </span>
+        </div>
+        <div class="col-md-6 ssn_div @((Model.CustomerSpouse != null && Model.CustomerSpouse.Id > 0) ? "" : "hidden")" style="padding-top:10px;padding-left:0;padding-right:0;">
+            <span class="text-custom">@Localize.T("Social Security Number")</span>
+            @Html.TextBoxFor(x => x.CustomerSpouse.SSN, new { @class = "style-textbox form-control", id = "SpouseSSN", placeholder = "xxx-xx-xxxx", tabindex = "14" })
+            <label class="label hidden red absolute ssnlbl" rel="SpouseSSN">@Localize.T("Please enter Valid No."). </label>
+        </div>
+    </div>
+    <div class="clearfix">
+        <div class="row">
+            <div class="col-md-2" style="padding-right:0;">
+                <label for="leadpresent" class="label-cbx">
+                    <input type="checkbox" id="leadpresent" @((Model.StreetPrevious != "" || Model.CityPrevious != "" || Model.StatePrevious != "" || Model.ZipCodePrevious != "") ? "checked" : "") class="invisible checkitemfortext" autocomplete="off">
+                    <div class="checkbox">
+                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                            <polyline points="4 11 8 15 16 6"></polyline>
+                        </svg>
+                    </div>
+                </label>
+            </div>
+            <div class="col-md-10" style="padding-top:14px;padding-left:0;">
+                <span class="txt-check">@Localize.T("PREVIOUS ADDRESS")</span>
+            </div>
+        </div>
+    </div>
+    <div class="clearfix">
+        <div class="col-md-12 Streetdiv" style="padding:0;">
+            <span class="text-custom">@Localize.T("Street")</span>
+            @Html.TextBoxFor(x => x.StreetPrevious, new { @class = "style-textbox form-control", id = "StreetPrevious", placeholder = "Street", tabindex = "5" })
+        </div>
+        <div class="col-md-4 CityState_insert_div_previous zip-div" style="padding-left:0 !important;padding-right:0;padding-top:6px;">
+            <span class="text-custom">@Localize.T("Zip")</span>
+            <input type="text" class="form-control" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" value="@Model.ZipCodePrevious" id="ZipCodePrevious" placeholder="Zip Code" tabindex=10 />
+            <div class='tt-menu'>
+                <div class='tt-dataset tt-dataset-autocomplete'> </div>
+            </div>
+        </div>
+        <div class="col-md-4 city-div" style="padding-top:6px;padding-right:0;">
+            <span class="text-custom">@Localize.T("City")</span>
+            @Html.TextBoxFor(x => x.CityPrevious, new { @class = "style-textbox form-control cityList-select2", id = "CityPrevious", style = "width:100%;text-transform:capitalize", placeholder = "City" })
+        </div>
+        <div class="col-md-4 state-div" style="padding-top:6px;padding-right:0;">
+            <span class="text-custom">@Localize.T("State")</span>
+            @Html.TextBoxFor(x => x.StatePrevious, new { @class = "style-textbox form-control stateList-select2", id = "StatePrevious", style = "width:100%", tabindex = "9", placeholder = "State" })
+        </div>
+    </div>
+</div>
+
+<section class="footer-section">
+    <footer class="footer">
+        <div class="SaveCancelDiv">
+            <button class="btn btn-leadnote" id="SaveCreditCheck"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+        </div>
+    </footer>
+</section>

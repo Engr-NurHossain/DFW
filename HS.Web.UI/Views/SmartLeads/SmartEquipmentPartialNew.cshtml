@@ -1,0 +1,592 @@
+﻿
+@model HS.Entities.AddSmartLeadEquipment
+@{
+    Layout = null;
+    double TotalPrice = 0;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<link href="~/Content/Css/Lead/PackagePartial.css" rel="stylesheet" />
+<link href="~/Content/Css/LeadEquipment/LeadEquipment.css" rel="stylesheet" />
+<link href="~/Content/Css/LeadEquipment/LeadSetupEquipments.css" rel="stylesheet" />
+<script>
+    var EquipmentPartialLeadId = @ViewBag.EquipmentPartialLeadId;
+</script>
+
+
+<script>
+    String.prototype.replaceAll = function (search, replacement) {
+        var target = this;
+        return target.split(search).join(replacement);
+    };
+
+    var PropertyLeadtemplate =
+                    "<div class='tt-suggestion tt-selectable' data-select='{1}' data-price='{2}' data-type='{5}' data-id='{0}' data-description='{6}'>"
+                       + "<p class='tt-sug-text'>"
+                           + "<em class='tt-sug-type'>{5}</em>{1}" + "<br />{7}"
+                           + "<em class='tt-eq-price'>${2}</em>"
+                           + "<br />"
+                       + "</p> "
+                    + "</div>";
+    var LeadEquipmentRow = "<tr>"
+                            + "<td valign='top' class='rowindex'></td>"
+                            + "<td valign='top'><input type='text'class='ProductName' onkeydown='SearchKeyDown(this,event)' onkeyup='SearchKeyUp(this,event)' />"
+                                + "<div class='tt-menu'>"
+                                    + "<div class='tt-dataset tt-dataset-autocomplete'> </div> "
+                                + "</div>"
+                                + "<span class='spnProductName'></span>"
+                            + "</td>"
+                            + "<td valign='top'>"
+                                + "<input type='number' class='txtProductQuantity' />"
+                                + "<span class='spnProductQuantity'></span>"
+                            + "</td>"
+                            + "<td valign='top'>"
+                                + "<input type='text' class='txtProductRate' />"
+                                + "<span class='spnProductRate'></span>"
+                            + "</td>"
+                            + "<td valign='top'>"
+                                + "<input type='text' class='txtProductDiscountRate' />"
+                                + "<span class='spnProductDiscountRate'></span>"
+                            + "</td>"
+                            + "<td valign='top'>"
+                                + "<input type='text' class='txtProductPackageDiscount' />"
+                                + "<span class='spnProductPackageDiscount'></span>"
+                            + "</td>"
+                            + "<td valign='top'>"
+                                + "<input type='text' class='txtTotalAmount' />"
+                                + "<span class='spnTotalAmount'></span>"
+                            + "</td>"
+                            + "<td valign='top' class='tableActions'>"
+                                + "<i class='fa fa-trash-o' aria-hidden='true'></i>"
+                            + "</td>"
+                        + "</tr>";
+
+    var InvoiceEqSuggestionclickbind = function (item) {
+        $('.LeadEquipmentTab .tt-suggestion').click(function () {
+            var clickitem = this;
+            $('.LeadEquipmentTab .tt-menu').hide();
+            $(item).val($(clickitem).attr('data-select'));
+            $(item).attr('data-id', $(clickitem).attr('data-id'));
+            var itemName = $(item).parent().find('span');
+            $(itemName).text($(item).val());
+
+            $(item).parent().parent().attr('data-id', $(clickitem).attr('data-id'));
+            $(item).parent().parent().addClass('HasItem');
+
+            var spnItemRate = $(item).parent().parent().find('.spnProductQuantity');
+            $(spnItemRate).text(1);
+            var txtItemRate = $(item).parent().parent().find('.txtProductQuantity');
+            $(txtItemRate).val(1);
+
+            /*Item Rate Set*/
+            var spnItemRate = $(item).parent().parent().find('.spnProductRate');
+            $(spnItemRate).text($(this).attr('data-price'));
+            var txtItemRate = $(item).parent().parent().find('.txtProductRate');
+            $(txtItemRate).val($(this).attr('data-price'));
+
+            /*Item ProductDiscountRate Set*/
+            var spnItemRate = $(item).parent().parent().find('.spnProductDiscountRate');
+            $(spnItemRate).text(0);
+            var txtItemRate = $(item).parent().parent().find('.txtProductDiscountRate');
+            $(txtItemRate).val(0);
+
+            /*Item ProductPackageDiscount Set*/
+            var spnItemRate = $(item).parent().parent().find('.spnProductPackageDiscount');
+            $(spnItemRate).text(0);
+            var txtItemRate = $(item).parent().parent().find('.txtProductPackageDiscount');
+            $(txtItemRate).val(0);
+
+            /*Total Amount Set*/
+            var spnItemRate = $(item).parent().parent().find('.spnTotalAmount');
+            $(spnItemRate).text($(this).attr('data-price'));
+            var txtItemRate = $(item).parent().parent().find('.txtTotalAmount');
+            $(txtItemRate).val($(this).attr('data-price'));
+
+        });
+        $('.LeadEquipmentTab .tt-suggestion').hover(function () {
+            var clickitem = this;
+            $('.tt-suggestion').removeClass("active");
+            $(clickitem).addClass('active');
+        });
+    }
+    var SearchKeyUp = function (item, event) {
+        if (event.keyCode == 40 || event.keyCode == 38 || event.keyCode == 13)
+            return false;
+        $.ajax({
+            url: domainurl + "/Invoice/GetOnlyEquipmentListByKey",
+            data: {
+                key: $(item).val()
+            },
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var resultparse = JSON.parse(data.result);
+
+                if (resultparse.length > 0) {
+                    var searchresultstring = "<div class='NewProjectSuggestion'>";
+                    for (var i = 0; i < resultparse.length; i++) {
+                        searchresultstring = searchresultstring + String.format(PropertyLeadtemplate,
+                            /*0*/resultparse[i].EquipmentId,
+                            /*1*/ resultparse[i].EquipmentName,
+                            /*2*/ resultparse[i].RetailPrice,
+                            /*3*/resultparse[i].Reorderpoint,
+                            /*4*/ resultparse[i].QuantityAvailable,
+                            /*5*/ resultparse[i].EquipmentType,
+                            /*6*/resultparse[i].EquipmentDescription,
+                            /*7*/resultparse[i].ManufacturerName);
+                    }
+                    searchresultstring += "</div>";
+                    var ttdom = $($(item).parent()).find('.tt-menu');
+                    var ttdomComplete = $($(item).parent()).find('.tt-dataset-autocomplete');
+                    $(ttdomComplete).html(searchresultstring);
+                    $(ttdom).show();
+
+                    InvoiceEqSuggestionclickbind(item);
+                    if (resultparse.length > 4) {
+                        $(".NewProjectSuggestion").height(352);
+                        $(".NewProjectSuggestion").css('position', 'relative');
+                        $(".NewProjectSuggestion").perfectScrollbar()
+                    }
+                }
+                if (resultparse.length == 0)
+                    $('.tt-menu').hide();
+            }
+        });
+    }
+    var SearchKeyDown = function (item, event) {
+
+        if (event.keyCode == 13) {
+            $('.tt-menu').hide();
+        }
+        if (event.keyCode == 40) {
+            if ($('.tt-suggestion').length > 0) {
+                if ($('.tt-suggestion.active').length == 0) {
+                    $($('.tt-suggestion').get(0)).addClass('active');
+                    $(item).val($($('.tt-suggestion').get(0)).attr('data-select'))
+                }
+                else {
+                    var suggestionlist = $('.tt-suggestion');
+                    var activesuggestion = $('.tt-suggestion.active');
+                    var indexactive = -1;
+                    for (var id = 0; id < suggestionlist.length; id++) {
+                        if ($(suggestionlist[id]).hasClass('active'))
+                            indexactive = id;
+                    }
+                    if (indexactive < suggestionlist.length - 1) {
+                        $('.tt-suggestion').removeClass('active');
+                        var possibleactive = $('.tt-suggestion').get(indexactive + 1);
+                        $($('.tt-suggestion').get(indexactive + 1)).addClass('active');
+                        $(possibleactive).addClass('active');
+                        $(item).val($(possibleactive).attr('data-select'));
+                    }
+                }
+            }
+            event.preventDefault();
+        }
+        if (event.keyCode == 38) {
+            if ($('.tt-suggestion').length > 0 && $('.tt-suggestion.active').length > 0) {
+                var suggestionlist = $('.tt-suggestion');
+                var activesuggestion = $('.tt-suggestion.active');
+                var indexactive = -1;
+                for (var id = 0; id < suggestionlist.length; id++) {
+                    if ($(suggestionlist[id]).hasClass('active'))
+                        indexactive = id;
+                }
+                if (indexactive > 0) {
+                    $('.tt-suggestion').removeClass('active');
+                    var possibleactive = $('.tt-suggestion').get(indexactive - 1);
+                    $(possibleactive).addClass('active');
+                    $(item).val($(possibleactive).attr('data-select'))
+                }
+            }
+            event.preventDefault();
+        }
+    }
+    var InitRowIndex = function () {
+        var i = 1;
+        $(".LeadEquipmentTab tbody tr td:first-child").each(function () {
+            $(this).text(i);
+            i += 1;
+        });
+    }
+
+    var RemoveLeadEquipment = function (id) {
+        var url = domainurl + "/SmartLeads/DeleteCustomerAppointmentEquipment";
+        var Param = JSON.stringify({
+            id: id
+        });
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: Param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew('Success!', data.message, function () {
+                        $(".Equipment_" + id).remove();
+                        LeadEquipmetnPriceCalculation();
+                    });
+                } else {
+                    OpenErrorMessageNew('Error!', data.message, function () { });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var LeadEquipmetnPriceCalculation = function () {
+        var totalRetailPrice = 0;
+        var totalPrice = 0;
+        $(".Setup-Equipments-Table .retail_price").each(function () {
+            totalRetailPrice += parseFloat($(this).text().trim().replaceAll(',', ''));
+        });
+        $(".Setup-Equipments-Table .total_price").each(function () {
+            totalPrice += parseFloat($(this).text().trim().replaceAll(',', ''));
+        });
+
+        $(".BottomTotalTr .retail-total").text('$' + totalRetailPrice.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+        $(".BottomTotalTr .sub-total").text('$' + totalPrice.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+    }
+
+    $(document).ready(function () {
+        InitRowIndex();
+        $("#LeadEquipmentTab tbody").on('click', 'tr', function (e) {
+            if ($(e.target).hasClass('fa')) {
+                return;
+            }
+            $("#LeadEquipmentTab tr").removeClass("focusedItem");
+            $(this).addClass("focusedItem");
+        });
+        $("#LeadEquipmentTab tbody").on('click', 'tr:last', function (e) {
+            if ($(e.target).hasClass('fa')) {
+                return;
+            }
+            $("#LeadEquipmentTab tbody tr:last").after(LeadEquipmentRow);
+            var i = 1;
+            $(".LeadEquipmentTab tbody tr td:first-child").each(function () {
+                $(this).text(i);
+                i += 1;
+            });
+        });
+        $(".LeadEquipmentTab tbody").on('click', 'tr td i.fa', function (e) {
+            $(this).parent().parent().remove();
+            if ($(".LeadEquipmentTab tbody tr").length < 2) {
+                $("#LeadEquipmentTab tbody tr:last").after(LeadEquipmentRow);
+            }
+            var i = 1;
+            $(".LeadEquipmentTab tbody tr td:first-child").each(function () {
+                $(this).text(i);
+                i += 1;
+            });
+        });
+        $(".LeadEquipmentTab tbody").on('change', "tr td .txtProductQuantity", function () {
+            var ProductQuantityDom = $(this).parent().find('span.spnProductQuantity');
+            $(ProductQuantityDom).text($(this).val());
+
+            var ProductDiscountDom = $(this).parent().parent().find('input.txtProductDiscountRate');
+            var ProductRateDom = $(this).parent().parent().find('input.txtProductRate');
+            if ($(ProductRateDom).val() != "" && $(ProductRateDom).val() > 0) {
+                var ProductYouAmountDom = $(this).parent().parent().find('input.txtTotalAmount');
+                $(ProductYouAmountDom).val(($(this).val() * $(ProductRateDom).val()) - ($(this).val() *$(ProductDiscountDom).val()));
+                var spnProductYouAmountDom = $(this).parent().parent().find('span.spnTotalAmount');
+                $(spnProductYouAmountDom).text(($(this).val() * $(ProductRateDom).val()) - ($(this).val() * $(ProductDiscountDom).val()));
+            }
+
+        });
+        $(".LeadEquipmentTab tbody").on('change', "tr td .txtProductDiscountRate", function () {
+            var ProductDiscountRateDom = $(this).parent().find('span.spnProductDiscountRate');
+            $(ProductDiscountRateDom).text($(this).val());
+
+            var ProductQuantityDom = $(this).parent().parent().find('input.txtProductQuantity');
+            var ProductRateDom = $(this).parent().parent().find('input.txtProductRate');
+            if ($(ProductQuantityDom).val() != "" && $(ProductQuantityDom).val() > 0) {
+                var ProductYouAmountDom = $(this).parent().parent().find('input.txtTotalAmount');
+                $(ProductYouAmountDom).val(($(ProductRateDom).val() * $(ProductQuantityDom).val()) - ($(this).val() * $(ProductQuantityDom).val()));
+                var spnProductYouAmountDom = $(this).parent().parent().find('span.spnTotalAmount');
+                $(spnProductYouAmountDom).text(($(ProductRateDom).val() * $(ProductQuantityDom).val()) - ($(this).val() * $(ProductQuantityDom).val()));
+            }
+        });
+        $(".LeadEquipmentTab tbody").on('change', "tr td .txtProductRate", function () {
+            var ProductRateDom = $(this).parent().find('span.spnProductRate');
+            $(ProductRateDom).text($(this).val());
+
+            var ProductQuantityDom = $(this).parent().parent().find('input.txtProductQuantity');
+            var ProductDiscountDom = $(this).parent().parent().find('input.txtProductDiscountRate');
+            if ($(ProductQuantityDom).val() != "" && $(ProductQuantityDom).val() > 0) {
+                var ProductYouAmountDom = $(this).parent().parent().find('input.txtTotalAmount');
+                $(ProductYouAmountDom).val(($(this).val() * $(ProductQuantityDom).val()) - ($(ProductDiscountDom).val() * $(ProductQuantityDom).val()));
+                var spnProductYouAmountDom = $(this).parent().parent().find('span.spnTotalAmount');
+                $(spnProductYouAmountDom).text(($(this).val() * $(ProductQuantityDom).val()) - ($(ProductDiscountDom).val() * $(ProductQuantityDom).val()));
+            }
+        });
+
+        $(".LeadEquipmentTab tbody").on('change', "tr td .txtTotalAmount", function () {
+            var spnTotalAmountDom = $(this).parent().find('span.spnTotalAmount');
+            $(spnTotalAmountDom).text($(this).val());
+
+
+
+            var txtQuantityDom = $(this).parent().parent().find('input.txtProductQuantity');
+            var txtDiscountDom = $(this).parent().parent().find('input.txtProductDiscountRate');
+            var txtUnitPricDom = $(this).parent().parent().find('input.txtProductRate');
+
+            var spnQuantityDom = $(this).parent().parent().find('span.spnProductQuantity');
+            var spnDiscountDom = $(this).parent().parent().find('span.spnProductDiscountRate');
+            var spnUnitPricDom = $(this).parent().parent().find('span.spnProductRate');
+
+            var Quantity = $(txtQuantityDom).val();
+            var Discount = $(txtDiscountDom).val();
+            var UnitPrice = $(txtUnitPricDom).val();
+            var TotalAmount = $(this).val();
+
+            console.log(TotalAmount);
+
+        });
+
+        $(".existing-equipments .tableActions .fa-trash-o").click(function () {
+            var id = $(this).attr('dataid');
+            OpenConfirmationMessageNew("Confirm?", "Do you want to remove this equipment?", function () {
+                RemoveLeadEquipment(id);
+            });
+        });
+    });
+</script>
+
+
+<div class="">
+    <input id="step" type="hidden" value="3" />
+    <table class="LeadEquipmentTab" id="LeadEquipmentTab">
+        <thead class="header_text_style">
+            <tr>
+                <th class="thead-th-style1 tab-index">
+                    <span>
+
+                    </span>
+                </th>
+                <th class="thead-th-style1 tab-Product">
+                    <span>
+                        @Localize.T("Product")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Quantity">
+                    <span>
+                        @Localize.T("Quantity")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Rate">
+                    <span>
+                        @Localize.T("Unit Price")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Amount">
+                    <span>
+                        @Localize.T("Discount Unit Price")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Amount">
+                    <span>
+                        @Localize.T("Package Discount")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Amount">
+                    <span>
+                        @Localize.T("Total Equipment Price")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Action">
+
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.LeadCustomerAppointmentEquipmentList != null)
+            {
+                foreach (var item in Model.LeadCustomerAppointmentEquipmentList)
+                {
+                    <tr data-id="@item.EquipmentId" class="HasItem">
+                        <td valign="top"></td>
+                        <td valign="top">
+                            <input type="text" class="ProductName" value="@item.EquipmentServiceName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                            <span class="spnProductName">@item.EquipmentServiceName</span>
+                        </td>
+                        <td valign="top">
+                            <input type="number" value="@item.Quantity" class="txtProductQuantity" />
+                            <span class="spnProductQuantity">@item.Quantity</span>
+                        </td>
+                        <td valign="top">
+                            <input type="text" class="txtProductRate" value="@item.UnitPrice" />
+                            <span class="spnProductRate">@item.UnitPrice</span>
+                        </td>
+                        <td valign="top">
+                            <input type="text" class="txtProductDiscountRate" value="@item.DiscountUnitPricce" />
+                            <span class="spnProductDiscountRate">@item.DiscountUnitPricce</span>
+                        </td>
+                        <td valign="top">
+                            <input type="text" class="txtProductPackageDiscount" value="@item.DiscountPckage" />
+                            <span class="spnProductDiscountRate">@item.DiscountPckage</span>
+                        </td>
+                        <td valign="top">
+                            <input type="text" class="txtTotalAmount" value="@item.Total" />
+                            <span class="spnTotalAmount">@item.Total</span>
+                        </td>
+                        <td valign="top" class="tableActions">
+                            <i class="fa fa-trash-o" aria-hidden="true"></i>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td valign="top"></td>
+                    <td valign="top">
+                        <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                        <span class="spnProductName"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="number" class="txtProductQuantity" />
+                        <span class="spnProductQuantity"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" class="txtProductRate" />
+                        <span class="spnProductRate"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" class="txtProductDiscountRate" />
+                        <span class="spnProductDiscountRate"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" class="txtProductPackageDiscount" />
+                        <span class="spnProductPackageDiscount"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" class="txtTotalAmount" />
+                        <span class="spnTotalAmount"></span>
+                    </td>
+                    <td valign="top" class="tableActions">
+                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                    </td>
+                </tr>
+                <tr>
+                    <td valign="top"></td>
+                    <td valign="top">
+                        <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                        <span class="spnProductName"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="number" onkeydown='OthersKeyDown(this,event)' class="txtProductQuantity" />
+                        <span class="spnProductQuantity"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductRate" />
+                        <span class="spnProductRate"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDiscountRate" />
+                        <span class="spnProductDiscountRate"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductPackageDiscount" />
+                        <span class="spnProductPackageDiscount"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtTotalAmount" />
+                        <span class="spnTotalAmount"></span>
+                    </td>
+                    <td valign="top" class="tableActions">
+                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="existing-equipments">
+    @if (Model.PackageEquipmentsList != null && Model.PackageEquipmentsList.Count > 0)
+    {
+        <div class="leadsetup_equip_header head_space">
+            @Localize.T("Setup Equipment")
+        </div>
+        <table class="Setup-Equipments-Table">
+            <thead>
+                <tr>
+                    <th>
+                        @Localize.T("Product")
+                    </th>
+                    <th>
+                        @Localize.T("Quantity")
+                    </th>
+                    <th>
+                        @Localize.T("Unit Price")
+                    </th>
+                    <th>
+                        @Localize.T("Discount Unit Price")
+                    </th>
+                    <th>
+                        @Localize.T("Package Discount")
+                    </th>
+                    <th>
+                        @Localize.T("Total Equipment Price")
+                    </th>
+                    <th style="width:5%;">
+
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var item in Model.PackageEquipmentsList)
+                {
+                    <tr class="Equipment_@item.Id">
+                        <td>
+                            @item.EquipmentServiceName
+                        </td>
+                        <td>
+                            @item.Quantity
+                        </td>
+                        <td>
+                            <span>
+                                @Currency@String.Format("{0:0.00}", item.UnitPrice)
+                            </span>
+                        </td>
+                        <td>
+                            <span>
+                                @Currency@String.Format("{0:0.00}", item.DiscountUnitPricce)
+                            </span>
+                        </td>
+                        <td>
+                            <span>
+                                @Currency@String.Format("{0:0.00}", item.DiscountPckage)
+                            </span>
+                        </td>
+                        <td>
+                            <span class="total_price">@Currency@String.Format("{0:0.00}", item.Total)</span>
+                        </td>
+                        <td valign="top" class="tableActions">
+                            @if (!item.IsIncluded && !item.IsDevice && !item.IsOptionalEqp)
+                            {
+                                <i class="fa fa-trash-o cursor-pointer" dataid="@item.Id" aria-hidden="true"></i>
+                            }
+                        </td>
+                    </tr>
+                }
+                <tr class="BottomTotalTr">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td>Total</td>
+                    <td class="retail-total">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@String.Format("{0:0.00}", TotalPrice)</td>
+                    <td class="sub-total">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@String.Format("{0:0.00}", Model.PackageEquipmentsList.Sum(x => x.Total))</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    }
+</div>

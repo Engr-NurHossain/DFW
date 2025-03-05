@@ -1,0 +1,131 @@
+﻿
+@model List<HS.Entities.TeamSetting>
+
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@Styles.Render("~/styles/DataTableBundles")
+@Styles.Render("~/styles/UserManagement")
+@Scripts.Render("~/scripts/DataTableBundles")
+
+<script>
+    var DataTablePageSize = 50;
+    var selectedDeleteId = 0;
+    var UserteamDelete = function () {
+        var delitem = selectedDeleteId;
+        $.ajax({
+            url: domainurl + "/UserMgmt/DeleteUserTeam",
+            data: { id: delitem },
+            type: "Post",
+            dataType: "Json",
+            success: function (result) {
+                if (result) {
+                    parent.LoadUserTeam();
+                }
+            },
+
+            error: function () {
+            }
+
+        });
+
+    }
+    var EditUserTeam = function (id) { 
+        OpenRightToLeftModal(domainurl + "/UserMgmt/AddUserTeam?id=" + id);
+    }
+    var DeleteUserTeam = function (id) {
+            selectedDeleteId = id;
+            OpenConfirmationMessageNew("Confirm?","Are you sure, you want to delete this?", UserteamDelete);
+    }
+    $(document).ready(function () {
+        //$('[data-toggle="tooltip"]').tooltip();
+        parent.$('.close').click(function () {
+            parent.$(".modal-body").html('');
+        })
+        var table = $('#tblAccFee').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        $(".LoaderWorkingDiv").hide();
+        $(".AddActvation").click(function () {
+            OpenRightToLeftModal(domainurl + "/UserMgmt/AddUserTeam");
+        })
+        $('#tblAccFee tbody').on('click', 'tr', function () {
+
+            if ($(this).hasClass('selected')) {
+                $(this).removeClass('selected');
+            }
+            else {
+                table.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+            }
+        });
+ 
+        $(".srch-term-acc").keyup(function () {
+            $("#tblAccFee_filter input").val($(".srch-term-acc").val());
+            $("#tblAccFee_filter input").trigger('keyup');
+        });
+    });
+</script>
+ 
+<div class="page-wrap user_group_container">
+    <div class="container-fluid">
+        <div class="user_group_header">@Localize.T("Manage Teams")</div>
+        <div class="left_div">
+            @*"searchbardiv" class removed*@
+            <div class="input-group add-on">
+                @*<input class="form-control srch-term-acc" placeholder="Find a user group" name="srch-term-acc" @*id="srch-term-acc" type="text">*@
+                <input class="form-control srch-term-acc" placeholder="Find a group" name="srch-term-acc" @*id="srch-term"*@ type="text">
+                <div class="input-group-btn">
+                    <button class="btn custom-btn green_button green_button" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+                </div>
+            </div>
+        </div>
+        <div class="right_div"> 
+            <button class="AddActvation"><i class="fa fa-plus-circle" aria-hidden="true"></i>@Localize.T(" New")</button>
+        </div>
+        <div class="custom-table user_group_table_container">
+            <table class="display user_group_table" id="tblAccFee">
+                <thead class="table-head-border">
+                    <tr>
+                        <th class="thead-th-style sorting">
+                            @Localize.T("Name")
+                        </th>
+                        <th class="thead-th-style sorting ">
+                            @Localize.T("Actions")
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr class="tr-style">
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Name")</div>
+                                <div>
+                                    <a href="javascript:void(0)" onclick="EditUserTeam(@item.Id)" class="item-edit-acc name-anchor-style green-tooltip tooltipmsg_@item.Id" data-id="@item.Id" data-placement="right" data-toggle="tooltip">
+                                        @item.Name
+                                    </a>
+                                </div>
+                            </td>
+                            <td class="table-body-td" valign="top">
+                                <div>@Localize.T("Actions")</div>
+                                <div>
+                                    <a href="javascript:void(0)" class="item-delete-panel-acc information_style_device " onclick="DeleteUserTeam(@item.Id)" data-id="@item.Id" title="@Localize.T("Delete")">
+                                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,366 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using cs = HS.Entities.Customer
+
+<link href="~/Content/Bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+<link href="~/Content/PikDay/css/pikaday.css" rel="stylesheet" />
+<link href="~/Content/FontAwesome/css/font-awesome.css" rel="stylesheet" />
+<script src="~/Content/Jquery-ui/jquery.js"></script>
+<script src="~/Content/PikDay/js/pikaday.js"></script>
+<script src="~/Content/Js/Modals/Modals.js"></script>
+<script src="~/Content/Js/Login/domainurl.js"></script>
+<script>
+    var ProratedStartDatePicker;
+
+    var CustomerGeneratedProratedBill = function () {
+        var url = domainurl + "/Customer/GenerateProratedBill/";
+        var param = {
+            CustomerId: parent.CustomerGuidId,
+            StartDate: $("#ProrateStartDate").val(),
+            EndDate: $("#ProrateEndDate").val(),
+            DayCount: $("#ProrateDayCount").val(),
+            Amount: $("#ProrateAmount").val(),
+            MonthlyFee: $("#MonthlyMonitoringFee").val(),
+            BillTax: $("#IsTaxable").prop('checked')
+        };
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: JSON.stringify(param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    parent.OpenSuccessMessageNew("Success!", "Generate prorated bill successfully.", function () { parent.ClosePopup(); });
+                }
+                else {
+                    parent.OpenErrorMessageNew("Error!", "Generate prorated bill failed.");
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $(".prorate_inner_height").height(window.innerHeight - 90);
+        ProratedStartDatePicker = new Pikaday({
+            format: 'MM/DD/YYYY',
+            field: $('#ProrateStartDate')[0],
+            trigger: $('#ProrateStartDate_custom')[0],
+            firstDay: 1
+        });
+
+        $("#ProrateStartDate").change(function () {
+            var dailyfee = 0;
+            var daycount = 0;
+            var dateconvertProrateStartDate = new Date($('#ProrateStartDate').val());
+            var proratestartdate = dateconvertProrateStartDate.getMonth() + 1 + "/" + dateconvertProrateStartDate.getDate() + "/" + dateconvertProrateStartDate.getFullYear();
+            $('#ProrateStartDate').val(proratestartdate);
+            var monthlymonitoringfee = $("#MonthlyMonitoringFee").val();
+            var dateconverProratedEndDate = new Date($('#ProrateEndDate').val());
+            var prorateenddate = dateconverProratedEndDate.getMonth() + 1 + "/" + dateconverProratedEndDate.getDate() + "/" + dateconverProratedEndDate.getFullYear();
+
+             var prostr1 = prorateenddate.split('/');
+                var prostr2 = proratestartdate.split('/');
+
+                //                yyyy   , mm       , dd
+                var prot1 = new Date(prostr1[2], prostr1[0] - 1, prostr1[1]);
+                var prot2 = new Date(prostr2[2], prostr2[0] - 1, prostr2[1]);
+            console.log("time");
+            if (prot2 > prot1) {
+                parent.OpenErrorMessageNew("Error!", "Please select valid start date", "");
+                $("#ProrateStartDate").val('');
+                $("#ProrateDayCount").val('');
+                $("#ProrateAmount").val('');
+
+            }
+            //else if (proratestartdate == prorateenddate) {
+            //    dailyfee = (parseFloat(monthlymonitoringfee).toFixed(2)) / 30;
+            //    daycount = 1;
+            //    $("#ProrateDayCount").val(daycount);
+            //    $("#ProrateAmount").val((dailyfee * daycount).toFixed(2));
+            //}
+            else {
+                var str1 = prorateenddate.split('/');
+                var str2 = proratestartdate.split('/');
+
+                //                yyyy   , mm       , dd
+                var t1 = new Date(str1[2], str1[0] - 1, str1[1]);
+                var t2 = new Date(str2[2], str2[0] - 1, str2[1]);
+
+                var diffMS = t1 - t2;
+                console.log(diffMS + ' ms');
+
+                var diffS = diffMS / 1000;
+                console.log(diffS + ' ');
+
+                var diffM = diffS / 60;
+                console.log(diffM + ' minutes');
+
+                var diffH = diffM / 60;
+                console.log(diffH + ' hours');
+
+                var diffD = diffH / 24;
+
+                dailyfee = (parseFloat(monthlymonitoringfee).toFixed(2)) / 30;
+                daycount = parseInt(diffD);
+                $("#ProrateDayCount").val(daycount);
+                $("#ProrateAmount").val((dailyfee * daycount).toFixed(2));
+            }
+        });
+        $("#SaveProrate").click(function () {
+            console.log("pro");
+            if ($("#ProrateStartDate").val() == null || $("#ProrateStartDate").val() == "" || $("#ProrateStartDate").val() == new Date()) {
+                parent.OpenErrorMessageNew("Error!", "Please select valid start date", "");
+                return false;
+            }
+            var url = domainurl + "/Customer/CheckPreviousProratedBill/";
+            var param = {
+                CustomerId: parent.CustomerGuidId
+                //StartDate: $("#ProrateStartDate").val(),
+                //EndDate: $("#ProrateEndDate").val(),
+                //DayCount: $("#ProrateDayCount").val(),
+                //Amount: $("#ProrateAmount").val(),
+                //MonthlyFee:$("#MonthlyMonitoringFee").val()
+            };
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: JSON.stringify(param),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        if (data.hasprorated) {
+                            parent.OpenConfirmationMessageNew("Confirm?", "This customer has prorated bill invoice " + data.invoicenumber +". Are you sure, you want to create a new prorated bill?", function () {
+                                CustomerGeneratedProratedBill();
+                            });
+                        }
+                        else {
+                            CustomerGeneratedProratedBill();
+                        }
+                    }
+                    else {
+                        parent.OpenErrorMessageNew("Error!", "Customer is not found.");
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+        });
+    })
+    $(window).resize(function () {
+        $(".prorate_inner_height").height(window.innerHeight - 90);
+
+    });
+</script>
+<style>
+    .prorate_container {
+        width: 100%;
+        float: left;
+    }
+
+        .prorate_container div {
+            box-sizing: border-box;
+        }
+
+    .prorate_header {
+        width: 100%;
+        float: left;
+        font-size: 23px !important;
+        padding: 5px 15px;
+        background-color: #f4f5f8;
+        border-bottom: 1px solid #ccc;
+    }
+
+    .prorate_footer {
+        width: 100%;
+        float: left;
+        padding: 5px 15px;
+        text-align: right;
+    }
+
+    .prorate_inner_height {
+        width: 100%;
+        float: left;
+    }
+
+    .prorate_inner {
+        width: 100%;
+        float: left;
+        padding: 10px 0px;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+        .prorate_inner .form-group {
+            width: 50%;
+            float: left;
+            padding: 0px 15px;
+        }
+
+    .prorate_content {
+        width: 33.333%;
+        float: left;
+        padding: 0px 15px;
+    }
+
+        .prorate_content .mad_header {
+            font-weight: bold;
+        }
+
+    .prorate_container .close_btn_size {
+        height: 20px;
+        width: 20px;
+        float: right;
+        cursor: pointer;
+    }
+
+    .input_group_for_date {
+        width: 100%;
+        float: left;
+        position: relative;
+        display: table;
+        border-collapse: separate;
+    }
+
+        .input_group_for_date .btn {
+            height: 34px;
+            border-radius: 0px 4px 4px 0px;
+            background-color: #fff;
+            border-color: #ccc;
+            color: #333;
+        }
+
+        .input_group_for_date input {
+            border-radius: 4px 0px 0px 4px;
+            -webkit-border-radius: 4px 0px 0px 4px;
+            -moz-border-radius: 4px 0px 0px 4px;
+        }
+
+    .currency_style .input-group-prepend {
+        margin-right: -1px;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        margin-right: -1px;
+    }
+
+    .currency_style .input-group-text {
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -webkit-box-align: center;
+        -ms-flex-align: center;
+        align-items: center;
+        padding: .375rem .75rem;
+        margin-bottom: 0;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #495057;
+        text-align: center;
+        white-space: nowrap;
+        background-color: #e9ecef;
+        border: 1px solid #ced4da;
+        border-radius: .25rem;
+    }
+
+    .currency_style .input-group > .input-group-prepend > .input-group-text {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .currency_style .input-group > .form-control {
+        position: relative;
+        -webkit-box-flex: 1;
+        -ms-flex: 1 1 auto;
+        flex: 1 1 auto;
+        width: 1%;
+        margin-bottom: 0;
+    }
+
+    .currency_style .input-group {
+        position: relative;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -ms-flex-wrap: wrap;
+        flex-wrap: wrap;
+        -webkit-box-align: stretch;
+        -ms-flex-align: stretch;
+        align-items: stretch;
+        width: 100%;
+    }
+</style>
+
+<input hidden id="MonthlyMonitoringFee" value="@Model.MonthlyMonitoringFee" />
+<input hidden id="ProratedCustomerId" value="@Model.CustomerId" />
+<input hidden id="IsTaxable" type="checkbox" @(Model.BillTax ? "checked=\"checked\"" : "") value="true"/>
+<div class="prorate_container">
+    <div class="prorate_header">
+        @Localize.T("Generate Prorated Bill")
+        <img onclick="parent.ClosePopup()" class="close_btn_size" title="Close" src="/Content/Icons/cross_update.png">
+    </div>
+    <div class="prorate_inner_height">
+        <div class="prorate_inner">
+
+            <div class="form-group clearfix width-33p" id="ProrateStartDate_custom">
+                <span class="span-style">@Localize.T("Start Date")</span>
+                <div class="input_group_for_date add-on">
+                    <input type="text" id="ProrateStartDate" class="form-control" placeholder="mm/dd/yyyy" autocomplete="off" />
+                    <div class="input-group-btn">
+                        <btn class="btn">
+                            <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                        </btn>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group clearfix width-33p">
+                <span class="span-style">@Localize.T("End Date")</span>
+                <div class="input_group_for_date add-on">
+                    <input type="text" disabled id="ProrateEndDate" class="form-control" value="@(Model.FirstBilling!=null  ? Model.FirstBilling.ToString("MM/dd/yyyy") : "")" placeholder="mm/dd/yyyy" />
+                    <div class="input-group-btn">
+                        <btn class="btn">
+                            <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                        </btn>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group clearfix width-33p">
+                <span class="span-style">@Localize.T("Day")</span>
+                <input type="text" class="form-control" disabled id="ProrateDayCount" placeholder="Day Count" />
+            </div>
+            <div class="form-group clearfix width-33p">
+                <span class="span-style">@Localize.T("Amount")</span>
+                <div class="currency_style">
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">
+                                $
+                            </span>
+                        </div>
+                        <input type="text" class="form-control" disabled id="ProrateAmount" placeholder="Prorate Amount" />
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+    <div class="prorate_footer"><button class="btn btn-success SaveProrate" id="SaveProrate">@Localize.T("Generate")</button></div>
+</div>
+
+

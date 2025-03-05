@@ -1,0 +1,131 @@
+﻿@{
+    Layout = null;
+}
+@using System.Collections;
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+
+<link href="~/Content/Bootstrap/css/bootstrap.css" rel="stylesheet" />
+<link href="~/Content/Css/Estimator/EstimatorFilter.css" rel="stylesheet" />
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+
+<script src="~/Content/JQuery/jquery-3.1.1.js"></script>
+<script src="~/Content/Bootstrap/js/bootstrap.js"></script>
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<script>
+    var TicketId = '@ViewBag.TicketId';
+    var ShowAdditionalMemberList = '@ViewBag.ShowAdditionalMemberList';
+    var NotifyingMembers = '@ViewBag.NotifyingMembers';
+    var SaveCheckItem = function () {
+        parent.ResetCheckvalue();
+        if ($("#SendToCustomer").is(":checked")) {
+            parent.CheckValue.SendToCustomer = true;
+        }
+        if ($("#SendToTech").is(":checked")) {
+            parent.CheckValue.SendToTech = true;
+        }
+        if ($("#SendToAdditionalMembers").is(":checked")) {
+            parent.CheckValue.SendToAdditionalMembers = true;
+        }
+        if ($("#SendToNotifyingMembers").is(":checked")) {
+            parent.CheckValue.SendToNotifyingMembers = true;
+        }
+    }
+    var SetCheckboxStatus = function () {
+        if (parent.CheckValue.SendToCustomer == true) {
+            $("#SendToCustomer").prop('checked', true);
+        }
+        if (parent.CheckValue.SendToTech == true) {
+            $("#SendToTech").prop('checked', true);
+        }
+        if (parent.CheckValue.SendToAdditionalMembers == true) {
+            $("#SendToAdditionalMembers").prop('checked', true);
+        }
+        if (parent.CheckValue.SendToNotifyingMembers == true) {
+            $("#SendToNotifyingMembers").prop('checked', true);
+        }
+    }
+
+    var SendNotificationToUser = function () {
+
+        //var param = JSON.stringify({
+        //    Id: EstimatorIntId,
+
+        //});
+        $.ajax({
+            url: "/Ticket/NotificationSendToSelectedUser",
+            data: {
+                TicketId: TicketId,
+                SendToCustomer: $("#SendToCustomer").is(':checked'),
+                SendToTech: $("#SendToTech").is(':checked'),
+                SendToAdditionalMembers: $("#SendToAdditionalMembers").is(':checked'),
+                SendToNotifyingMembers: $("#SendToNotifyingMembers").is(':checked'),
+            },
+            //data: param,
+
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result) {
+                    parent.OpenSuccessMessageNew("Success!", "Notification Sent Successfully!");
+                    parent.ClosePopup();
+
+                    setTimeout(function () {
+                        console.log("TimeOut");
+                        //parent.$(".closenew").click();
+                        //parent.OpenSuccessMessageNew(false);
+                        $("#__ConfirmationMessageModal_").trigger("click");
+                    }, 3000);
+
+                } else {
+                    parent.OpenErrorMessageNew("Error!", "You Have To Select One To Send Notification");
+                }
+
+            }
+        });
+
+    }
+</script>
+
+<div class="estimator_filter_container">
+    <div class="estimator_filter_header">
+        <span>@Localize.T("Send Notification")</span>
+        <div class="CloseButtonDiv" onclick="parent.ClosePopup()" style="text-align:right; cursor:pointer">
+            <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+        </div>
+    </div>
+    <div class="estimator_filter_height">
+        <div class="estimator_filter_inner">
+            <div class="est_filt_block">
+                <div>
+                    <label><input type="checkbox" id="SendToCustomer" value="SendToCustomer" /> @Localize.T("Send To Customer")</label>
+                </div>
+                <div>
+                    <label><input type="checkbox" id="SendToTech" value="SendToTech" /> @Localize.T("Send To Technician")</label>
+                </div>
+                @if (@ViewBag.ShowAdditionalMemberList == "true")
+                {
+                    <div>
+                        <label><input type="checkbox" id="SendToAdditionalMembers" value="SendToAdditionalMembers" /> @Localize.T("Send To Additional Members")</label>
+                    </div>
+                }
+                @if (@ViewBag.NotifyingMembers == "true")
+                {
+                    <div>
+                        <label><input type="checkbox" id="SendToNotifyingMembers" value="SendToNotifyingMembers" /> @Localize.T("Send To Notifying Members")</label>
+                    </div>
+                }
+
+            </div>
+        </div>
+    </div>
+    <div class="estimator_filter_footer">
+        <button onclick="SendNotificationToUser()" class="btn green_button btnInv NotificationButton desktop_estimate_save">@Localize.T("Send")</button>
+
+    </div>
+</div>
+

@@ -1,0 +1,294 @@
+﻿@{
+    Layout = null;
+    DateTime EndDate = (DateTime)ViewBag.EndDate;
+    DateTime StartDate = (DateTime)ViewBag.StartDate;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<link href="~/Content/Css/TimeClockPto/TimeClockDefaultFilter.css" rel="stylesheet" />
+
+<script>
+    var StartDateDatepicker;
+    var EndDateDatepicker;
+    var FirstDayOfWeek = '@ViewBag.FirstDayOfWeek';
+    var payrollfilterweek = '@ViewBag.PayrollFilterWeek';
+    var accrualform = '@ViewBag.from';
+    var date = new Date();
+    var UpdatePtoCookie = function () {
+        var FirstDayStr = $("#PayrollFilterStartDate").val();
+        var EndDayStr = $("#PayrollFilterEndDate").val();
+        var FilterWeeksStr = $("#FilterWeeks").val();
+        var PTOFilterStr = $("#PTOFilter").val();
+        var NewCookie = String.format("{0},{1},{2},{3}", FirstDayStr, EndDayStr, FilterWeeksStr, PTOFilterStr);
+
+        $.cookie("_PtoFilter", NewCookie , { expires: 1*60*24, path: '/' });
+        //$.cookie("_EmpTimeFilter", NewCookie , { expires: 1*60*24, path: '/' });
+    }
+    var DownloadTimeClockReport = function () {
+        window.open(domainurl + "/Reports/GetAllEmploployeeTimeClockReport/?WeekStr=" + $("#PayrollFilterStartDate").val()
+            + "&WeekEnd=" + $("#PayrollFilterEndDate").val());
+    }
+    var DownloadEmpReport = function () {
+        window.open(domainurl + "/Reports/GetAllEmploployeeTimeClockReport/?userId=" + $("#EmployeeDrpDown").val()
+            + "&WeekStr=" + $("#PayrollFilterStartDate").val() + "&WeekEnd=" + $("#PayrollFilterEndDate").val());
+    }
+    var DownloadPayrollReport = function () {
+        window.open(domainurl + "/Reports/GetAllEmploployeePayrollReport/?StrStartDate=" + $("#PayrollFilterStartDate").val() + "&StrEndDate=" + $("#PayrollFilterEndDate").val() + "&FilterWeek=" + $("#FilterWeeks").val()+ "&CurrentEmployee=" + $("#CurrentEmployee").val());
+    }
+    var DownloadPtoReport = function () {
+        var PtoStatus = encodeURI($("#PTOStutas").val());
+        window.open(domainurl + "/Reports/GetAllPtoReport/?userId=" + $("#EmployeeDrpDown").val()
+     + "&WeekStr=" + $("#PayrollFilterStartDate").val() + "&WeekEnd=" + $("#PayrollFilterEndDate").val()+"&status="+ PtoStatus + "&getreport=true");
+    }
+    var DownloadOwnPtoReport = function () {
+        var PtoStatus = encodeURI($("#PTOStutas").val());
+        window.open(domainurl + "/Reports/GetAllPtoReport/?userId=" + $("#EmployeeDrpDown").val()
+     + "&WeekStr=" + $("#PayrollFilterStartDate").val() + "&WeekEnd=" + $("#PayrollFilterEndDate").val() + "&status="+ PtoStatus + "&isOwnPto=" + 1 + "&getreport=true");
+    }
+    $(document).ready(function () {
+        $("#TimeClockDownload").hide();
+        $("#EmpPayrollDownload").hide();
+        $("#EmpTimeClockDownload").hide();
+        $("#OwnPtoDownload").hide();
+        $("#PtoDownload").hide();
+        $("#FilterWeeks").val("");
+
+        //FilterName: PayrollFilterStartDate,PayrollFilterEndDate,PTOFilter,FilterWeeks
+        if ($(".TimeClockEmpTabHead").hasClass("active") == true)
+        {
+
+            $("#OwnPtoDownload").hide();
+            $("#TimeClockDownload").hide();
+            $("#Weeks").hide();
+            $("#EmpPayrollDownload").hide();
+            $("#PtoDownload").hide();
+            $("#EmpTimeClockDownload").show();
+
+        }
+        else if ($(".PayrollReportTabHead").hasClass("active") == true)
+        {
+            $("#OwnPtoDownload").hide();
+            $("#TimeClockDownload").hide();
+            $("#EmpTimeClockDownload").hide();
+            $("#PtoDownload").hide();
+            $("#EmpPayrollDownload").show()
+            $("#PayrollStartDate").show();
+            $("#PayrollEndDate").show();
+            $("#PTO").hide();
+
+        }
+        else if ($(".AccrualPTOTabHead").hasClass("active") == true) {
+            $("#OwnPtoDownload").hide();
+            $("#TimeClockDownload").hide();
+            $("#EmpTimeClockDownload").hide();
+            $("#PtoDownload").hide();
+            $("#EmpPayrollDownload").hide()
+            $("#PayrollStartDate").show();
+            $("#PayrollEndDate").show();
+            $("#PTO").hide();
+
+        }
+        else if ($(".PtoEmpTabHead").hasClass("active") == true)
+        {
+            $("#Weeks").hide();
+            $("#OwnPtoDownload").hide();
+            $("#TimeClockDownload").hide();
+            $("#EmpTimeClockDownload").hide();
+            $("#PtoDownload").show();
+            $("#EmpPayrollDownload").hide();
+            $("#Employee_Pto").show()
+
+
+        }
+        else if ($(".PtoTabHead").hasClass("active") == true) {
+            $("#Weeks").hide();
+            $("#OwnPtoDownload").show();
+            $("#EmpPayrollDownload").hide();
+            $("#EmpTimeClockDownload").hide();
+            $("#PtoDownload").hide();
+            $("#TimeClockDownload").hide();
+            $("#Employee_Pto").show()
+        }
+        else {
+            $("#Weeks").hide();
+            $("#EmpPayrollDownload").hide();
+            $("#EmpTimeClockDownload").hide();
+            $("#PtoDownload").hide();
+            $("#OwnPtoDownload").hide();
+            $("#TimeClockDownload").show();
+        }
+
+        StartDateDatepicker = new Pikaday({
+            field: $('#PayrollFilterStartDate')[0],
+            format: 'MM/DD/YYYY'
+        });
+        EndDateDatepicker = new Pikaday({
+            field: $('#PayrollFilterEndDate')[0],
+            format: 'MM/DD/YYYY'
+        });
+        $("#PayrollFilterBtn").click(function () {
+            FilterPayrollPaging(1);
+            UpdatePtoCookie();
+        });
+        $("#FilterWeeks").change(function () {
+            console.log("Test FilterWeeks");
+            if ($(this).val().split('/').length == 2) {
+                console.log("accrualform", accrualform);
+                if (payrollfilterweek == "LastWeekBefore" && accrualform == "AccrualPto") {
+                    console.log($(this).val());
+                    var StartingDay = getDateOfISOWeek($(this).val().split('/')[1], $(this).val().split('/')[0]);
+                    StartingDay = StartingDay.addDays(-8);
+                    StartDateDatepicker.setDate(StartingDay);
+                    var EndingDay = StartingDay.addDays(6);
+                    EndDateDatepicker.setDate(EndingDay);
+                }
+                else if (payrollfilterweek == "LastWeekBefore") {
+                    console.log($(this).val());
+                    var StartingDay = getDateOfISOWeek($(this).val().split('/')[1], $(this).val().split('/')[0]);
+                    StartingDay = StartingDay.addDays(-14);
+                    StartDateDatepicker.setDate(StartingDay);
+                    var EndingDay = StartingDay.addDays(6);
+                    EndDateDatepicker.setDate(EndingDay);
+                }
+                else {
+                    var StartingDay = getDateOfISOWeek($(this).val().split('/')[1], $(this).val().split('/')[0]);
+                    StartDateDatepicker.setDate(StartingDay);
+                    var EndingDay = StartingDay.addDays(6);
+                    EndDateDatepicker.setDate(EndingDay);
+                }
+            }
+            else if ($(this).val() == "") {
+                $("#PayrollFilterStartDate").val("");
+                $("#PayrollFilterEndDate").val("");
+            }
+        });
+        if ($("#PTOFilter").val() == "AllTime") {
+            var Today = new Date();
+            //$("#PayrollFilterStartDate").val("");
+            //$("#PayrollFilterEndDate").val("");
+            var FirstDayOfMonth = '@ViewBag.FilterStartDate';
+            var LastDayOfMonth = new Date(Today.getFullYear() + 1, 11, 31);
+
+            StartDateDatepicker.setDate(FirstDayOfMonth);
+            EndDateDatepicker.setDate(LastDayOfMonth);
+
+
+        }
+        $("#PTOFilter").change(function () {
+            if ($(this).val() == "Today") {
+                var Today = new Date();
+                StartDateDatepicker.setDate(Today);
+                EndDateDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "Yesterday") {
+                var Today = new Date();
+                EndDateDatepicker.setDate(Today.addDays(-1));
+                StartDateDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "ThisWeek") {
+                var Today = new Date();
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDateDatepicker.setDate(StartDay);
+                EndDateDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "LastWeek") {
+                var Today = new Date();
+                Today = Today.addDays(-7);
+
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDateDatepicker.setDate(StartDay);
+                EndDateDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "ThisMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() + 1, 0);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+
+            }
+            else if ($(this).val() == "LastMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() - 1, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 0);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "ThisYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), 11, 31);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "LastYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear() - 1, 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear() - 1, 11, 31);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "AllTime") {
+                var Today = new Date();
+                //$("#PayrollFilterStartDate").val("");
+                //$("#PayrollFilterEndDate").val("");
+                var FirstDayOfMonth = '@ViewBag.FilterStartDate';
+                var LastDayOfMonth = new Date(Today.getFullYear() + 1, 11, 31);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+        });
+        FilterPayrollPaging(1);
+    });
+</script>
+
+<div class="input-group">
+    <span id="PayrollStartDate">
+        <input type="text" value="@StartDate.ToString("MM/dd/yy")" placeholder="Start Date" autocomplete="off" id="PayrollFilterStartDate" class="form-control border-radius-0" />
+    </span>
+    <span id="PayrollEndDate">
+        <input type="text" value="@EndDate.ToString("MM/dd/yy")" placeholder="End Date" autocomplete="off" id="PayrollFilterEndDate" class="form-control border-radius-0" />
+    </span>
+    <span id="PTO">
+        @Html.DropDownList("PTOFilter", (List<SelectListItem>)ViewBag.PTOFilterOptions, new { @class = "form-control" })
+    </span>
+    <span class="@(ViewBag.ShowWeekList==false ? "hidden":"")" id="Weeks">
+        @Html.DropDownList("FilterWeeks", (List<SelectListItem>)ViewBag.WeekList, new { @class = "form-control" })
+    </span>
+    <span id="Employee_Pto" style="display:none">
+        @Html.DropDownList("PTOStutas", (List<SelectListItem>)ViewBag.PTOStutasList, new { @class = "form-control PTOStutas",@multiple = "multiple", id = "PTOStutas" })
+    </span>
+    <div class="input-group-btn time_clock_filter_btn">
+        <button id="PayrollFilterBtn" class="btn PayrollFilterBtn green_button" title="@Localize.T("Search")">
+            <i class="glyphicon glyphicon-search"></i>
+        </button>
+    </div>
+</div>
+
+<span id="TimeClockDownload">
+    <button id="PayrollDownloadBtn" onclick="DownloadTimeClockReport()" class="btn PayrollFilterBtn green_button" title="@Localize.T("Download")"><i class="glyphicon glyphicon-download-alt"></i></button>
+</span>
+<span id="EmpTimeClockDownload">
+    <button id="PayrollDownloadBtn" onclick="DownloadEmpReport()" class="btn PayrollFilterBtn green_button" title="@Localize.T("Download")"><i class="glyphicon glyphicon-download-alt"></i></button>
+</span>
+<span id="EmpPayrollDownload">
+    <button id="PayrollDownloadBtn" onclick="DownloadPayrollReport()" class="btn PayrollFilterBtn green_button" title="@Localize.T("Download")"><i class="glyphicon glyphicon-download-alt"></i></button>
+</span>
+<span id="PtoDownload">
+    <button id="PayrollDownloadBtn" onclick="DownloadPtoReport()" class="btn PayrollFilterBtn green_button" title="@Localize.T("Download")"><i class="glyphicon glyphicon-download-alt"></i></button>
+</span>
+<span id="OwnPtoDownload">
+    <button id="PayrollDownloadBtn" onclick="DownloadOwnPtoReport()" class="btn PayrollFilterBtn green_button" title="@Localize.T("Download")"><i class="glyphicon glyphicon-download-alt"></i></button>
+</span>

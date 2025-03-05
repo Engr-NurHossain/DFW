@@ -1,0 +1,315 @@
+﻿@{ 
+    Layout = null;
+}
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>
+<link href="~/Content/Css/API/SenEcontractWithSurvey.css" rel="stylesheet" />
+<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+    <script>
+        var SurveyCancellingService = false;
+        var SurveyConfirmContractLength = false;
+        var SurveyFamiliarizationPeriod = false;
+        var SurveyHomeowner = false;
+        var SurveyNewConstruction = false;
+        var SurveyUnderContract = false;
+        var CustomerGuidId = '@ViewBag.CustomerId';
+        var From = '@ViewBag.from';
+
+     
+
+        var SendEcontract = function (ContactId) {
+           
+                  $(".CloseButtonDiv").click();
+             if ($('#Yhomeowner').is(':checked') == true) {
+                SurveyHomeowner = true;
+            }
+            if ($('#YConstruction').is(':checked') == true) {
+                SurveyNewConstruction = true;
+            }
+
+             if ($('#YMonitoringService').is(':checked') == true) {
+                SurveyUnderContract = true;
+            }
+            if ($('#YSecurity').is(':checked') == true) {
+                SurveyCancellingService = true;
+            }
+
+             if ($('#YReceiveMonitoring').is(':checked') == true) {
+                SurveyConfirmContractLength = true;
+            }
+            if ($('#Yauthorize').is(':checked') == true) {
+                SurveyFamiliarizationPeriod = true;
+            }
+        SurveyQuestion = {
+            SurveyHomeowner: SurveyHomeowner,
+            SurveyNewConstruction: SurveyNewConstruction,
+            SurveyUnderContract: SurveyUnderContract,
+            SurveyCancellingService: SurveyCancellingService,
+
+            SurveyConfirmContractLength: SurveyConfirmContractLength,
+            SurveyFamiliarizationPeriod: SurveyFamiliarizationPeriod,
+            IsExtendedService: $("#IsExtendedService").is(':checked'),
+
+          
+        };
+        PersonalGuarantee = {
+            IsPersonalGuarantee: $("#IsPersonalGuarantee").is(":checked"),
+            Title : $("#title").val(),
+            Address1: $("#address1").val(),
+            Address2: $("#address2").val(),
+            City: $("#City").val(),
+            State: $("#State").val(),
+            ZipCode: $("#ZipCode").val()
+        };
+        var url = domainurl + "/SmartLeads/SendEcontract";
+        var Param = JSON.stringify({
+            CustomerId: CustomerGuidId,
+            PaymentDate: $("#PaymentDate").val(),
+            InstallStartDate: $("#StartDate").val(),
+            InstallFinishDate: $("#FinishDate").val(),
+            PromotionMonth: $("#Promomonth").val(),
+            PrepaidMonth:  $("#Prepaidmonth").val(),
+            Questions: SurveyQuestion,
+            personalGuarantee: PersonalGuarantee,
+            from: From,
+            ActivitionFee: $("#activitionfee").val(),
+            ContactId: ContactId,
+            ContractType: $("input:radio[name=ContractType]:checked").val()
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".sewsLoader").removeClass("hidden"),
+            url: url,
+            data: Param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                $(".sewsLoader").addClass("hidden");
+                if (data.result == true) {
+                    OpenSuccessMessageNew("", data.Message, function () {
+                        CloseTopToBottomModal();
+                        if (From == "lead") {
+                             window.location.href = "/Customer/Customerdetail/?id=" + CurrentCustomerIntId;
+                        }
+                    });
+                }
+                else {
+                    OpenErrorMessageNew("", data.Message, function () {
+                   
+                    });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+         
+            }
+        });
+        }
+
+        var CommonUiValidationForPG = function () {
+            var result = true;
+            var inputlist = $("input");
+          
+            for (var i = 0; i < inputlist.length; i++) {
+              
+                if (($(inputlist[i]).attr('datarequired') == 'true' || $(inputlist[i]).attr('daterequired') == 'true') && $(inputlist[i]).is(":visible")) {
+                    var check = Validation.ForTextbox($(inputlist[i]));
+                    if (!check)
+                        result = check;
+                }
+            }
+
+            return result;
+        }
+        $(document).ready(function () {
+
+            
+            var idlist = [
+                { id: ".SecondaryContactMagnific", type: 'iframe', width: 550, height: 420 }
+            ];
+            jQuery.each(idlist, function (i, val) {
+                magnificPopupObj(val);
+            });
+            $(".sews_inner_height").height(window.innerHeight - 98);
+            $(".PGDetails").hide();
+            $("#IsPersonalGuarantee").change(function () {
+                if ($("#IsPersonalGuarantee").is(":checked") == true) {
+                    $(".PGDetails").show();
+                }
+                else {
+                     $(".PGDetails").hide();
+                }
+            });
+            //$("#SendContract").click(function () {
+            //    console.log("dsf");
+            //    if (CommonUiValidationForPG()) {
+            //        SendEcontract();
+            //    }
+            //})
+
+            $(".typeItem").change(function () {
+                console.log("gfdgf");
+                if ($(this).is(':checked')) {
+                    if ($(this).val() == 'S' || $(this).val() == 'B') {
+                        $("#SecondaryContactList").load("/SmartPackageSetup/SecondaryContactListForCreditCheck?CustomerId=" + CustomerGuidId);
+                        $("#SecondaryContactList").show();
+                    }
+                    else {
+                        $("#SecondaryContactList").hide();
+                    }
+            }
+              
+            });
+
+            
+            $("#SendContract").click(function () {
+
+                if ($("input:radio[name=ContractType]:checked").val() == 'S' || $("input:radio[name=ContractType]:checked").val() == 'B') {
+                    console.log("dfsd");
+                    var LoadUrl = domainurl + "/SmartPackageSetup/GetAllOtherCustomerContact?CustomerId=" + CustomerGuidId+"&For=SecondarySigner";
+                    $(".SecondaryContactMagnific").attr("href", LoadUrl);
+                    setTimeout(function () { $(".SecondaryContactMagnific").click();}, 1000);
+            
+                }
+                else {
+                    SendEcontract();
+                }
+        
+            });
+         
+        });
+    </script>
+
+    <div class="sewsLoader hidden">
+        <div class="loader-background"></div>
+        <div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>
+    </div>
+    <div class="sews_container">
+        <div class="sews_header">
+            Econtract Survey
+        </div>
+        <div class="sews_inner_height">
+            <div class="sews_inner">
+
+                <div class="sews_content">
+                    <div class="sews_content_block">Are you the homeowner?</div>
+                    <label class="sews_yes"><input type="radio" id="Yhomeowner" name="homeowner" value="Y" checked> Yes</label>
+                    <label class="sews_no"><input type="radio" id="Nhomeowner" name="homeowner" value="N"> No<br></label>
+                </div>
+
+                <div class="sews_content">
+                    <div class="sews_content_block">Is your home new construction?”</div>
+                    <label class="sews_yes"><input type="radio" id="YConstruction" name="Construction" value="Y"> Yes</label>
+                    <label class="sews_no"><input type="radio" id="NConstruction" name="Construction" value="N" checked> No<br></label>
+                </div>
+
+                <div class="sews_content">
+                    <div class="sews_content_block">Are you under any contractual obligation with any other company for monitoring services?</div>
+                    <label class="sews_yes"><input type="radio" id="YMonitoringService" name="MonitoringService" value="Y"> Yes</label>
+                    <label class="sews_no"><input type="radio" id="NMonitoringService" name="MonitoringService" value="N" checked> No<br></label>
+                </div>
+
+                <div class="sews_content">
+                    <div class="sews_content_block">
+                        I understand that @ViewBag.CompanyName, Inc. or any representative of @ViewBag.CompanyName, Inc.
+                        cannot be responsible for canceling any services with my current security company (If Applicable)
+                    </div>
+                    <label class="sews_yes"><input type="radio" id="YSecurity" name="Security" value="Y" checked> Yes</label>
+                    <label class="sews_no"><input type="radio" id="NSecurity" name="Security" value="N"> No<br></label>
+                </div>
+
+                <div class="sews_content">
+                    <div class="sews_content_block">
+                        I understand that I have signed an agreement to receive monitoring
+                        for 36 month.
+                    </div>
+                    <label class="sews_yes"><input type="radio" id="YReceiveMonitoring" name="ReceiveMonitoring" value="Y" checked> Yes</label>
+                    <label class="sews_no"><input type="radio" id="NReceiveMonitoring" name="ReceiveMonitoring" value="N"> No<br></label>
+                </div>
+
+                <div class="sews_content">
+                    <div class="sews_content_block">
+                        A familiarization period is recommend to allow you to
+                        become familiar with the use of your security system and to avoid false alarms and potential fines. Do
+                        you authorize us to configure a 7 day familiarization period?
+                    </div>
+                    <label class="sews_yes"><input type="radio" id="Yauthorize" name="authorize" value="Y" checked> Yes</label>
+                    <label class="sews_no"><input type="radio" id="Nauthorize" name="authorize" value="N"> No<br></label>
+                </div>
+                @if (ViewBag.CusType == "Residential")
+                {
+                    <div class="sews_content">
+                        <label class="sews_yes"><input type="checkbox" id="IsExtendedService" checked> Is this an Extended Service Option</label>
+                    </div>
+                }
+
+                @if (ViewBag.CusType == "Commercial")
+                {
+                    <div class="sews_content">
+                        <label class="sews_yes"><input type="checkbox" id="IsPersonalGuarantee">PersonalGuarantee</label>
+                    </div>
+                    <div class="PGDetails">
+                        <div class="PGDetails_header">
+                            PG Info
+                        </div>
+                        <div class="form-group">
+                            <div class="aba_header">Title<span>*</span></div>
+                            <input type="text" id="title" value="" class="form-control" placeholder="Title" name="title" datarequired="true" />
+                            <label rel="title" class="label hidden red">Title required.</label>
+                        </div>
+                        <div class="form-group">
+                            <div class="aba_header">Adddress 1<span>*</span></div>
+                            <input type="text" id="address1" value="" class="form-control" datarequired="true" name="address1" placeholder="Address 1" />
+                            <label rel="address1" class="label hidden red">Address1 required.</label>
+                        </div>
+                        <div class="form-group">
+                            <div class="aba_header">Adddress 2<span>*</span></div>
+                            <input type="text" id="address2" value="" name="address2" class="form-control" placeholder="Address 2" />
+
+                        </div>
+                        <div class="form-group">
+                            <div class="aba_header">City<span>*</span></div>
+                            <input type="text" class="form-control" id="City" name="City" value="" datarequired="true" placeholder="City" />
+                            <label rel="City" class="label hidden red">City required.</label>
+                        </div>
+                        <div class="form-group">
+                            <div class="aba_header">State<span>*</span></div>
+                            <input type="text" class="form-control" id="State" name="State" value="" datarequired="true" placeholder="State" />
+                            <label rel="State" class="label hidden red">State required.</label>
+                        </div>
+
+                        <div class="form-group CityState_insert_div">
+                            <div class="aba_header">Zip Code<span>*</span></div>
+
+                            <input type="text" class="" onkeydown="CityStateSearchKeyDown(this,event)" name="ZipCode" onkeyup="CityStateSearchKeyUp(this,event)" value="" datarequired="true" id="ZipCode" placeholder="Zip Code" />
+                            <label rel="ZipCode" class="label hidden red">ZipCode required.</label>
+                            <div class='tt-menu'>
+                                <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <div class="sews_content">
+
+                    <label class="sews_yes"><input type="radio" class="typeItem" name="ContractType" value="P" checked>Primary Contact</label>
+                    <label class="sews_yes"><input type="radio" class="typeItem" name="ContractType" value="S">Secondary Contact</label>
+                    <label class="sews_yes"><input type="radio" class="typeItem" name="ContractType" value="B">Both</label>
+                </div>
+                <div id="SecondaryContactList">
+
+                </div>
+
+            </div>
+        </div>
+
+
+        <div class="sews_footer">
+            <button type="button" id="SendContract" class="btn green_button">
+                Send
+            </button>
+        </div>
+        <div style="display:none">
+            <a href="" class="SecondaryContactMagnific">Secondary Contact</a>
+        </div>
+    </div>

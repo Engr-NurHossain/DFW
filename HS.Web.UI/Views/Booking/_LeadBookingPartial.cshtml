@@ -1,0 +1,213 @@
+﻿@using Localize = HS.Web.UI.Helper.LanguageHelper
+@{
+    Layout = null;
+}
+@using HS.Framework
+@model List<HS.Entities.Booking>
+<link href="~/Content/Css/Booking/Booking.css" rel="stylesheet" />
+<style>
+    #tblBooking > thead > tr > th:nth-child(3) {
+        width: 30% !important;
+    }
+
+    #tblBooking > thead > tr > th:nth-child(2) {
+        width: 20% !important;
+    }
+</style>
+<script>
+    var DataTablePageSize = 50;
+    var OpenBkById = function (bkId) {
+        if (typeof (bkId) != "undefined" && bkId > 0) {
+            if (typeof (customerId) == "undefined") {
+                customerId = 0;
+            }
+            OpenTopToBottomModal("/Booking/AddLeadBooking/?customerid=" + customerId + "&Id=" + bkId);
+        }
+    }
+    //Booking Clone Method 
+    var CloneBooking = function (bookingId) {
+        $.ajax({
+            url: "/Booking/CloneBooking",
+            data: {
+                BookingId: bookingId
+            },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message);
+                    OpenLeadBookTab();
+                    CloseTopToBottomModal();
+
+                } else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            }
+        });
+    }
+    var AddBooking = function(CustomerId){
+        OpenTopToBottomModal("/Booking/AddLeadBooking?customerid=" + CustomerId);
+    }
+    $(document).ready(function(){
+        var BookingTable = $('#tblBooking').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        BookingTable.order([0, 'desc']).draw();
+        
+        //Clone Booking Button Action 
+        $(".BookingCloneBtn").click(function () {
+            var SelectedBookingId = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirmation Required!", "Are you sure, you want to make a duplicate copy of this booking.?", function () {
+                CloneBooking(SelectedBookingId);
+            });
+        });
+    });
+</script>
+
+<div class="page-content-wrap cus-padding-top10p">
+    <div class="header-section">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="width-50p">
+                    <div class="btn-group lead_booking_batch_btn">
+                        <button class="btn green_button">@Localize.T("Batch Actions")</button>
+                        <button data-toggle="dropdown" class="btn dropdown-toggle green_button" type="button" aria-expanded="false">
+                            <span class="caret"></span>
+                        </button>
+                        <ul style="min-width:inherit; margin-top:0px !important; border-radius:4px !important; border-color: #b1b4bb !important;" class="dropdown-menu customer-dropdown-ul-style">
+                            <li class="Edit-Customer"><a class="dropallign" href="#">@Localize.T("Send Bookings")</a></li>
+                            <li class="Delete-Customer"><a class="dropallign" href="#">@Localize.T("Print Bookings")</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="width-50p text-right">
+                    <button class="btn btn-primary btn-add-booking" onclick="AddBooking(@ViewBag.CustomerId)" >
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i> &nbsp;@Localize.T("New")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="Booking-table">
+        <table class="display" id="tblBooking">
+            <thead class="table-head-border ep_hide_for_device">
+                <tr>
+                    <th class="thead-th-style">
+                        @Localize.T("Booking")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Status")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("User/TimeStamp")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Total")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Action")
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr class="tr-style">
+                        <td class="table-body-td-style ep_device_row" valign="top">
+                            <div class="ep_device_header">@Localize.T("Booking")<span>:</span></div>
+                            <div class="ep_device_info">
+                                @if (item.Status == HS.Web.UI.Helper.LabelHelper.BookingStatus.SentToCustomer
+                                    || item.Status == HS.Web.UI.Helper.LabelHelper.BookingStatus.ResendToCustomer
+                                    || item.Status == HS.Web.UI.Helper.LabelHelper.BookingStatus.CustomerViewed)
+                                {
+                                    <a class="cus-anchor" href="javascript:void(0)" onclick="OpenBkById(@item.Id)"><span class="glyphicon glyphicon-lock"></span>@item.BookingId</a>
+                                }
+                                else
+                                {
+                                    <a class="cus-anchor" href="javascript:void(0)" onclick="OpenBkById(@item.Id)">@item.BookingId</a>
+                                }
+                            </div>
+                        </td>
+                        <td class="table-body-td-style ep_device_row" valign="top">
+                            <div class="ep_device_header">@Localize.T("Status")<span>:</span></div>
+                            <div class="ep_device_info">
+                                <div style="float:left">
+                                    @if (item.CustomerViewedTime != null && item.CustomerViewedTime != new DateTime() && item.CustomerViewedTime.HasValue)
+                                    {
+                                        if (item.CustomerViewedType == HS.Web.UI.Helper.LabelHelper.EstimateStatus.SentToCustomer)
+                                        {
+                                            <span class="green-tooltip estimatestatus" data-toggle="tooltip" title="@string.Format(item.CustomerViewedTime.Value.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"))">@Localize.T("Sent To Customer")</span>
+                                        }
+                                        else if (item.CustomerViewedType == "LoadBooking")
+                                        {
+                                            <span class="green-tooltip estimatestatus" data-toggle="tooltip" title="@string.Format(item.CustomerViewedTime.Value.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"))">@Localize.T("Customer Viewed")</span>
+                                        }
+                                        else if (item.CustomerViewedType == "SignBooking")
+                                        {
+                                            <span class="green-tooltip estimatestatus" data-toggle="tooltip" title="@string.Format(item.CustomerViewedTime.Value.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"))">@Localize.T("Customer Signed")</span>
+                                        }
+                                        else if (item.CustomerViewedType == "SubmitBooking")
+                                        {
+                                            <span class="green-tooltip estimatestatus" data-toggle="tooltip" title="@string.Format(item.CustomerViewedTime.Value.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"))">@Localize.T("Customer Signed & Submitted")</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span>@item.Status</span>
+                                    }
+                                </div>
+                                @if (item.BookingSource == "Online")
+                                {
+                                    <div style="float:right; color:green;"><span>Online</span></div>
+                                }
+                                else
+                                {
+                                    <div style="float:right; color:black;"><span>Manual</span></div>
+                                }
+
+                            </div>
+                        </td>
+                        <td class="table-body-td-style ep_device_row" valign="top">
+                            @if (item.CreatedDate != new DateTime())
+                            {
+                                <div class="ep_device_header">@Localize.T("User/TimeStamp")<span>:</span></div>
+                                <div class="ep_device_info">
+                                    <span>@item.UserNum @Localize.T(" - ") @string.Format(item.CreatedDate.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"))</span>
+                                </div>
+                            }
+                        </td>
+                        <td class="table-body-td-style ep_device_row" valign="top">
+
+                            <div class="ep_device_header">@Localize.T("Total")<span>:</span></div>
+                            <div class="ep_device_info">
+                                @if (item.TotalAmount.HasValue)
+                                {
+                                    <span>$@string.Format("{0:0,0.00}", item.TotalAmount)</span>
+                                }
+                                else
+                                {
+                                    <span>$0.00</span>
+                                }
+                            </div>
+                        </td>
+                        <td class="table-body-td-style ep_device_row" valign="top">
+                            <div class="ep_device_header">@Localize.T("Action")<span>:</span></div>
+                            <div class="ep_device_info">
+                                <button data-id="@item.Id" class="btn BookingCloneBtn">@Localize.T("Clone")</button>
+                            </div>
+                        </td>
+                        
+                    </tr>
+                }
+            </tbody>
+
+        </table>
+    </div>
+
+</div>

@@ -1,0 +1,239 @@
+﻿@model List<HS.Entities.ShowBillModel>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@{ 
+    Layout = null;
+}
+@Styles.Render("~/styles/EquipmentList")
+<link href="~/Content/Css/VendorBill/VendorBillList.css" rel="stylesheet" />
+<script src="~/Content/Js/VendorBill/VendorBillList.js"></script>
+@Styles.Render("~/styles/DataTableBundles")
+@Scripts.Render("~/scripts/DataTableBundles")
+<link href="~/Content/Css/Expense/BillAccountsPayable.css" rel="stylesheet" />
+<script>
+    var OpenBillById = function (BillId) {
+        if (typeof (BillId) != "undefined" && BillId > 0) {
+            OpenTopToBottomModal(domainurl +"/Expense/AddVendorBill/?id=" + BillId);
+        }
+        else if (typeof (BillId) != "undefined" && BillId.indexOf("BL") == 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/AddVendorBill/?BillID=" + BillId);
+        }
+    }
+    var OpenPaymentByPaymentId = function (PaymentId) {
+        if (typeof (PaymentId) != "undefined" && PaymentId > 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/MakePayment/?PaymentId=" + PaymentId);
+        }
+    }
+    var OpenPaymentByBillId = function (BillId, SupplierId, empid) {
+        if (typeof (BillId) != "undefined" && BillId > 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/MakePayment/?BillId=" + BillId + "&SupplierId=" + SupplierId + "&empid=" + empid);
+        }
+    }
+    var OpenCheck = function (name, amount,memo) {
+        name = encodeURI(name);
+        memo = encodeURI(memo);
+
+        $("#OpenCheckPreview").attr("href", domainurl +"/Expense/CheckPreview/?Amount=" + amount + "&Name=" + name + "&Memo=" + memo);
+        $("#OpenCheckPreview").click();
+    }
+    $(document).ready(function () {
+
+        $(".LoaderWorkingDiv").hide();
+        $(".btn-apply-Datefilter").click(function () {
+            if ($(".AccountsPayableTab").hasClass("active") == true) {
+
+                OpenExpAccountsPayableTab(null);
+            }
+            
+        })
+          $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            OpenExpAccountsPayableTab(orderval);
+        });
+    });
+</script>
+
+@*<div class="bill_accounts_payable_container">*@
+    <div class="custom-table bill_accounts_payable_container">
+        <table class="display">
+            <thead class="table-head-border bap_header_hide">
+                <tr>
+                    <th class="thead-th-style bap_checkbox_col">
+
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Type")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/type"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/type"></i></div>
+
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Total Amount")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/tamount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/tamount"></i></div>
+
+                    </th>
+                    <th class="thead-th-style">
+                        <div> @Localize.T("Balance")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/balance"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/balance"></i></div>
+
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Due Date")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/duedate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/duedate"></i></div>
+
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Status")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Actions")</div>
+
+                    </th>
+                </tr>
+            </thead>
+            @if (Model.Count > 0)
+            {
+                foreach (var item in Model)
+                {
+                    <tr class="tr-style device_row_bap">
+                        <td>
+                            <div class="batchActions">
+                                <label for="cbx@(item.Id)" class="label-cbx">
+                                    <input id="cbx@(item.Id)" idval="@(item.Id)" type="checkbox" name="checkbox-@(item.Id)" class="invisible">
+                                    <div class="checkbox">
+                                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                            <polyline points="4 11 8 15 16 6"></polyline>
+                                        </svg>
+                                    </div>
+                                </label>
+                            </div>
+                        </td>
+                        <td class="table-body-td-style vbl_device_row vbl_row_mergin_top" valign="top">
+                            <label class="vbl_device_header">@Localize.T("Type")</label>
+                            <span class="vbl_device_info">
+                                @if (item.Type == "Bill")
+                                {
+                                    <a class="cus-anchor" onclick="OpenBillById(@item.Id)" href="Javasicpt:Void(0)">@item.BillNo</a>
+                                }
+                                else if (item.Type == "Payment")
+                                {
+                                    <a class="cus-anchor" onclick="OpenPaymentByPaymentId(@item.PaymentId)" href="Javasicpt:Void(0)">@item.Type</a>
+                                }
+                                else
+                                {
+                                    <span>@item.Type</span>
+                                }
+                            </span>
+                        </td>
+                        <td class="table-body-td-style vbl_device_row vbl_row_mergin_top" valign="top">
+                            <label class="vbl_device_header">@Localize.T("Total Amount")</label>
+                            @{
+                                if (item.PaymentStatus == "Open")
+                                {
+                                    <span class="vbl_device_info" style="color:red;">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalAmount)</span>
+                                }
+                                else
+                                {
+                                    <span class="vbl_device_info">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalAmount)</span>
+                                }
+                            }
+
+                        </td>
+                        <td class="table-body-td-style vbl_device_row vbl_row_mergin_top" valign="top">
+                            <label class="vbl_device_header">@Localize.T("Balance")</label>
+                            @{
+                                if (item.PaymentStatus == "Open")
+                                {
+                                    <span class="vbl_device_info" style="color:red;">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.OpenBalance)</span>
+                                }
+                                else
+                                {
+                                    <span class="vbl_device_info">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.OpenBalance)</span>
+                                }
+                            }
+
+                        </td>
+                        <td class="table-body-td-style vbl_device_row vbl_row_mergin_top" valign="top">
+                            <label class="vbl_device_header">@Localize.T("Due Date")</label>
+                            @{
+                                if (item.PaymentStatus == "Open")
+                                {
+                                    <span class="vbl_device_info" style="color:red;">@item.DueDate.ToString("MM/dd/yy")</span>
+                                }
+                                else
+                                {
+                                    <span class="vbl_device_info">@item.DueDate.ToString("MM/dd/yy")</span>
+                                }
+                            }
+
+                        </td>
+                        <td class="table-body-td-style vbl_device_row vbl_row_mergin_top" valign="top">
+                            <label class="vbl_device_header">@Localize.T("Status")</label>
+                            @{
+                                if (item.PaymentStatus == "Open")
+                                {
+                                    string status = item.PaymentStatus;
+                                    status = item.DueDate < DateTime.Today ? "Due" : status;
+                                    <span class="vbl_device_info" style="color:red;">@status</span>
+                                }
+                                else
+                                {
+                                    <span class="vbl_device_info">@item.PaymentStatus</span>
+                                }
+                            }
+                        </td>
+
+                        <td class="table-body-td-style vbl_device_row vbl_row_mergin_top" valign="top">
+                            <label class="vbl_device_header">@Localize.T("Actions")</label>
+                            <span class="vbl_device_info">
+                                @if (item.OpenBalance > 0 && item.Type == "Bill")
+                                {
+                                    if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.AccountsPayableMakePayment))
+                                    {
+                                        <a href="Javasicpt:Void(0)" class="cus-anchor" onclick="OpenPaymentByBillId(@item.Id, @item.SupplierId, '@item.EMPID')">Make Payment</a>
+                                    }
+                                }
+                                else if (item.Type == "Payment" && ViewBag.CheckList != null)
+                                {
+                                    if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.AccountsPayableMakePayment))
+                                    {
+                                        var itemList = ((List<HS.Entities.CheckPayment>)ViewBag.CheckList).Where(x => x.PaymentId == item.PaymentId).ToList();
+                                        foreach (var i in itemList)
+                                        {
+                                            <a href="Javasicpt:Void(0)" class="cus-anchor" onclick="OpenCheck('@i.SupplierName','@i.Amount','')">@i.BillId</a>
+                                        }
+                                    }
+                                }
+                            </span>
+                        </td>
+                    </tr>
+                }
+            }
+        <tr class="table_total_bg">
+            <td colspan="2" class="total_bg_none_device">
+                <b class="float_right">
+                    @Localize.T("Total: ")
+                </b>
+            </td>
+            <td>
+                <label class="vbl_device_header">@Localize.T("Total Amount")</label>
+                <span class="vbl_device_info"><b title="Total Amount"> $@Model.Sum(e => e.TotalAmount).ToString("#,##0.00")</b></span>
+
+            </td>
+            <td colspan="4">
+                <label class="vbl_device_header">@Localize.T("Total Balance")</label>
+                <span class="vbl_device_info"><b title="Total Balance"> $@Model.Sum(e => e.OpenBalance).ToString("#,##0.00")</b></span>
+
+            </td>
+        </tr>
+        </table>
+    </div>
+@*</div>*@
+
+
+

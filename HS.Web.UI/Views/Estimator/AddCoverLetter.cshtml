@@ -1,0 +1,561 @@
+﻿@model IEnumerable<HS.Entities.EstimatorFile>
+@{
+    Layout = null;
+    var estimatorFileList = ViewBag.EstimatorFile;
+    var EstimatorType = ViewBag.EstimatorType;
+}
+
+@*@model HS.Entities.EmailTemplate*@
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@Styles.Render("~/styles/AddFile")
+<style>
+    .container-fluid {
+        width: 100%;
+        float: left;
+        overflow: auto;
+    }
+
+    #mydiv {
+        font-size: 20px;
+    }
+
+        #mydiv span {
+            font-size: 13px;
+        }
+
+    #CoverLetterBodyContent_ifr {
+        height: 300px !important;
+    }
+
+    .Upload_Doc {
+        position: relative;
+    }
+
+    .progress-container {
+        position: absolute !important;
+    }
+
+    .modal.right.fade.in {
+        z-index: 99999 !important;
+    }
+
+    .dv-preview-pic, .dv-preview-pic-doc {
+        width: 25%;
+        float: left;
+        position: relative;
+        padding: 10px;
+    }
+
+        .dv-preview-pic .image-delete, .dv-preview-pic-doc .image-delete {
+            width: 15px;
+            height: 15px;
+            position: absolute;
+            right: 11px;
+            z-index: 99;
+            top: 11px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+    .dv-preview-pic-inner {
+        width: 100%;
+        float: left;
+        position: relative;
+        height: 100px;
+        border: 1px solid #ccc;
+    }
+
+    .image-caption, .image-date {
+        display: block;
+        width: 100%;
+        height: 34px;
+        padding: 6px 12px;
+        font-size: 14px;
+        line-height: 1.42857143;
+        color: #555;
+        background-color: #fff;
+        background-image: none;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+        box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+        -webkit-transition: border-color ease-in-out .15s, -webkit-box-shadow ease-in-out .15s;
+        -o-transition: border-color ease-in-out .15s, box-shadow ease-in-out .15s;
+        transition: border-color ease-in-out .15s, box-shadow ease-in-out .15s;
+    }
+
+    .dv-preview-pic img, .dv-preview-pic-doc img {
+        max-height: 100%;
+        max-width: 100%;
+        position: absolute;
+        top: 0px;
+        bottom: 0px;
+        left: 0px;
+        right: 0px;
+        margin: auto;
+        cursor: pointer;
+    }
+    .mce-tinymce .mce-tinymce {
+        display:block !important;
+    }
+</style>
+<script>
+    if (tinymce.get("CoverLetterBodyContent") != null) {
+        tinymce.get("CoverLetterBodyContent").remove();
+    }
+</script>
+<script src="~/Content/Tiny/tiny_long.js"></script>
+
+<script>
+    var UserFileUploadjqXHRData;
+    var EstimatorId = '@ViewBag.EstimatorId';
+    var CoverLetterFile = '@ViewBag.CoverLetterFile';
+    var EstimatorType = '@ViewBag.EstimatorType';
+    var valid = false;
+    var hyperlinkvalid = false;
+    var jqXHRProjectData;
+    var PhotoIndexNumber = 0;
+    var jqXHR = [];
+
+    var Images = [];
+
+
+    var SaveCoverLetter = function () {
+        $("#CoverLetter").prop("disabled", true);
+        $(".dv-preview-pic").each(function () {
+            Images.push({
+                FileDescription: $(this).find('img.project-photo').attr('data-link') == null || $(this).find('img.project-photo').attr('data-link') == "" ? $(this).find('img.project-photo').attr('src') : $(this).find('img.project-photo').attr('data-link'),
+                Filename: $($(this).find('.image-caption')).val(),
+                FileSize: $(this).find('img.project-photo').attr('data-size')
+            });
+        });
+        var url = "/Estimator/SaveCoverLetter";
+        var bodycontent = tinyMCE.get('CoverLetterBodyContent').getContent();
+        var File = Images;//$("#UploadedPath").val()
+        var param = JSON.stringify({ EstimatorId: EstimatorId, BodyContent: bodycontent, CoverLetterFile: File, EstimatorType: EstimatorType })
+
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                tinymce.get("CoverLetterBodyContent").remove();
+                $(".close").click();
+            },
+
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            },
+            complete: function () { 
+                $("#CoverLetter").prop("disabled", false); 
+                $(".loader-div").hide();
+            }
+        });
+    };
+
+    var DeletePdf = function () {
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this file?", function () {
+                $(".Upload_Doc").removeClass('hidden');
+                $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/blank_thumb_file.png');
+                $(".chooseFilebtn").removeClass("hidden");
+                $(".changeFilebtn").addClass("hidden");
+                $(".deleteDoc").addClass("hidden");
+                $("#Preview_Doc").attr('src', "");
+                $("#UploadSuccessMessage").hide();
+                $("#UploadedPath").val('');
+                $(".fileborder").addClass('border_none');
+                $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+            });
+    }
+
+    $("#UploadCustomerFileBtn").click(function () {
+        console.log("sdfdsf obayed");
+        $('#fu-my-project-upload').click();
+        $("#UploadSuccessMessage").addClass('hidden');
+    });
+    $(".change-picture-logo").click(function () {
+        $("#fu-my-project-upload").click();
+        $("#UploadSuccessMessage").addClass('hidden');
+    });
+    $(".project-photo").click(function () {
+        var imgurl = $(this).attr('data-link');
+        window.location.href = domainurl + "/File/DownloadKnowledgeBaseFile?url=" + imgurl;
+
+    });
+
+    $(window).resize(function () {
+        $(".acl_inner").height(window.innerHeight - 107);
+    })
+    $(document).ready(function () {
+        setTimeout(function () {
+            $(".mce-tinymce").css("display", "block !important;");
+        }, 100);
+       
+       
+        $('.upload-gallary').delegate('.image-delete', 'click', function (evt) {
+            evt.preventDefault();
+            var id = $(this).attr('data-id');
+            parent.OpenConfirmationMessageNew("Delete", "Do you want to delete this item?", function () {
+                console.log("delete id ", id);
+                $(".preview_" + id).remove();
+                $("#preview_" + id).remove();
+                var piccountProject = $(".upload-gallary img.preview-pic").length;
+                if (piccountProject < 20) {
+                    $(".project-blank-thumb").show();
+                }
+            })
+        });
+
+
+
+        $(".acl_inner").height(window.innerHeight - 107);
+
+        $(".deleteDoc").click(function () {
+            DeletePdf();
+        });
+
+        if (CoverLetterFile != null && CoverLetterFile != "") {
+            $(".deleteDoc").removeClass('hidden');
+            $(".chooseFilebtn").addClass('hidden');
+            $(".changeFilebtn").removeClass('hidden');
+        }
+        $('#fu-my-project-upload').fileupload({
+            pasteZone: null,
+            url: '/File/KnowledgeBaseFileUpload',
+            dataType: 'json',
+            progress: function (e, data) {
+                var progress = parseInt(data.loaded / data.total * 100, 10);
+                $(".project-progress_" + data.files[0].uploadID).show();
+                $(".project-progress_" + data.files[0].uploadID + " .progress-bar").animate({
+                    width: progress + "%"
+                }, 40);
+                $(".progressbar-project-percentage_" + data.files[0].uploadID + " span").text(progress + "%");
+            },
+             
+            add: function (e, data) {
+                console.log("Upload Knowledgebase");
+                if (data.originalFiles.length > 5) {
+                    parent.OpenErrorMessageNew("", "You can upload upto 5 files at a time.");
+                    return false;
+                };
+                if (data.originalFiles.length > 0) {
+                    for (var u = 0; u < data.originalFiles.length; u++) {
+                        var size = data.originalFiles[u].size;
+                        if (size > 104857600) {
+                            parent.OpenErrorMessageNew("Failed.", "File size upto 100MB.");
+                            return false;
+                        }
+                    }
+                }
+                 
+                if (data.originalFiles.length > 0) {
+                    for (var u = 0; u < data.originalFiles.length; u++) {
+                        var Name = data.originalFiles[u].name.toLowerCase(); 
+                        if (!Name.includes(".pdf")) {
+                            parent.OpenErrorMessageNew("Failed.", "Unallowed file type. Please re-check your file's format.");
+                            return false;
+                        }
+                    }
+                }
+                jqXHRProjectData = data;
+                PhotoUploadXHRData = [];
+                PhotoUploadXHRData.push(jqXHRProjectData);
+                var validationPass = true; 
+                if (validationPass) {
+                    data.files[0].uploadID = PhotoIndexNumber;
+
+                    var ProgressBarString =
+                        "<div class='progressbar-div progress-container project-progress_" + PhotoIndexNumber + "' style='position: relative;margin-top:-6px;'>" +
+                        "<div class='progress progress-striped active progressbar-bar'>" +
+                        "<div class='progress-bar progress-bar-danger' style='width: 0%;'>" +
+                        "</div>" +
+                        "</div>" +
+                        "<div class='progressbar-project-percentage_" + PhotoIndexNumber + "'>" +
+                        "<span></span>" +
+                        "</div>" +
+                        "</div>";
+
+                    var CaptionText = "Add caption";
+                    if (typeof (CaptionTextTranslation) != "undefined") {
+                        CaptionText = CaptionTextTranslation;
+                    }
+                    var CaptionErrorText = "The content have exceeded 30 characters";
+                    if (typeof (CaptionErrorTextTranslation) != "undefined") {
+                        CaptionErrorText = CaptionErrorTextTranslation;
+                    }
+                    $(".upload-gallary").append(" <div id='NewFileUp_" + PhotoIndexNumber + "' class='dv-preview-pic '><div class='image-delete' style='cursor:pointer;' newImgDataId='" + PhotoIndexNumber + "'><img src='/Content/Icons/cross_update.png' /></div><div class='dv-preview-pic-inner'><img class='preview-pic project-photo' src='' /></div><input type='text' propertycontentid='' class='image-caption' placeholder='" + CaptionText + "' /><label class='label hidden red lblCaptionError' id=''>" + CaptionErrorText + ".</label>" + ProgressBarString + "</div></div>");
+                    jqXHR[PhotoIndexNumber] = data.submit();
+                    PhotoIndexNumber++;
+                }
+                else {
+                    parent.OpenErrorMessageNew("", "You can upload upto 5 files at a time.");
+                }
+            },
+            done: function (event, data) {
+                console.log(data)
+                if (data.result.status.length > 0) {
+                    for (var u = 0; u < data.result.status.length; u++) {
+                        var resultdata = data.result.status[u];
+                        $("#hf-uploaded-cover-path").val(resultdata.File);
+                        fullImagePath = resultdata.filepath;
+                        var filename = resultdata.filename;
+                        var spfile = resultdata.filename.split('.');
+                        var size = resultdata.size;
+                        var index = spfile.length - 1;
+                        var NewIdName = "#NewFileUp_" + data.files[u].uploadID;
+                        $(NewIdName).addClass("preview_" + data.files[u].uploadID);
+                        $(NewIdName + " .image-delete").attr('data-id', data.files[u].uploadID);
+                        if (spfile[index] == "pdf") {
+                            $(NewIdName + " .preview-pic").attr('src', domainurl + '/Content/Icons/pdf.png');
+                            $(NewIdName + " .preview-pic").attr('data-link', fullImagePath);
+                        }
+                        else if (spfile[index] == "doc" || spfile[index] == "docx") {
+                            $(NewIdName + " .preview-pic").attr('src', domainurl + '/Content/Icons/docx.png');
+                            $(NewIdName + " .preview-pic").attr('data-link', fullImagePath);
+                        }
+                        else if (spfile[index] == "mp4" || spfile[index] == "mov") {
+                            $(NewIdName + " .preview-pic").attr('src', domainurl + '/Content/Icons/mp4.png');
+                            $(NewIdName + " .preview-pic").attr('data-link', fullImagePath);
+                        }
+                        else if (spfile[index] == "xlsx" || spfile[index] == "xls") {
+                            $(NewIdName + " .preview-pic").attr('src', domainurl + '/Content/Icons/xlsx.png');
+                            $(NewIdName + " .preview-pic").attr('data-link', fullImagePath);
+                        }
+                        else if (spfile[index] == "txt") {
+                            $(NewIdName + " .preview-pic").attr('src', domainurl + '/Content/Icons/text.png');
+                            $(NewIdName + " .preview-pic").attr('data-link', fullImagePath);
+                        }
+                        else if (spfile[index] == "msg") {
+                            $(NewIdName + " .preview-pic").attr('src', domainurl + '/Content/Icons/msg.png');
+                            $(NewIdName + " .preview-pic").attr('data-link', fullImagePath);
+                        }
+                        else if (spfile[index] == "pptx") {
+                            $(NewIdName + " .preview-pic").attr('src', domainurl + '/Content/Icons/pptx.png');
+                            $(NewIdName + " .preview-pic").attr('data-link', fullImagePath);
+                        }
+                        else if (spfile[index] == "ppt") {
+                            $(NewIdName + " .preview-pic").attr('src', domainurl + '/Content/Icons/ppt.png');
+                            $(NewIdName + " .preview-pic").attr('data-link', fullImagePath);
+                        }
+                        else {
+                            $(NewIdName + " .preview-pic").attr('src', fullImagePath);
+                            $(NewIdName + " .preview-pic").attr('data-link', fullImagePath);
+                        }
+                        $(NewIdName + " .image-caption").val(filename.substring(0, filename.lastIndexOf('.')));
+                        $(NewIdName + " .lblCaptionError").attr('id', "lblCaptionErr_" + resultdata.Id);
+                        $(NewIdName + " .preview-pic").attr('data-size', size);
+                    }
+                    var piccount = $(".upload-gallary img.preview-pic").length;
+                    if (piccount > 0) {
+                        $(".project-blank-thumb-img").attr("src", "/Content/Icons/blank_thumb_file.png");
+                    }
+                    if (piccount == 20) {
+                        $(".project-blank-thumb").hide();
+                    }
+                    setTimeout(function () {
+                        $(".project-progress_" + data.files[0].uploadID).hide();
+                        $(".project-progress .progress-bar").animate({
+                            width: "0%"
+                        }, 10);
+                        $(".progressbar-project-percentage span").text(+ "0%");
+                    }, 1000);
+                }
+                $('.acl_inner').animate({
+                    scrollTop: $('.acl_inner')[0].scrollHeight
+                }, 'slow');
+
+                /*$('.container-fluid').scrollTop($('.Upload_Doc')[0].scrollHeight);*/
+            },
+            fail: function (event, data) {
+                if (data.files[0].error) {
+                    alert(data.files[0].error);
+                }
+            }
+        })
+
+        $("#fu-my-project-upload").on("change", function () {
+            console.log("ajkbdj");
+            if (jqXHRProjectData) {
+                var piccount = $(".upload-gallary img.preview-pic").length;
+                piccount += PhotoUploadXHRData.length;
+                var uploadPhoto = PhotoUploadXHRData.length;
+                var sizeLimit = false;
+                for (var ur = 0; ur < PhotoUploadXHRData.length; ur++) {
+                    if (PhotoUploadXHRData[ur].files[0].size > 104857600)
+                        sizeLimit = true;
+                }
+                if (!sizeLimit || uploadPhoto > 1) {
+                    if (piccount > 100) {
+                        parent.OpenErrorMessageNew("", "Upto 100 files");
+                    }
+                    else {
+                        var items = PhotoUploadXHRData[0];
+                    }
+                }
+                else {
+                    $("#lblProjectMgs").text("File size not more than 100MB.");
+                    $("#dvProjectMgsbox").show();
+                    setTimeout(function () {
+                        $("#dvProjectMgsbox").hide();
+                    }, 3000);
+                }
+                PhotoUploadXHRData = [];
+            }
+            return false;
+        }); 
+    });
+
+</script>
+<div class="hidden">
+    <input type="hidden" value="@ViewBag.EstimatorId" id="EstimatorId" />
+</div>
+
+@if (!string.IsNullOrWhiteSpace(EstimatorType) && EstimatorType == "CoverPage")
+{
+    <div class="acl_header">
+        @Localize.T("Cover Letter")
+    </div>
+}
+else
+{
+    <div class="acl_header">
+        @Localize.T("Layout")
+    </div>
+}
+
+<div class="acl_inner">
+    <div class="BodyContentDiv">
+        <textarea rows="20" id="CoverLetterBodyContent" name="CoverLetterBodyContent" class="tinymce">@Html.Raw(ViewBag.BodyContent)</textarea>
+    </div>
+
+    <div class="container-fluid">
+        @if (!string.IsNullOrWhiteSpace(EstimatorType) && EstimatorType == "CoverPage")
+        {
+            <div id="mydiv">Or upload a cover letter <span>(*only pdf)</span> </div><br />
+        }
+        else
+        {
+          <div id="mydiv">Or upload a layout <span>(*only pdf)</span> </div><br />
+        }
+        <div class="txt-form Upload_Doc">
+            <div class="col-md-12 padding-left-0">
+                <div>
+                    @*<button class="btn green_button" id="UploadCustomerFileBtn" title="Allowed file types: doc, docx, gif, jpeg, jpg, msg, png, ppt, pptx, pdf, txt, xls, xlsx."><i class="fa fa-upload" aria-hidden="true"></i> Upload File</button>*@
+                    @if (ViewBag.CoverLetterFile != null && ViewBag.CoverLetterFile != "")
+                    {
+                        <div class="fileborder border_none">
+                            <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="~/Content/Icons/blank_thumb_file.png" />
+                        </div>
+                        <div class="deleteDoc cursor-pointer hidden">
+                            <img src="~/Content/Icons/cross-image-delete.png" />
+                        </div>
+                        <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                            <span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                            <span class="changeFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                        </div>
+                    }
+                    else
+                    {
+
+                        <div class="fileborder border_none">
+                            <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="~/Content/Icons/blank_thumb_file.png" />
+                        </div>
+                        <div class="deleteDoc cursor-pointer hidden">
+                            <img src="~/Content/Icons/cross-image-delete.png" />
+                        </div>
+                        <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                            <span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                            <span class="changeFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="RugImages">
+                    <div class="AddImageDiv">
+                        <div class="upload-gallary">
+                            @if (Model != null && Model.Count() > 0)
+                            {
+                                foreach (var item in Model)
+                                {
+                                    <div id="NewFileUp_@item.Id" class="dv-preview-pic  preview_@item.Id">
+                                        <div class="image-delete" newimgdataid="0" data-id="@item.Id">
+                                            <img title="Delete" src="~/Content/Icons/cross-image-delete.png">
+                                        </div>
+                                        @*@if (item.Filename.Contains(".pdf"))*@
+                                        @if (1 == 1)
+                                        {
+                                            <div class="dv-preview-pic-inner">
+                                                <img class="preview-pic project-photo" data-size="@item.FileSize" data-link="@item.FileDescription" src="/Content/Icons/pdf.png">
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="dv-preview-pic-inner">
+                                                <img class="preview-pic project-photo" data-size="@item.FileSize" data-link="@item.FileDescription" src="@item.FileDescription">
+                                            </div>
+                                        }
+                                        <input type="text" value="@item.Filename" class="image-caption" placeholder="Add caption">
+                                        <label class="label hidden red lblCaptionError" id="lblCaptionErr_undefined">The content have exceeded 30 characters.</label>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+
+
+
+                @*<div class="deleteDoc cursor-pointer hidden">
+                <img src="~/Content/Icons/cross-image-delete.png" />
+                </div>
+                <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                    <span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                    <span class="changeFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                </div>
+                *@
+                @*<div style="display:none;">
+                    @Html.Hidden("UploadedImagePath", string.Empty, new { id = "hf-uploaded-image-path" })
+                    <input id="fu-my-project-upload" name="ImageFile" type="file" value="" multiple>
+                </div>*@
+                @*<div class="">
+                    <input type="hidden" id="UploadedPath" value="" />
+                    <input type="file" name="CustomerLeadImportFile" class="hidden" id="UploadedFile" accept=".pdf" />
+
+                </div>*@
+            </div>
+
+            <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+                <div class="progress progress-striped active">
+                    <div class="progress-bar progress-bar-success" style="width:0%">
+                        <span> 0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div style="display:none;">
+        @Html.Hidden("UploadedImagePath", string.Empty, new { id = "hf-uploaded-image-path" })
+        <input id="fu-my-project-upload" name="ImageFile" type="file" value="" multiple>
+    </div>
+    @*<div class="">
+            <input type="hidden" id="UploadedPath" value="" />
+            <input type="file" name="CustomerLeadImportFile" class="hidden" id="UploadedFile" multiple accept=".pdf" />
+
+        </div>*@
+</div>
+
+
+
+<div class="acl_footer">
+    <button class="btn green_button" id="CoverLetter" onclick="SaveCoverLetter()"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+
+</div>
+
+
+

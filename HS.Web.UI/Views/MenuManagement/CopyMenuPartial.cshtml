@@ -1,0 +1,109 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.WebsiteLocation
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+<link href="~/Content/Css/Lead/AddFollowUpReminder/AddFollowUpReminder.css" rel="stylesheet" />
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+<script>
+    var ImportMenuByRestaurant = function (chkcate, chkitem, chktopping) {
+        var url = "/MenuManagement/ImportMenuByRestaurant";
+        var param = JSON.stringify({
+            comid: $("#resList").val(),
+            iscategory: chkcate,
+            isitem: chkitem,
+            istopping: chktopping
+        })
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data) {
+                    OpenRightToLeftModal(false);
+                    OpenIeateryPopupModal("Success", "Menu imported successfully");
+                }
+                else {
+                    OpenErrorMessageNew("Error", "Menu imported not successfull")
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $("#chk_menu_category").change(function () {
+            if ($(this).prop("checked") == false) {
+                $("#chk_menu_item").prop("checked", false);
+            }
+        })
+        $("#chk_menu_item").change(function () {
+            if ($(this).prop("checked")) {
+                $("#chk_menu_category").prop("checked", true);
+                $("#chk_menu_topping").prop("checked", true);
+            }
+        })
+        $("#chk_menu_topping").change(function () {
+            if ($(this).prop("checked") == false) {
+                $("#chk_menu_item").prop("checked", false);
+            }
+        })
+        $("#btn-copymenu").click(function () {
+            var chkcate = $("#chk_menu_category").prop("checked");
+            var chkitem = $("#chk_menu_item").prop("checked");
+            var chktopping = $("#chk_menu_topping").length > 0 ? $("#chk_menu_topping").prop("checked") : false;
+            if ($("#resList").val() != "-1") {
+                OpenConfirmationMessageNew("Confirmation", "Are you sure, you want to copy menu into selected restaurant?", function () {
+                    ImportMenuByRestaurant(chkcate, chkitem, chktopping);
+                })
+            }
+            else {
+                OpenErrorMessageNew("Error", "No restaurant selected");
+            }
+        })
+    })
+</script>
+<div class="add_customer_follow_up_header">
+    @Localize.T("Copy Menu")
+</div>
+
+<div class="add_followup_reminder_container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="form-group clearfix">
+                <div class="note_text">@Localize.T("Restaurant")</div>
+                @Html.DropDownList("resList", ViewBag.Restaurant as List<SelectListItem>, new { @class = "form-control" })
+            </div>
+            <div class="form-group clearfix">
+                <div class="note_text">@Localize.T("Import Option")</div>
+            </div>
+            <div class="form-group clearfix">
+                <input type="checkbox" checked id="chk_menu_category" /> Categories
+            </div>
+            <div class="form-group clearfix">
+                <input type="checkbox" checked id="chk_menu_item" /> Items
+            </div>
+            @if (ViewBag.ToppingCount > 0)
+            {
+                <div class="form-group clearfix">
+                    <input type="checkbox" checked id="chk_menu_topping" /> Toppings
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<section class="footer-section">
+    <footer class="footer">
+        <button id="btn-copymenu" type="button" class="btn" title="@Localize.T("Save")"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+    </footer>
+</section>

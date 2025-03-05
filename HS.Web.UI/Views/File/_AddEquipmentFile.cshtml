@@ -1,0 +1,207 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+@Styles.Render("~/styles/AddFile")
+<style>
+    div.show-image {
+        position: relative;
+        float: left;
+        /*margin:5px;*/
+    }
+    div.show-image input {
+        position: absolute;
+        display: block;
+    }
+
+    div.show-image input.deleteDoc {
+        top: 0;
+        left: 91%;
+        background-color: #d0d0d0;
+        border-radius: 27px;
+    }
+</style>
+
+<script>
+    var EquipemntFileUploadjqXHRData;
+    var SaveEquipmentFile = function () {
+        var url = "@(AppConfig.DomainSitePath)/File/SaveEquipmentFile/";
+        var param = JSON.stringify({
+            File: $("#UploadedPath").val(),
+            EquipmentId: EquipmentGuid,
+            Description: $("#description").val(),
+            IsProfilePicture: $('#SetAsDp').is(":checked")
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                OpenSuccessMessageNew("Success!", "File Saved Successfully!", function () {
+                    OpenEquipmentFilsTab();
+                    $("#Right-To-Left-Modal-Body .close").click();
+                });
+                $(".customer-files-modal-head .close").click();
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $(".deleteDoc").click(function () {
+            $(".Upload_Doc").removeClass('hidden');
+            $(".LoadPreviewDocument").addClass('hidden');
+            $(".LoadPreviewDocument1").addClass('hidden');
+            $("#Preview_Doc").attr('src', "");
+            $("#Frame_Doc").attr('src', "");
+            $("#UploadSuccessMessage").addClass("hidden");
+            $("#description").val("");
+            $(".setDPDiv").addClass("hidden");
+            $('#SetAsDp').prop('checked', false);
+        });
+
+        $("#SaveCustomerFiles").click(function () {
+            if (CommonUiValidation()) {
+                SaveEquipmentFile();
+            }
+        });
+        $("#UploadCustomerFileBtn").click(function () {
+            $("#UploadedEquipmentFile").click();
+            $("#UploadSuccessMessage").addClass('hidden');
+        });
+        $('#UploadedEquipmentFile').fileupload({
+            pasteZone: null,
+            url: '@(AppConfig.DomainSitePath)/File/UploadEquipmentFile/?EquipmentId=' + EquipmentGuid, /* CustomerId*/
+            dataType: 'json',
+            add: function (e, data) {
+                if ($("#description").val() == "") {
+                    var filename = data.fileInput[0].value.split('\\').pop();
+                    $("#description").val(filename);
+                }
+                EquipemntFileUploadjqXHRData = data;
+            },
+            progress: function (e, data) {
+                var percentVal = parseInt(data.loaded / data.total * 100, 10);
+                $(".file-progress").show();
+                $(".file-progress .progress-bar").animate({
+                    width: percentVal + "%"
+                }, 40);
+                $(".file-progress .progress-bar span").text(percentVal + '%');
+            },
+            done: function (event, data) {
+                setTimeout(function () {
+                    $(".file-progress").hide();
+                    $(".file-progress .progress-bar").animate({
+                        width: 0 + "%"
+                    }, 0);
+                    $(".file-progress .progress-bar span").text(0 + '%');
+                }, 500);
+                console.log(data.result);
+                if ((typeof (data.result.isUploaded) != "undefined") && data.result.isUploaded == true) {
+                    $("#UploadSuccessMessage").removeClass('hidden');
+                    //$("#UploadCustomerFileBtn").addClass('hidden');
+                    $("#UploadedPath").val(data.result.filePath);
+                    var spfile = data.result.FullFilePath.split('.');
+                    var index = spfile.length - 1;
+                    if (spfile[index] == "png" || spfile[index] == "PNG" || spfile[index] == "jpg" || spfile[index] == "JPG" || spfile[index] == "jpeg" || spfile[index] == "JPEG") {
+                        $(".Upload_Doc").addClass('hidden');
+                        $(".LoadPreviewDocument").removeClass('hidden');
+                        $("#Preview_Doc").attr('src', data.result.FullFilePath);
+                        $(".setDPDiv").removeClass("hidden");
+                    }
+                    else if (spfile[index] == "pdf") {
+                        $(".Upload_Doc").addClass('hidden');
+                        $(".LoadPreviewDocument").addClass('hidden');
+                        $(".LoadPreviewDocument1").removeClass('hidden');
+                        $("#Frame_Doc").attr('src', data.result.FullFilePath);
+                        $(".setDPDiv").addClass("hidden");
+                        $('#SetAsDp').prop('checked', false);
+                    }
+                    else {
+                        $(".Upload_Doc").removeClass('hidden');
+                        $(".LoadPreviewDocument").addClass('hidden');
+                        $(".LoadPreviewDocument1").addClass('hidden');
+                        $("#Frame_Doc").attr('src', "");
+                        $(".setDPDiv").addClass("hidden");
+                        $('#SetAsDp').prop('checked', false);
+                    }
+                }
+            },
+            fail: function (event, data) {
+                if (data.files[0].error) {
+                    console.log(data.files[0].error);
+                }
+            }
+        });
+        $("#UploadedEquipmentFile").on("change", function () {
+            if (EquipemntFileUploadjqXHRData) {
+                EquipemntFileUploadjqXHRData.submit();
+            }
+            return false;
+        });
+    })
+</script>
+<div class="add_file_header">@Localize.T("Upload File")</div>
+<div class="container_addfile">
+    <div class="addfile_inner_info">@Localize.T("Allowed file types: doc, docx, xls, xlsx, jpg, jpeg, gif, png, rtf, pdf, txt") </div>
+    <div class="addfile_inner_info">@Localize.T("(max file size: 20 mb)")</div>
+
+    <span class="content-type">@Localize.T("Description")</span>
+    <div class="txt_form_add_file">
+        <input type="text" id="description" name="description" class="form-control content-text" datarequired="true" />
+        <br /><label rel="description" class="label hidden red position-absolute">*@Localize.T("Description Required")</label>
+    </div>
+    <div class="setDPDiv hidden">
+        <span><input type="checkbox" name="SetAsDP" id="SetAsDp" /> @Localize.T("Set as display picture")</span>
+    </div>
+    
+
+    <div class="txt_form_add_file Upload_Doc">
+        <div class="col-md-12 padding-left-0">
+            <img id="UploadCustomerFileBtn" class="cursor-pointer" src="~/Content/Icons/blank_thumb_file.png" />
+            <div class="" style="margin-top: 15px;">
+                <span id="UploadSuccessMessage" class="hidden">@Localize.T("File Uploaded Successfully..!")</span>
+            </div>
+        </div>
+
+        <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+            <div class="progress progress-striped active">
+                <div class="progress-bar progress-bar-success" style="width:0%">
+                    <span> 0%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="LoadPreviewDocument hidden">
+        <div class="show-image">
+            <img id="Preview_Doc" src="" style="max-height:300px;max-width:300px;"/>
+            <input class="deleteDoc" type="image" src="~/Content/Icons/cross_update.png" />
+        </div>
+    </div>
+    <div class="LoadPreviewDocument1 hidden">
+        <div class="show-image">
+            <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+            <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+        </div>
+    </div>
+</div>
+<section class="footer-section">
+    <footer class="footer">
+        <div class="SaveCancelDiv">
+            <button class="btn btn_file" id="SaveCustomerFiles"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+
+        </div>
+    </footer>
+</section>
+<div class="">
+    <input type="hidden" id="UploadedPath" value="" />
+    <input type="file" name="CustomerFile" class="hidden" id="UploadedEquipmentFile" />
+</div>
+

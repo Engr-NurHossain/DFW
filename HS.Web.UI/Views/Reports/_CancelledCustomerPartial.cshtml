@@ -1,0 +1,368 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@model List<HS.Entities.Customer>
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<script>
+    var DataTablePageSize = 50;
+    var LeadsStartDatepicker;
+    var LeadsEndDatepicker;
+    var pageno = '@ViewBag.PageNumber';
+    var cn = '@ViewBag.PageSize';
+    var pagesize;
+
+    var ReActiveCusConfirm = function () {
+    var url = "/Reports/MakeRemoveFromQueue";
+    var RemoveFromQueueList = [];
+    $(".CancelledCustomer").each(function (id) {
+        CancellationId = $(this).attr('id');
+        if ($(".IsCancelItem_" + CancellationId).is(':checked')) {
+            RemoveFromQueueList.push(CancellationId);
+        }
+    });
+
+    var param = JSON.stringify({
+        RemoveFromQueueList: RemoveFromQueueList
+    });
+
+    $.ajax({
+        type: "POST",
+        url: url,
+        data: param,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+        success: function (data) {
+            OpenSuccessMessageNew("Success!", "", function () {
+                $(".CancelledCustomer_report").load(domainurl + "/Reports/CancelledCustomerPartial?pageno=1&pagesize=50");
+            });
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(errorThrown);
+        }
+    });
+    }
+    var ReActiveCusFromQueue = function () {
+    var CustomerIdList = [];
+        $(".CancelledCustomer").each(function (id) {
+            console.log("sdfd")
+        CancellationId = $(this).attr('id');
+        if ($(".IsCancelItem_" + CancellationId).is(':checked')) {
+            CustomerIdList.push($(this).attr('customerid'));
+        }
+    });
+    if (CustomerIdList.length > 0) {
+        OpenConfirmationMessageNew("", "Are you sure you want to reactive selected customer(s) from cancelled list?", function () {
+            ReActiveCusConfirm();
+        });
+    }
+    else {
+        OpenErrorMessageNew("Error!", "Please select a customer.", "");
+    }
+}
+    var my_date_format = function (input) {
+        console.log(input+" r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+        return (date);
+    };
+
+    $(document).ready(function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".LoaderWorkingDiv").hide();
+        $("#LeadReportTab .invoice-loader").hide();
+        if (StartDate != "" && EndDate != "")
+        {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            UpdatePtoCookie();
+            CustomerSearchKeyUpforCancelledcuswithpagination(1);
+        });
+        $("#btnCancelledCustomerDownload").click(function () {
+            pagesize = parseInt(cn);
+              var SearchText = encodeURI($("#searchText").val());
+            window.location.href = domainurl + "/Reports/CancelledCustomerPartial?pageno=1&GetReport=true&pagesize=" + pagesize + "&SearchText=" + SearchText;
+
+           // window.location.href = domainurl + "/Reports/CancelledCustomerPartial?pageno=1&pagesize=50&GetReport=true";
+        })
+
+        $(".icon_sort_bi").click(function () {
+             pagesize = 50;
+
+            var orderval = $(this).attr('data-val');
+            var SearchText = encodeURI($("#searchText").val());
+            $(".CancelledCustomer_report").html(TabsLoaderText);
+            $(".CancelledCustomer_report").load(domainurl + "/Reports/CancelledCustomerPartial?GetReport=false&order=" + orderval+"&pageno="+pageno+"&pagesize="+pagesize+"&SearchText="+SearchText);
+        });
+        $(".SearchCacncelledCustomer").click(function () {
+              pagesize = 50;
+
+            var SearchText = encodeURI($("#searchText").val());
+            SearchText = SearchText.replace(/\s+/g, ' ').trim();
+            $(".CancelledCustomer_report").html(TabsLoaderText);
+            $(".CancelledCustomer_report").load(domainurl + "/Reports/CancelledCustomerPartial?GetReport=false&SearchText=" + SearchText+"&pageno="+pageno+"&pagesize="+pagesize);
+        })
+    });
+</script>
+<div class="row lrp_bottom_border">
+    <div class="lead_total_color"> @Localize.T("Total: ") @string.Format("{0:#,##0}", ViewBag.OutOfNumber)</div>
+</div>
+<div class="row leads_report_top_bar ccp_top_bar">
+    <div class="input-group add-on">
+
+        <input class="form-control cus_name" value="@ViewBag.SearchText" placeholder="Customer Name" id="searchText" />
+
+        <div class="input-group-btn">
+            <button class="btn SearchCacncelledCustomer green_button" type="button" title="@Localize.T(" Search")"><i class="glyphicon glyphicon-search" title="@Localize.T(" Search")" data-placement="bottom"></i></button>
+        </div>
+    </div>
+    <button class="btn green_button" id="btnCancelledCustomerDownload"><i class="fa fa-download" title="@Localize.T("Download")"></i></button>
+    <button onclick="ReActiveCusFromQueue()" class="btn Can_Cue_btn green_button" title="Remove from Queue">@Localize.T("Reactivate")</button>
+
+</div>
+<div class="leads_report_table">
+    <table id="LeadsReportTable">
+        <thead>
+            <tr>
+                <th>
+                    <div>@Localize.T("Customer")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/name"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/name"></i></div>
+
+                </th>
+                <th>
+                    <div>@Localize.T("Address")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/address"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/address"></i></div>
+
+                </th>
+                <th>
+                    <div>@Localize.T("Cancellation Date")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/date"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/date"></i></div>
+
+                </th>
+                <th>
+                    <div>@Localize.T("Reason")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/reason"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/status"></i></div>
+
+                </th>
+                <th>
+                    <div>@Localize.T("Action")</div>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr class="CancelledCustomer" id="@item.CancellationId" customerid="@item.CustomerId">
+                    <td>
+                        <div>@Localize.T("Name") <span>:</span></div>
+                        <div>
+                            <a href="/Customer/Customerdetail?id=@item.Id" title="Customer Id" class="cus-anchor" target="_blank">@item.Id</a><br />
+                            @if (!string.IsNullOrEmpty(item.CustomerNo))
+                            {
+                                <span title="Customer No">@item.CustomerNo</span><br />
+                            }
+                            <a href="/Customer/Customerdetail?id=@item.Id" class="lead_click_item" data-id="@item.CustomerId" target="_blank">
+                                @{
+                                    var name = "";
+                                    if (!string.IsNullOrWhiteSpace(item.DBA))
+                                    {
+                                        name = item.DBA;
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(item.BusinessName))
+                                    {
+                                        name = item.BusinessName;
+                                    }
+                                    else
+                                    {
+                                        name = item.FirstName + " " + item.LastName;
+                                    }
+                                }
+                                @name
+                            </a>
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Address") <span>:</span></div>
+                        <div>@item.Address</div>
+                    </td>
+                    <td>
+                        @if (item.CancellationDate != new DateTime())
+                        {
+                            <div>@Localize.T("Cancellation Date") <span>:</span></div>
+                            <span>@string.Format(item.CancellationDate.ToString("M/d/yy"))</span>
+                        }
+                    </td>
+                    <td>
+                        <div>@Localize.T("Reason") <span>:</span></div>
+                        <div>@item.CancellationReason</div>
+                    </td>
+                    <td>
+                        <input class="cancel-item IsCancelItem_@item.CancellationId" type="checkbox" customerid="@item.CustomerId" />
+
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    @*<div class="AgentListPagination">
+            <div class="paginationContainer">
+                @if (ViewBag.PageCount > 0)
+                {
+                    <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+                }
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">1</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="CustomerSearchKeyUp(3)">3</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons disabledBtn" onclick="CustomerSearchKeyUp()">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 2)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                }
+            </div>
+        </div>*@
+</div>
+

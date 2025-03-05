@@ -1,0 +1,545 @@
+﻿@model HS.Entities.CustomerListWithCountModel
+@{
+    List<HS.Entities.GlobalSetting> globalSetting = (List<HS.Entities.GlobalSetting>)ViewBag.CustomerUiSetting;
+    List<HS.Entities.GridSetting> gridSetting = (List<HS.Entities.GridSetting>)ViewBag.LeadGridSettings;
+    var busname = "";
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<script src="~/Content/Js/LeadList/_FilterCustomerListPartial.js"></script>
+<script>
+    //var tableLead;
+    var LeadGuidID;
+    var leadcount = '@Model.LeadTabCount.LeadCount';
+    var estcount = '@Model.LeadTabEstimateCount.EstimateCount';
+
+    @*//var bookingcount = '@Model.LeadTabBookingCount.BookingCount';*@
+    var leadlastcount = '@Model.LeadTabLastMonthCount.LeadLastMonthCount';
+    var estamount = '@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.LeadTabEstimateAmount.LeadEstimateAmount)';
+    var LoadRequestTechnician = function (id) {
+        OpenRightToLeftModal(domainurl + "/Leads/LeadRequestTechnician?LeadId=" + id);
+    }
+    var LoadLeadDocumentCenter = function (id) {
+        LoadDocumentCenter(id, true);
+    }
+    var LeadVerify = function (id) {
+        LoadVerifyLeads(id, true);
+    }
+    $(document).ready(function () {
+        parent.$(".spnleadcount").html(leadcount);
+        parent.$(".spnestimatecount").html(estcount);
+        //parent.$(".bookingimatecount").html(bookingcount);
+        parent.$(".spnthiscount").html(leadthiscount);
+        parent.$(".spnlastcount").html(leadlastcount);
+        parent.$(".spnestimateamount").html(estamount);
+        $(".btnLeadSetup").click(function () {
+            var valid = $(this).attr('data-id');
+            LoadLeadSetup(valid, true)
+        })
+        $(".btnSmartLeadSetup").click(function () {
+            var valid = $(this).attr('data-id');
+            LoadSmartLeadSetup(valid, true)
+        })
+        $(".addressMapPopup").click(function () {
+            LeadGuidID = $(this).attr('data-id');
+            var mapLoadUrl = domainurl + "/Leads/LeadAddressMap?LeadId=" + LeadGuidID;
+            $(".MapManufacturerMagnific").attr("href", mapLoadUrl);
+            $(".MapManufacturerMagnific").click();
+        });
+        $("#SelectAll").change(function () {
+            if ($(this).is(':checked')) {
+                $(".CheckItems").each(function () {
+                    $(this).prop('checked', true);
+                });
+            } else {
+                $(".CheckItems").each(function () {
+                    $(this).prop('checked', false);
+                });
+            }
+        });
+        $("#SelectAllIds").change(function () {
+            if ($(this).is(':checked')) {
+                $(".CheckItems").each(function () {
+                    $(this).prop('checked', true);
+                });
+            } else {
+                $(".CheckItems").each(function () {
+                    $(this).prop('checked', false);
+                });
+            }
+        });
+    
+    });
+</script>
+<style>
+    .header-content {
+        padding: 0;
+    }
+
+    .addressMapPopup:hover {
+        cursor: pointer;
+    }
+
+    .displayNone {
+        display: none;
+    }
+
+    #tblCustomerList thead .thead-th-style {
+        cursor: pointer;
+    }
+</style>
+
+<div class="header-content">
+    <div class="custom-table">
+        <table class="data-table display lead_list_view" id="tblCustomerList">
+            <thead class="table-head-border header_hide">
+                <tr>
+                    <th class="thead-th-style">
+                        <label for="SelectAll" class="label-cbx">
+                            <input id="SelectAll" idval="SelectAll" type="checkbox" name="SelectAll" class="invisible">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                    </th>
+                    @foreach (var item in gridSetting)
+                    {
+                        if (item.SelectedColumn == "Name" && item.GridActive == true)
+                        {
+                            <th onclick="SetLeadSortBy('name')" class="thead-th-style" data-info="Name">
+                                @Localize.T("Lead")
+                            </th>
+                        }
+                        else if (item.SelectedColumn == "Location" && item.GridActive == true)
+                        {
+                            <th onclick="SetLeadSortBy('location')" class="thead-th-style" data-info="CellNo">
+                                @Localize.T("Location")
+                            </th>
+                        }
+                        else if (item.SelectedColumn == "Contact" && item.GridActive == true)
+                        {
+                            <th onclick="SetLeadSortBy('Contact')" class="thead-th-style" data-info="SecondaryPhone">
+                                @Localize.T("Contact")
+                            </th>
+                        }
+                        else if (item.SelectedColumn == "Status" && item.GridActive == true)
+                        {
+                            <th onclick="SetLeadSortBy('Status')" class="thead-th-style" data-info="Fax">
+                                @Localize.T("Status")
+                            </th>
+                        }
+                        else if (item.SelectedColumn == "Status" && item.GridActive == true)
+                        {
+                            <th onclick="SetLeadSortBy('status')" class="thead-th-style" data-info="EmailAddress">
+                                @Localize.T("Status")
+                            </th>
+                        }
+                        else if (item.SelectedColumn == "Lead Source" && item.GridActive == true)
+                        {
+                            <th onclick="SetLeadSortBy('leadsource')" class="thead-th-style" data-info="Address">
+                                @Localize.T("Lead Source")
+                            </th>
+                        }
+
+                    }
+                    <th class="thead-th-style custom_action_allign">
+                        @Localize.T("Actions")
+                    </th>
+                    <th class="th hidden" data-info="Name">@Localize.T("Name")</th>
+                    <th class="th hidden" data-info="Email">@Localize.T("Email Address")</th>
+                    <th class="th hidden" data-info="BussinessName">@Localize.T("Business Name")</th>
+                    <th class="th hidden" data-info="Type">@Localize.T("Type")</th>
+                    <th class="th hidden" data-info="Sales">@Localize.T("Sales Person")</th>
+                    <th class="th hidden" data-info="Phone">@Localize.T("Primary Phone")</th>
+                    <th class="th hidden" data-info="City">@Localize.T("City")</th>
+                    <th class="th hidden" data-info="State">@Localize.T("State")</th>
+                    <th class="th hidden" data-info="ZipCode">@Localize.T("Zip Code")</th>
+                    @*<th class="th hidden" data-info="Address">@Localize.T("Address")</th>*@
+                    <th class="th hidden" data-info="Contract">@Localize.T("Contract Term")</th>
+                    <th class="th hidden" data-info="MMR">@Localize.T("Monthly Monitoring Fee")</th>
+                    <th class="th hidden" data-info="BillAmount">@Localize.T("Bill Amount")</th>
+                    <th class="th hidden" data-info="BillCycle">@Localize.T("Bill Cycle")</th>
+                    <th class="th hidden" data-info="Payment">@Localize.T("Payment Method")</th>
+                    <th class="th hidden" data-info="Tax">@Localize.T("Tax")</th>
+                    <th class="th hidden" data-info="CustomerNo">@Localize.T("Customer No")</th>
+                    <th class="th hidden" data-info="SSN">@Localize.T("SSN")</th>
+                    <th class="th hidden" data-info="DateofBirth">@Localize.T("Date of Birth")</th>
+                    <th class="th hidden" data-info="SecondaryPhone">@Localize.T("Secondary Phone")</th>
+                    <th class="th hidden" data-info="CreditScore">@Localize.T("Credit Score")</th>
+                    <th class="th hidden" data-info="FundingCompany">@Localize.T("Funding Company")</th>
+                    <th class="th hidden" data-info="LeadSource">@Localize.T("Lead Source")</th>
+                    <th class="th hidden" data-info="CellularBackup">@Localize.T("Cellular Backup")</th>
+                    <th class="th hidden" data-info="CustomerFunded">@Localize.T("Customer Funded")</th>
+                    <th class="th hidden" data-info="Maintenance">@Localize.T("Maintenance")</th>
+                    <th class="th hidden" data-info="Note">@Localize.T("Note")</th>
+                    <th class="th hidden" data-info="SalesDate">@Localize.T("Sales Date")</th>
+                    <th class="th hidden" data-info="InstallDate">@Localize.T("Install Date")</th>
+                    <th class="th hidden" data-info="CutInDate">@Localize.T("Cut In Date")</th>
+                    <th class="th hidden" data-info="Installer">@Localize.T("Installer")</th>
+                    <th class="th hidden" data-info="FundingDate">@Localize.T("Funding Date")</th>
+                    <th class="th hidden" data-info="JoinDate">@Localize.T("Join Date")</th>
+                    <th class="th hidden" data-info="QA1">@Localize.T("QA1")</th>
+                    <th class="th hidden" data-info="QA1Date">@Localize.T("QA1 Date")</th>
+                    <th class="th hidden" data-info="QA2">@Localize.T("QA2")</th>
+                    <th class="th hidden" data-info="QA2Date">@Localize.T("QA2 Date")</th>
+                    <th class="th hidden" data-info="Status">@Localize.T("Status")</th>
+                    <th class="th hidden" data-info="Note">@Localize.T("Note")</th>
+                    <th class="th hidden" data-info="BillDay">@Localize.T("Bill Day")</th>
+                    <th class="th hidden" data-info="StreetType">@Localize.T("Street Type")</th>
+                    <th class="th hidden" data-info="Appartment">@Localize.T("Appartment")</th>
+                    <th class="th hidden" data-info="SecondCustomerNo">@Localize.T("Second Customer No")</th>
+                    <th class="th hidden" data-info="AdditionalCustomerNo">@Localize.T("Additional Customer No")</th>
+                    <th class="th hidden" data-info="Passcode">@Localize.T("Passcode")</th>
+                    <th class="th hidden" data-info="ActivationFee">@Localize.T("Activation Fee")</th>
+                    <th class="th hidden" data-info="FirstBilling">@Localize.T("First Billing")</th>
+                    <th class="th hidden" data-info="CrossStreet">@Localize.T("Cross Street")</th>
+                    <th class="th hidden" data-info="DBA">@Localize.T("DBA")</th>
+                    <th class="th hidden" data-info="IsAgreement">@Localize.T("Agreement")</th>
+                    <th class="th hidden" data-info="BranchId">@Localize.T("Branch Id")</th>
+                    <th class="th hidden" data-info="LastUpdatedDate">@Localize.T("Last Updated Date")</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var item in Model.CustomerList)
+                {
+
+                    <tr class="tr-style Export_excel_lead" data-id="@item.Id">
+                        <td class="table-body-td-style lead_list_device_row" valign="middle">
+                            <label for="@item.Id" class="label-cbx">
+                                <input id="@item.Id" idval="@item.Id" type="checkbox" class="CheckItems invisible" value="@item.Id">
+                                <div class="checkbox">
+                                    <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                        <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                        <polyline points="4 11 8 15 16 6"></polyline>
+                                    </svg>
+                                </div>
+                            </label>
+                        </td>
+                        @foreach (var setting in (List<HS.Entities.GridSetting>)ViewBag.LeadGroupGridSettings)
+                        {
+                            List<HS.Entities.GridSetting> tempGridSettings = gridSetting.Where(x => x.ColumnGroup == setting.SelectedColumn).ToList();
+                            var SelectStreetType = gridSetting.Where(x => x.SelectedColumn == "StreetType").FirstOrDefault();
+                            var SelectAppartment = gridSetting.Where(x => x.SelectedColumn == "Appartment").FirstOrDefault();
+                            if (setting.SelectedColumn == "Name")
+                            {
+
+                                <td class="table-body-td-style lead_list_device_row" valign="middle">
+                                    @if (tempGridSettings.Where(x => x.SelectedColumn == "Name").Count() > 0 && (!string.IsNullOrWhiteSpace(item.BusinessName) && !string.IsNullOrWhiteSpace(item.FirstName)) || (!string.IsNullOrWhiteSpace(item.LastName) && !string.IsNullOrWhiteSpace(item.BusinessName)))
+                                    {
+                                        <div class="heading_for_mobile">@Localize.T("Name")</div>
+                                        <div class="content_for_mobile">
+                                            <a href="/Lead/Leadsdetail/?id=@item.Id" class="name-anchor-style leads-name-anchor-style" id="@(item.Id)">
+                                                <span href="/Lead/Leadsdetail/?id=@item.Id">@item.BusinessName</span><br />
+                                            </a>
+                                            <span>Name: @item.FirstName @item.LastName</span>
+                                        </div>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(item.BusinessName))
+                                    {
+                                        <a class="name-anchor-style leads-name-anchor-style" id="@(item.Id)">
+                                            <div class="heading_for_mobile">@Localize.T("Name")</div>
+                                            <span class="content_for_mobile">@item.BusinessName</span><br />
+                                        </a>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(item.FirstName) || !string.IsNullOrWhiteSpace(item.LastName))
+                                    {
+                                        <a class="name-anchor-style leads-name-anchor-style" id="@(item.Id)">
+                                            @{
+                                                var formattedName = item.FirstName + " " + item.LastName;
+                                                if (item.MiddleName != null || item.MiddleName != "")
+                                                {
+                                                    formattedName = item.FirstName + " " + item.MiddleName + " " + item.LastName;
+                                                }
+                                            }
+                                            <div class="heading_for_mobile">@Localize.T("Name")</div>
+                                            <span class="content_for_mobile">@formattedName</span>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a class="name-anchor-style leads-name-anchor-style" id="@(item.Id)">
+                                            <div class="heading_for_mobile">@Localize.T("Name")</div>
+                                            <span class="content_for_mobile">@Localize.T("Lead") #@item.Id</span>
+                                        </a>
+                                    }
+                                </td>
+                                                }
+                                                if (setting.SelectedColumn == "Contact")
+                                                {
+                                                    <td class="table-body-td-style lead_list_device_row" valign="middle">
+                                                        @{
+                                                            if (!string.IsNullOrWhiteSpace(item.PrimaryPhone))
+                                                            {
+                                                                <div class="heading_for_mobile">@Localize.T("Phone No")</div>
+                                                                <span class="content_for_mobile"><span class="glyphicon glyphicon-phone-alt"></span> @item.PrimaryPhone</span><br />
+                                                            }
+                                                            if (!string.IsNullOrWhiteSpace(item.SecondaryPhone))
+                                                            {
+                                                                <div class="heading_for_mobile">@Localize.T("Phone No")</div>
+                                                                <span class="content_for_mobile"><span class="glyphicon glyphicon-phone"></span> @item.SecondaryPhone</span>
+                                                            }
+                                                        }
+                                                    </td>
+                                                            }
+                                                            if (setting.SelectedColumn == "User")
+                                                            {
+                                                                <td class="table-body-td-style lead_list_device_row" valign="middle">
+                                                                    <div class="heading_for_mobile">@Localize.T("Created On")</div>
+                                                                    <span class="content_for_mobile">@HS.Framework.DateTimeExtension.UTCToClientTime(item.JoinDate.Value).ToString("MM/dd/yy") at @HS.Framework.DateTimeExtension.UTCToClientTime(item.JoinDate.Value).ToString("hh:mm tt")</span><br />
+                                                                    @if (!string.IsNullOrWhiteSpace(item.EMPNUM))
+                                                                    {
+                                                                        <div class="heading_for_mobile">@Localize.T("User")</div>
+                                                                        <span class="content_for_mobile">@item.EMPNUM</span>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <div class="heading_for_mobile">@Localize.T("User")</div>
+                                                                        <span class="content_for_mobile">@Localize.T("-") </span>
+                                                                    }
+                                                                </td>
+                                                            }
+                                                            if (setting.SelectedColumn == "Location")
+                                                            {
+                                                                <td class="table-body-td-style lead_list_device_row" valign="middle">
+                                                                    @if (!string.IsNullOrWhiteSpace(item.Street) || !string.IsNullOrWhiteSpace(item.City) || !string.IsNullOrWhiteSpace(item.State) || !string.IsNullOrWhiteSpace(item.ZipCode) || !string.IsNullOrWhiteSpace(item.Appartment) || item.StreetType != "-1")
+                                                                    {
+                                                                        string addressdata1stLine = "";
+                                                                        string addressdata2ndLine = "";
+                                                                        string fappartment = "";
+                                                                        if (!string.IsNullOrWhiteSpace(item.Appartment))
+                                                                        {
+                                                                            fappartment = "#" + item.Appartment;
+                                                                        }
+                                                                        if (item.StreetType != "-1")
+                                                                        {
+                                                                            addressdata1stLine = string.Format("{0} {1} {2}", item.Street, item.StreetType, fappartment);
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            addressdata1stLine = string.Format("{0} {1}", item.Street, fappartment);
+                                                                        }
+                                                                        var StateAddress = "";
+                                                                        if (item.State != "")
+                                                                        {
+                                                                            StateAddress = item.State;
+                                                                        }
+                                                                        addressdata2ndLine = string.Format("{0}, {1} {2}", item.City, StateAddress, item.ZipCode);
+                                                                        <div class="heading_for_mobile">@Localize.T("Location")</div>
+                                                                        <div class="content_for_mobile">
+                                                                            <span>
+                                                                                @if (!string.IsNullOrWhiteSpace(addressdata1stLine))
+                                                                                {
+                                                                                    @addressdata1stLine <br /> @addressdata2ndLine
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    @addressdata2ndLine
+                                                                                }
+                                                                            </span>
+                                                                        </div>
+                                                                    }
+                                                                    @*<span>@(String.Format("{0} {1}", item.Street, item.State))</span>*@
+                                                                    @*<div class="heading_for_mobile">@Localize.T("Location")</div>
+                                                                        <span class="content_for_mobile"><a class="addressMapPopup" data-id="@item.CustomerId">@formattedAddress</a></span>*@
+                                                                </td>
+                                                            }
+                                                            if (setting.SelectedColumn == "Status")
+                                                            {
+                                                                <td class="table-body-td-style lead_list_device_row" valign="middle">
+                                                                    <div class="heading_for_mobile">@Localize.T("Status")</div>
+                                                                    <span class="content_for_mobile">@item.Status</span>
+                                                                </td>
+                                                            }
+                                                            if (setting.SelectedColumn == "Lead Source" || setting.SelectedColumn == "LeadSource")
+                                                            {
+                                                                <td class="table-body-td-style lead_list_device_row" valign="middle">
+                                                                    @if (!string.IsNullOrWhiteSpace(item.LeadSource) && item.LeadSource != "-1")
+                                                                    {
+                                                                        <div class="heading_for_mobile">@Localize.T("Lead Source")</div>
+                                                                        <span class="content_for_mobile">@item.LeadSource</span>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <span>@Localize.T("-") </span>
+                                                                    }
+                                                                </td>
+                                                                }
+                                                            }
+                        <td class="table-body-td-style lead_list_device_row" valign="middle">
+                            <div class="heading_for_mobile">@Localize.T("Actions")</div>
+                            <div class="ActionsDivLeads ActionsDivLeads_custom">
+                                <div class="btn-group">
+                                    <button class="btn green_button" onclick="LoadLeadVerificationInfo(@item.Id)" data-id="@item.Id">
+                                        <i class="fa fa-pencil-square-o" aria-hidden="true"></i> @Localize.T("Edit")
+                                    </button>
+                                    <button data-toggle="dropdown" class="btn dropdown-toggle green_button" type="button">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul style="min-width:inherit;width:115px; margin-top:0px !important; border-radius:4px !important; border-color: #b1b4bb !important;" class="dropdown-menu customer-dropdown-ul-style">
+
+                                        @*<li><a class="dropallign" href="javascript:void(0)" onclick="LoadRequestTechnician(@item.Id)">@Localize.T("Request Technician")</a></li>*@
+                                        @*<li><a class="dropallign" href="javascript:void(0)" onclick="LoadLeadDocumentCenter(@item.Id)">@Localize.T("Document Center")</a></li>*@
+                                        @if (globalSetting.Where(x => x.SearchKey == "LeadSmartSetUp").Count() > 0 && globalSetting.Where(x => x.SearchKey == "LeadSmartSetUp").FirstOrDefault().Value.ToLower() == "true")
+                                        {
+                                            <li>
+                                                <a class="dropallign btnSmartLeadSetup" href="javascript:void(0)" data-id="@item.Id">
+                                                    <i class="fa fa-cog" aria-hidden="true"></i> @Localize.T("Smart Setup")
+                                                </a>
+                                            </li>
+                                        }
+                                        else
+                                        {
+                                            <li>
+                                                <a class="dropallign btnLeadSetup" href="javascript:void(0)" data-id="@item.Id">
+                                                    <i class="fa fa-cog" aria-hidden="true"></i> @Localize.T("Setup")
+                                                </a>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+
+                        </td>
+                    </tr>
+                    }
+            </tbody>
+
+        </table>
+    </div>
+
+    <div class="AgentListPagination">
+        <div class="paginationContainer">
+            @if (ViewBag.PageCount > 0)
+            {
+                <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+            }
+            @if (ViewBag.PageCount == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons disabledBtn">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">1</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="CustomerSearchKeyUp(3)">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount > 3)
+            {
+                if (ViewBag.PageNumber == ViewBag.PageCount)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="CustomerSearchKeyUp()">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<div class="displayNone">
+    <a href="" class="MapManufacturerMagnific">@Localize.T("Address in Map")</a>
+</div>

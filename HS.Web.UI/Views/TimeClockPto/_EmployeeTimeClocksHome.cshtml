@@ -1,0 +1,140 @@
+﻿
+@{
+    Layout = null;
+}
+@model List<HS.Entities.Employee>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@Styles.Render("~/styles/EmployeeTimeClocksHome") 
+
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script>
+    var userlist = '@Html.Raw(Json.Encode(@ViewBag.userlist))';
+    userlist = JSON.parse(userlist);
+    var ispermit = '@PermissionChekcer.IsPermitted(Permissions.TimeClockPtoPermission.EmployeesTimeClockListAll)';
+    $(document).ready(function () {
+        $("#EmployeeDrpDown").selectpicker('val', userlist);
+        //var EmpLoadId = $(".EmployeesTimeClockDiv .tab-list.active").attr('data-id');
+        //var EmpLoadGuid = $(".EmployeesTimeClockDiv .tab-list.active").attr('data-Guid');
+        //$("#customer_tab_" + EmpLoadId).html(LoaderDom);
+        //$("#customer_tab_" + EmpLoadId).load(String.format("/TimeClockPto/EmployeeTimeClock/?UserId={0}", EmpLoadGuid));
+
+        var EmpLoadGuid = $("#EmployeeDrpDown").val();
+        $(".employeetimeclock-load").load(domainurl + String.format("/TimeClockPto/EmployeeTimeClock/?UserId={0}", EmpLoadGuid));
+
+        $("#btn_EmployeeDrpDown").click(function (e) {
+            //var EmployeeGuid = $("#EmployeeDrpDown").val();
+            //$(".employeetimeclock-load").load(domainurl + String.format("/TimeClockPto/EmployeeTimeClock/?UserId={0}", EmployeeGuid));
+               FilterPayrollPaging(1);
+            UpdatePtoCookie();
+        });
+        //$(".EmployeesTimeClockDiv .tab-list").click(function (e) {
+        //    var EmployeeId = $(e.target).attr('data-id');
+        //    var EmployeeGuid = $(e.target).attr('data-Guid');
+        //    /*$("#customer_tab_" + EmployeeId).html(LoaderDom);*/
+        //    $(".eployee_time_Clock_load").html(LoaderDom);
+        //    $("#customer_tab_" + EmployeeId).load(String.format("/TimeClockPto/EmployeeTimeClock/?UserId={0}", EmployeeGuid));
+        //});
+        
+    });
+</script>
+<!--select all for multiple selection script-->
+<script>
+    $(document).ready(function () {
+      
+           $("#SelectAll").show();
+            $("#DeSelectAll").hide();
+      
+        $('#EmployeeDrpDown').selectpicker('refresh');
+        $("#SelectAll").click(function () {
+            $("#DeSelectAll").show();
+            $("#SelectAll").hide();
+              $('#EmployeeDrpDown').find('option').prop('selected', true).parent().selectpicker('refresh');
+        })
+          $("#DeSelectAll").click(function () {
+            $("#SelectAll").show();
+            $("#DeSelectAll").hide();
+            $('#EmployeeDrpDown').selectpicker('val', '');
+        })
+
+        
+        $('#EmployeeDrpDown').on('change', function () {
+            var thisObj = $(this);
+            var isAllSelected = thisObj.find('option[value="All"]').prop('selected');
+            var lastAllSelected = $(this).data('all');
+            var selectedOptions = (thisObj.val()) ? thisObj.val() : [];
+            var allOptionsLength = thisObj.find('option[value!="All"]').length;
+
+            console.log(selectedOptions);
+            var selectedOptionsLength = selectedOptions.length;
+
+            if (isAllSelected == lastAllSelected) {
+
+                if ($.inArray("All", selectedOptions) >= 0) {
+                    selectedOptionsLength -= 1;
+                }
+
+                if (allOptionsLength <= selectedOptionsLength) {
+
+                    thisObj.find('option[value="All"]').prop('selected', true).parent().selectpicker('refresh');
+                    isAllSelected = true;
+                } else {
+                    thisObj.find('option[value="All"]').prop('selected', false).parent().selectpicker('refresh');
+                    isAllSelected = false;
+                }
+
+            } else {
+                thisObj.find('option').prop('selected', isAllSelected).parent().selectpicker('refresh');
+            }
+
+            $(this).data('all', isAllSelected);
+        }).trigger('change');
+    })
+</script>
+
+<div class="EmployeesTimeClockDiv">
+    <div class="employee_list_div">
+        <div class="left_one_header">
+            @Localize.T("Employee list")
+        </div>
+        <div class="input-group add-on employee_dropdown_div">
+            @Html.DropDownList("EmployeeDrpDown", (List<SelectListItem>)ViewBag.empLsit, new { @class = "form-control", @multiple = "multiple" })
+
+            <div class="input-group-btn"> <button title="Search by employee name" class="btn" id="btn_EmployeeDrpDown"><i class="fa fa-check"></i></button></div>
+        </div>
+        @if (PermissionChekcer.IsPermitted(Permissions.TimeClockPtoPermission.EmployeesTimeClockListAll))
+        {
+            <div style="width:auto; float:right;">
+                <button class="btn" id="SelectAll">Select All</button>
+                <button class="btn" id="DeSelectAll">DeSelect All</button>
+            </div>
+        }
+
+    </div>
+    <div class="employeetimeclock-load">
+
+    </div>
+    @*<ul class="nav nav-tabs customer_details_main_nav">
+            @foreach (var item in Model)
+            {
+                <li class="tab-list @(i==1?"active":"")" data-id="@item.Id" data-Guid="@item.UserId">
+                    <a data-target="#customer_tab_@item.Id" data-id="@item.Id" data-Guid="@item.UserId" data-toggle="tab">
+                        <i class="fa fa-user fa-fw"></i>
+                        @item.FirstName @item.LastName
+                    </a>
+                </li>
+                i++;
+            }
+        </ul>
+        <div class="tab-content">
+            @foreach (var item in Model)
+            {
+                <div class="tab-pane eployee_time_Clock_load @(j == 1 ? "active" : "")" data-id="@item.Id" data-Guid="@item.UserId" id="customer_tab_@item.Id">@item.Id</div>
+                j++;
+            }
+        </div>*@
+</div>

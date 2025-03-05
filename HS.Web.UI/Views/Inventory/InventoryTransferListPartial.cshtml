@@ -1,0 +1,341 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@model HS.Entities.TechReceiveListModel
+@using HS.Framework
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using POHelper = HS.Web.UI.Helper.LabelHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Css/Inventory/TechPurchaseOrderListPartial.css" rel="stylesheet" />
+<style>
+    .bt_right_style {
+        width: auto;
+        float: right;
+        padding: 10px;
+        padding-right: 0px;
+        display: flex;
+        gap: 10px;
+    }
+</style>
+
+<script>
+
+    var selectedTechsTrfFromList = '@Html.Raw(Json.Encode(@ViewBag.selectedTechsTrfFromList))';
+    selectedTechsTrfFromList = JSON.parse(selectedTechsTrfFromList);
+    var selectedTechsTrfToList = '@Html.Raw(Json.Encode(@ViewBag.selectedTechsTrfToList))';
+    selectedTechsTrfToList = JSON.parse(selectedTechsTrfToList);
+
+    var selectedTechsRcvFromList = '@Html.Raw(Json.Encode(@ViewBag.selectedTechsRcvFromList))';
+    selectedTechsRcvFromList = JSON.parse(selectedTechsRcvFromList);
+    var selectedTechsRcvToList = '@Html.Raw(Json.Encode(@ViewBag.selectedTechsRcvToList))';
+    selectedTechsRcvToList = JSON.parse(selectedTechsRcvToList);
+
+    $(document).ready(function () {
+        checkedItem = [];
+        RenderTechFilterDDTL();
+
+        SaveTabState();
+        BindTabState();
+        RestoreTabState();
+
+        BindTechFilterDDTL();
+
+        $("#btnDownloadTLTrf").click(function () {
+
+            DataListDownload(1, 1, null, $("#TechTrfFromList").val(), $("#TechTrfToList").val(), true);
+
+        });
+        $("#AddNewPOTranslog").click(function () {
+            OpenTopToBottomModal(domainurl + "/Inventory/AddTechTransfer?id=0&OpenTab=Transferlog");
+        });
+    });
+
+
+</script>
+
+
+<div class="TechPurchaseOrderListPartial_container">
+    <div class="tab-content">
+        <div class="tab-pane active" id="TechApproveTab">
+            @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.TechDropDownEditable))
+            {
+            <div class="bi_single_filter_div_style filter_fill ENameDropDown">
+                @Html.DropDownList("TechTrfFromList", ViewBag.TechTrfFromList as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple", @title = "Transfer From Technician" })
+            </div>
+            <div class="bi_single_filter_div_style filter_fill ENameDropDown" style="margin-left: 10px;">
+                @Html.DropDownList("TechTrfToList", ViewBag.TechTrfToList as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple", @title = "Transfer To Technician" })
+            </div>
+            }
+            else
+            {
+            <div class="bi_single_filter_div_style filter_fill" style="width: auto; float: left; margin-left: 0px">
+                @ViewBag.LoggedUserName
+                <input type="hidden" id="TechTrfFromList" value="@ViewBag.LoggedUserId" />
+            </div>
+            <div class="bi_single_filter_div_style filter_fill" style="width: auto; float: left; margin-left: 10px; margin-top: 10px; width: 400px; margin-bottom: 10px">
+                @Html.DropDownList("TechTrfToList", ViewBag.TechTrfToList as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple", @title = "Transfer Technician" })
+            </div>
+            }
+            <div class="bt_right_style"> 
+                <button title="@Localize.T(" Download")" class="report_btn lrp_float_right" id="btnDownloadTLTrf"><i class="fa fa-download" aria-hidden="true"></i></button>
+                <button class="btn btnPO" id="AddNewPOTranslog"><i class="fa fa-plus"></i> @Localize.T("New")</button>
+            </div>
+            <table id="tblPO_tech">
+                <thead class="table-head-border">
+                    <tr>
+                        @if (ViewBag.order == "ascending/dono" || ViewBag.order == "descending/dono")
+                        {
+                        <th class="th_timeclock"><div>@Localize.T("Description")</div><div><i class="fa fa-angle-up icon_sort_potech" data-val="ascending/dono"></i> <i class="fa fa-angle-down icon_sort_potech" data-val="descending/dono"></i></div></th>
+                        }
+                        else
+                        {
+                        <th class="th_timeclock_pre"><div>@Localize.T("Description")</div><div><i class="fa fa-angle-up icon_sort_potech" data-val="ascending/dono"></i> <i class="fa fa-angle-down icon_sort_potech" data-val="descending/dono"></i></div></th>
+                        }
+                        @if (ViewBag.order == "ascending/dono" || ViewBag.order == "descending/dono")
+                        {
+                        <th class="th_timeclock"><div>@Localize.T("SKU")</div><div><i class="fa fa-angle-up icon_sort_potech" data-val="ascending/dono"></i> <i class="fa fa-angle-down icon_sort_potech" data-val="descending/dono"></i></div></th>
+                        }
+                        else
+                        {
+                        <th class="th_timeclock_pre"><div>@Localize.T("SKU")</div><div><i class="fa fa-angle-up icon_sort_potech" data-val="ascending/dono"></i> <i class="fa fa-angle-down icon_sort_potech" data-val="descending/dono"></i></div></th>
+                        }
+                        <th class="th_timeclock"><div>@Localize.T("Transfer From")</div><div><i class="fa fa-angle-up icon_sort_potech" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_potech" data-val="descending/status"></i></div></th>
+                        @if (ViewBag.order == "ascending/status" || ViewBag.order == "descending/status")
+                        {
+                        <th class="th_timeclock"><div>@Localize.T("Quantity")</div><div><i class="fa fa-angle-up icon_sort_potech" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_potech" data-val="descending/status"></i></div></th>
+                        }
+                        else
+                        {
+                        <th class="th_timeclock_pre"><div>@Localize.T("Quantity")</div><div><i class="fa fa-angle-up icon_sort_potech" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_potech" data-val="descending/status"></i></div></th>
+                        }
+                        @if (ViewBag.order == "ascending/status" || ViewBag.order == "descending/status")
+                        {
+                        <th class="th_timeclock"><div>@Localize.T("Transfer To")</div><div><i class="fa fa-angle-up icon_sort_potech" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_potech" data-val="descending/status"></i></div></th>
+                        }
+                        else
+                        {
+                        <th class="th_timeclock_pre"><div>@Localize.T("Transfer To")</div><div><i class="fa fa-angle-up icon_sort_potech" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_potech" data-val="descending/status"></i></div></th>
+                        }
+                        @if (ViewBag.order == "ascending/status" || ViewBag.order == "descending/status")
+                        {
+                        <th class="th_timeclock"><div>@Localize.T("On Hand")</div><div><i class="fa fa-angle-up icon_sort_potech" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_potech" data-val="descending/status"></i></div></th>
+                        }
+                        else
+                        {
+                        <th class="th_timeclock_pre"><div>@Localize.T("On Hand")</div><div><i class="fa fa-angle-up icon_sort_potech" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_potech" data-val="descending/status"></i></div></th>
+                        }
+
+
+                        <th class="th_timeclock_pre">
+                            <div>@Localize.T("Transfer User")</div>
+                        </th>
+                        <th class="th_timeclock_pre"><div>@Localize.T("Transfer Date")</div></th>
+
+                        <th class="th_timeclock_pre"><div>@Localize.T("Status")</div></th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.ListAssignedInventoryTechApprove)
+                    {
+                    <tr>
+                        <td class="table-body-td-style">
+                            <div>@Localize.T("Name") <span>:</span></div>
+                            <div>
+                                <span>@item.Name</span>
+                            </div>
+                        </td>
+                        <td class="table-body-td-style"><div>@Localize.T("SKU") <span>:</span></div><div>@item.SKU</div></td>
+                        <td class="table-body-td-style"><div>@Localize.T("Transfer From") <span>:</span></div><div>@item.TransferByName</div></td>
+                        <td class="table-body-td-style"><div>@Localize.T("Quantity") <span>:</span></div><div><strong style="color:green">@item.Quantity</strong></div></td>
+                        <td class="table-body-td-style"><div>@Localize.T("Transfer To") <span>:</span></div><div>@item.ReceivedByName</div></td>
+                        <td class="table-body-td-style"><div>@Localize.T("On Hand") <span>:</span></div><div>@item.TotalQuantity</div></td>
+
+                        <td class="table-body-td-style">
+                            <div>@Localize.T("Date") <span>:</span></div>
+
+                            <div>
+                                <b><span>@Localize.T("Request By:")</span></b><br /> @item.created_BY
+                            </div>
+                            @if (item.IsDecline == true)
+                            {
+                            <div> <b><span>@Localize.T("Declined By: ")</span></b> <br />@(item.Closed_By ?? "Unknown")</div>
+                            }
+                            @if (item.IsApprove == true && item.IsReceived == true)
+                            {
+                            <div> <b><span>@Localize.T("Accepted By: ") </span></b><br />@(item.Closed_By ?? "Unknown")</div>
+                            }
+                        </td>
+                        <td class="table-body-td-style">
+                            <div>@Localize.T("Transfer Date") <span>:</span></div>
+                            <div><b><span>@Localize.T("Request On: ")</span></b><br /> @item.CreatedDate.ToString("MM/dd/yyyy hh:mm tt")</div>
+                            @if (item.IsDecline == true && item.ReceivedDate != null && item.ReceivedDate != new DateTime())
+                            {
+                            <div> <b><span>@Localize.T("Declined On: ")</span></b><br /> @item.ReceivedDate.Value.ToString("MM/dd/yyyy hh:mm tt")</div>
+                            }
+                            @if (item.IsApprove == true && item.ReceivedDate != null && item.ReceivedDate != new DateTime())
+                            {
+                            <div> <b><span>@Localize.T("Accepted On: ")</span></b><br /> @item.ReceivedDate.Value.ToString("MM/dd/yyyy hh:mm tt")</div>
+                            }
+                        </td>
+
+
+                        <td class="table-body-td-style">
+
+                            @if (item.IsDecline == false)
+                            {
+                            if (item.IsApprove == true)
+                            {
+                            <span>@Localize.T("Accepted")</span>
+                            }
+                            else
+                            {
+                            <span>@Localize.T("In Process")</span>
+                            }
+
+                            }
+                            else
+                            {
+                            <span>@Localize.T("Declined")</span>
+                            }
+
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="AgentListPagination inv1">
+                <div class="paginationContainer">
+                    @if (ViewBag.PageCountApprove > 0)
+                    {
+                    <div class="paginationtextdv"><span>@string.Format("{0:0,0}", ViewBag.CurrentNumberApprove) of @string.Format("{0:0,0}", ViewBag.OutOfNumberApprove)</span></div>
+                    }
+                    @if (ViewBag.PageCountApprove == 1)
+                    {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">1</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn">Next</button>
+                    </div>
+                    }
+                    else if (ViewBag.PageCountApprove == 2)
+                    {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumberApprove==1?" disabledBtn":"")" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove!=1?ViewBag.PageNumberApprove-1:" "), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumberApprove==1?" activeBtn":"")" onclick="TrfLogListLoad(1, @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumberApprove==2?" activeBtn":"")" onclick="TrfLogListLoad(2, @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">2</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumberApprove==2? " disabledBtn" : "" )" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove!=2?ViewBag.PageNumberApprove+1:" "), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">Next</button>
+                    </div>
+                    }
+                    else if (ViewBag.PageCountApprove == 3 || (ViewBag.PageNumberApprove == 1 && ViewBag.PageCountApprove == 3))
+                    {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumberApprove==1?" disabledBtn":"")" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove!=1?ViewBag.PageNumberApprove-1:" "), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumberApprove==1?" activeBtn":"")" onclick="TrfLogListLoad(1, @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumberApprove==2?" activeBtn":"")" onclick="TrfLogListLoad(2, @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumberApprove==3?" activeBtn":"")" onclick="TrfLogListLoad(3, @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">3</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumberApprove==3?" disabledBtn":"")" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove!=3?ViewBag.PageNumberApprove+1:" "), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">Next</button>
+                    </div>
+                    }
+                    else if (ViewBag.PageCountApprove > 3)
+                    {
+                    if (ViewBag.PageNumberApprove == ViewBag.PageCountApprove)
+                    {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove-1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove-2), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">@(ViewBag.PageNumberApprove - 2)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove-1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">@(ViewBag.PageNumberApprove - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">@(ViewBag.PageNumberApprove)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="TrfLogListLoad()">Next</button>
+                    </div>
+                    }
+                    else if (ViewBag.PageNumberApprove == 1)
+                    {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove-1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumberApprove)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove+1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">@(ViewBag.PageNumberApprove + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove + 2), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">@(ViewBag.PageNumberApprove + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove+1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">Next</button>
+                    </div>
+                    }
+                    else if (ViewBag.PageNumberApprove == 2)
+                    {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove-1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove-1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">@(ViewBag.PageNumberApprove - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumberApprove)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove + 1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">@(ViewBag.PageNumberApprove + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove+1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">Next</button>
+                    </div>
+                    }
+                    else
+                    {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove-1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove - 1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">@(ViewBag.PageNumberApprove - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">@(ViewBag.PageNumberApprove)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove + 1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">@(ViewBag.PageNumberApprove + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="TrfLogListLoad(@(ViewBag.PageNumberApprove+1), @(ViewBag.PageNumber), @(ViewBag.order), $('#TechTrfFromList').val(), $('#TechTrfToList').val(), $('#TechRcvFromList').val(), $('#TechRcvToList').val())">Next</button>
+                    </div>
+                    }
+                    }
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</div>
+

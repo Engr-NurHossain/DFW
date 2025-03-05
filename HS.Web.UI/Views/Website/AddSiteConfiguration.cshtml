@@ -1,0 +1,281 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.WebsiteConfiguration
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@Styles.Render("~/styles/AddCustomer")
+<link href="~/Content/Css/AddFile/AddFile.css" rel="stylesheet" />
+
+<script>
+    $(document).ready(function () {
+        $(".add_site_config_inner_height").height(window.innerHeight - 94);
+        $("#SaveWebConfiguration").click(function () {
+            var url = domainurl + "/Website/AddSiteConfiguration";
+            var param = JSON.stringify({
+                Id: $("#site_config_id").val(),
+                SiteName: $("#SiteName").val(),
+                DomainName: $("#DomainName").val(),
+                Phone: $("#Phone").val(),
+                ThemeLoc: $("#UploadedPath").val()
+            })
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data) {
+                        OpenSuccessMessageNew("Success", "Site configuration saved successfully.", function () {
+                            CloseTopToBottomModal();
+                            LoadSiteConfigurationTab(1, null);
+                        })
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+        })
+        $(".deleteDoc").click(function () {
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this file?", function () {
+                $(".Upload_Doc").removeClass('hidden');
+                $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/blank_thumb_file.png');
+                $(".chooseFilebtn").removeClass("hidden");
+                $(".changeFilebtn").addClass("hidden");
+                $(".deleteDoc").addClass("hidden");
+                $("#Preview_Doc").attr('src', "");
+                $("#Frame_Doc").attr('src', "");
+                $("#UploadSuccessMessage").hide();
+                $("#BodyContent").val("");
+                $("#UploadedPath").val('');
+                $(".fileborder").addClass('border_none');
+                $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+            });
+        });
+
+        $("#UploadCustomerFileBtn").click(function () {
+            console.log("sdfdsf");
+            $("#UploadedFile").click();
+            $("#UploadSuccessMessage").addClass('hidden');
+        });
+
+        $(".change-picture-logo").click(function () {
+            $("#UploadedFile").click();
+            $("#UploadSuccessMessage").addClass('hidden');
+        });
+        $('#UploadedFile').fileupload({
+            pasteZone: null,
+            url: domainurl + '/MenuManagement/UploadMenuPhoto',
+            dataType: 'json',
+            add: function (e, data) {
+                UserFileUploadjqXHRData = data;
+            },
+            progress: function (e, data) {
+                var percentVal = parseInt(data.loaded / data.total * 100, 10);
+                $(".file-progress").show();
+                $(".file-progress .progress-bar").animate({
+                    width: percentVal + "%"
+                }, 40);
+                $(".file-progress .progress-bar span").text(percentVal + '%');
+            },
+            done: function (event, data) {
+                console.log("dfdf");
+                if ($("#BodyContent").val() == "") {
+                    var filename = data.result.FullFilePath;
+                    tinymce.get("BodyContent").setContent(filename);
+                }
+
+                setTimeout(function () {
+                    $(".file-progress").hide();
+                    $(".file-progress .progress-bar").animate({
+                        width: 0 + "%"
+                    }, 0);
+                    $(".file-progress .progress-bar span").text(0 + '%');
+                }, 500);
+
+                if ((typeof (data.result.isUploaded) != "undefined") && data.result.isUploaded == true) {
+                    $("#UploadSuccessMessage").removeClass('hidden');
+                    $("#UploadedPath").val(data.result.FullFilePath);
+                    var spfile = data.result.FullFilePath.split('.');
+                    $(".fileborder").removeClass('red-border');
+                    $("#uploadfileerror").addClass("hidden");
+                    $("#SiteName").val(data.result.NameFile);
+                    var index = spfile.length - 1;
+                    if (spfile[index] == "png" || spfile[index] == "PNG" || spfile[index] == "jpg" || spfile[index] == "JPG" || spfile[index] == "jpeg" || spfile[index] == "JPEG") {
+                        $("#UploadCustomerFileBtn").attr('src', data.result.FullFilePath)
+                        $(".chooseFilebtn").addClass("hidden");
+                        $(".changeFilebtn").removeClass("hidden");
+                        $(".deleteDoc").removeClass("hidden");
+                        $("#UploadCustomerFileBtn").addClass('custom-file');
+                        $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+                        $(".fileborder").addClass('border_none');
+                    }
+                    else if (spfile[index] == "pdf") {
+                        $(".chooseFilebtn").addClass("hidden");
+                        $(".changeFilebtn").removeClass("hidden");
+                        $(".deleteDoc").removeClass("hidden");
+                        $("#UploadCustomerFileBtn").attr('src', domainurl + '/Content/Icons/pdf.png');
+                        $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                        $("#UploadCustomerFileBtn").removeClass('custom-file');
+                        $(".fileborder").removeClass('border_none');
+                    }
+                    else if (spfile[index] == "doc" || spfile[index] == "docx") {
+                        $(".chooseFilebtn").addClass("hidden");
+                        $(".changeFilebtn").removeClass("hidden");
+                        $(".deleteDoc").removeClass("hidden");
+                        $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+                        $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                        $("#UploadCustomerFileBtn").removeClass('custom-file');
+                        $(".fileborder").removeClass('border_none');
+                    }
+                    else if (spfile[index] == "mp4" || spfile[index] == "mov") {
+                        $(".chooseFilebtn").addClass("hidden");
+                        $(".changeFilebtn").removeClass("hidden");
+                        $(".deleteDoc").removeClass("hidden");
+                        $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/mp4.png');
+                        $(".fileborder").removeClass('border_none');
+                    }
+                    else {
+                        $(".chooseFilebtn").addClass("hidden");
+                        $(".changeFilebtn").removeClass("hidden");
+                        $(".deleteDoc").removeClass("hidden");
+                        $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+                        $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                        $("#UploadCustomerFileBtn").removeClass('custom-file');
+                        $(".fileborder").removeClass('border_none');
+                    }
+                }
+            },
+            fail: function (event, data) {
+            }
+        });
+        $("#UploadedFile").on("change", function () {
+            if (UserFileUploadjqXHRData) {
+                UserFileUploadjqXHRData.submit();
+            }
+            return false;
+        });
+
+        $("#UploadedPath").blur(function () {
+            if ($("#UploadedPath").val() == "") {
+                $("#uploadfileerror").removeClass("hidden");
+                $(".fileborder").addClass('red-border');
+            }
+            if ($("#UploadedPath").val() != "") {
+                $("#uploadfileerror").addClass("hidden");
+                $(".fileborder").removeClass('red-border');
+            }
+        })
+    })
+    $(window).resize(function () {
+        $(".add_site_config_inner_height").height(window.innerHeight - 94);
+    });
+</script>
+
+@Html.HiddenFor(m => m.Id, new { id = "site_config_id"})
+<div class="hidden" style="display:none;visibility:hidden;height:0px;">
+
+</div>
+<div class="add_site_config_container">
+    <div class="add_site_config_header">
+        @Localize.T("Site Configuration")
+    </div>
+    <div class="add_site_config_inner_height">
+        <div class="add_site_config_inner">
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Site Name")</span>
+                @Html.TextBoxFor(x => x.SiteName, new { @class = "form-control", id = "SiteName", placeholder = Localize.T("Site Name") })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Domain Name")</span>
+                @Html.TextBoxFor(x => x.DomainName, new { @class = "form-control", id = "DomainName", placeholder = Localize.T("Domain Name") })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Phone")</span>
+                @Html.TextBoxFor(x => x.Phone, new { @class = "form-control", id = "Phone", placeholder = Localize.T("Phone") })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Theme")</span>
+
+                <div class="txt-form Upload_Doc">
+                    <div class="col-md-12 padding-left-0">
+                        <div class="fileborder border_none">
+                            @{
+                                if (!String.IsNullOrWhiteSpace(Model.ThemeLoc) && Model.ThemeLoc != null)
+                                {
+                                    <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="@Model.ThemeLoc" />
+                                }
+                                else
+                                {
+                                    <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="~/Content/Icons/blank_thumb_file.png" />
+                                }
+                            }
+                        </div>
+                        <div class="deleteDoc cursor-pointer hidden">
+                            <img src="~/Content/Icons/cross-image-delete.png" />
+                        </div>
+                        <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                            <span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                            <span class="changeFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                        </div>
+                        <div class="LoadPreviewDocument hidden">
+                            <div class="show-image PropertyLogoPreviewPic">
+                                <div class="image-delete" data-id="">
+                                    <img src="~/Content/Icons/cross-image-delete.png" />
+                                </div>
+                                <img class="Preview_Doc T360image-photo T360image" src="" />
+                            </div>
+                            <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                                <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+                        <div class="progress progress-striped active">
+                            <div class="progress-bar progress-bar-success" style="width:0%">
+                                <span> 0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <label class="label red position-relative hidden" id="uploadfileerror">@Localize.T("File required")</label>
+                </div>
+                <div class="LoadPreviewDocument hidden">
+                    <div class="show-image">
+                        <img id="Preview_Doc" src="" />
+                        <input class="deleteDoc" type="image" title="@Localize.T(" Close")" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                    <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                        <span><img src="~/Content/Icons/edit-icon.png" /></span>
+                    </div>
+                </div>
+                <div class="LoadPreviewDocument1 hidden">
+                    <div class="show-image">
+                        <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+                        <input class="deleteDoc" type="image" title="@Localize.T(" Close")" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                </div>
+                <div class="UploadedVideo hidden">
+                    <div class="show-image">
+                        <span>Click save button for add this video</span>
+                    </div>
+                </div>
+                <div class="">
+                    <input type="hidden" id="UploadedPath" value="@Model.ThemeLoc" />
+                    <input type="file" name="CustomerFile" class="hidden" id="UploadedFile" />
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="add_site_config_footer">
+        <button onclick="CloseTopToBottomModal()" class="btn btn-danger"><i class="fa fa-times" aria-hidden="true"></i> @Localize.T("Close")</button>
+        <button class="btn btn-default" id="SaveWebConfiguration"><i class="fa fa-save" aria-hidden="true"></i> @Localize.T("Save")</button>
+    </div>
+</div>

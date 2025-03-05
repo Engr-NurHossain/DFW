@@ -1,0 +1,436 @@
+﻿
+@{
+    Layout = null;
+}
+
+@model HS.Entities.EquipmentListWithCountModel
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using UserTypes = HS.Web.UI.Helper.LabelHelper.UserTypes
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@{
+    int Count = 1;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+
+@Styles.Render("~/styles/EquipmentList")
+<script src="~/Content/Js/ProductList/ProductList.js"></script>
+<link href="~/Content/Css/Equipment/FilteredEquipmentList.css" rel="stylesheet" />
+<link href="~/Content/Css/Equipment/FilteredEquipmentListCustom.css" rel="stylesheet" />
+<style>
+    .AddProductButtonDiv {
+        width: 100%;
+        height: 50px;
+    }
+</style>
+@*<script>
+        var EquipmentSearchKeyUp = function (pageNumber) {
+            if (typeof (pageNumber) == "undefined") {
+                return;
+            }
+            var ActiveStatus = $("#ActiveStatus").val();
+            var EquipmentClass = $("#EquipmentClass").val();
+            var EquipmentCategory = $("#EquipmentCategory").val();
+            var StockStatus = $("#StockStatus").val();
+            var searchtext = $('#srch-term').val();
+            $('.filter-inventory-product').html('');
+            $('.filter-inventory-product').load("/Inventory/FilterProductList/?ActiveStatus=" + ActiveStatus + "&EquipmentClass=" + EquipmentClass + "&EquipmentCategory=" + EquipmentCategory + "&StockStatus=" + StockStatus + "&PageNo=" + pageNumber + "&SearchText=" + searchtext);
+        }
+    </script>*@
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    $(document).ready(function () {
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            EquipmentSearchKeyUp(pageno, orderval);
+        })
+    })
+</script>
+<div class="custom-table fql_container product_and_services_table">
+    <table class="table2" id="tblVideo">
+        <thead class="table-head-border">
+            <tr>
+                @foreach (var item in (List<HS.Entities.GridSetting>)ViewBag.InventoryGridSettings)
+                {
+                    if (item.SelectedColumn == "Name")
+                    {
+                        <th class="thead-th-style" data-info="Name">
+                            <div>@Localize.T("Name")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/name"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/name"></i></div>
+                        </th>
+                    }
+                    else if (item.SelectedColumn == "Point")
+                    {
+                        <th class="thead-th-style" data-info="SKU">
+                            <div>@Localize.T("Point")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/point"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/point"></i></div>
+                        </th>
+                    }
+                    else if (item.SelectedColumn == "SupplierCost")
+                    {
+                        if (CurrentUser.UserRole == UserTypes.Admin || CurrentUser.UserRole == UserTypes.SysAdmin)
+                        {
+                            <th class="thead-th-style" data-info="Sales Price">
+                                <div>@Localize.T("Supplier Cost")</div>
+                                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/suppliercost"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/suppliercost"></i></div>
+                            </th>
+                        }
+                    }
+                    else if (item.SelectedColumn == "Cost")
+                    {
+                        <th class="thead-th-style" data-info="Cost">
+                            <div>@Localize.T("Cost")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/cost"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/cost"></i></div>
+                        </th>
+                    }
+                    else if (item.SelectedColumn == "RetailPrice")
+                    {
+                        <th class="thead-th-style" data-info="Retail Price">
+                            <div>@Localize.T("Retail Price")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/retailprice"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/retailprice"></i></div>
+                        </th>
+                    }
+                    else if (item.SelectedColumn == "Manufacturer")
+                    {
+                        <th class="thead-th-style" data-info="Qty On Hand">
+                            <div>@Localize.T("Manufacturer")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/manufacturer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/manufacturer"></i></div>
+                        </th>
+                    }
+                    else if (item.SelectedColumn == "Class")
+                    {
+                        <th class="thead-th-style" data-info="Reorder Point">
+                            <div>@Localize.T("Class")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/class"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/class"></i></div>
+                        </th>
+                    }
+                    else if (item.SelectedColumn == "SKU")
+                    {
+                        <th class="thead-th-style" data-info="SKU">
+                            <div>@Localize.T("SKU")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/sku"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/sku"></i></div>
+                        </th>
+                    }
+                }
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var item in Model.EquipmentList)
+            {
+                <tr class="tr-style @(Count%2==0?"even-row-style":"")">
+                    @foreach (var setting in (List<HS.Entities.GridSetting>)ViewBag.InventoryGridSettings)
+                    {
+                        if (setting.SelectedColumn == "Name")
+                        {
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Name") <span>:</span></div>
+                                <div>
+                                    @if (string.IsNullOrWhiteSpace(item.Name))
+                                    {
+                                        <span class="cus-anchor">@Localize.T("-")</span>
+                                        <span class="product-delete" data-id="@item.Id" style="cursor:pointer;float:right;" title="@Localize.T("Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i></span>
+                                    }
+                                    else
+                                    {
+                                        <span class="product-edit-name cus-anchor" data-id="@item.EquipmentClassId" idval="@item.Id">@item.Name</span>
+                                        <span class="product-delete" data-id="@item.Id" style="cursor:pointer;float:right;" title="@Localize.T("Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i></span>
+                                    }
+                                </div>
+
+                            </td>
+                        }
+                        else if (setting.SelectedColumn == "Point")
+                        {
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Point") <span>:</span></div>
+                                <div>
+                                    @if (!item.Point.HasValue)
+                                    {
+                                        <span>@Localize.T("-")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@item.Point </span>
+                                    }
+                                </div>
+                            </td>
+                        }
+                        else if (setting.SelectedColumn == "SupplierCost")
+                        {
+
+                            if (CurrentUser.UserRole == UserTypes.Admin || CurrentUser.UserRole == UserTypes.SysAdmin)
+                            {
+                                <td class="table-body-td-style" valign="top">
+                                    <div>@Localize.T("Supplier Cost") <span>:</span></div>
+                                    <div>
+                                        @if (item.SupplierCost <= 0)
+                                        {
+                                            <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null) 00.00</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.SupplierCost.Value)</span>
+                                        }
+                                    </div>
+                                </td>
+                            }
+                        }
+                        else if (setting.SelectedColumn == "Cost")
+                        {
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Cost") <span>:</span></div>
+                                <div>
+                                    @if (item.Cost <= 0)
+                                    {
+                                        <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null) 0.00</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Cost.Value)</span>
+                                    }
+                                </div>
+                            </td>
+                        }
+                        else if (setting.SelectedColumn == "RetailPrice")
+                        {
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Retail Price") <span>:</span></div>
+                                <div>
+                                    @if (item.Retail <= 0)
+                                    {
+                                        <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null) 0.00</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Retail.Value)</span>
+                                    }
+                                </div>
+                            </td>
+                        }
+                        else if (setting.SelectedColumn == "Manufacturer")
+                        {
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Manufacturer") <span>:</span></div>
+                                <div>
+                                    @if (string.IsNullOrWhiteSpace(item.ManufacturerName))
+                                    {
+                                        <span>@Localize.T("-")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@item.ManufacturerName</span>
+                                    }
+                                </div>
+                            </td>
+                        }
+                        else if (setting.SelectedColumn == "Class")
+                        {
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Class") <span>:</span></div>
+                                <div>
+                                    @if (string.IsNullOrWhiteSpace(item.EquipmentClass))
+                                    {
+                                        <span>@Localize.T("-")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@item.EquipmentClass</span>
+                                    }
+                                </div>
+                            </td>
+                        }
+                        else if (setting.SelectedColumn == "SKU")
+                        {
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("SKU") <span>:</span></div>
+                                <div>
+                                    @if (string.IsNullOrWhiteSpace(item.SKU))
+                                    {
+                                        <span>@Localize.T("-")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@item.SKU</span>
+                                    }
+                                </div>
+                            </td>
+                        }
+                    }
+                </tr>
+                Count++;
+            }
+        <tr class="table_total_bg">
+            <td class="table-body-td-style" colspan="2">
+                <b class="float_right">
+                    @Localize.T("Total:")
+                </b>
+            </td>
+            @foreach (var setting in (List<HS.Entities.GridSetting>)ViewBag.InventoryGridSettings)
+            {
+                if (setting.SelectedColumn == "Point")
+                {
+                    <td class="table-body-td-style">
+                        <b>@Model.TotalPoint.ToString()</b>
+                    </td>
+                }
+
+                else if (setting.SelectedColumn == "SupplierCost")
+                {
+                    if (CurrentUser.UserRole == UserTypes.Admin || CurrentUser.UserRole == UserTypes.SysAdmin)
+                    {
+                        <td class="table-body-td-style">
+                            <b>$@Model.TotalSupplierCost.ToString("#,##0.00")</b>
+                        </td>
+                    }
+                }
+                else if (setting.SelectedColumn == "Cost")
+                {
+                    <td class="table-body-td-style">
+                        <b>$@Model.TotalCost.ToString("#,##0.00")</b>
+                    </td>
+                }
+                else if (setting.SelectedColumn == "RetailPrice")
+                {
+                    <td class="table-body-td-style">
+                        <b>$@Model.TotalRetail.ToString("#,##0.00")</b>
+                    </td>
+                }
+            }
+            <td class="table-body-td-style" colspan="2">
+               
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="AgentListPagination table2-page">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber),'@ViewBag.order')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="EquipmentSearchKeyUp(1,'@ViewBag.order')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="EquipmentSearchKeyUp(2,'@ViewBag.order')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="EquipmentSearchKeyUp(1,'@ViewBag.order')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="EquipmentSearchKeyUp(2,'@ViewBag.order')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="EquipmentSearchKeyUp(3,'@ViewBag.order')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber-2),'@ViewBag.order')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="EquipmentSearchKeyUp()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber+1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber + 2),'@ViewBag.order')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber - 1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+

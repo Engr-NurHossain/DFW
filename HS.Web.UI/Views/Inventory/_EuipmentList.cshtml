@@ -1,0 +1,419 @@
+﻿@*@model List<HS.Entities.Equipment>*@
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+@Styles.Render("~/styles/EquipmentList")
+@Scripts.Render("~/scripts/EquipmentList")
+    <link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+    <script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+@*@Styles.Render("~/styles/DataTableBundles")
+    @Scripts.Render("~/scripts/DataTableBundles")*@
+<script>
+    var isNewVisit = 1;
+    var listactivestatus = '@Html.Raw(Json.Encode(@ViewBag.listactivestatus))';
+    listactivestatus = JSON.parse(listactivestatus);
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var InventorySearchKeyUp = function (pageNumber, order) {
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        if (order == "" || order == undefined)
+        {
+            order = $("#SortingVal").val();
+        }
+        var ActiveStatus = 1;
+        if (typeof ($(".ActiveStatus").val()) != "undefined") {
+            ActiveStatus = $(".ActiveStatus").val();
+        } 
+
+        var ActiveInactiveStatus = encodeURI($("#ActiveStatus").val());
+
+        var EquipmentClass = 1;
+        if (typeof ($(".EquipmentClass").val()) != "undefined") {
+            EquipmentClass = $(".EquipmentClass").val();
+        }
+        var EquipmentCategory = -1 ;
+        if (typeof ($(".EquipmentCategory").val()) != "undefined") {
+            EquipmentCategory = $(".EquipmentCategory").val();
+        }
+        /*var StockStatus = $(".StockStatus").val();*/
+        var searchtext = encodeURI($(".srch-term-equip").val());
+        $(".filter-inventory-equipments").html(TabsLoaderText);
+        //set Paging code
+        var oldpagenumber = localStorage.getItem('_EquipmentListPageNumber');
+        var searchText = localStorage.getItem('_EquipmentListSearchText');
+        
+        if (isNewVisit==1) {
+            if (oldpagenumber != null) {
+                pageNumber = oldpagenumber;
+            }
+            if (searchText != null) {
+                searchtext = searchText;
+                $("#txtSearchEquipList").val(searchtext);
+            }
+            else {
+                $("#txtSearchEquipList").val('');
+            }
+            isNewVisit = 0;
+        }
+        localStorage.setItem('_EquipmentListPageNumber', pageNumber);
+        localStorage.setItem('_EquipmentListSearchText', $("#txtSearchEquipList").val());
+        $(".filter-inventory-equipments").load(domainurl + "/Inventory/FilterEquipmentsListPartial?ActiveStatus=" + ActiveStatus + "&ActiveInactiveStatus="+ ActiveInactiveStatus + "&EquipmentClass=" + EquipmentClass + "&EquipmentCategory=" + EquipmentCategory +/* "&StockStatus=" + StockStatus + */"&PageNo=" + pageNumber + "&SearchText=" + searchtext + "&order=" + order);
+    }
+    var InventorySearchKeyUp1 = function (pageNumber, order) {
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        if (order == "" || order == undefined) {
+            order = $("#SortingVal").val();
+        }
+        var ActiveStatus = 1;
+        if (typeof ($(".ActiveStatus").val()) != "undefined") {
+            var ActiveStatus = $(".ActiveStatus").val();
+        }
+        var ActiveInactiveStatus = encodeURI($("#ActiveStatus").val());
+        var EquipmentClass = 1;
+        if (typeof ($(".EquipmentClass").val()) != "undefined") {
+            EquipmentClass = $(".EquipmentClass").val();
+        }
+        var EquipmentCategory = -1;
+        if (typeof ($(".EquipmentCategory").val()) != "undefined") {
+            EquipmentCategory = $(".EquipmentCategory").val();
+        }
+
+        //var oldpagenumber = localStorage.getItem('_EquipmentListPageNumber');
+        var searchText = localStorage.getItem('_EquipmentListSearchText');
+        if (isNewVisit == 1) {
+            //if (oldpagenumber != null) {
+              //  pageNumber = oldpagenumber;
+           // }
+            if (searchText != null) {
+                searchtext = searchText;
+                $("#txtSearchEquipList").val(searchtext);
+            }
+            else {
+                $("#txtSearchEquipList").val('');
+            }
+            isNewVisit = 0;
+        }
+        localStorage.setItem('_EquipmentListPageNumber', pageNumber);
+        localStorage.setItem('_EquipmentListSearchText', $("#txtSearchEquipList").val());
+        /*var StockStatus = $(".StockStatus").val();*/
+        var searchtext = encodeURIComponent($(".srch-term-equip").val());
+        $(".filter-inventory-equipments").html(TabsLoaderText);
+        $(".filter-inventory-equipments").load(domainurl + "/Inventory/FilterEquipmentsListPartial?ActiveStatus=" + ActiveStatus + "&ActiveInactiveStatus="+ ActiveInactiveStatus  + "&EquipmentClass=" + EquipmentClass + "&EquipmentCategory=" + EquipmentCategory +/* "&StockStatus=" + StockStatus +*/ "&PageNo=" + pageNumber + "&SearchText=" + searchtext + "&order=" + order);
+    }
+        var ResetFilter = function () {
+        $("#ActiveStatus").selectpicker("val", "1");
+        $(".EquipmentCategory").val("-1");
+        $(".srch-term-equip").val("");
+        InventorySearchKeyUp1(1);
+    }
+    $(document).ready(function () {
+        if (listactivestatus != null) {
+            if (listactivestatus.length != 0) {
+                $("#ActiveStatus").selectpicker('val', listactivestatus);
+            }
+            else {
+                $("#ActiveStatus").selectpicker('val', '');
+            }
+        }
+     
+        if (IsInventoryFilterCookie)
+        {
+            if (typeof $.cookie('FilterInventoryData') != 'undefined') {
+                var FilterInventoryData = $.parseJSON($.cookie("FilterInventoryData"));
+                if (FilterInventoryData != null)
+                {
+                    //$(".eqpInvetory").val(FilterInventoryData.SearchBox);
+                    //$("#ActiveStatus").val(FilterInventoryData.ActiveStatus);
+                    //$("#EquipmentCategory").val(FilterInventoryData.EquipmentCategory);
+                    //$("#StockStatus").val(FilterInventoryData.StockStatus);
+                    $("#SortingVal").val(FilterInventoryData.SortingVal);
+                }
+            }
+        }
+        parent.$('.close').click(function () {
+            parent.$(".modal-body").html('');
+        })
+        InventorySearchKeyUp(1, "");
+        $(".btn-filter").click(function () {
+            $(".fliter-list").toggle();
+        });
+        $(".btn-apply-filter").click(function () {
+            InventorySearchKeyUp(1, "");
+            $(".fliter-list").hide();
+        });
+        $(".eqpInvetory").keydown(function (e) {
+            if (e.which == 13) {
+                InventorySearchKeyUp1(1,null);
+            }
+        });
+        $(".equipment-grid-col").click(function () {
+            OpenRightToLeftModal(domainurl + "/Inventory/InventoryGridSettings");
+        });
+    });
+</script>
+
+<style>
+    .equipment-search {
+        float: left;
+        padding-right: 10px;
+        width: 80%;
+    }
+
+    .equipment-list-filter {
+        float: left;
+        margin-left:0px;
+        margin-top:10px;
+    }
+
+    .fliter-list {
+        display: none;
+        position: absolute;
+        background: #fff;
+        border: 2px solid #ddd;
+        z-index: 999;
+        padding: 5px;
+        width: 290px;
+    }
+
+    .left-items {
+        left: 0;
+    }
+
+    .right-items {
+        right: 0;
+    }
+
+    .equipment-list-filter button {
+        background: transparent;
+        height: 35px;
+        
+    }
+
+    .sub-list {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-bottom: 5px;
+    }
+
+        .sub-list span {
+            font-weight: 600;
+            display: block;
+            padding-bottom: 2px;
+        }
+
+    .sub-list-btn {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-bottom: 10px;
+        padding-top: 20px;
+    }
+
+    .btn-reset-filter {
+        border: none;
+        background: #ddd !important;
+        height: 35px;
+        padding-left: 15px;
+        padding-right: 15px;
+        float: left;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        -webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+    }
+
+    .btn-apply-filter {
+        border: none;
+        background: #2ca01c !important;
+        height: 35px;
+        padding-left: 15px;
+        padding-right: 15px;
+        float: right;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        -webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+    }
+   
+    
+</style>
+
+<div class="header-content">
+    <div class="stock-status-partial-view-div">
+
+    </div>
+    <div class="ListViewLoader">
+        <div>
+            <div class="lds-css ng-scope">
+                <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+            </div>
+        </div>
+        @*<div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div>*@
+    </div>
+    <div class="container-fluid equipment_list_container">
+        <input type="hidden" id="SortingVal" value="" />
+        <div class="row">
+            <div class="col-md-5 left-items equipment_list_search_filter">
+                <div class="equipment-search">
+                    <div class="input-group add-on">
+                        <input class="form-control srch-term-equip eqpInvetory" placeholder="Find an Equipment" id="txtSearchEquipList" @*id="srch-term-equip"*@ type="text">
+                        @*<div class="truck_single_filter_info_inner_content">
+                            @Html.DropDownList("tech_user_transfer", ViewBag.techlist as List<SelectListItem>, new { @class = "form-control border_radius_0 TicketFor_search trans_technician", @multiple = "multiple", @title = "Select Technician" })
+                        </div>*@
+                        @*<input type="text" class="form-control" style="padding:7px;" placeholder="Find an Equipment" >*@
+                        <div class="input-group-btn">
+                            <button class="btn btn-default custom-btn green_button" onclick="InventorySearchKeyUp1(1, null)" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="equipment-list-filter">
+                    @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.InventroyFilter))
+                    {
+                        <button class="btn-filter btn btn-default green_button">
+                            <span title="Filter" class="glyphicon glyphicon-filter"></span>
+                        </button>
+
+                        <div class="fliter-list">
+                            <div class="filter-by-status sub-list">
+                                <span>@Localize.T("Status")</span>
+                                @Html.DropDownList("ActiveStatus", (List<SelectListItem>)ViewBag.EquipmentActiveStatus, new { @class = "form-control ActiveStatus",@multiple = "multiple", id = "ActiveStatus" })
+                            </div>
+                            <div class="filter-by-equipmentType sub-list">
+                                <span>@Localize.T("Category")</span>
+                                @Html.DropDownList("EquipmentCategory", (List<SelectListItem>)ViewBag.EquipmentTypeList, new { @class = "form-control EquipmentCategory", id = "EquipmentCategory" })
+                            </div>
+                            @*<div class="filter-by-stock-status sub-list">
+                                <span>@Localize.T("Stock Status")</span>
+                                @Html.DropDownList("StockStatus", (List<SelectListItem>)ViewBag.StockStatus, new { @class = "form-control StockStatus", id = "StockStatus" })
+                            </div>*@
+
+                        <div class="sub-list-btn">
+                            @*<button class="btn-reset-filter">
+            <i class="fa fa-refresh" aria-hidden="true"></i> @Localize.T("Reset")
+        </button>*@
+                            <button class="btn-apply-filter">
+                                <i class="fa fa-check" aria-hidden="true"></i>  @Localize.T("Apply")
+                            </button>
+                            <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilter()">@Localize.T("Reset")</button>
+
+                        </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.InventoryListDownloadAndCustomizeColumn))
+            {
+                <div class="col-md-7 custom-icon right-items">
+                    @*<button style="border: none; background: #fff;" title="@Localize.T("Print")"><i class="fa fa-print cus-print" aria-hidden="true"></i></button>*@
+                    <button class="btn download_btn" title="@Localize.T("Download")"><i class="glyphicon glyphicon-download-alt" id="EquipmentReport"></i></button>
+                    
+
+                    <button data-toggle="dropdown" class="btn green_button" title="@Localize.T("Customize columns")"><i class="fa fa-cog" aria-hidden="true"></i></button>
+                    <ul class="dropdown-menu custom_column_dropdown" style="left:450px;right:15px;">
+                        <li class="equipment-grid-col"><a href="javascript:void(0)">@Localize.T("Customize columns")</a></li>
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+    <div>
+        <div class="filter-inventory-equipments">
+
+        </div>
+
+    </div>
+</div>
+
+<div class="add-equipment-background">
+
+</div>
+
+<div class="add-equipment-div">
+    <div class="header-div">
+        <button class="close-btn-add-equipment"><span class="fa fa-close close-class"></span></button>
+    </div>
+
+    <div class="add-equipment-contents header_back">
+        <h3>@Localize.T("Equipment/Service Information")</h3>
+        <div class="custom-sub-hearder">
+            @Localize.T("Select a type")
+        </div>
+    </div>
+
+    <div class="equipment-content-container">
+        <div class="equipment-contents" id="AddInventoryEquipment">
+            <div class="width-30p">
+                <span class="type-icon">
+                    <img class="padding-15p" src="~/Content/img/inventory.png" />
+                </span>
+            </div>
+            <div class="width-70p">
+                <div class="equipment-title">
+                    @Localize.T("Equipment")
+                </div>
+                <div class="equipment-subtitle">
+                    @Localize.T("Equipment you buy and/or sell and that you track quantities of.")
+                </div>
+            </div>
+        </div>
+        <div class="equipment-contents" id="AddService">
+            <div class="width-30p">
+                <span class="type-icon">
+                    <img class="padding-15p" src="~/Content/img/service.png" />
+                </span>
+            </div>
+            <div class="width-70p">
+                <div class="equipment-title">
+                    @Localize.T("Service")
+                </div>
+                <div class="equipment-subtitle">
+                    @Localize.T("Services that you provide to customers, for example, landscaping or tax preparation services..")
+                </div>
+            </div>
+        </div>
+        <div class="equipment-contents" id="AddBundle">
+            <div class="width-30p">
+                <span class="type-icon">
+                    <img class="padding-15p" src="~/Content/img/Bundle.png" />
+                </span>
+            </div>
+            <div class="width-70p">
+                <div class="equipment-title">
+                    @Localize.T("Bundle")
+                </div>
+                <div class="equipment-subtitle">
+                    @Localize.T("Services that you provide to customers, for example, landscaping or tax preparation services..")
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="add-equipment-inventory">
+
+</div>
+
+<div class="add-service">
+
+</div>
+
+<div class="add-bundle">
+
+</div>
+
+<div class="adjust-quantity-background">
+
+</div>
+
+<div class="adjust-quantity">
+
+</div>
+
+<div class="adjust-starting-value">
+
+</div>

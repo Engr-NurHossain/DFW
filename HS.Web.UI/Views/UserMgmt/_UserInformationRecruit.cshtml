@@ -1,0 +1,454 @@
+﻿@{
+    Layout = null;
+}
+@using PermissionHelper = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.AddUser
+<link href="~/Content/Css/UserManagement/UserInformation.css" rel="stylesheet" />
+<link href="~/Content/Css/Shared/device_style_for_top_menu.css" rel="stylesheet" />
+<link href="~/Content/Css/CustomerDetails/CustomerDetailsCustom.css" rel="stylesheet" />
+<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>
+<script>
+    var DateHire = new Pikaday({ format: 'MM/DD/YYYY', field: $('.AddHire')[0] });
+    var usernum = '@Model.Employee.UserName';
+    var empid = '@Model.Employee.Id';
+    /*var EditPermissions = function () {
+        var un = $("#edit-permissions").attr('idval');
+        OpenRightToLeftLgModal("/UserMgmt/EditUserPermissions?username=" + un);
+    }*/
+    function FormateSSNNumber(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-  ]/g, '');
+            if (Value.length == 9) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{2})\-?(\d{4})/, "$1-$2-$3");
+                $("#Employee_SSN").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 9) {
+                ValueClean = Value;
+                $("#Employee_SSN").css({ "border": "1px solid red" });
+            }
+            else {
+                ValueClean = Value;
+                $("#Employee_SSN").css({ "border": "1px solid #babec5" });
+            }
+        }
+        return ValueClean;
+    }
+    function FormatePhoneNumber(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-()  ]/g, '');
+            if (Value.length == 10) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+                $("#Employee_Phone").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 10) {
+                ValueClean = Value;
+                $("#Employee_Phone").css({ "border": "1px solid red" });
+            }
+            else {
+                $("#Employee_Phone").css({ "border": "1px solid red" });
+                ValueClean = Value;
+            }
+        }
+        return ValueClean;
+    }
+
+    var DeleteThisUserById = function (Id) {
+        var url = domainurl + "/UserMgmt/DeleteUser";
+        var param = JSON.stringify({
+            id : Id
+        });
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message, function () {
+                        LoadUserMgmt();
+                    });
+                } else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+
+            }
+        });
+    }
+
+    var SaveThisUser = function () {
+        var url = domainurl + "/UserMgmt/SaveUserInfo";
+        var param = JSON.stringify({
+            empid: empid,
+            fnum: $("#Employee_FirstName").val(),
+            lnum: $("#Employee_LastName").val(),
+            email: $("#Employee_Email").val(),
+            street: $("#Employee_Street").val(),
+            city: $("#City").val(),
+            state: $("#State").val(),
+            zip: $("#ZipCode").val(),
+            phn: $("#Employee_Phone").val(),
+            ssn: $("#Employee_SSN").val(),
+            hire: DateHire.getDate(),
+            place: $("#Employee_PlaceOfBirth").val(),
+            job: $("#Employee_JobTitle").val(),
+            session: $("#Employee_Session").val(),
+            password: $("#UserConfirmPassword").val(),
+            sales: $("#Employee_SalesCommissionStructure").val(),
+            tech: $("#Employee_TechCommissionStructure").val(),
+            Status: $("#Status").val(),
+            iscalendar:false,
+            IsSupervisor:false,
+            NoAutoClockout:false,
+            SuperVisorId:"",
+            DriversLicenseExpirationDate:"",
+            FireLicenseExpirationDate:"",
+            SalesLicenseExpirationDate:"",
+            InstallLicenseExpirationDate:"",
+            HourlyRate:"",
+        })
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message, function () {
+                        LoadRecruitUserInfo(data.logId, true);
+                    });
+                } else {
+                    OpenErrorMessageNew("Error!", data.message, function () {
+
+                    });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+
+
+    var IsUserPasswordMatched = function(){
+        if ($("#UserConfirmPassword").val() != $("#UserPassword").val()) {
+            $("#errConfirmPass").removeClass('hidden');
+            return false;
+        } else {
+            $("#errConfirmPass").addClass('hidden');
+            return true;
+        }
+    }
+    var ChangeUserPermission = function () {
+        var url = domainurl + "/UserMgmt/UserPermissionChange";
+        var param = JSON.stringify({
+            empid: empid,
+            permissionId: $("#PermissionGroup_Id").val()
+        })
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message, function () {
+
+                    });
+                } else {
+                    OpenErrorMessageNew("Error!", data.message, function () {
+
+                    });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        parent.$('.close').click(function () {
+            parent.$(".modal-body").html('');
+        });
+        $("#UploadProfilePic").click(function () {
+            OpenRightToLeftModal(domainurl + "/UserMgmt/AddUserFile?id=" + @Model.Employee.Id);
+        })
+        $("#ChangeUserPermission").click(function () {
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to update this users permissions?", function () {
+                ChangeUserPermission();
+            });
+        });
+        $("#UserConfirmPassword").blur(function () {
+            IsUserPasswordMatched();
+        });
+        $("#Employee_SSN").keyup(function () {
+            var SSNNumber = $(this).val();
+            if (SSNNumber != undefined && SSNNumber != null && SSNNumber != "") {
+                var cleanSSNNumber = FormateSSNNumber(SSNNumber);
+                $(this).val(cleanSSNNumber);
+            }
+        });
+        $("#Employee_Phone").keyup(function () {
+            var PhoneNumber = $(this).val();
+            if (PhoneNumber != undefined && PhoneNumber != null && PhoneNumber != "") {
+                var cleanPhoneNumber = FormatePhoneNumber(PhoneNumber);
+                $(this).val(cleanPhoneNumber);
+            }
+        });
+        $(".LoaderWorkingDiv").hide();
+        $(".GoUser").click(function () {
+            LoadRecruit()();
+        });
+        $(".LoadDocInfo").load(domainurl + "/HrDoc/HrDocPartial?usernum=" + usernum);
+        /*
+        Total module is useless right now
+        $("#edit-permissions").click(function () {
+            OpenSuccessMessage("Attention", "If you edit permissions this user will be assigned to custom user, do you want to edit?", EditPermissions);
+        });*/
+
+        $("#DeleteThisUser").click(function () {
+
+            var UserId = $("#DeleteThisUser").attr("dataid");
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this user?", function () {
+                DeleteThisUserById(UserId);
+            });
+        });
+        $("#btnSaveUser").click(function () {
+            if($("#UserPassword").val() != "" && $("#UserConfirmPassword").val() != ""){
+                if (IsUserPasswordMatched()) {
+                    SaveThisUser();
+                }
+            }
+            else{
+                SaveThisUser();
+            }
+        });
+        $(".notesTab").load(domainurl + "/Notes/RecruitUserNote?id=@Model.Employee.Id");
+        $("#ReminderTab").load(domainurl + "/Notes/RecruitUserReminder?id=@Model.Employee.Id");
+        $("#scheduleTab").load(domainurl + "/Notes/RecruitUserSchedule?id=@Model.Employee.Id");
+        $("#Status").val('@Model.Employee.Status');
+        if($("#Status").val() == "Signed" || $("#Status").val() == "Dropped"){
+            $("#Status").attr("disabled", true);
+        }
+    });
+</script>
+
+<style>
+    .margin-top-15 {
+        margin-top: 15px;
+    }
+</style>
+<div class="content-wrap custom-head user_information_container">
+    <div class="container-fluid">
+        <div class="row style-row">
+            <div class="col-xs-6 user_info_device_head">
+                <div class="user_info_header_container">
+                    <a class="GoUser" href="javascript:void(0)">
+                        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+                    </a>
+                    <h2 class="user_info_head_text">@Localize.T("Manage Recruit User")</h2>
+                </div>
+            </div>
+            <div class="col-xs-6 user_info_device_btn">
+                <div class="row custome-col-style">
+                    @*@if(PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.EditUserPermissions))
+                    {
+                        <button class="style-btn" id="edit-permissions" idval="@Model.UserLogin.UserName"><i class="fa fa-lock" aria-hidden="true"></i>@Localize.T(" Edit Permissions")</button>
+                    }*@
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.SaveUserInformation))
+                    {
+                        <button class="style-btn" id="btnSaveUser"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+                    }
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.DeleteUser))
+                    {
+                        <button class="style_btn_delete btn-danger" id="DeleteThisUser" dataid="@Model.UserLogin.Id"><i class="fa fa-trash-o" aria-hidden="true"></i>@Localize.T(" Delete")</button>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <ul class="nav nav-tabs">
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.DetailTab))
+                    {
+                        <li class="active"><a class="cursor_link" data-target="#DetailInfoTab" data-toggle="tab">@Localize.T("Detail")</a></li>
+                    }
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.HRTab))
+                    {
+                        <li><a class="cursor_link" data-target="#DocInfoTab" data-toggle="tab">@Localize.T("HR Doc")</a></li>
+                    }
+                    <li><a class="cursor_link" data-target="#ReminderTab" data-toggle="tab">@Localize.T("Reminder")</a></li>
+                    <li><a class="cursor_link" data-target="#notesTab" data-toggle="tab">@Localize.T("Notes")</a></li>
+                    <li><a class="cursor_link" data-target="#scheduleTab" data-toggle="tab">@Localize.T("Schedule")</a></li>
+                    @*@if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.UserPermissionsTab))
+                    {
+                        <li><a class="cursor_link" data-target="#PermissionInfoTab" data-toggle="tab">@Localize.T("User Permission")</a></li>
+                    }*@
+                    @*<li><a data-target="#TechscheduleTab" data-toggle="tab">@Localize.T("Tech Schedule Setting")</a></li>*@
+                </ul>
+                <div class="tab-content">
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.DetailTab))
+                    {
+                        <div class="tab-pane active" id="DetailInfoTab">
+                            <div class="width-33p">
+                                <div class="udi_information_block">
+                                    <div class="ci_block udi_pad_bottom">
+                                        <div class="ci_header clearfix">
+                                            <div>@Localize.T("Information")</div>
+                                        </div>
+                                        <div class="udi_info">
+                                            <table class="udi_table">
+                                                <tr class="info-table-tr">
+                                                    <td class="udi_title">
+                                                        <label>@Localize.T("First Name")</label>
+                                                        @Html.TextBoxFor(x => x.Employee.FirstName, new { @class = "form-control" })
+                                                    </td>
+                                                    <td class="udi_data">
+                                                        <label>@Localize.T("Last Name")</label>
+                                                        @Html.TextBoxFor(x => x.Employee.LastName, new { @class = "form-control" })
+                                                    </td>
+                                                </tr>
+                                                <tr class="info-table-tr">
+                                                    <td colspan="2" class="udi_title_mail">
+                                                        <label>@Localize.T("User Name / Email")</label>
+                                                        @if (Model.Employee.UserName.Length != 36)
+                                                        {
+                                                            @Html.TextBoxFor(x => x.Employee.UserName, new { @class = "form-control", @readonly = "read-only" })
+                                                        }
+                                                        else
+                                                        {
+                                                            <input class="form-control" readonly="readonly" />
+                                                        }
+                                                    </td>
+                                                    @*<td class="udi_data">
+                                <label>@Localize.T("Email")</label>
+                                @Html.TextBoxFor(x => x.Employee.Email, new { @class = "form-control" })
+                            </td>*@
+
+                                                </tr>
+                                                <tr class="info-table-tr">
+                                                    <td class="udi_title">
+                                                        <label>@Localize.T("Phone")</label>
+                                                        @Html.TextBoxFor(x => x.Employee.Phone, new { @class = "form-control", placeholder = "xxx-xxx-xxxx" })
+                                                    </td>
+                                                    <td class="udi_data">
+                                                        <label>@Localize.T("SSN")</label>
+                                                        @Html.TextBoxFor(x => x.Employee.SSN, new { @class = "form-control", placeholder = "xxx-xx-xxxx" })
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="width-33p">
+                                <div class="udi_change_Detail_block">
+                                    <div class="ci_block udi_pad_bottom">
+                                        <div class="ci_header clearfix">
+                                            <div>@Localize.T("User Detail")</div>
+                                        </div>
+                                        <div class="udi_info">
+                                            <table class="udi_table">
+                                                <tr class="info-table-tr">
+                                                    <td class="udi_title">
+                                                        <label>@Localize.T("Street")</label>
+                                                        @Html.TextBoxFor(x => x.Employee.Street, new { @class = "form-control", placeholder = "Street" })
+                                                    </td>
+                                                    <td class="udi_data CityState_insert_div">
+                                                        <label>@Localize.T("Zip code")</label>
+                                                        <input type="text" class="form-control" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" value="@Model.Employee.ZipCode" id="ZipCode" placeholder="Zip Code" tabindex=10 />
+                                                        <div class='tt-menu'>
+                                                            <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="info-table-tr">
+                                                    <td class="udi_title">
+                                                        <label>@Localize.T("City")</label>
+                                                        @Html.TextBoxFor(x => x.Employee.City, new { @class = "form-control", style = "text-transform:capitalize", id = "City", placeholder = "City" })
+                                                    </td>
+                                                    <td class="udi_data">
+                                                        <label>@Localize.T("State")</label>
+                                                        @Html.TextBoxFor(x => x.Employee.State, new { @class = "form-control", id = "State", placeholder = "State" })
+                                                    </td>
+                                                </tr>
+                                                <tr class="info-table-tr">
+                                                    <td class="udi-title">
+                                                        <label>@Localize.T("Status")</label>
+                                                        <select class="form-control" id="Status">
+                                                            <option value="Recruit">Recruit</option>
+                                                            <option value="Progressing">Progressing</option>
+                                                            <option value="Signature">Signature</option>
+                                                            <option value="Pending">Pending</option>
+                                                            <option value="Signed">Signed</option>
+                                                            <option value="Dropped">Dropped</option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="width-33p">
+                                <div class="udi_Detail_block">
+                                    <div class="ci_block udi_pad_bottom">
+                                        <div class="ci_header clearfix">
+                                            <div>@Localize.T("Change password")</div>
+                                        </div>
+                                        <div class="udi_info">
+                                            <table class="udi_table">
+                                                <tr class="info-table-tr">
+                                                    <td class="udi_title">
+                                                        <label>@Localize.T("Password")</label>
+                                                        <input name="UserPassword" type="password" value="" class="form-control" id="UserPassword" placeholder="******" />
+                                                        <label class="hidden red label position-absolute" rel="UserPassword">@Localize.T("Minimum 6 characters required")</label>
+                                                    </td>
+                                                    <td class="udi_data">
+                                                        <label>@Localize.T("Confirm Password")</label>
+                                                        <input name="UserConfirmPassword" type="password" value="" id="UserConfirmPassword" class="form-control" placeholder="******" />
+                                                        <label class="hidden red label position-absolute" rel="UserConfirmPassword">@Localize.T("Minimum 6 characters required")</label>
+                                                        <label id="errConfirmPass" class="label hidden red position-absolute"> @Localize.T("Password not matched.")</label>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.HRTab))
+                    {
+                        <div class="tab-pane" id="DocInfoTab">
+                            <div class="LoadDocInfo"></div>
+                        </div>
+                    }
+                    <div class="tab-pane" id="ReminderTab"></div>
+                    <div class="tab-pane" id="notesTab"><div class="notesTab"></div></div>
+                    <div class="tab-pane" id="scheduleTab"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">&nbsp;</div>
+        </div>
+    </div>
+</div>
+

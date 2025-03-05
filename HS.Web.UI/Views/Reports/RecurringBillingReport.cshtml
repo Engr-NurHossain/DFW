@@ -1,0 +1,115 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+<link href="~/Content/Css/Inventory/PurchaseOrderPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+<script>
+    var my_date_format = function (input) {
+        console.log(input + " r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var listmethod = '@Html.Raw(Json.Encode(@ViewBag.PaymentMethod))';
+    listmethod = JSON.parse(listmethod);
+
+
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var RBSReportLoad = function (pageNo, order) {
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+        var PaymentMethod = encodeURI($("#PaymentMethod").val());
+        var Cycle = $("#Cycle").val();
+        if (typeof (pageNo) != "undefined" && pageNo > 0) {
+            var LoadUrl = domainurl + "/Reports/RecurringBillingReportList/?SearchText=" + encodeURI($(".BillingText").val()) + "&Start=" + StartDateVal + "&End=" + EndDateVal
+                + "&PageNo=" + pageNo + "&Order=" + order + "&PageSize=50" + "&Method=" + PaymentMethod + "&Cycle=" + Cycle;
+            $(".RBSTable").html(TabsLoaderText);
+            $(".RBSTable").load(LoadUrl);
+        }
+    }
+
+
+    $(document).ready(function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        console.log(listmethod);
+        if (listmethod.length != 0) {
+            $("#PaymentMethod").selectpicker('val', listmethod);
+        }
+        else {
+            $("#PaymentMethod").selectpicker('val', '');
+        }
+
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+            UpdatePtoCookie();
+
+            RBSReportLoad(1, null);
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        });
+
+        $("#btnRBSSearch").click(function () {
+            RBSReportLoad(1, null);
+        });
+        $(".BillingText").keydown(function (e) {
+            if (e.which == 13) {
+                RBSReportLoad(1, null);
+            }
+        });
+
+        RBSReportLoad(1, null);
+
+        $("#btnRBSDownload").click(function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            var PaymentMethod = encodeURI($("#PaymentMethod").val());
+            var Cycle = $("#Cycle").val();
+            location.href = domainurl + "/Reports/DownloadRecurringBillingReport/?SearchText=" + encodeURI($(".BillingText").val()) + "&Start=" + StartDateVal + "&End=" + EndDateVal
+                + "&PageNo=1" + "&PageSize=50" + "&Method=" + PaymentMethod + "&Cycle=" + Cycle;
+            //+ pageNo + "&Order=" + order
+        })
+    });
+</script>
+
+
+
+<div class="purchase_order_partial_container">
+    <div class="recurring_billing_search_bar">
+        <div class="recurring_billing_search_bar_inner">
+            <input class="form-control BillingText" type="text" placeholder="Search" />
+            @Html.DropDownList("Cycle", (List<SelectListItem>)ViewBag.Cycle, new { @class = "form-control add_estimate_dropdown_style" })
+
+            <div class="input-group add-on">
+                @Html.DropDownList("PaymentMethod", ViewBag.PaymentMethod as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Payment Methods" })
+                <div class="input-group-btn"><button class="btn search_PurchaseOrder_btn green_button" id="btnRBSSearch" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button></div>
+            </div>
+        </div>
+
+        <button title="@Localize.T("Download")" class="report_btn lrp_float_right" id="btnRBSDownload"><i class="fa fa-download"></i></button>
+
+    </div>
+
+    <div class="RBSTable">
+
+    </div>
+</div>
+
+

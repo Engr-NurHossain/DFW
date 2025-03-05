@@ -1,0 +1,273 @@
+﻿@model HS.Entities.CustomerNote
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework
+
+<script>
+    var cusid = '@Model.CustomerId';
+    var completeddatePermit = '@PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowReminderCompletedDateOnAddReminder)';
+    var taskreplyedirdeletepermit = '@PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.TaskReplyEditDelete)';
+    var num = '@Model.AssignName';
+    var complete = '@ViewBag.complete';
+    var EmpArray = [];
+    @if (Model.AssignEmpList != null) {
+      @:EmpArray = [
+        foreach(var item in Model.AssignEmpList)  {
+        @: '@item.AssignedEmpId',
+        }
+        @:];
+        }
+    var timeval = "";
+    if('@Model.RemainderTime' != "")
+    {
+        timeval = '@Model.RemainderTime';
+    }
+    var reminderTime = '@Model.RemainderTime';
+        $(document).ready(function () {
+        $("#btn-AddFollowUpReminder").click(function () {
+            $(this).prop("disabled", !$(this).prop("disabled"));
+        });
+    });
+    </script>
+@Styles.Render("~/styles/AddCustomerFollowUpReminder")
+@Scripts.Render("~/scripts/AddCustomerFollowUpReminder")
+
+<div class="add_customer_follow_up_header">
+    @{
+        if (Model.Id > 0)
+        {
+            <span>@Localize.T("Edit Reminder")</span>
+        }
+        else
+        {
+            <span>@Localize.T("Add Reminder")</span>
+        }
+    }
+</div>
+
+<div class="add_followup_reminder_container">
+    <div class="row">
+        <div class="col-md-12 add_followup_reminder_body">
+            @Html.HiddenFor(x => x.CustomerId)
+            @Html.HiddenFor(x => x.Id)
+            @Html.HiddenFor(x => x.EmployeeID)
+
+            <div class="form-group clearfix item_margin">
+                <span class="reminder-form">@Localize.T("Reminder Note ")<span class="red">@Localize.T("*")</span></span>
+                @Html.TextAreaFor(x => x.Notes, new { @class = "form-control", placeholder = "Please add something to your note", id = "CustomerNoteNewNote" })
+            </div>
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowTaskReply) && Model.Id > 0)
+            {
+                <div class="form-group clearfix item_margin">
+                    <span class="reminder-form">@Localize.T("Reply for Note")</span>
+                    <div class="InvNotesContainer">
+                        <div class="TaskNotesList">
+                            @if (Model.TaskNoteList != null && Model.TaskNoteList.Count() > 0)
+                            {
+                                foreach (var item in Model.TaskNoteList)
+                                {
+                                    <div class="templates">
+                                        <div class="NoteTemplate">
+                                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.TaskReplyEditDelete))
+                                            {
+                                                <input type="text" class="TaskNote_@item.Id" value="@Html.Raw(item.Note)" />
+                                                <button id="btn_edittaskreply_@item.Id" onclick="taskeditReply(@item.Id)" id-val="@item.Id" type="button" class="btn note_reply_save btn_edittaskreply_@item.Id" title="@Localize.T("Save")"> @Localize.T("Save")</button>
+                                                <div class="TaskNoteOptions clearfix">
+                                                    <div class="NoteAddedByDiv">
+                                                        <div>
+                                                            <span><b>@Localize.T("Added By:")</b><span class="NoteAddedBy note_addedby_change_@item.Id">@item.AddedByText</span></span>
+                                                        </div>
+                                                        <div>
+                                                            <span><b>@Localize.T("Added Date:")</b><span class="NoteAddedDate note_addeddate_change_@item.Id">@item.AddedDate.UTCToClientTime().ToString("MM/dd/yy hh:mm")</span></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="TaskNote">@Html.Raw(item.Note)</div>
+                                                <div class="TaskNoteOptions clearfix">
+                                                    <div class="NoteAddedByDiv">
+                                                        <div>
+                                                            <span><b>@Localize.T("Added By:")</b><span class="NoteAddedBy">@item.AddedByText</span></span>
+                                                        </div>
+                                                        <div>
+                                                            <span><b>@Localize.T("Added Date:")</b><span class="NoteAddedDate">@item.AddedDate.UTCToClientTime().ToString("MM/dd/yy hh:mm")</span></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        <div class="addNewInvoiceNoteDiv">
+
+                            <textarea rows="5" id="TaskNote" class="task_textarea form-control"></textarea>
+
+                            <div class="clearfix">
+                                <button class="btn green_button AddNewTaskNotBtn" id="AddNewTaskNotBtn" title="@Localize.T("Reply for Note")">
+                                    <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                                    @Localize.T("Reply for Note")
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowCreatedDateOnAddReminder))
+            {
+                <div class="form-group clearfix item_margin" style="pointer-events:none;">
+                    <span class="reminder-form">@Localize.T("Created On")</span>
+                    <div class="input_group_for_date add-on" id="CustomerNoteCreatedDateCustom">
+                        @Html.TextBoxFor(x => x.CreatedDate, "{0:MM/dd/yy}", new { @class = "form-control datepicker", id = "CustomerNoteCreatedDate" })
+                        <div class="input-group-btn">
+                            <btn class="btn">
+                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                            </btn>
+                        </div>
+                    </div>
+
+                </div>
+            }
+
+            <div class="form-group clearfix item_margin">
+                <span class="reminder-form">@Localize.T("Task Date")<span class="red">@Localize.T("*")</span></span>
+                <div class="input_group_for_date add-on" id="CustomerNoteReminderDateCustom">
+                    @Html.TextBoxFor(x => x.ReminderDate, "{0:MM/dd/yy}", new { @class = "form-control datepicker", id = "CustomerNoteReminderDate" })
+                    <div class="input-group-btn">
+                        <btn class="btn">
+                            <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                        </btn>
+                    </div>
+                </div>
+
+            </div>
+            <div class="form-group clearfix item_margin">
+                <div class="note_text">@Localize.T("Task Time")<span class="red">*</span></div>
+                @Html.DropDownListFor(x => x.RemainderTime, ViewBag.ReminderTime as List<SelectListItem>, new { @class = "form-control" })
+            </div>
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowReminderCompletedDateOnAddReminder))
+            {
+                <div class="form-group clearfix item_margin">
+                    <span class="reminder-form">@Localize.T("Completed By")<span class="red">*</span></span>
+                    <div class="input_group_for_date add-on" id="CustomerNoteReminderEndDateCustom">
+                        @Html.TextBoxFor(x => x.ReminderEndDate, "{0:MM/dd/yy}", new { @class = "form-control datepicker", id = "CustomerNoteReminderEndDate" })
+                        <div class="input-group-btn">
+                            <btn class="btn">
+                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                            </btn>
+                        </div>
+                    </div>
+
+                </div>
+            }
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowNoteAndReminderTeam))
+            {
+                <div class="row" id="Customer-check-type">
+                    <div class="col-md-12 item_margin">
+                        <span class="reminder-form">@Localize.T("Reminder Team")</span>
+                        <select class="form-control" id="TeamSettingId" datarequred="true" style="width:100%">
+                            <option value="-1">Select One</option>
+                            @if (ViewBag.TeamList != null)
+                            {
+                                foreach (var teamItem in (List<HS.Entities.TeamSetting>)ViewBag.TeamList)
+                                {
+                                    <option @(Model.TeamSettingId == teamItem.Id ? "selected" : "") value="@teamItem.Id" userid="@teamItem.UserId">@teamItem.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+            }
+            <div class="row" id="Customer-check-type">
+                <div class="col-md-12 item_margin">
+                    <span class="reminder-form">@Localize.T("Reminder for")<span class="red">@Localize.T("*")</span></span>
+                    @Html.DropDownListFor(x => x.EmpId, (List<SelectListItem>)ViewBag.SalesPersonList, new { @class = "selectpicker form-control note-form", @multiple = "multiple", data_live_search = "true" })
+                    <br />
+                    <label rel="EmpId" class="label hidden red position-absolute"></label>
+                </div>
+            </div>
+
+
+            <div style="margin-top:10px;">
+                <label for="IsEmailReminder" class="label-cbx">
+                    <input id="IsEmailReminder" type="checkbox" class="invisible cus-checkBox" @(Model.IsEmail.Value ? "checked" : "") autocomplete="off">
+                    <div class="checkbox">
+                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                            <polyline points="4 11 8 15 16 6"></polyline>
+                        </svg>
+                    </div>
+                    <label for="IsEmailReminder" class="lbl-CheckBoxText add_reminder_style">@Localize.T("Email Reminder")</label>
+                </label>
+
+            </div>
+
+            <div class="reminder-text">
+                <label for="IsTextReminder" class="label-cbx">
+                    <input id="IsTextReminder" type="checkbox" class="invisible cus-checkBox" @(Model.IsText.Value ? "checked" : "") autocomplete="off">
+                    <div class="checkbox">
+                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                            <polyline points="4 11 8 15 16 6"></polyline>
+                        </svg>
+                    </div>
+                    <label for="IsTextReminder" class="lbl-CheckBoxText add_reminder_style">@Localize.T("Text Reminder")</label>
+                </label>
+
+            </div>
+            <div class="reminder-text instantNotificationDiv hidden">
+                <label for="IsInstantNotification" class="label-cbx">
+                    <input id="IsInstantNotification" type="checkbox" class="invisible cus-checkBox" autocomplete="off">
+                    <div class="checkbox">
+                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                            <polyline points="4 11 8 15 16 6"></polyline>
+                        </svg>
+                    </div>
+                    <label for="IsInstantNotification" class="lbl-CheckBoxText add_reminder_style">@Localize.T("Instant Notification")</label>
+                </label>
+            </div>
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.FollowupPinTopPermission))
+            {
+                <div class="reminder-text">
+                    <label for="IsPinned" class="label-cbx">
+                        <input id="IsPinned" type="checkbox" class="invisible cus-checkBox" @(Model.IsPin.HasValue && Model.IsPin.Value ? "checked" : "") autocomplete="off">
+                        <div class="checkbox">
+                            <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                <polyline points="4 11 8 15 16 6"></polyline>
+                            </svg>
+                        </div>
+                        <label for="IsPinned" class="lbl-CheckBoxText add_reminder_style">@Localize.T("Pin to Top")</label>
+                    </label>
+
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<section class="footer-section">
+    <footer class="footer">
+        <div class="followUp_SaveCancelDiv">
+            @if (Model.IsClose == true)
+            {
+                <button id="btn-AddFollowUpReminder" id-val="@Model.CustomerId" idval1="@Model.EmployeeID" type="button" class="btn"><i class="fa fa-floppy-o"></i> @Localize.T("Re-Open")</button>
+            }
+            else
+            {
+                <button id="btn-AddFollowUpReminder" id-val="@Model.CustomerId" idval1="@Model.EmployeeID" type="button" class="btn"><i class="fa fa-floppy-o"></i> @Localize.T("Save")</button>
+                if (Model.Id > 0)
+                {
+                    <button id="btn-IsComplete1" id-val="@Model.CustomerId" idval1="@Model.EmployeeID" type="button" class="btn btn-IsComplete">@Localize.T(" Complete")</button>
+                }
+
+            }
+        </div>
+    </footer>
+</section>

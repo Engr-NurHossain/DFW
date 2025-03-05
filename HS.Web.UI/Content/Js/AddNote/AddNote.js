@@ -1,0 +1,1 @@
+﻿var datepicker = new Pikaday({ format: 'MM/DD/YYYY', field: $('#ReminderDate')[0] });

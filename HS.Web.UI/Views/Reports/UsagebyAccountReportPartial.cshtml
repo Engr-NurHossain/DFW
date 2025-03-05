@@ -1,0 +1,252 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script>
+     var pageno = '@ViewBag.PageNumber';
+
+    var UsagebyAccountDataLoad = function (CustomerId) {
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+
+        OpenTopToBottomModal("/Reports/UsagebyAccountReportPartialList?CustomerId=" + CustomerId + "&Start=" + StartDateVal + "&End=" + EndDateVal);
+    }
+
+    var UsagebyAccountServiceDataLoad = function (CustomerId) {
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+
+        OpenTopToBottomModal("/Reports/UsagebyAccountReportPartialServiceList?CustomerId=" + CustomerId + "&Start=" + StartDateVal + "&End=" + EndDateVal);
+    }
+
+    $(document).ready(function(){
+      
+
+
+          $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            UsagebyAccountReportLoad(pageno, orderval);
+        });
+
+    });
+</script>
+
+<table class="table" id="InventoryCountReportTable">
+    <thead class="table-head-border">
+        <tr>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Customer")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customer"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customer"></i></div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("CS Account No.")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/csaccount"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/csaccount"></i></div>
+            </th>
+
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Inventory (Installed Ticket)")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/installedticket"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/installedticket"></i></div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Inventory (Service Ticket)")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/serviceticket"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/serviceticket"></i></div>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.UsagebyAccountList)
+        {
+        <tr>
+
+            <td class="table-body-td-style">
+                <div class="ticket_list_partial_device_header">@Localize.T("Customer")<span>:</span></div>
+                <div class="ticket_list_partial_device_info">
+                    <a class="cus-anchor" href="/Customer/CustomerDetail/?id=@item.Id" target="_blank">@item.CustomerName</a>
+
+                </div>
+            </td>
+            <td class="table-body-td-style">
+                <div>@Localize.T("CS Account No.") <span>:</span></div>
+                <div>@item.CustomerNo</div>
+            </td>
+            <td class="table-body-td-style">
+                <div>@Localize.T("Inventory (Installed Ticket)") <span>:</span></div>
+                @if (item.InstalledQuantity <= 0)
+                {
+                    <div>-</div>
+                }
+                else
+                {
+                    <div>
+                        <span class="cus-anchor">
+                            <a href="javascript:void(0)" class="LoadTechListPopUp cus-anchor" onclick="UsagebyAccountDataLoad('@item.CustomerId')">@item.InstalledQuantity</a>
+                        </span>
+                    </div>
+                }
+            </td>
+            <td class="table-body-td-style">
+                <div>@Localize.T("Inventory (Service Ticket)") <span>:</span></div>
+                @if (item.ServiceQuantity <= 0)
+                {
+                    <div>-</div>
+                }
+                else
+                {
+                    <div>
+                        <span class="cus-anchor">
+                            <a href="javascript:void(0)" class="LoadTechListPopUp cus-anchor" onclick="UsagebyAccountServiceDataLoad('@item.CustomerId')">@item.ServiceQuantity</a>
+                        </span>
+                    </div>
+                }
+            </td>
+        </tr>
+        }
+    <tr class="table_total_bg">
+        <td colspan="2">
+            <b class="float_right">@Localize.T("Total:")</b>
+        </td>
+        <td>
+            <div>@Localize.T("Total Installed Ticket") <span>:</span></div>
+            <div>
+                <b title="@Localize.T("Total Installed Ticket")">@Model.TotalCount.TotalInstalled</b>
+            </div>        </td>
+        <td>
+            <div>@Localize.T("Total Service Ticket") <span>:</span></div>
+            <div>
+                <b title="@Localize.T("Total Service Ticket")">@Model.TotalCount.TotalService</b>
+            </div>        </td>
+    </tr>
+    </tbody>
+    
+</table>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber), @(ViewBag.order))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="UsagebyAccountReportLoad(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="UsagebyAccountReportLoad(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="UsagebyAccountReportLoad(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="UsagebyAccountReportLoad(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="UsagebyAccountReportLoad(3, @(ViewBag.order))">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber-2), @(ViewBag.order))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="UsagebyAccountReportLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber + 2), @(ViewBag.order))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber - 1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="UsagebyAccountReportLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>

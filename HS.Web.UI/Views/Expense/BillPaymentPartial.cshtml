@@ -1,0 +1,236 @@
+﻿@*@model List<HS.Entities.BillPaymentHistory>*@
+@model HS.Entities.BillPaymentHistory
+    @{ 
+        Layout = null;
+    }
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@Styles.Render("~/styles/EquipmentList")
+<link href="~/Content/Css/VendorBill/VendorBillList.css" rel="stylesheet" />
+<link href="~/Content/Css/Supplier/SupplierDetails.css" rel="stylesheet" />
+
+<script>
+
+    var pageno = '@ViewBag.PageNumber';
+
+    var my_date_format = function (input) {
+        console.log(input + " r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+
+    var OpenPaymentByPaymentId = function (PaymentId) {
+        if (typeof (PaymentId) != "undefined" && PaymentId > 0) {
+            OpenTopToBottomModal("@(AppConfig.DomainSitePath)/Expense/MakePayment/?PaymentId=" + PaymentId);
+        }
+    }
+    var OpenPaymentByBillIdAndSupplierId = function (BillId,SupplierId) {
+        if (typeof (BillId) != "undefined" && BillId > 0) {
+            OpenTopToBottomModal("@(AppConfig.DomainSitePath)/Expense/MakePayment/?BillId=" + BillId+"&SupplierId="+CurrentSupplierId);
+        }
+    }
+    var OpenCheck = function (name, amount,memo) {
+        memo = encodeURI(memo);
+        name = encodeURI(name);
+        $("#OpenCheckPreview").attr("href", "@(AppConfig.DomainSitePath)/Expense/CheckPreview/?Amount=" + amount + "&Name=" + name+"&Memo="+memo);
+        $("#OpenCheckPreview").click();
+    }
+    var UploadSupplierDocument = function(){
+        OpenRightToLeftModal(domainurl + "/Supplier/AddSupplierDocument?id=" + CurrentSupplierId);
+    }
+    
+
+    $(document).ready(function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        if (StartDate != "" && EndDate != "") {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        $(".btn-apply-Datefilter").click(function () {
+            if ($(".PaymentTab").hasClass("active") == true) {
+
+                OpenExpPaymentTab(null);
+            }
+        })
+          $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            OpenExpPaymentTab(orderval);
+        });
+
+        //parent.$('.close').click(function () {
+        //    parent.$(".modal-body").html('');
+        //});
+        //$(".LoaderWorkingDiv").hide();
+        //$(".btn-create-bill").click(function(){
+        //    OpenBillBySupplierId(CurrentSupplierId);
+        //});
+        //$(".edit-btn").click(function(){
+        //    OpenRightToLeftModal(domainurl + "/Supplier/AddSupplier?id=" + CurrentSupplierId);
+        //});
+        //$(".existing_supplierFile").load(domainurl + "/Supplier/SupplierDocument?id=" + CurrentSupplierId);
+    });
+</script>
+
+<div class="custom-table bill_Payment_partial_container">
+    @if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.ExpneseVendorsDetail))
+    {
+        <table class="display">
+            <thead class="table-head-border">
+                <tr>
+                    @*
+                        <th class="thead-th-style"></th>*@
+                    <th class="thead-th-style ">
+                        <div>@Localize.T("Date")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/date"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/date"></i></div>
+                    </th>
+                    <th class="thead-th-style ">
+                        <div> @Localize.T("Paymet Method")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/paymentmethod"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/paymentmethod"></i></div>
+                    </th>
+                    <th class="thead-th-style ">
+                        <div> @Localize.T("Reference No.")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/referenceno"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/referenceno"></i></div>
+                    </th>
+                    @*<th class="thead-th-style">
+                            <div>@Localize.T("No")</div>
+                            <div><i class="fa fa-angle-up"></i> <i class="fa fa-angle-down"></i></div>
+                        </th>*@
+                <th class="thead-th-style">
+                    <div> @Localize.T("Paid Amt.")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/paidamt"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/paidamt"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div> @Localize.T("Status")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+                </th>
+                    @*<th class="thead-th-style">
+                            <div>@Localize.T("Total Amount")</div>
+                            <div><i class="fa fa-angle-up"></i> <i class="fa fa-angle-down"></i></div>
+                        </th>*@
+                    @*
+                        <th class="thead-th-style">
+                            @Localize.T("Balance")
+                        </th>
+                        <th class="thead-th-style">
+                            @Localize.T("Due Date")
+                        </th>
+                        <th class="thead-th-style">
+                            @Localize.T("Status")
+                        </th>*@
+
+                    @*<th class="thead-th-style">
+                            @Localize.T("Actions")
+                        </th>*@
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.BillPaymentHistoryList != null && Model.BillPaymentHistoryList.Count > 0)
+                {
+                    foreach (var item in Model.BillPaymentHistoryList)
+                    {
+                        <tr class="tr-style">
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Date")<span>:</span></div>
+                                <div>
+                                    @if (item.BType == "Payment")
+                                    {
+                                        <a class="cus-anchor" onclick="OpenPaymentByPaymentId(@item.BpaymentId)" href="Javasicpt:Void(0)">@item.Ddate.ToString("MM/dd/yyyy")</a>
+                                    }
+                                </div>
+                            </td>
+                            <td class="table-body-td-style supd_device_row" valign="top">
+                                <div>@Localize.T("Paymet Method")<span>:</span></div>
+                                <div>
+                                    @if (item.Bmethod != "-1")
+                                    {
+                                        @item.Bmethod
+                                    }
+
+                                </div>
+                            </td>
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Reference No.")<span>:</span></div>
+                                <div>
+                                    @item.BReferenceNo
+                                </div>
+                            </td>
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Paid Amt.")<span>:</span></div>
+                                <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Tamount)</div>
+                            </td>
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Status") <span>:</span></div>
+                                <div>
+                                    @if (item.Bstatus == "Closed")
+                                    {
+                                        @Localize.T("Paid")
+                                    }
+                                </div>
+                            </td>
+                            @*<td class="table-body-td-style supd_device_row" valign="top">
+                        <label class="supd_device_header">@Localize.T("Balance")</label>
+                        <span class="supd_device_info">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.BBalance)</span>
+                    </td>*@
+                            @*<td class="table-body-td-style supd_device_row" valign="top">
+                        <label class="supd_device_header">@Localize.T("Due Date")</label>
+                        <span class="supd_device_info">@item.Ddate.ToString("MM/dd/yyyy")</span>
+                    </td>
+                    <td class="table-body-td-style supd_device_row" valign="top">
+                        <label class="supd_device_header">@Localize.T("Status")</label>
+                        <span class="supd_device_info">@item.Bstatus</span>
+                    </td>*@
+
+                            @*<td class="table-body-td-style supd_device_row" valign="top">
+                        <label class="supd_device_header">@Localize.T("Actions")</label>
+                        <span class="supd_device_info">
+                            @if (item.Bmethod == "Check")
+                            {
+                                <a href="Javasicpt:Void(0)" class="cus-anchor" onclick="OpenCheck('@item.Bname','@item.Tamount','')">@item.Bbillid</a>
+                            }
+                        </span>
+                    </td>*@
+                        </tr>
+                    }
+                }
+                <tr class="table_total_bg">
+                    <td colspan="3" class="total_bg_none_devices">
+                        <b class="float_right">
+                            @Localize.T("Total:")
+                        </b>
+                    </td>
+                    <td colspan="2">
+                        <div>@Localize.T("Total Paid Amount") <span>:</span></div>
+                        <div><b title="@Localize.T("Total Paid Amount")">$ @Model.TotalAmount.ToString(("#,##0.00"))</b></div>
+                    </td>
+                  
+                </tr>
+            </tbody>
+        </table>
+    }
+</div>
+
+
+

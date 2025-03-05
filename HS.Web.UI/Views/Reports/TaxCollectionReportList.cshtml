@@ -1,0 +1,247 @@
+﻿@model HS.Entities.TaxCollection
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script>
+
+
+    $(document).ready(function () {
+        var pagenumber = '@ViewBag.PageNumber';
+        var DateFrom = $(".min-date").val();
+        var DateTo = $(".max-date").val();
+        var SearchText = $("#searchtext_tax_report").val();
+
+        $(".icon_sort_timeclock").click(function () {
+
+            var orderval = $(this).attr('data-val');
+            $(".tax_coll_report_table").html(TabsLoaderText);
+            $(".tax_coll_report_table").load("/Reports/TaxCollectionReportList", { PageNo: pagenumber, SearchText: SearchText,order: orderval, StartDate: DateFrom, EndDate: DateTo, viewtype:"webview"});
+        })
+    })
+</script>
+
+<table class="loadticketreportlist_table">
+    <thead class="table-head-border">
+        <tr>
+            <th class="thead-th-style"> <div>@Localize.T("Customer")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customerid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customerid"></i></div></th>
+            <th class="thead-th-style">
+                <div>@Localize.T("Invoice Id")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/invoiceid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/invoiceid"></i></div>
+            </th>
+            <th class="tb_prev_tick thead-th-style">
+                <div>@Localize.T("Tax Amount")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/tax"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/tax"></i></div>
+            </th>
+            <th class="thead-th-style">
+                <div>@Localize.T("Received Date")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/receiveddate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/receiveddate"></i></div>
+            </th>
+        
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.TaxCollectionList)
+        {
+            <tr class="tr-style">
+                <td class="table-body-td-style" valign="top">
+                    <div class="ticket_list_partial_device_header">@Localize.T("Customer Info.") <span>:</span></div>
+
+
+                    <div class="ticket_list_partial_device_info">
+
+                        <div class="ticket_list_partial_device_info"> <a class="cus-anchor" href="/Customer/CustomerDetail/?id=@item.CusId" target="_blank">@item.CusId</a></div>
+
+                        <span title="@Localize.T("Customer Name")">@item.CusName</span>
+                    </div>
+                </td>
+                <td class="table-body-td-style" valign="top">
+                    <div class="ticket_list_partial_device_header">@Localize.T("Invoice ID")<span>:</span></div>
+
+                    <a class="cus-anchor" href="javascript:void(0)" onclick="OpenInvById(@item.Id)">@item.InvId</a>
+
+                </td>
+                <td class="table-body-td-style" valign="top">
+                    <div class="ticket_list_partial_device_header">@Localize.T("Tax Amount") <span>:</span></div>
+                    <div class="ticket_list_partial_device_info">
+                        @if (item.Tax == 0)
+                        {
+                            <div>$0.00</div>
+                        }
+                        else
+                        {
+                            <div>$@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Tax)</div>
+                        }
+
+
+                    </div>
+                </td>
+                <td class="table-body-td-style" valign="top">
+                    <div class="ticket_list_partial_device_header">@Localize.T("Received Date") <span>:</span></div>
+                    <div class="ticket_list_partial_device_info">
+                        @if (item.TransactionDate != new DateTime())
+                        {
+
+
+                            <span>@item.TransactionDate.ToString("MM/dd/yy")</span>
+
+
+                        }
+                        else
+                        {
+                            <span>-</span>
+                        }
+                    </div>
+                </td>
+
+            </tr>
+        }
+        <tr class="table_total_bg">
+            <td colspan="2">
+                <b class="float_right">
+                    @Localize.T("Total Tax Amount:")
+                </b>
+            </td>
+            <td colspan="2">
+                @*<div>@Localize.T("Total Tax Amount") <span>:</span></div>*@
+                <div><b>$@Model.TotalAmountByPage.ToString("#,##0.00")</b></div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="TaxCollListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="TaxCollListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButtonq  @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="TaxCollListLoad(1, '@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="TaxCollListLoad(2,'@(ViewBag.order)')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="TaxCollListLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="TaxCollListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="TaxCollListLoad(1,'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="TaxCollListLoad(2,'@(ViewBag.order)')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="TaxCollListLoad(3,'@(ViewBag.order)')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="TaxCollListLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TaxCollListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaxCollListLoad(@(ViewBag.PageNumber-2),'@(ViewBag.order)')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaxCollListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="TaxCollListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="TaxCollListLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TaxCollListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaxCollListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaxCollListLoad(@(ViewBag.PageNumber + 2),'@(ViewBag.order)')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TaxCollListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TaxCollListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaxCollListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaxCollListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TaxCollListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TaxCollListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaxCollListLoad(@(ViewBag.PageNumber - 1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="TaxCollListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaxCollListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TaxCollListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+
+
+

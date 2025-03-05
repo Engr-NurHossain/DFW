@@ -1,0 +1,293 @@
+﻿@model HS.Entities.CustomerSystemNumberWithModel
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using HS.Framework
+<script src="~/Content/Js/CustomerNo/CustomerNoList.js"></script>
+@Styles.Render("~/styles/Mmrs")
+@*@Scripts.Render("~/scripts/Mmrs")*@
+@*<link href="~/Content/datatable/dataTables.bootstrap.css" rel="stylesheet" />*@
+<link href="~/Content/Css/CustomerNo/CustomerSystemNoListPartial.css" rel="stylesheet" />
+@Styles.Render("~/styles/CustomerList")
+<style>
+    #tblCustomerNoList_paginate {
+        display: none;
+    }
+
+    #tblCustomerNoList > thead > tr > th:nth-child(1) {
+        width: 20% !important;
+    }
+
+    #tblCustomerNoList > thead > tr > th:nth-child(2) {
+        width: 20% !important;
+    }
+
+    #tblCustomerNoList > thead > tr > th:nth-child(3) {
+        width: 15% !important;
+    }
+
+    #tblCustomerNoList > thead > tr > th:nth-child(4) {
+        width: 15% !important;
+    }
+    #tblCustomerNoList > thead > tr > th:nth-child(5) {
+        width: 15% !important;
+    }
+    #tblCustomerNoList > thead > tr > th:nth-child(6)
+    {
+        width: 15% !important;
+    }
+    .csnlp_status .btn {
+       
+        float:none;
+    }
+    .csnlp_status .toggle-handle {
+         background-color:#fff;
+    }
+</style>
+<div class="csnlp_container">
+
+    <div class="cus-table table1">
+        <table class="data-table display" id="tblCustomerNoList">
+            <thead class="table-head-border header_hide_for_mobile">
+                <tr>
+                    <th class="thead-th-style">
+                        @Localize.T("Customer No")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Customer Name")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Status")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Generate Date")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Modified Date")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Used Date")
+                    </th>
+                </tr>
+            </thead>
+            @foreach (var item in Model.ListCustomerSystemNo)
+            {
+                <tr class="tr-style">
+                    <td class="width_for_mobile table-body-td-style">
+                        <div class="">
+                            <div class="show_header_for_mobile">@Localize.T("Customer No")</div>
+                            <span class="info_style_mobile">@item.CustomerNo</span>
+                            @if (item.IsUsed == true && item.CustomerId > 0)
+                            {
+                                <a href="javascript:void(0)" onclick="ConfirmUnassociateCustomerNo(@item.Id)" class="system-no-delete" style="float:right;cursor:pointer;" data-id="@item.Id" title="@Localize.T("Unassociate Number")"><i class="fa fa-times" style="color:#d71920;margin-left:5px;"></i></a>
+                            }
+                        </div>
+                    </td>
+                    <td class="width_for_mobile table-body-td-style">
+                        <div class="">
+                            <div class="show_header_for_mobile">@Localize.T("Customer Name")</div>
+                            @if (item.IsUsed == true && item.CustomerId == 0)
+                            {
+                                <span class="info_style_mobile">System</span>
+                            }
+                            else
+                            {
+                                <span class="info_style_mobile">@item.CustomerName</span>
+                            }
+
+
+                        </div>
+                    </td>
+                    <td class="width_for_mobile table-body-td-style csnlp_status">
+                        <div class="">
+                            <div class="show_header_for_mobile">@Localize.T("Status")</div>
+                            @{ if (item.IsUsed == true)
+                                {
+                                    <span class="info_style_mobile"><input type="checkbox" class="toggle-demo" idval="@item.Id" onchange="StatusChange(@item.Id)" data-toggle="toggle" data-on="Open" data-off="Used" data-offstyle="danger"></span>
+                                }
+                                else if (item.IsReserved == true)
+                                {
+                                    @*<span class="info_style_mobile">@Localize.T("Unassociate")</span>*@
+                                    <span class="info_style_mobile"><input type="checkbox" class="toggle-demo" idval="@item.Id" onchange="StatusChange(@item.Id)" data-toggle="toggle" data-on="Open" data-off="Unassociate" data-offstyle="danger"></span>
+                                }
+                                else
+                                {
+                                    <span class="info_style_mobile"><input type="checkbox" class="toggle-demo" idval="@item.Id" onchange="StatusChange(@item.Id)" data-toggle="toggle" data-on="Used" data-off="Open" data-offstyle="success"></span>
+                                }
+                            }
+                        </div>
+                    </td>
+                    <td class="width_for_mobile table-body-td-style">
+                        <div class="">
+                            <div class="show_header_for_mobile">@Localize.T("Generate Date")</div>
+                            <span class="info_style_mobile">@item.GenerateDate</span>
+                        </div>
+                    </td>
+                    <td class="width_for_mobile table-body-td-style">
+                        <div class="">
+                            <div class="show_header_for_mobile">@Localize.T("Modified Date")</div>
+                            @{
+                                if (item.ReserveDate != null && item.ReserveDate != new DateTime())
+                                {
+                                    <span class="info_style_mobile">@item.ReserveDate.Value.UTCToClientTime()</span>
+                                }
+                                else
+                                {
+                                    <span class="info_style_mobile">@Localize.T("-") </span>
+                                }
+                            }
+
+                        </div>
+                    </td>
+                    <td class="width_for_mobile table-body-td-style">
+                        <div class="">
+                            <div class="show_header_for_mobile">@Localize.T("Used Date")</div>
+                            @{
+                                if (item.UsedDate != null && item.UsedDate != new DateTime())
+                                {
+                                    <span class="info_style_mobile">@item.UsedDate</span>
+                                }
+                                else
+                                {
+                                    <span class="info_style_mobile">@Localize.T("-") </span>
+                                }
+
+                                if (item.IsReserved != true)
+                                {
+                                    <a href="javascript:void(0)" onclick="ConfirmDeleteCustomerNo(@item.Id)" class="system-no-delete" style="float:right;cursor:pointer;" data-id="@item.Id" title="@Localize.T("Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i></a>
+                                }
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </table>
+    </div>
+</div>
+
+<div class="AgentListPagination table1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(2)">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(2)">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(3)">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="CustomerSystemNumberKeyUp()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" data-id="@ViewBag.PageNumber">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" data-id="@ViewBag.PageNumber">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" data-id="@ViewBag.PageNumber" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="CustomerSystemNumberKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div> 

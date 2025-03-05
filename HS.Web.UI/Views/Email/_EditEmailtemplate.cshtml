@@ -1,0 +1,267 @@
+﻿@model HS.Entities.EmailTemplate
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+<script>
+    var TinyMCEHeightSet = 400;
+    var SaveChanges = function (IsDefault) {
+        var Param = {
+            Id: $("#TemplateId").val(),
+            RestoreDefault: IsDefault,
+            CompanyId: "00000000-0000-0000-0000-000000000000",
+            TemplateKey: $("#TemplateKey").val(),
+            Name: $("#TemplateName").val(),
+            Description: $("#Description").val(),
+            ToEmail: $("#ToEmail").val(),
+            CcEmail: $("#CcEmail").val(),
+            BccEmail: $("#BccEmail").val(),
+            FromEmail: $("#FromEmail").val(),
+            FromName: $("#FromName").val(),
+            ReplyEmail: $("#ReplyEmail").val(),
+            Subject: $("#Subject").val(),
+            BodyContent: tinyMCE.get('BodyContent').getContent(),
+
+        };
+        var url = "@(AppConfig.DomainSitePath)/Email/EditEmailTemplate";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message, function () {
+                        CloseTopToBottomModal();
+                    });
+                    LoadEmailTemplates(true)
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var SendTestEmail = function () {
+        var Param = {
+            ToEmail: $("#ToTestEmail").val(),
+            Subject: $("#Subject").val(),
+            BodyContent: tinyMCE.get('BodyContent').getContent(),
+
+        };
+        var url = "@(AppConfig.DomainSitePath)/Email/SendTestEmail";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message);
+                    LoadEmailTemplates(true)
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var SaveBulkBcc = function () {
+        var Param = {
+            EmailAddress: $("#BccEmail").val(),
+        };
+        var url = "@(AppConfig.DomainSitePath)/Email/SaveBulkBcc";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message);
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var SaveReplyEmail = function () {
+        var Param = {
+            EmailAddress: $("#ReplyEmail").val(),
+        };
+        var url = "@(AppConfig.DomainSitePath)/Email/SaveReplyEmail";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message);
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $("#SaveChanges").click(function () {
+            SaveChanges(false);
+        });
+        $("#RestoreDefault").click(function () {
+            SaveChanges(true);
+        });
+        $("#ApplyForAllBtn").click(function () {
+            OpenConfirmationMessageNew("", "Do you want to use this email address for all templates BCC?", function () {
+                SaveBulkBcc();
+            });
+        });
+        $("#ApplyForAllBtnReply").click(function () {
+            OpenConfirmationMessageNew("", "Do you want to use this email address for all templates Reply email?", function () {
+                SaveReplyEmail();
+            });
+        });
+        $("#SendTestEmail").click(function () {
+            if ($("#ToTestEmail").val().trim() != "") {
+                $("#ToTestEmail").removeClass("required");
+                SendTestEmail();
+            } else {
+                $("#ToTestEmail").addClass("required");
+            }
+        });
+    });
+</script>
+<style>
+     .EditEmailTemplate .row{
+         margin-bottom:15px;
+     }
+     .EmailTemplateDescription{
+         width:100%;
+     }
+     .TemplateEditorMainDiv{
+         height: 100vh; 
+         overflow-y: scroll;
+         background-color: #f4f5f8;
+     }
+     .margin-bottom-5{
+         margin-bottom:5px;
+     }
+</style>
+
+
+<div class="hidden">
+    <input type="hidden" value="@Model.Id" id="TemplateId" />
+    <input type="hidden" value="@Model.TemplateKey" id="TemplateKey"/>
+    <input type="hidden" value="@Model.Name" id="TemplateName" />
+</div>
+<div class="container-fluid TemplateEditorMainDiv">
+    <div class="EditEmailTemplate">
+      
+        <div class="row">
+            <div class="col-md-12">
+                <h3>@Localize.T("Edit Email Template")</h3>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <label>@Localize.T("To Email")</label>
+                <input type="text" id="ToEmail" name="ToEmail" placeholder="Mail To" value="@Model.ToEmail" />
+            </div> 
+            <div class="col-md-4">
+                <label>@Localize.T("Reply Email")</label>
+                <input type="text" id="ReplyEmail" name="ReplyEmail" placeholder="Reply Email" value="@Model.ReplyEmail" />
+            </div>
+            <div class="col-md-2">
+                <label style="width:100%;">&nbsp;</label>
+                <button id="ApplyForAllBtnReply" class="btn btn-default">@Localize.T("Apply For All")</button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <label>@Localize.T("CC")</label>
+                <input type="text" id="CcEmail" name="CcEmail" placeholder="CC" value="@Model.CcEmail" />
+            </div> 
+            <div class="col-md-4">
+                <label>@Localize.T("BCC")</label>
+                <input type="text" id="BccEmail" name="BccEmail" placeholder="BCC" value="@Model.BccEmail" />
+            </div>
+            <div class="col-md-2">
+                <label style="width:100%;">&nbsp;</label>
+                <button id="ApplyForAllBtn" class="btn btn-default">@Localize.T("Apply For All")</button>
+            </div>
+        </div> 
+        <div class="row">
+            <div class="col-md-4">
+                <label>@Localize.T("From Name")</label>
+                <input type="text" id="FromName" name="FromName" placeholder="From Name" value="@Model.FromName" />
+            </div>
+            <div class="col-md-4">
+                <label>@Localize.T("From Email")</label>
+                <input type="text" id="FromEmail" name="FromEmail" placeholder="From Email" value="@Model.FromEmail" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <label>@Localize.T("Subject")</label>
+                <input type="text" value="@Model.Subject" id="Subject" name="Subject" placeholder="Subject" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="BodyContentDiv col-md-12">
+                <label>@Localize.T("Body")</label>
+                <textarea id="BodyContent" name="BodyContent" class="tinymce">@Model.BodyContent</textarea>
+            </div>
+        </div>
+        <div class="row"> 
+            <div class="col-md-6">
+                <div>
+                    <label>@Localize.T("Description")</label>
+                    <textarea type="text" rows="3" class="EmailTemplateDescription" id="Description" name="Description" placeholder="Description">@Model.Description</textarea>
+                </div>
+                <div class="SaveChangesDiv">
+                    <button class="btn btn-default" id="SaveChanges">Save Changes</button>
+                    <button class="btn btn-default" id="RestoreDefault">Restore Default</button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="margin-bottom-5">
+                    <label>@Localize.T("Send Test Email To")</label>
+                    <input type="text" placeholder="eg.: mail@gmail.com" id="ToTestEmail" />
+                </div>
+                <div> 
+                    <button id="SendTestEmail" class="btn btn-default">@Localize.T("Send Test Email")</button>
+                </div>
+            </div>
+        </div>
+        <div class="row"> 
+         
+        </div>
+    </div>
+</div>
+<script src="~/Content/Tiny/tiny.js"></script>

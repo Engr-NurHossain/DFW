@@ -1,0 +1,318 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+ 
+}
+@using HS.Framework
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.EmployeeListWithCustomerModel
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
+<style>
+    #btnDownloadfirstcallclose {
+        float: right;
+    }
+    #LeadsReportTable{
+        width:100%;
+    }
+</style>
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var ShowFirstCallCustomer = function (EmpId) {
+        OpenTopToBottomModal("/Reports/SalesMatrixCustomerListPertial?EmployeeId=" + EmpId);
+    }
+      var ShowFirstCallCloseCustomer = function (EmpId) {
+        OpenTopToBottomModal("/Reports/SalesMatrixCustomerListPertial?EmployeeId=" + EmpId+"&from=FirstCallClose");
+    }
+    
+    $(document).ready(function () {
+           $(".icon_sort_bi").click(function () {
+            var orderval = $(this).attr('data-val');
+              LoadEmployeeNav(pageno, orderval);
+           });
+
+           $("#btnDownloadEmployeeList").click(function () {
+                var FirstDayStr = parent.$(".min-date").val();
+                var EndDayStr = parent.$(".max-date").val();
+                var Search = encodeURI($("#empSearch").val());
+                var DeptFilter = $("#DepartmentFilter").val();
+                var StatusFilter = encodeURI($("#EmpStatusFilter").val());
+                var InsuranceFilter = encodeURI($("#InsuranceFilter").val());
+                location.href = (domainurl + "/Reports/EmployeePartial?Start=" + FirstDayStr + "&End=" + EndDayStr+ "&Search=" + Search + "&DeptFilter="+DeptFilter+"&StatusFilter="+StatusFilter+ "&InsuranceFilter=" + InsuranceFilter  + "&GetReport=true&pageno=" + pageno + "&pagesize=50");
+        });
+    })
+</script>
+
+
+<div>
+    <button title="@Localize.T(" Download")" class="report_btn lrp_float_right btn green_button" id="btnDownloadEmployeeList"><i class="fa fa-download" aria-hidden="true"></i></button>
+</div>
+
+<div class="leads_report_table">
+    <table id="LeadsReportTable" class="can_cue_table">
+        <thead>
+            <tr>
+                <th>
+                    <div>@Localize.T("Name")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/name"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/name"></i></div>
+                </th>
+                <th>
+                    <div>@Localize.T("Adress")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/adress"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/adress"></i></div>
+                </th>
+                <th>
+                    <div>@Localize.T("Hire Date")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/hiredate"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/hiredate"></i></div>
+                </th>
+                <th>
+                    <div>@Localize.T("Insurance")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/insurance"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/insurance"></i></div>
+                </th>
+                <th>
+                    <div>@Localize.T("Insurance Eligible")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/insuranceeligable"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/insuranceeligable"></i></div>
+                </th>
+                <th>
+                    <div>@Localize.T("Last Evaluation")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/lastevaluation"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/lastevaluation"></i></div>
+                </th>
+                <th>
+                    <div>@Localize.T("Next Evaluation")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/nextevaluation"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/nextevaluation"></i></div>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.EmployeeList)
+            {
+            <tr>
+                <td>
+                    <div>@Localize.T("Name") <span>:</span></div>
+                    <div>
+                        <a class="name_anchor_style" href="/UserInformation?Id=@item.UserIntId" target="_blank">@item.FirstName @item.LastName</a><br />
+                        <span>
+                            @item.Email
+                        </span>
+                    </div>
+                </td>
+
+                <td>
+                    <div>@Localize.T("Address") <span>:</span></div>
+                    <div>
+                        @{
+                            var Address = "";
+                            if (!string.IsNullOrEmpty(item.Street))
+                            {
+                                Address += item.Street + ",";
+                            }
+                            if (!string.IsNullOrEmpty(item.City))
+                            {
+                                Address += item.City + ",";
+                            }
+                            if (!string.IsNullOrEmpty(item.State))
+                            {
+                                Address += item.State + ",";
+                            }
+                            if (!string.IsNullOrEmpty(item.ZipCode))
+                            {
+                                Address += item.ZipCode + ",";
+                            }
+                        }
+                        @if (!string.IsNullOrEmpty(Address))
+                        {
+                            Address = Address.Remove(Address.Length - 1, 1);
+                        }
+                        <span>@Address</span>
+                    </div>
+                </td>
+
+                <td>
+                    <div>@Localize.T("Hire Date") <span>:</span></div>
+                    <div>
+                        @if (item.HireDate != null && item.HireDate != new DateTime())
+                        {
+                            <span>@item.HireDate.Value.ToString("M/d/yyyy")</span>
+                        }
+                        @if (!string.IsNullOrEmpty(item.Department) && item.Department != "-1")
+                        {
+                            <div></div>
+                            <div>
+                                <span>Dept.: @item.Department</span>
+                            </div>
+                        }
+
+                    </div>
+                </td>
+                <td>
+                    <div>@Localize.T("Insurance") <span>:</span></div>
+                    <div>
+                        <span>@item.Insurance</span>
+                    </div>
+                </td>
+                <td>
+                    <div>@Localize.T("Insurance Eligible") <span>:</span></div>
+                    <div>
+                        @if (item.EligibleFrom != null && item.EligibleFrom != new DateTime())
+                        {
+                            <span>@item.EligibleFrom.ToString("M/d/yyyy")</span>
+                        }
+                    </div>
+                </td>
+                <td>
+                    <div>@Localize.T("Last Evaluation") <span>:</span></div>
+                    <div>
+                        @if (item.LastEvaluationDate != null && item.LastEvaluationDate != new DateTime())
+                        {
+                            <span>@item.LastEvaluationDate.ToString("M/d/yyyy")</span>
+                        }
+                    </div>
+                </td>
+                <td>
+                    <div>@Localize.T("Next Evaluation") <span>:</span></div>
+                    <div>
+                        @if (item.NextEvaluationDate != null && item.NextEvaluationDate != new DateTime())
+                        {
+                            <span>@item.NextEvaluationDate.ToString("M/d/yyyy")</span>
+                        }
+                    </div>
+                </td>
+            </tr>
+            }
+   
+        </tbody>
+    </table>
+    <div class="AgentListPagination">
+        <div class="paginationContainer">
+            @if (ViewBag.PageCount > 0)
+            {
+                <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+            }
+            @if (ViewBag.PageCount == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons disabledBtn">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="LoadEmployeeNav(@(ViewBag.PageNumber))">1</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?" disabledBtn":"")" onclick="LoadEmployeeNav(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:" "))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?" activeBtn":"")" onclick="LoadEmployeeNav(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?" activeBtn":"")" onclick="LoadEmployeeNav(2)">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? " disabledBtn": "" )" onclick="LoadEmployeeNav(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:" "))">
+                        Next
+                    </button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?" disabledBtn":"")" onclick="LoadEmployeeNav(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:" "))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?" activeBtn":"")" onclick="LoadEmployeeNav(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?" activeBtn":"")" onclick="LoadEmployeeNav(2)">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?" activeBtn":"")" onclick="LoadEmployeeNav(3)">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==3?" disabledBtn":"")" onclick="LoadEmployeeNav(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:" "))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount > 3)
+            {
+                if (ViewBag.PageNumber == ViewBag.PageCount)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="LoadEmployeeNav(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadEmployeeNav(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadEmployeeNav(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="LoadEmployeeNav(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="LoadEmployeeNav()">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="LoadEmployeeNav(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadEmployeeNav(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadEmployeeNav(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="LoadEmployeeNav(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="LoadEmployeeNav(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadEmployeeNav(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadEmployeeNav(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="LoadEmployeeNav(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="LoadEmployeeNav(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadEmployeeNav(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="LoadEmployeeNav(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadEmployeeNav(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="LoadEmployeeNav(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+

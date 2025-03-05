@@ -1,0 +1,224 @@
+﻿@model HS.Entities.EmergencyContact
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+<link href="~/Content/Css/Lead/AddEmergencyContact.css" rel="stylesheet" />
+<script src="~/Content/Js/Site/Validation.js"></script>
+<script src="~/Content/Js/NumberFormet/NumberFormat.js"></script>
+
+<script>
+
+    var InsertCustomerId = '@ViewBag.AddEmgContactCustomerId';
+    var PhoneType = "@Model.PhoneType";
+    var EmContctRelation = "@Model.RelationShip";
+    var HasKeyValue = '@ViewBag.HasKeyValue'
+    var HideNewEmgContactPartial = function () {
+        $("#AddNewEmgContactPartial").hide();
+        $("#QA1AddNewEmgContactPartial").hide();
+    }
+
+    var LoadEmergencyContactList = function () {
+        $("#EmergencyContactList").load(domainurl + "/Customer/CustomerEmergencyContactListPartial?Id=" + InsertCustomerId);
+        $("#QA1EmergencyContactList").load(domainurl + "/Customer/CustomerEmergencyContactListPartial?Id=" + InsertCustomerId);
+    }
+    var EmergencyContactValidation = function () {
+        if ($("#EcFirstName").val().trim() == "" || $("#EcLastName").val().trim() == "") {
+            return false;
+        }
+        return true;
+    }
+    var SaveEmergencyContact = function () {
+        var url = domainurl + "/Customer/AddEmergencyContact/";
+        var param;
+        var HasKey = "";
+        if (HasKeyValue == "true")
+        {
+            if ($("#THasKey").prop("checked")) {
+                // do something
+                HasKey = true;
+            }
+
+            // OR
+            if ($("#FHasKey").is(":checked")) {
+                // do something
+                HasKey = false;
+            }
+        }
+      
+        param = JSON.stringify({
+            Id: $("#EmergencyContactId").val(),
+            CrossSteet: $("#CrossSteet").val(),
+            FirstName: $("#EcFirstName").val(),
+            LastName: $("#EcLastName").val(),
+            RelationShip: $("#EcRelationShip").val(),
+            Email: $("#Email").val(),
+            Phone: $("#EcPhone").val(),
+            PhoneType: $("#PhoneType").val(),
+            HasKey: HasKey,
+            CustomerId: InsertCustomerId
+        });
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (response) {
+
+              if (response.result == true) {
+                    OpenSuccessMessageNew("Success!", response.message, function () {
+                        HideNewEmgContactPartial();
+                        LoadEmergencyContactList();
+                    });
+                }
+
+
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+
+    var SaveEmergencyContactDraft = function () {
+        parent.OpenTextModal("Give verbal password!", "Please put your verbal password here.", function () {
+            token = $("#CustomerOTP").val()
+            CheckTokenAndSaveEmergencyContact(token);
+        });
+    }
+    var CheckTokenAndSaveEmergencyContact = function (token) {
+        var url = "@(AppConfig.DomainSitePath)/CustomerPublic/CheckTokenAndSaveEmergencyContact/";
+        var param;
+        param = JSON.stringify({
+            Id: $("#EmergencyContactId").val(),
+            CrossSteet: $("#CrossSteet").val(),
+            FirstName: $("#EcFirstName").val(),
+            LastName: $("#EcLastName").val(),
+            RelationShip: $("#EcRelationShip").val(),
+            Email: $("#Email").val(),
+            Phone: $("#EcPhone").val(),
+            PhoneType: $("#PhoneType").val(),
+            Token : token,
+            CustomerId: InsertCustomerId
+        });
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (response) {
+                console.log(response.result);
+                console.log("token");
+                if (response.result) {
+                    OpenSuccessMessageNew("Success!", response.message, function () {
+                        HideNewEmgContactPartial();
+                        LoadEmergencyContactList();
+                    });
+                }
+                else {
+                    OpenErrorMessageNew("Error!", response.message);
+                }
+
+
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $("#EcRelationShip").val(EmContctRelation);
+        $("#PhoneType").val(PhoneType);
+
+        $("#btnSaveEmgContact").click(function () {
+            console.log("sdfdsf");
+            CommonUiValidation();
+            if (EmergencyContactValidation()){
+                SaveEmergencyContact();
+            }
+        });
+
+        $("#btnSaveEmgContactDraft").click(function () {
+            CommonUiValidation();
+            if (EmergencyContactValidation()) {
+                SaveEmergencyContactDraft();
+            }
+        });
+        $("#btnCancelEmgContact").click(function () {
+            HideNewEmgContactPartial();
+        });
+    });
+</script>
+<div class="add_emergency_contact_container">
+    <div class="row margin_top_row">
+        <input type="hidden" value="@Model.Id" id="EmergencyContactId" />
+        @*@Html.HiddenFor(x => x.Id)*@
+        @*<div class="col-sm-4 manual_width">
+                <span class="text-custom">@Localize.T("Cross Street") </span>
+                @Html.TextBoxFor(x => x.CrossSteet, new { @class = "form-control", placeholder = "Cross Street", id = "EcCrossSteet" })
+            </div>*@
+        <div class="col-sm-4 manual_width emergencycontactmargin">
+            <span class="span-style">@Localize.T("First Name")<span class="red">*</span></span>
+            @Html.TextBoxFor(x => x.FirstName, new { @class = "style-textbox form-control", placeholder = "First Name", id = "EcFirstName", datarequired = "true" })
+            <label class="label hidden red absolute" rel="FirstName">*@Localize.T("Please enter First Name"). </label>
+        </div>
+        <div class="col-sm-4 manual_width emergencycontactmargin">
+            <span class="span-style">@Localize.T("Last Name*") </span>
+            @Html.TextBoxFor(x => x.LastName, new { @class = "form-control", placeholder = "Last Name", id = "EcLastName", datarequired = "true" })
+            <label class="label hidden red absolute" rel="LastName">*@Localize.T("Please Last Name.") </label>
+        </div>
+        @if (ViewBag.HasKeyValue == "true")
+        {
+            <div class="col-sm-4 manual_width acec_padding_bot">
+                <span class="text-custom">@Localize.T("Has Key")</span>
+                <label>@Html.RadioButtonFor(x => x.HasKey, true, new { id = "THasKey" })&nbsp;&nbsp;@Localize.T("Yes")</label>&nbsp;&nbsp;&nbsp;&nbsp;
+                <label>@Html.RadioButtonFor(x => x.HasKey, false, new { id = "FHasKey" })&nbsp;&nbsp;@Localize.T("No")</label>
+            </div>
+        }
+
+        <div class="col-sm-4 manual_width emergencycontactmargin">
+            <span class="span-style">@Localize.T("Relationship")  </span>
+            @Html.DropDownListFor(x => x.RelationShip, ViewBag.Relationship as List<SelectListItem>, new { @class = "form-control", placeholder = "Relationship", id = "EcRelationShip" })
+        </div>
+
+
+
+
+        <div class="col-sm-4 manual_width emergencycontactmargin">
+            <span class="span-style">@Localize.T("Phone No")</span>
+            @Html.TextBoxFor(x => x.Phone, new { @class = "form-control input-phone-format", placeholder = "xxx-xxx-xxxx", id = "EcPhone", datarequired = "true" })
+            <label class="label hidden red absolute" rel="Phone">*@Localize.T("Please enter Valid No."). </label>
+            <label class="label hidden red absolute" id="PhoneExists">@Localize.T("Contact number already exsists.")</label>
+        </div>
+        <div class="col-sm-4 manual_width emergencycontactmargin">
+            <span class="span-style">@Localize.T("Phone Type")</span>
+            @Html.DropDownListFor(x => x.PhoneType, (List<SelectListItem>)ViewBag.PhoneTypeList, new { @class = "form-control", id = "PhoneType" })
+            <label class="label hidden red absolute" rel="Phone">*@Localize.T("Select phone type"). </label>
+        </div>
+    </div>
+    <div class="row margin_top_row">
+        <div class="col-md-12">
+            @if (ViewBag.Role == "Customer")
+            {
+                <button type="button" class="btn" id="btnSaveEmgContactDraft"><i class="fa fa-floppy-o" aria-hidden="true"></i>&nbsp;@Localize.T("Save")</button>
+            }
+            else
+            {
+                <button type="button" class="btn" id="btnSaveEmgContact"><i class="fa fa-floppy-o" aria-hidden="true"></i>&nbsp;@Localize.T("Save")</button>
+            }
+            <button type="button" class="btn" id="btnCancelEmgContact" style="margin-right:10px;float:right;margin-top:10px;color: #fff;background-color: #867e7e;border-color: #867e7e;"><i class="fa fa-window-close" aria-hidden="true"></i>&nbsp;@Localize.T("Cancel")</button>
+        </div>
+    </div>
+</div>
+
+
+
+

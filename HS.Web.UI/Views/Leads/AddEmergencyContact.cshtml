@@ -1,0 +1,177 @@
+﻿@model HS.Entities.EmergencyContact
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<link href="~/Content/Css/Lead/AddEmergencyContact.css" rel="stylesheet" />
+<script src="~/Content/Js/Site/Validation.js"></script>
+<script src="~/Content/Js/NumberFormet/NumberFormat.js"></script>
+
+<script>
+    var RelationShip = '@Model.RelationShip';
+    var InsertLeadId = '@ViewBag.AddEmgContactCustomerId';
+    var SaveEmergencyContact = function () {
+        var url = domainurl + "/Leads/AddEmergencyContact/";
+        var param;
+        if ($("#HasKey").prop('checked') == true) {
+            param = JSON.stringify({
+                Id: $("#Id").val(),
+                CrossSteet: $("#CrossSteet").val(),
+                FirstName: $("#FirstName").val(),
+                LastName: $("#LastName").val(),
+                RelationShip: $("#RelationShip").val(),
+                Email: $("#Email").val(),
+                Phone: $(".Phone").val(),
+                HasKey: $("#HasKey").val(),
+                PhoneType: $("#PhoneType").val(),
+                CustomerId: InsertLeadId
+            });
+        }
+        else if ($("#FHasKey").prop('checked') == true) {
+            param = JSON.stringify({
+                Id: $("#Id").val(),
+                CrossSteet: $("#CrossSteet").val(),
+                FirstName: $("#FirstName").val(),
+                LastName: $("#LastName").val(),
+                RelationShip: $("#RelationShip").val(),
+                Email: $("#Email").val(),
+                Phone: $(".Phone").val(),
+                HasKey: $("#FHasKey").val(),
+                PhoneType: $("#PhoneType").val(),
+                CustomerId: InsertLeadId
+            });
+        }
+        else {
+            param = JSON.stringify({
+                Id: $("#Id").val(),
+                CrossSteet: $("#CrossSteet").val(),
+                FirstName: $("#FirstName").val(),
+                LastName: $("#LastName").val(),
+                RelationShip: $("#RelationShip").val(),
+                Email: $("#Email").val(),
+                Phone: $(".Phone").val(),
+                PhoneType: $("#PhoneType").val(),
+                HasKey: "False",
+                CustomerId: InsertLeadId
+            });
+        }
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result == true) {
+                    HideNewEmgContactPartial();
+                    LoadEmergencyContactList();
+                } else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        var Phone = $(".Phone").val();
+        if (typeof (Phone) != "undefined" && Phone.length == 10) {
+            $(".Phone").val(Phone.replace(/^(\d{3})(\d{3})(\d{4}).*/, '($1) $2-$3'));
+        }
+        $("#btnCancelEmgContact").click(function () {
+            HideNewEmgContactPartial();
+        });
+        $("#btnSaveEmgContact").click(function () {
+            console.log("frere");
+            if (CommonUiValidation() ) {
+                SaveEmergencyContact();
+            }
+        });
+        $(".Phone").blur(function () {
+            var url = domainurl + "/Leads/EmergencyContactExists/";
+            var param = JSON.stringify({
+                PhoneNumber :  $(".Phone").val(),
+                CustomerId: InsertLeadId,
+                Id: $("#Id").val()
+            });
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result == true) {
+                        $("#PhoneExists").removeClass('hidden');
+                    } else {
+                        $("#PhoneExists").addClass('hidden');
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+        });
+        $("#RelationShip").val(RelationShip);
+    });
+</script>
+<div class="smart_add_emerg_contact">
+  
+        @Html.HiddenFor(x => x.Id)
+        @*<div class="col-sm-4 manual_width">
+                <span class="text-custom">@Localize.T("Cross Street") </span>
+                @Html.TextBoxFor(x => x.CrossSteet, new { @class = "form-control", placeholder = "Cross Street", id = "CrossSteet" })
+            </div>*@
+        <div class="smart_add_emerg_content">
+            <span class="text-custom">@Localize.T("First Name")<span class="red">*</span></span>
+            @Html.TextBoxFor(x => x.FirstName, new { @class = "style-textbox form-control", placeholder = "First Name", id = "FirstName", datarequired = "true" })
+            <label class="label hidden red absolute" rel="FirstName">*@Localize.T("Please enter First Name"). </label>
+        </div>
+        <div class="smart_add_emerg_content">
+            <span class="text-custom">@Localize.T("Last Name*") </span>
+            @Html.TextBoxFor(x => x.LastName, new { @class = "form-control", placeholder = "Last Name", id = "LastName", datarequired = "true" })
+            <label class="label hidden red absolute" rel="LastName">*@Localize.T("Please enter Last Name.") </label>
+        </div>
+        @if (ViewBag.HasKey == "true")
+        {
+            <div class="smart_add_emerg_content add_emergency_contact_check">
+                <div><span class="text-custom">@Localize.T("Has Key")</span></div>
+                <label>@Html.RadioButtonFor(x => x.HasKey, true)&nbsp;&nbsp;@Localize.T("Yes")</label>
+                <label class="add_emergency_contact_check_margin">@Html.RadioButtonFor(x => x.HasKey, false, new { id = "FHasKey" })&nbsp;&nbsp;@Localize.T("No")</label>
+            </div>
+        }
+       
+  
+        <div class="smart_add_emerg_content">
+            <span class="text-custom">@Localize.T("Relationship")  </span>
+            @Html.DropDownListFor(x => x.RelationShip, ViewBag.Relationship as List<SelectListItem>, new { @class = "form-control", placeholder = "Relationship", id = "RelationShip" })
+        </div>
+    <div class="smart_add_emerg_content">
+        <span class="text-custom">@Localize.T("Phone Type")</span>
+        @Html.DropDownListFor(x => x.PhoneType, (List<SelectListItem>)ViewBag.PhoneTypeList, new { @class = "form-control", id = "PhoneType" })
+        <label class="label hidden red absolute" rel="Phone">*@Localize.T("Select phone type"). </label>
+    </div>
+        <div class="smart_add_emerg_content">
+            <span class="text-custom">@Localize.T("Phone No")</span>
+            <input type="text" class="Phone form-control input-phone-format" value="@Model.Phone" placeholder="xxx-xxx-xxxx" name="Phone" datarequired="true"/>
+            <label class="label hidden red absolute"  rel="Phone">*@Localize.T("Please enter Valid No."). </label>
+            <label class="label hidden red absolute" id="PhoneExists">@Localize.T("Contact number already exsists.")</label>
+        </div>
+
+      
+     
+        <div class="smart_add_emerg_footer">
+            <button type="button" class="btn green_button" id="btnSaveEmgContact"><i class="fa fa-floppy-o" aria-hidden="true"></i>&nbsp;@Localize.T("Save")</button>
+            <button type="button" class="btn" id="btnCancelEmgContact"><i class="fa fa-times"></i> @Localize.T("Close")</button>
+        </div>
+   
+</div>
+
+
+
+

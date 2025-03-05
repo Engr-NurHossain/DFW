@@ -1,0 +1,195 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+<link href="~/Content/Css/Inventory/PurchaseOrderPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<script>
+    var my_date_format = function (input) {
+        console.log(input + " r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var listparentsource = '@Html.Raw(Json.Encode(@ViewBag.ParentSource))';
+    listparentsource = JSON.parse(listparentsource);
+    var listleadsource = '@Html.Raw(Json.Encode(@ViewBag.LeadSource))';
+    listleadsource = JSON.parse(listleadsource);
+    var listleadstatus = '@Html.Raw(Json.Encode(@ViewBag.LeadStatus))';
+    listleadstatus = JSON.parse(listleadstatus);
+    var listsalesperson = '@Html.Raw(Json.Encode(@ViewBag.SalesPerson))';
+    listsalesperson = JSON.parse(listsalesperson);
+    var listcustomerstatus = '@Html.Raw(Json.Encode(@ViewBag.CustomerStatus))';
+    listcustomerstatus = JSON.parse(listcustomerstatus);
+    var listsaleslocation = '@Html.Raw(Json.Encode(@ViewBag.SalesLocation))';
+    listsaleslocation = JSON.parse(listsaleslocation);
+    var listleadsourcetype = '@Html.Raw(Json.Encode(@ViewBag.LeadSourceType))';
+    listleadsourcetype = JSON.parse(listleadsourcetype);
+
+
+
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var AllRecordsReportLoad = function (pageNo, order) {
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+        var LeadSource = encodeURI($("#LeadSource").val());
+        var LeadStatus = encodeURI($("#LeadStatus").val());
+        var SalesPerson = encodeURI($("#SalesPerson").val());
+        var CustomerStatus = encodeURI($("#CustomerStatus").val());
+        var SalesLocation = encodeURI($("#SalesLocation").val());
+        var ParentSource = encodeURI($("#ParentSource").val());
+        var LeadSourceType = encodeURI($("#LeadSourceType").val());
+        var IsLead = $("#IsLead").val();
+        if (typeof (pageNo) != "undefined" && pageNo > 0) {
+            var LoadUrl = domainurl + "/Reports/AllRecordsReportList/?SearchText=" + encodeURI($(".AllRecordText").val()) + "&Start=" + StartDateVal + "&End=" + EndDateVal
+                + "&PageNo=" + pageNo + "&Order=" + order + "&PageSize=50" + "&LeadSource=" + LeadSource + "&LeadStatus=" + LeadStatus + "&SalesPerson=" + SalesPerson
+                + "&CustomerStatus=" + CustomerStatus + "&SalesLocation=" + SalesLocation + "&IsLead=" + IsLead + "&LeadSourceType=" + LeadSourceType; //+ "&ParentSource=" + ParentSource
+            $(".AllRecordTable").html(TabsLoaderText);
+            $(".AllRecordTable").load(LoadUrl);
+        }
+    }
+
+
+    $(document).ready(function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+
+        if (listleadsource.length != 0) {
+            $("#LeadSource").selectpicker('val', listleadsource);
+        }
+        else {
+            $("#LeadSource").selectpicker('val', '');
+        }
+        if (listleadsourcetype.length != 0) {
+            $("#LeadSourceType").selectpicker('val', listleadsourcetype);
+        }
+        else {
+            $("#LeadSourceType").selectpicker('val', '');
+        }
+        if (listleadstatus.length != 0) {
+            $("#LeadStatus").selectpicker('val', listleadstatus);
+        }
+        else {
+            $("#LeadStatus").selectpicker('val', '');
+        }
+        if (listsalesperson.length != 0) {
+            $("#SalesPerson").selectpicker('val', listsalesperson);
+        }
+        else {
+            $("#SalesPerson").selectpicker('val', '');
+        }
+        if (listcustomerstatus.length != 0) {
+            $("#CustomerStatus").selectpicker('val', listcustomerstatus);
+        }
+        else {
+            $("#CustomerStatus").selectpicker('val', '');
+        }
+        if (listsaleslocation.length != 0) {
+            $("#SalesLocation").selectpicker('val', listsaleslocation);
+        }
+        else {
+            $("#SalesLocation").selectpicker('val', '');
+        }
+        if (listparentsource.length != 0) {
+            $("#ParentSource").selectpicker('val', listparentsource);
+        }
+        else {
+            $("#ParentSource").selectpicker('val', '');
+        }
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+            UpdatePtoCookie();
+            AllRecordsReportLoad(1, null);
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        });
+
+        $("#btnAllRecordSearch").click(function () {
+            AllRecordsReportLoad(1, null);
+        });
+        $(".AllRecordText").keydown(function (e) {
+            if (e.which == 13) {
+                AllRecordsReportLoad(1, null);
+            }
+        });
+
+        AllRecordsReportLoad(1, null);
+
+        $("#btnAllRecordDownload").click(function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            var LeadSource = encodeURI($("#LeadSource").val());
+            var LeadStatus = encodeURI($("#LeadStatus").val());
+            var SalesPerson = encodeURI($("#SalesPerson").val());
+            var CustomerStatus = encodeURI($("#CustomerStatus").val());
+            var SalesLocation = encodeURI($("#SalesLocation").val());
+            var ParentSource = encodeURI($("#ParentSource").val());
+            var LeadSourceType = encodeURI($("#LeadSourceType").val());
+            var IsLead = $("#IsLead").val();
+            location.href = domainurl + "/Reports/DownloadAllRecordsReport/?SearchText=" + encodeURI($(".AllRecordText").val()) + "&Start=" + StartDateVal + "&End=" + EndDateVal
+                + "&LeadSource=" + LeadSource + "&LeadStatus=" + LeadStatus + "&SalesPerson=" + SalesPerson
+                + "&CustomerStatus=" + CustomerStatus + "&SalesLocation=" + SalesLocation + "&IsLead=" + IsLead + "&LeadSourceType=" + LeadSourceType; //"&ParentSource=" + ParentSource +
+        })
+    });
+</script>
+
+
+
+<div class="purchase_order_partial_container">
+    <div class="All_Records_search_bar">
+        <div class="All_Records_search_bar_inner">
+            <input class="form-control AllRecordText" type="text" placeholder="Search" />
+            @*<div class="LeadSource">
+                @Html.DropDownList("ParentSource", ViewBag.ParentSource as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Parent Source" })
+            </div>*@ 
+            <div class="LeadSource">
+                @Html.DropDownList("LeadSource", ViewBag.LeadSource as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Lead Source" })
+            </div>
+            <div class="LeadSource">
+                @Html.DropDownList("LeadSourceType", ViewBag.LeadSourceType as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Lead Source Type" })
+            </div>          
+            <div class="LeadStatus">
+                @Html.DropDownList("LeadStatus", ViewBag.LeadStatus as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Lead Status" })
+            </div>           
+            <div class="SalesPerson">
+                @Html.DropDownList("SalesPerson", ViewBag.SalesPerson as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Sales Person" })
+            </div>           
+            <div class="CustomerStatus">
+                @Html.DropDownList("CustomerStatus", ViewBag.CustomerStatus as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Customer Status" })
+            </div>           
+            <div class="SalesLocation">
+                @Html.DropDownList("SalesLocation", ViewBag.SalesLocation as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Sales Location" })
+            </div>        
+        <div class="input-group add-on">
+            @Html.DropDownList("IsLead", (List<SelectListItem>)ViewBag.IsLead, new { @class = "form-control add_estimate_dropdown_style" })
+            <div class="input-group-btn"><button class="btn search_PurchaseOrder_btn green_button" id="btnAllRecordSearch" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button></div>
+        </div>        </div>
+
+        <button title="@Localize.T("Download")" class="report_btn lrp_float_right" id="btnAllRecordDownload"><i class="fa fa-download"></i></button>
+
+    </div>
+
+    <div class="AllRecordTable">
+
+    </div>
+</div>
+
+
+

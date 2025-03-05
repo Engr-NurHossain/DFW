@@ -1,0 +1,1429 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@model HS.Entities.WebsiteLocation
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@Styles.Render("~/styles/AddCustomer")
+<link href="~/Content/Css/Tagit/Tagit.css" rel="stylesheet" />
+<link href="~/Content/Css/Tagit/Tagit_ui_Zendesk.css" rel="stylesheet" />
+<link href="~/Content/Cropper/CSS/Cropper.css" rel="stylesheet" />
+<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+<link href="~/Content/Css/AddFile/AddFile.css" rel="stylesheet" />
+<script src="~/Content/Js/Tagit/Tagit.js"></script>
+<script src="~/Content/Cropper/JS/Cropper.js"></script>
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>
+
+<style>
+    .load_hours_operation {
+        margin-bottom: 100px;
+    }
+
+    .custom_form_group {
+        width: 100%;
+        float: left;
+        padding-left: 15px;
+        padding-right: 15px;
+        margin-bottom: 10px;
+        margin-top: 10px;
+        position:relative;
+    }
+    textarea.form-control{
+        height:75px !important;
+    }
+    .social_media_container {
+        float: left;
+        width: 100%;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    .social_media_content {
+        margin-top: 5px;
+        padding: 10px;
+    }
+
+    .social_media_header {
+        padding: 2px;
+        background-color: #ccc;
+    }
+
+    #btn_social_media_link {
+        background-color: #2ca01c;
+        color: white;
+    }
+
+    .deleteDoc_cover {
+        position: absolute;
+        width: 21px;
+        height: 21px;
+        margin-left: 162px;
+        margin-top: -134px;
+        text-align: center;
+        cursor: pointer;
+    }
+
+        .deleteDoc_cover img {
+            width: 25px;
+        }
+
+    .crop-picture-logo, .crop-picture-logo_cover {
+        border: 1px solid #ccc;
+        background-color: #58595B;
+        padding: 5px;
+        width: 175px;
+        height: 35px;
+    }
+    .hood_suggestion_div{
+        border:1px solid #ccc;
+        border-radius: 4px;
+        position:absolute;
+        z-index:9;
+        background-color:#fff;
+    }
+    .suggestion_temp{
+        border-bottom: 1px solid #ccc;
+    padding: 3px 5px;
+    cursor:pointer;
+}
+    .hood_suggestion_div .suggestion_temp:hover{
+        background-color:#f4f5f8;
+    }
+    .hood_suggestion_div .suggestion_temp:nth-child(odd){
+        background-color:#f8f8f8;
+    }
+    .site_location_tracking .tt-menu {
+    background: white;
+    min-width: 250px;
+    font-size: 12px;
+    max-height: 230px;
+   -webkit-box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    margin-top: 0px;
+    position: absolute;
+    z-index: 100;
+    display: none;
+    overflow-y:scroll;
+}
+        .site_location_tracking .tt-dataset-autocomplete {
+    margin-top: -5px;
+}
+        .site_location_tracking .tt-suggestion {
+    min-height: 36px;
+    display: block;
+    padding: 10px 10px 9px 15px;
+    position: relative;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 1px solid #ccc;
+}
+        .site_location_tracking .tt-suggestion span {
+      width: 85%;
+    float: left;
+    display: inline;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    font-size: 12px;
+    display:block!important;
+}
+    .site_location_tracking .tt-sug-text {
+        width: 100%;
+        font-size: 14px;
+        text-overflow: ellipsis;
+    }
+        .site_location_tracking .tt-suggestion.active {
+    background-color: #f2f2f2;
+}
+</style>
+<script>
+    var iscropped = true;
+    var iscroppedCover = true;
+    var UserFileUploadjqXHRData;
+    var pricontact = '@Model.PrimaryContact';
+    var hoursoptoption = '@Model.HoursofOperationOption';
+    var selecteddaysavailable = '@Html.Raw(Json.Encode(@ViewBag.dayavailable))';
+    selecteddaysavailable = JSON.parse(selecteddaysavailable);
+    var selectedcartopt = '@Html.Raw(Json.Encode(@ViewBag.selectedcartopt))';
+    selectedcartopt = JSON.parse(selectedcartopt);
+    var selectedcuisine = '@Html.Raw(Json.Encode(@ViewBag.selectedcuisine))';
+    selectedcuisine = JSON.parse(selectedcuisine);
+    var daysavail = '@Model.AvailableDays';
+    var daysavailoption = '@Model.DaysAvailableOption';
+    var locid = '@Model.Id';
+    var urlslug = '@Model.UrlSlug';
+    var weburl = "";
+    var webid = '@Model.Id';
+    var cuisinetype = '@Model.CuisineType';
+    var optsttime = '@Model.OperationStartTime';
+    var optendtime = '@Model.OperationEndTime';
+    var isinstruct = '@Model.IsInstruction';
+    var paidopt = '@Model.PaidOption';
+    var paymentopt = '@Model.PaymentOption';
+    var selectedpayment = '@Html.Raw(Json.Encode(@ViewBag.selectedpayment))';
+    selectedpayment = JSON.parse(selectedpayment);
+    var comid = '@Model.CompanyId';
+    var isdefaultweb = '@Model.IsDefault';
+    var userrole = '@CurrentUser.UserRole.ToLower()';
+    var neighborlist = '@Model.Neighbarhood';
+    var searchengindex = '@Model.SearchEngineIndex';
+    var SaveWebsiteLocation = function (type, newloc) {
+        if ($("#State").val() != "" && $("#City").val() != "" && $("#UrlSlug").val() != "") {
+                weburl = "/" + $("#State").val().toLowerCase() + "/" + $("#City").val().replace(" ", "-").toLowerCase() + "/" + $("#UrlSlug").val().toLowerCase();
+            }
+            var url = domainurl + "/Website/AddSiteLocation";
+            var param = JSON.stringify({
+                Id: $("#site_loc_id").val(),
+                Name: $("#Name").val(),
+                Address: $("#Address").val(),
+                Address2: $("#Address2").val(),
+                Zipcode: $("#ZipCode").val(),
+                City: $("#City").val(),
+                State: $("#State").val(),
+                PrimaryContact: $("#PrimaryContact").val(),
+                DomainName: $("#DomainName").val(),
+                StorePhone: $("#StorePhone").val(),
+                TrackingPhonePhone: $("#TrackingPhonePhone").val(),
+                HoursofOperation: $("#HoursofOperation").val(),
+                HoursofOperationOption: $("#hour_opt_option").val(),
+                OperationStartTime: $("#OperationStartTime").val(),
+                OperationEndTime: $("#OperationEndTime").val(),
+                DaysAvailable: String($("#selectDaysAvailable_loc").val()),
+                CartOption: String($("#CartOption").val()),
+                DaysAvailableOption: $("#day_available_option").val(),
+                UrlSlug: $("#UrlSlug").val(),
+                WebsiteURL: weburl,
+                MetaTitle: $("#MetaTitle").val(),
+                MetaDescription: $("#MetaDescription").val(),
+                ImageLoc: $("#UploadedPath").val(),
+                TaxPercentage: $("#TaxPercentage").val(),
+                CuisineType: String($("#CuisineType_Val").val()),
+                CloseType: type,
+                PreparationTime: $("#PreparationTime").val(),
+                PaidOption: typeof ($("#PaidOption").val()) != "undefined" && $("#PaidOption").val() != null && $("#PaidOption").val() != "" ? $("#PaidOption").val() : paidopt,
+                PaymentOption: String($("#PaymentOption").val()),
+                FacebookFollowURL: $("#FacebookFollowURL_id").val(),
+                TwitterFollowURL: $("#TwitterFollowURL_id").val(),
+                InstagramFollowURL: $("#InstagramFollowURL_id").val(),
+                YoutubeFollowURL: $("#YoutubeFollowURL_id").val(),
+                NewLocation: newloc,
+                CoverImageLoc: $("#UploadedPath_cover").val(),
+                ExpireTime: $("#ExpireTime").val(),
+                DeliveryRadius: $("#DeliveryRadius").val(),
+                DeliveryFee: $("#DeliveryFee").val(),
+                ListNeighborhood: $('#Neighborhood').tagit('assignedTags'),
+                SearchEngineIndex: $("#SearchEngineIndex").val() == "1" ? true : false,
+                MinimumOrderValue: $("#MinimumOrderValue").val(),
+                MinimumDeliveryTime: $("#MinimumDeliveryTime").val()
+            })
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result && data.closetype) {
+                        OpenIeateryPopupModal("Success", "Site location saved successfully")
+                        CloseTopToBottomModal();
+                            LoadLocationsTab(1, null);
+                    }
+                    else {
+                        OpenIeateryPopupModal("Success", "Site location saved successfully")
+                        OpenTopToBottomModal(domainurl + "/Website/AddSiteLocation?id=" + data.id);
+                            LoadLocationsTab(1, null);
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+    }
+    var GetUrlSlug = function () {
+            $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: "/MenuManagement/GetURLSlug",
+            data: JSON.stringify({ key: $("#Name").val() }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                 if (data.result) {
+                       $("#UrlSlug").val(data.str);
+                 }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    function FormatCellNumber(cvalue) {
+        var ValueCleanCell = "";
+        if (cvalue != undefined && cvalue != "" && cvalue != null) {
+            cvalue = cvalue.replace(/[-  ]/g, '');
+            if (cvalue.length == 10) {
+                ValueCleanCell = cvalue.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+                $("#StorePhone").css({ "border": "1px solid #babec5" });
+            }
+            else if (cvalue.length > 10) {
+                ValueCleanCell = cvalue;
+                $("#StorePhone").css({ "border": "1px solid red" });
+            }
+            else {
+                $("#StorePhone").css({ "border": "1px solid red" });
+                ValueCleanCell = cvalue;
+            }
+        }
+        return ValueCleanCell;
+    }
+    function FormatTrackingNumber(cvalue) {
+        var ValueCleanCell = "";
+        if (cvalue != undefined && cvalue != "" && cvalue != null) {
+            cvalue = cvalue.replace(/[-  ]/g, '');
+            if (cvalue.length == 10) {
+                ValueCleanCell = cvalue.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+                $("#TrackingPhonePhone").css({ "border": "1px solid #babec5" });
+            }
+            else if (cvalue.length > 10) {
+                ValueCleanCell = cvalue;
+                $("#TrackingPhonePhone").css({ "border": "1px solid red" });
+            }
+            else {
+                $("#TrackingPhonePhone").css({ "border": "1px solid red" });
+                ValueCleanCell = cvalue;
+            }
+        }
+        return ValueCleanCell;
+    }
+    function readURL(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                $('#UploadCustomerFileBtn').attr('src', e.target.result);
+                $(".fileborder_directory .cropper-container .cropper-canvas img").attr('src', e.target.result);
+                $(".fileborder_directory .cropper-container .cropper-crop-box span img").attr('src', e.target.result);
+            };
+            reader.readAsDataURL(input.files[0]);
+            setTimeout(initCropperDirectory, 1000);
+        }
+    }
+    function readURLCover(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                $('#UploadCustomerFileBtn_cover').attr('src', e.target.result);
+                $(".fileborder_cover .cropper-container .cropper-canvas img").attr('src', e.target.result);
+                $(".fileborder_cover .cropper-container .cropper-crop-box span img").attr('src', e.target.result);
+            };
+            reader.readAsDataURL(input.files[0]);
+            setTimeout(initCropperCover, 1000);
+        }
+    }
+    function initCropperDirectory() {
+        iscropped = false;
+        var image = document.getElementById('UploadCustomerFileBtn');
+        var cropper = new Cropper(image, {
+            aspectRatio: 1 / 1,
+            autoCropArea: 1,
+          crop: function(e) {
+            console.log(e.detail.x);
+            console.log(e.detail.y);
+          }
+        });
+        document.getElementById('crop_button').addEventListener('click', function () {
+            iscropped = true;
+            var imgurl =  cropper.getCroppedCanvas().toDataURL('image/png');
+            var img = document.createElement("img");
+            img.src = imgurl;
+
+            $.ajax({
+                    url: '/Website/UploadWeblocPhoto',
+                    type: "POST",
+                    data: {imgurl},
+                        dataType: "Json",
+                        success: function (data) {
+                            console.log("dfdf");
+                            $(".deleteDoc").removeClass("hidden");
+                            $(".crop-picture-logo").addClass("hidden");
+                            $(".change-picture-logo").removeClass("hidden");
+                            $("#UploadCustomerFileBtn").removeClass("cropper-hidden");
+                            $(".fileborder_directory .cropper-container").addClass("hidden");
+            if ($("#BodyContent").val() == "") {
+                var filename = data.FullFilePath;
+                tinymce.get("BodyContent").setContent(filename);
+            }
+
+                            setTimeout(function () {
+                                $(".file-progress").hide();
+                $(".file-progress .progress-bar").animate({
+                    width: 0 + "%"
+                }, 0);
+                $(".file-progress .progress-bar span").text(0 + '%');
+            }, 500);
+
+            if ((typeof (data.isUploaded) != "undefined") && data.isUploaded == true) {
+                $("#UploadSuccessMessage").removeClass('hidden');
+                $("#UploadedPath").val(data.FullFilePath);
+                var spfile = data.FullFilePath.split('.');
+                $(".fileborder").removeClass('red-border');
+                $("#uploadfileerror").addClass("hidden");
+
+                var index = spfile.length - 1;
+                if (spfile[index] == "png" || spfile[index] == "PNG" || spfile[index] == "jpg" || spfile[index] == "JPG" || spfile[index] == "jpeg" || spfile[index] == "JPEG") {
+                    $("#UploadCustomerFileBtn").attr('src', data.FullFilePath)
+                    $(".chooseFilebtn").addClass("hidden");
+                    $(".changeFilebtn").removeClass("hidden");
+                    $(".deleteDoc").removeClass("hidden");
+                    $("#UploadCustomerFileBtn").addClass('custom-file');
+                    $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+                    $(".fileborder").addClass('border_none');
+                }
+                else if (spfile[index] == "pdf") {
+                    $(".chooseFilebtn").addClass("hidden");
+                    $(".changeFilebtn").removeClass("hidden");
+                    $(".deleteDoc").removeClass("hidden");
+                    $("#UploadCustomerFileBtn").attr('src', domainurl + '/Content/Icons/pdf.png');
+                    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                    $(".fileborder").removeClass('border_none');
+                }
+                else if (spfile[index] == "doc" || spfile[index] == "docx") {
+                    $(".chooseFilebtn").addClass("hidden");
+                    $(".changeFilebtn").removeClass("hidden");
+                    $(".deleteDoc").removeClass("hidden");
+                    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+                    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                    $(".fileborder").removeClass('border_none');
+                }
+                else if (spfile[index] == "mp4" || spfile[index] == "mov") {
+                    $(".chooseFilebtn").addClass("hidden");
+                    $(".changeFilebtn").removeClass("hidden");
+                    $(".deleteDoc").removeClass("hidden");
+                    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/mp4.png');
+                    $(".fileborder").removeClass('border_none');
+                }
+                else {
+                    $(".chooseFilebtn").addClass("hidden");
+                    $(".changeFilebtn").removeClass("hidden");
+                    $(".deleteDoc").removeClass("hidden");
+                    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+                    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                    $(".fileborder").removeClass('border_none');
+
+                }
+            }
+            else {
+                OpenErrorMessageNew("Error", "Image dimension should be 1400 * 930");
+            }
+                        },
+                        error: function () {
+                          console.log('Upload error');
+                        }
+                      });
+        })
+    }
+    function initCropperCover() {
+        iscroppedCover = false;
+        var image = document.getElementById('UploadCustomerFileBtn_cover');
+        var cropper = new Cropper(image, {
+          aspectRatio: 16 / 9,
+            autoCropArea: 1,
+          crop: function(e) {
+            console.log(e.detail.x);
+            console.log(e.detail.y);
+          }
+        });
+
+        document.getElementById('crop_button_cover').addEventListener('click', function () {
+            iscroppedCover = true;
+            var imgurl =  cropper.getCroppedCanvas().toDataURL('image/png');
+            var img = document.createElement("img");
+            img.src = imgurl;
+
+            $.ajax({
+                    url: '/Website/UploadWeblocPhoto',
+                    type: "POST",
+                    data: {imgurl},
+                        dataType: "Json",
+                        success: function (data) {
+                            console.log("dfdf");
+                            $(".deleteDoc_cover").removeClass("hidden");
+                            $(".crop-picture-logo_cover").addClass("hidden");
+                            $(".change-picture-logo_cover").removeClass("hidden");
+                            $("#UploadCustomerFileBtn_cover").removeClass("cropper-hidden");
+                            $(".fileborder_cover .cropper-container").addClass("hidden");
+            if ($("#BodyContent").val() == "") {
+                var filename = data.FullFilePath;
+                tinymce.get("BodyContent").setContent(filename);
+            }
+
+            setTimeout(function () {
+                $(".file-progress").hide();
+                $(".file-progress .progress-bar").animate({
+                    width: 0 + "%"
+                }, 0);
+                $(".file-progress .progress-bar span").text(0 + '%');
+            }, 500);
+
+            if ((typeof (data.isUploaded) != "undefined") && data.isUploaded == true) {
+                $("#UploadSuccessMessage").removeClass('hidden');
+                $("#UploadedPath_cover").val(data.FullFilePath);
+                var spfile = data.FullFilePath.split('.');
+                $(".fileborder").removeClass('red-border');
+                $("#uploadfileerror").addClass("hidden");
+
+                var index = spfile.length - 1;
+                if (spfile[index] == "png" || spfile[index] == "PNG" || spfile[index] == "jpg" || spfile[index] == "JPG" || spfile[index] == "jpeg" || spfile[index] == "JPEG") {
+                    $("#UploadCustomerFileBtn_cover").attr('src', data.FullFilePath)
+                    $(".chooseFilebtn_cover").addClass("hidden");
+                    $(".changeFilebtn_cover").removeClass("hidden");
+                    $(".deleteDoc_cover").removeClass("hidden");
+                    $("#UploadCustomerFileBtn_cover").addClass('custom-file');
+                    $("#UploadCustomerFileBtn_cover").removeClass('otherfileposition');
+                    $(".fileborder").addClass('border_none');
+                }
+                else if (spfile[index] == "pdf") {
+                    $(".chooseFilebtn_cover").addClass("hidden");
+                    $(".changeFilebtn_cover").removeClass("hidden");
+                    $(".deleteDoc_cover").removeClass("hidden");
+                    $("#UploadCustomerFileBtn_cover").attr('src', domainurl + '/Content/Icons/pdf.png');
+                    $("#UploadCustomerFileBtn_cover").addClass('otherfileposition');
+                    $("#UploadCustomerFileBtn_cover").removeClass('custom-file');
+                    $(".fileborder").removeClass('border_none');
+                }
+                else if (spfile[index] == "doc" || spfile[index] == "docx") {
+                    $(".chooseFilebtn_cover").addClass("hidden");
+                    $(".changeFilebtn_cover").removeClass("hidden");
+                    $(".deleteDoc_cover").removeClass("hidden");
+                    $("#UploadCustomerFileBtn_cover").attr('src', '/Content/Icons/docx.png');
+                    $("#UploadCustomerFileBtn_cover").addClass('otherfileposition');
+                    $("#UploadCustomerFileBtn_cover").removeClass('custom-file');
+                    $(".fileborder").removeClass('border_none');
+                }
+                else if (spfile[index] == "mp4" || spfile[index] == "mov") {
+                    $(".chooseFilebtn_cover").addClass("hidden");
+                    $(".changeFilebtn_cover").removeClass("hidden");
+                    $(".deleteDoc_cover").removeClass("hidden");
+                    $("#UploadCustomerFileBtn_cover").attr('src', '/Content/Icons/mp4.png');
+                    $(".fileborder").removeClass('border_none');
+                }
+                else {
+                    $(".chooseFilebtn_cover").addClass("hidden");
+                    $(".changeFilebtn_cover").removeClass("hidden");
+                    $(".deleteDoc_cover").removeClass("hidden");
+                    $("#UploadCustomerFileBtn_cover").attr('src', '/Content/Icons/docx.png');
+                    $("#UploadCustomerFileBtn_cover").addClass('otherfileposition');
+                    $("#UploadCustomerFileBtn_cover").removeClass('custom-file');
+                    $(".fileborder").removeClass('border_none');
+
+                }
+            }
+            else {
+                OpenErrorMessageNew("Error", "Image dimension should be 1400 * 930");
+            }
+                        },
+                        error: function () {
+                          console.log('Upload error');
+                        }
+                      });
+        })
+    }
+    var sampleTags = '@Html.Raw(Json.Encode(@ViewBag.neighname))';
+    sampleTags = JSON.parse(sampleTags);
+    $(document).ready(function () {
+        $(".selectpicker").selectpicker();
+        if (typeof (selectedcartopt) != "undefined" && selectedcartopt != null && selectedcartopt != "") {
+            $("#CartOption").selectpicker("val", selectedcartopt);
+        }
+        else {
+            $("#CartOption").selectpicker("val", "pickup");
+        }
+
+        $("#CuisineType_Val").selectpicker("val", selectedcuisine);
+        if (hoursoptoption != "" && hoursoptoption != "-1") {
+            $(".operation_time_div").removeClass('hidden');
+            $("#hour_opt_option").val(hoursoptoption);
+        }
+        else {
+            $(".operation_time_div").addClass('hidden');
+            $("#hour_opt_option").val("-1");
+        }
+        if (pricontact == "") {
+            $("#PrimaryContact").val("-1");
+        }
+        else {
+            $("#PrimaryContact").val(pricontact);
+        }
+        $(".add_site_location_inner_height").height(window.innerHeight - 94);
+        $(".add_site_config_inner_height").height(window.innerHeight - 94);
+        $("#SaveWebLocation").click(function () {
+            if (CommonUiValidation()) {
+                if (parseInt(webid) > 0) {
+                    if (isdefaultweb == "False") {
+                        $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                        url: "/Website/GetLocationUrlSlugPermission",
+                        data: JSON.stringify({ id: webid, urlslug: $("#UrlSlug").val(), state: $("#State").val(), city: $("#City").val() }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data) {
+                        if (iscropped == true && iscroppedCover == true) {
+                            SaveWebsiteLocation(false, false);
+                        }
+                        else {
+                            OpenErrorMessageNew("Error", "Cropped your image and save");
+                        }
+                    }
+                    else {
+                        OpenErrorMessageNew("Error", "website url must be unique");
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+                    }
+                    else {
+                        if (iscropped == true && iscroppedCover == true) {
+                            SaveWebsiteLocation(false, false);
+                        }
+                        else {
+                            OpenErrorMessageNew("Error", "Cropped your image and save");
+                        }
+                    }
+
+
+            }
+            else {
+                $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: "/Website/LocationAddPermission",
+                data: JSON.stringify({ state: $("#State").val(), city: $("#City").val(), address: $("#Address").val(), zip: $("#ZipCode").val(), urlslug: $("#UrlSlug").val() }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data) {
+                        if (iscropped == true && iscroppedCover == true) {
+                            SaveWebsiteLocation(false, true);
+                        }
+                        else {
+                            OpenErrorMessageNew("Error", "Cropped your image and save");
+                        }
+                    }
+                    else {
+                        OpenErrorMessageNew("Error", "Another site exist in same location");
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+            }
+            }
+        })
+        $("#hour_opt_option").change(function () {
+            if ($(this).val() != "-1" && $(this).val() == "sethour") {
+                $(".operation_time_div").removeClass('hidden');
+            }
+            else {
+                $(".operation_time_div").addClass('hidden');
+            }
+        })
+        if (typeof (String($("#selectDaysAvailable_loc").val()) != "null")) {
+            $(".load_hours_operation").load("/Website/LoadHoursOperation?daylist=" + String($("#selectDaysAvailable_loc").val()) + "&locid=" + locid);
+        }
+        $(".load_hours_opt_data").load("/Website/LoadHoursOfOPt?locid=" + locid + "&starttime=" + optsttime + "&endtime=" + optendtime);
+        $(".load_order_hours_opt_data").load("/Website/LoadOnlineOrderHoursOfOPt?locid=" + locid + "&starttime=" + optsttime + "&endtime=" + optendtime);
+        if (parseInt(webid) < 1) {
+            $("#Name").blur(function () {
+                if ($("#Name").val().length > 0) {
+                    if (userrole != "ieateryadmin") {
+                        $(".urlslug_div").removeClass('hidden');
+                    }
+                GetUrlSlug();
+            }
+            else {
+                $(".urlslug_div").addClass('hidden');
+            }
+        })
+        }
+
+        $(".deleteDoc").click(function () {
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this file?", function () {
+                $(".Upload_Doc").removeClass('hidden');
+                $("#UploadCustomerFileBtn").attr('src', '/Content/img/toppng.com-file-upload-image-icon-980x980.png');
+                $(".chooseFilebtn").removeClass("hidden");
+                $(".changeFilebtn").addClass("hidden");
+                $(".deleteDoc").addClass("hidden");
+                $("#Preview_Doc").attr('src', "");
+                $("#Frame_Doc").attr('src', "");
+                $("#UploadSuccessMessage").hide();
+                $("#BodyContent").val("");
+                $("#UploadedPath").val('');
+                $(".fileborder").addClass('border_none');
+                $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+            });
+        })
+            $(".deleteDoc_cover").click(function () {
+        OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this file?", function () {
+            $(".Upload_Doc").removeClass('hidden');
+            $("#UploadCustomerFileBtn_cover").attr('src', '/Content/img/toppng.com-file-upload-image-icon-980x980.png');
+            $(".chooseFilebtn_cover").removeClass("hidden");
+            $(".changeFilebtn_cover").addClass("hidden");
+            $(".deleteDoc_cover").addClass("hidden");
+            $("#Preview_Doc").attr('src', "");
+            $("#Frame_Doc").attr('src', "");
+            $("#UploadSuccessMessage").hide();
+            $("#BodyContent").val("");
+            $("#UploadedPath_cover").val('');
+            $(".fileborder").addClass('border_none');
+            $("#UploadCustomerFileBtn_cover").removeClass('otherfileposition');
+        });
+    });
+
+    $("#UploadCustomerFileBtn").click(function () {
+        console.log("sdfdsf");
+        $("#UploadedFile").click();
+        //loadDirectoryImage();
+        $("#UploadSuccessMessage").addClass('hidden');
+    });
+
+            $("#UploadCustomerFileBtn_cover").click(function () {
+        console.log("sdfdsf");
+        $("#UploadedFile_cover").click();
+        $("#UploadSuccessMessage").addClass('hidden');
+    });
+
+        $(".change-picture-logo").click(function () {
+        $("#UploadedFile").click();
+        //loadDirectoryImage();
+        $("#UploadSuccessMessage").addClass('hidden');
+    });
+        $(".change-picture-logo_cover").click(function () {
+        $("#UploadedFile_cover").click();
+        $("#UploadSuccessMessage").addClass('hidden');
+    });
+    $(document).on("change", "#UploadedFile", function (event) {
+            $('#UploadCustomerFileBtn').addClass("cropper-hidden");
+            $(".change-picture-logo").addClass("hidden");
+            $(".crop-picture-logo").removeClass("hidden");
+            $(".crop-picture-logo .chooseFilebtn").removeClass("hidden");
+            $(".fileborder_directory .cropper-container").removeClass("hidden");
+                $(".deleteDoc").addClass("hidden");
+                readURL(this);
+    });
+        $("#UploadedFile_cover").on("change", function () {
+                $(".deleteDoc_cover").addClass("hidden");
+        $('#UploadCustomerFileBtn_cover').addClass("cropper-hidden");
+        $(".change-picture-logo_cover").addClass("hidden");
+            $(".crop-picture-logo_cover").removeClass("hidden");
+            $(".crop-picture-logo_cover .chooseFilebtn").removeClass("hidden");
+        $(".fileborder_cover .cropper-container").removeClass("hidden");
+        readURLCover(this);
+    });
+
+    $("#UploadedPath").blur(function () {
+        if ($("#UploadedPath").val() == "") {
+            $("#uploadfileerror").removeClass("hidden");
+            $(".fileborder").addClass('red-border');
+        }
+        if ($("#UploadedPath").val() != "") {
+            $("#uploadfileerror").addClass("hidden");
+            $(".fileborder").removeClass('red-border');
+        }
+    })
+            $("#UploadedPath_cover").blur(function () {
+        if ($("#UploadedPath_cover").val() == "") {
+            $("#uploadfileerror").removeClass("hidden");
+            $(".fileborder").addClass('red-border');
+        }
+        if ($("#UploadedPath_cover").val() != "") {
+            $("#uploadfileerror").addClass("hidden");
+            $(".fileborder").removeClass('red-border');
+        }
+    })
+        $("#StorePhone").keyup(function () {
+            var cPhoneNumber = $(this).val();
+            if (cPhoneNumber != undefined && cPhoneNumber != null && cPhoneNumber != "") {
+                var ccleanPhoneNumber = FormatCellNumber(cPhoneNumber);
+                $(this).val(ccleanPhoneNumber);
+            }
+        });
+        $("#TrackingPhonePhone").keyup(function () {
+            var cPhoneNumber = $(this).val();
+            if (cPhoneNumber != undefined && cPhoneNumber != null && cPhoneNumber != "") {
+                var ccleanPhoneNumber = FormatTrackingNumber(cPhoneNumber);
+                $(this).val(ccleanPhoneNumber);
+            }
+        });
+        if (typeof (cuisinetype) != "undefined" && cuisinetype != null && cuisinetype != "") {
+            $("#CuisineType").val(cuisinetype);
+        }
+        else {
+            $("#CuisineType").val("-1");
+        }
+        $("#SaveWebLocationAndClose").click(function () {
+            if (CommonUiValidation()) {
+                if (parseInt(webid) > 0) {
+                    if (isdefaultweb == "False") {
+                        $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                        url: "/Website/GetLocationUrlSlugPermission",
+                        data: JSON.stringify({ id: webid, urlslug: $("#UrlSlug").val(), state: $("#State").val(), city: $("#City").val() }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data) {
+                        if (iscropped == true && iscroppedCover == true) {
+                            SaveWebsiteLocation(true, false);
+                        }
+                        else {
+                            OpenErrorMessageNew("Error", "Cropped your image and save");
+                        }
+                    }
+                    else {
+                        OpenErrorMessageNew("Error", "Website url must be unique");
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+                    }
+                    else {
+                        if (iscropped == true && iscroppedCover == true) {
+                            SaveWebsiteLocation(true, false);
+                        }
+                        else {
+                            OpenErrorMessageNew("Error", "Cropped your image and save");
+                        }
+                    }
+            }
+            else {
+                $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: "/Website/LocationAddPermission",
+                data: JSON.stringify({ state: $("#State").val(), city: $("#City").val(), address: $("#Address").val(), zip: $("#ZipCode").val(), urlslug: $("#UrlSlug").val() }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data) {
+                        if (iscropped == true && iscroppedCover == true) {
+                            SaveWebsiteLocation(true, true);
+                        }
+                        else {
+                            OpenErrorMessageNew("Error", "Cropped your image and save");
+                        }
+                    }
+                    else {
+                        OpenErrorMessageNew("Error", "Another site exist in same location");
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+            }
+            }
+        })
+        if (paidopt != "") {
+            $("#PaidOption").val(paidopt);
+        }
+        else {
+            $("#PaidOption").val("Unpaid");
+        }
+        if (typeof (paymentopt) != "undefined" && paymentopt != null && paymentopt != "") {
+            $("#PaymentOption").selectpicker('val', selectedpayment);
+        }
+        else {
+            $("#PaymentOption").selectpicker('val', 'PayRestaurant');
+        }
+        $(".social_media_left_content").load("/Website/LoadSocialMediaContent?comid=" + comid);
+        $("#Neighborhood").tagit({
+                                availableTags: sampleTags
+        });
+        if ($("#CartOption").val().length > 0) {
+            var cartarr = $("#CartOption").val();
+            for (var c = 0; c < $("#CartOption").val().length; c++) {
+                if ($(cartarr)[c] == "delivery") {
+                    $(".delivery_option_div").attr("style", "display:block;");
+                }
+                else {
+                    $(".delivery_option_div").attr("style", "display:none;");
+                }
+            }
+        }
+        $("#CartOption").change(function () {
+            var cartarr = $("#CartOption").val();
+            for (var c = 0; c < $("#CartOption").val().length; c++) {
+                if ($(cartarr)[c] == "delivery") {
+                    $(".delivery_option_div").attr("style", "display:block;");
+                }
+                else {
+                    $(".delivery_option_div").attr("style", "display:none;");
+                }
+            }
+        })
+        if (typeof (searchengindex) != "undefined" && searchengindex != null && searchengindex != "") {
+            if (searchengindex == "True") {
+                $("#SearchEngineIndex").val("1");
+            }
+            else {
+                $("#SearchEngineIndex").val("0");
+            }
+        }
+        else {
+            $("#SearchEngineIndex").val("1");
+        }
+    })
+    $(window).resize(function () {
+        $(".add_site_location_inner_height").height(window.innerHeight - 94);
+    });
+</script>
+<script>
+    var companyid = '@Model.CompanyId';
+    var CustomerSuggestiontemplate =
+    '<div class="tt-suggestion tt-selectable" data-number="{0}">'
+
+    + "<p class='tt-sug-text'>"
+    + "{0}"
+    + "</p> "
+        + "</div>";
+    var SearchTrackingNumber = function (item, event) {
+        if (event.keyCode == 40 || event.keyCode == 38 || event.keyCode == 13)
+            return false;
+        $.ajax({
+        url: "/Website/GetSiteLocationTrackingNumberSearchResult",
+            data: {
+                key: $(item).val(),
+                comid: companyid
+        },
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+            success: function (data) {
+                console.log("search data");
+            var resultparse = JSON.parse(data.result);
+
+            if (resultparse.length > 0) {
+                var searchresultstring = "<div class='NewProjectSuggestion'>";
+                for (var i = 0; i < resultparse.length; i++) {
+                    var Number = resultparse[i].TrackingNumber;
+                    searchresultstring = searchresultstring + String.format(CustomerSuggestiontemplate, Number);
+                }
+                searchresultstring += "</div>";
+                var ttdom = $($(item).parent()).find('.tt-menu');
+                var ttdomComplete = $($(item).parent()).find('.tt-dataset-autocomplete');
+                $(ttdomComplete).html(searchresultstring);
+                $(ttdom).show();
+
+                InvoiceCustomerclickbind(item);
+                $(".site_location_tracking .NewProjectSuggestion").height(200);
+            }
+            if (resultparse.length == 0)
+                $('.tt-menu').hide();
+
+        }
+    });
+    }
+    var InvoiceCustomerclickbind = function (item) {
+    $('.site_location_tracking .tt-suggestion').click(function () {
+        var clickitem = this;
+        $('.site_location_tracking .tt-menu').hide();
+
+        var selectednumber = $(clickitem).attr("data-number").trim();
+        $("#TrackingPhonePhone").val(selectednumber);
+
+        var sPhoneNumber = selectednumber;
+        if (sPhoneNumber != undefined && sPhoneNumber != null && sPhoneNumber != "") {
+            var scleanPhoneNumber = FormatTrackingNumber(sPhoneNumber);
+            $(this).val(scleanPhoneNumber);
+        }
+    });
+    $('.site_location_tracking .tt-suggestion').hover(function () {
+        var clickitem = this;
+        $('.tt-suggestion').removeClass("active");
+        $(clickitem).addClass('active');
+    });
+}
+</script>
+@Html.HiddenFor(m => m.Id, new { id = "site_loc_id" })
+<div class="hidden" style="display:none;visibility:hidden;height:0px;">
+
+</div>
+<div class="add_site_location_container">
+    <div class="add_site_location_header">
+        @Localize.T("Site Location")
+    </div>
+    <div class="add_site_location_inner_height">
+        <div class="add_site_location_inner">
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Location Name")</span>
+                @Html.TextBoxFor(x => x.Name, new { @class = "form-control", id = "Name", placeholder = Localize.T("Location Name"), datarequired = "true" })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Domain Name")</span>
+                @Html.TextBoxFor(x => x.DomainName, new { @class = "form-control", id = "DomainName", placeholder = Localize.T("Domain Name") })
+            </div>
+            @{
+                if (CurrentUser.UserRole.ToLower() != "ieateryadmin")
+                {
+                    if (Model.Id > 0)
+                    {
+                        if (Model.IsDefault.HasValue && Model.IsDefault.Value == true)
+                        {
+                            <div class="form-group clearfix">
+                                <span class="span-style">@Localize.T("Url Slug")</span>
+                                @Html.TextBoxFor(x => x.UrlSlug, new { @class = "form-control", id = "UrlSlug", placeholder = Localize.T("Url Slug"), @readonly = "readonly" })
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="form-group clearfix">
+                                <span class="span-style">@Localize.T("Url Slug")</span>
+                                @Html.TextBoxFor(x => x.UrlSlug, new { @class = "form-control", id = "UrlSlug", placeholder = Localize.T("Url Slug") })
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="form-group clearfix urlslug_div hidden">
+                            <span class="span-style">@Localize.T("Url Slug")</span>
+                            @Html.TextBoxFor(x => x.UrlSlug, new { @class = "form-control", id = "UrlSlug", placeholder = Localize.T("Url Slug") })
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="form-group clearfix urlslug_div hidden">
+                        <span class="span-style">@Localize.T("Url Slug")</span>
+                        @Html.TextBoxFor(x => x.UrlSlug, new { @class = "form-control", id = "UrlSlug", placeholder = Localize.T("Url Slug") })
+                    </div>
+                }
+            }
+            @if (Model.Id > 0)
+            {
+                <div class="form-group clearfix">
+                    <span class="span-style">@Localize.T("Website URL")</span>
+                    @Html.TextBoxFor(x => x.WebsiteURL, new { @class = "form-control", id = "WebsiteURL", placeholder = Localize.T("Website URL"), @readonly = "readonly" })
+                </div>
+            }
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Primary Contact")</span>
+                @Html.DropDownListFor(x => x.PrimaryContact, ViewBag.primarycontact as List<SelectListItem>, new { @class = "form-control", id = "PrimaryContact", placeholder = Localize.T("Primary Contact") })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Street Address")</span>
+                @Html.TextBoxFor(x => x.Address, new { @class = "form-control", id = "Address", placeholder = Localize.T("Street Address"), datarequired = "true" })
+            </div>
+
+            <div class="form-group clearfix CityState_insert_div">
+                <span class="span-style">@Localize.T("Zip Code")</span>
+                <input type="text" class="form-control" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" value="@Model.Zipcode" id="ZipCode" placeholder="Zip Code" datarequired="true" />
+                <div class='tt-menu'>
+                    <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                </div>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("City")</span>
+                @if (!string.IsNullOrWhiteSpace(Model.City))
+                {
+                    <input class="form-control" id="City" placeholder=@Localize.T("City") datarequired="true" value="@HS.Framework.Extentions.CapitalizeFirst(Model.City)" />
+                }
+                else
+                {
+                    @Html.TextBoxFor(x => x.City, new { @class = "form-control", id = "City", placeholder = Localize.T("City"), datarequired = "true" })
+                }
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("State")</span>
+                @Html.TextBoxFor(x => x.State, new { @class = "form-control", id = "State", placeholder = Localize.T("State"), datarequired = "true" })
+            </div>
+
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Store Phone")</span>
+                @Html.TextBoxFor(x => x.StorePhone, new { @class = "form-control", id = "StorePhone", placeholder = Localize.T("Store Phone") })
+            </div>
+            <div class="form-group clearfix site_location_tracking">
+                <span class="span-style">@Localize.T("Tracking Phone")</span>
+                @Html.TextBoxFor(x => x.TrackingPhonePhone, new { @class = "form-control", id = "TrackingPhonePhone", placeholder = Localize.T("Tracking Phone"), @onkeyup = "SearchTrackingNumber(this, event)" })
+                <div class='tt-menu'>
+                    <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                </div>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Cart Option")</span>
+                @Html.DropDownListFor(x => x.CartOption, ViewBag.CartOption as List<SelectListItem>, new { @class = "form-control", id = "CartOption", @multiple = "multiple" })
+            </div>
+            <div class="form-group clearfix delivery_option_div">
+                <span class="span-style">@Localize.T("Minimum Order (Delivery)") </span>
+                @Html.TextBoxFor(x => x.MinimumOrderValue, new { @class = "form-control", placeholder = "Minimum Order (Delivery)", id = "MinimumOrderValue", @type = "number" })
+            </div>
+            <div class="form-group clearfix delivery_option_div">
+                <span class="span-style">@Localize.T("Minimum Delivery Time") </span>
+                @Html.TextBoxFor(x => x.MinimumDeliveryTime, new { @class = "form-control", placeholder = "Minimum Delivery Time", id = "MinimumDeliveryTime", @type = "number" })
+            </div>
+            <div class="form-group clearfix delivery_option_div">
+                <span class="span-style">@Localize.T("Delivery Radius (Miles)") </span>
+                @Html.TextBoxFor(x => x.DeliveryRadius, new { @class = "form-control", placeholder = "Delivery Radius (Miles)", id = "DeliveryRadius", @type = "number" })
+            </div>
+            <div class="form-group clearfix delivery_option_div">
+                <span class="span-style">@Localize.T("Delivery Fee") </span>
+                @Html.TextBoxFor(x => x.DeliveryFee, new { @class = "form-control", placeholder = "Delivery Fee", id = "DeliveryFee", @type = "number" })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Payment Option")</span>
+                @Html.DropDownListFor(x => x.PaymentOption, ViewBag.paymentopt as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple" })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Minimum Prep. Time") </span>
+                @Html.TextBoxFor(x => x.PreparationTime, new { @class = "form-control", placeholder = "Minimum Prep. Time", id = "PreparationTime", @type = "number" })
+                @*<label class="label hidden red absolute" rel="ItemNumber">@Localize.T("Minimum Prep Time") </label>*@
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Expiration Time (Minutes)") </span>
+                @Html.TextBoxFor(x => x.ExpireTime, new { @class = "form-control", placeholder = "Expiration Time (Minute)", id = "ExpireTime", @type = "number" })
+            </div>
+
+            @if (Model.Id > 0 && !string.IsNullOrWhiteSpace(Model.OperationStartTime) && !string.IsNullOrWhiteSpace(Model.OperationEndTime))
+            {
+                <div class="form-group clearfix day_available_div hidden">
+                    <span class="span-style">@Localize.T("Days Available")<span class="red">*</span></span>
+                    @Html.DropDownList("selectDaysAvailable_loc", ViewBag.DaysAvailable as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple", id = "selectDaysAvailable_loc" })
+                </div>
+                <div class="form-group clearfix day_available_div hidden">
+                    <span class="span-style">@Localize.T("Operation Start Time")<span class="red">*</span></span>
+                    @Html.DropDownListFor(m => m.OperationStartTime, ViewBag.timeAvailable as List<SelectListItem>, new { @class = "form-control", id = "OperationStartTime", datarequired = "true" })
+                </div>
+                <div class="form-group clearfix day_available_div hidden">
+                    <span class="span-style">@Localize.T("Operation End Time")<span class="red">*</span></span>
+                    @Html.DropDownListFor(m => m.OperationEndTime, ViewBag.timeAvailable as List<SelectListItem>, new { @class = "form-control", id = "OperationEndTime", datarequired = "true" })
+                </div>
+            }
+            else
+            {
+                <div class="form-group clearfix day_available_div">
+                    <span class="span-style">@Localize.T("Days Available")<span class="red">*</span></span>
+                    @Html.DropDownList("selectDaysAvailable_loc", ViewBag.DaysAvailable as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple", id = "selectDaysAvailable_loc" })
+                </div>
+                <div class="form-group clearfix day_available_div">
+                    <span class="span-style">@Localize.T("Operation Start Time")<span class="red">*</span></span>
+                    @Html.DropDownListFor(m => m.OperationStartTime, ViewBag.timeAvailable as List<SelectListItem>, new { @class = "form-control", id = "OperationStartTime", datarequired = "true" })
+                </div>
+                <div class="form-group clearfix day_available_div">
+                    <span class="span-style">@Localize.T("Operation End Time")<span class="red">*</span></span>
+                    @Html.DropDownListFor(m => m.OperationEndTime, ViewBag.timeAvailable as List<SelectListItem>, new { @class = "form-control", id = "OperationEndTime", datarequired = "true" })
+                </div>
+            }
+            <div class="form-group clearfix tax_percent_div">
+                <span class="span-style">@Localize.T("Tax")</span>
+                <div class="input-group">
+                    <div class="input-group-addon">
+                        <span class="input-group-text"><i class="fa fa-percent"></i></span>
+                    </div>
+                    <input class="form-control" id="TaxPercentage" type="number" value="@Model.TaxPercentage" />
+                    @*@Html.TextBoxFor(x => x.TaxPercentage, new { @class = "form-control", id = "TaxPercentage", @type = "number" })*@
+                </div>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Cuisines Type")</span>
+                @Html.DropDownListFor(x => x.CuisineType, ViewBag.CuisineType as List<SelectListItem>, new { @class = "form-control", id = "CuisineType_Val", @multiple = "multiple" })
+            </div>
+
+            @if (CurrentUser != null && (CurrentUser.UserRole.ToLower() == "sysadmin" || CurrentUser.UserRole.ToLower() == "admin") && CurrentUser.Identity.Name.ToLower() == "administrator")
+            {
+                <div class="form-group clearfix">
+                    <span class="span-style">@Localize.T("Paid Option")</span>
+                    @*@Html.DropDownListFor(x => x.PaidOption, ViewBag.paidoption as List<SelectListItem>, new { @class = "form-control" })*@
+                    <select class="form-control" id="PaidOption">
+                        <option value="Unpaid">Unpaid</option>
+                        <option value="Paid0">Paid - $0.00</option>
+                        <option value="Paid29">Paid - $29.99</option>
+                        <option value="Paid99">Paid - $99.99</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+            }
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Index in Search Engines?")</span>
+                <select class="form-control" id="SearchEngineIndex">
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                </select>
+            </div>
+            <div class="custom_form_group">
+                <span class="span-style">@Localize.T("Neighborhood/Area")</span>
+                <input class="form-control" id="Neighborhood" name="tags" value="@Model.Neighbarhood" />
+            </div>
+            @if (Model.Id > 0)
+            {
+                <div class="custom_form_group">
+                    <div class="social_media_container">
+                        <div class="social_media_header">
+                            <h4>Social Media Follow and Share Link</h4>
+                        </div>
+                        <div class="social_media_content">
+                            <div class="social_media_right_content">
+                                <button class="btn" id="btn_social_media_link" onclick="OpenRightToLeftModal('/Website/AddSocialMediaContent?id=0&comid=@Model.CompanyId')"><i class="fa fa-plus"></i> New</button>
+                            </div>
+                            <div class="social_media_left_content">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Directory Page Photo")</span>
+
+                <div class="txt-form Upload_Doc">
+                    <div class="col-md-12 padding-left-0">
+                        <div class="fileborder border_none fileborder_directory">
+                            @{
+                                if (!String.IsNullOrWhiteSpace(Model.ImageLoc) && Model.ImageLoc != null && Model.IsDefault.HasValue && Model.IsDefault.Value == true)
+                                {
+                                    <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="/@Model.State.ToLower()/@Model.City.ToLower()/@Model.UrlSlug.ToLower()/Image/W1400/H930/@Model.Id/@Model.CompanyId/Image_Preview.png" />
+                                }
+                                else if (!String.IsNullOrWhiteSpace(Model.ImageLoc) && Model.ImageLoc != null && Model.IsDefault.HasValue && Model.IsDefault.Value == false)
+                                {
+                                    <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="/@Model.State.ToLower()/@Model.City.ToLower()/@Model.UrlSlug.ToLower()/Image/W1400/H930/@Model.Id/@Model.ReferCompanyId/Image_Preview.png" />
+                                }
+                                else
+                                {
+                                    <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="~/Content/img/toppng.com-file-upload-image-icon-980x980.png" />
+                                }
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.ImageLoc))
+                        {
+                            <div class="deleteDoc cursor-pointer">
+                                <img src="~/Content/Icons/cross-image-delete.png" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="deleteDoc cursor-pointer hidden">
+                                <img src="~/Content/Icons/cross-image-delete.png" />
+                            </div>
+                        }
+                        <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                            <span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                            <span class="changeFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                        </div>
+                        <div class="crop-picture-logo white-color cursor-pointer text-align-center hidden" id="crop_button">
+                            <span class="chooseFilebtn">@Localize.T("Crop & Save")</span>
+                        </div>
+                        <div class="LoadPreviewDocument hidden">
+                            <div class="show-image PropertyLogoPreviewPic">
+                                <div class="image-delete" data-id="">
+                                    <img src="~/Content/Icons/cross-image-delete.png" />
+                                </div>
+                                <img class="Preview_Doc T360image-photo T360image" src="" />
+                            </div>
+                            <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                                <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 progress-container file-progress" style="        display: none;
+        padding-left: 0;
+        padding-right: 0;
+        margin-top: 15px;">
+                        <div class="progress progress-striped active">
+                            <div class="progress-bar progress-bar-success" style="width:0%">
+                                <span> 0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    @*<label class="label red position-relative hidden" id="uploadfileerror">@Localize.T("File required")</label>*@
+                </div>
+                <div class="LoadPreviewDocument hidden">
+                    <div class="show-image">
+                        <img id="Preview_Doc" src="" />
+                        <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                    <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                        <span><img src="~/Content/Icons/edit-icon.png" /></span>
+                    </div>
+                </div>
+                <div class="LoadPreviewDocument1 hidden">
+                    <div class="show-image">
+                        <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+                        <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                </div>
+                <div class="UploadedVideo hidden">
+                    <div class="show-image">
+                        <span>Click save button for add this video</span>
+                    </div>
+                </div>
+                <div class="">
+                    @{
+                        if (!string.IsNullOrWhiteSpace(Model.ImageLoc))
+                        {
+                            <input type="hidden" id="UploadedPath" value="@Model.ImageLoc" />
+                        }
+                        else
+                        {
+                            <input type="hidden" id="UploadedPath" value="" />
+                        }
+                    }
+                    <input type="file" name="CustomerFile" class="hidden" id="UploadedFile" />
+                </div>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Cover Photo")</span>
+
+                <div class="txt-form Upload_Doc">
+                    <div class="col-md-12 padding-left-0">
+                        <div class="fileborder border_none fileborder_cover">
+                            @{
+                                if (!String.IsNullOrWhiteSpace(Model.CoverImageLoc) && Model.CoverImageLoc != null && Model.IsDefault.HasValue && Model.IsDefault.Value == true)
+                                {
+                                    <img id="UploadCustomerFileBtn_cover" class="cursor-pointer custom-file" src="/@Model.State.ToLower()/@Model.City.ToLower()/@Model.UrlSlug.ToLower()/CoverImage/W1400/H930/@Model.Id/@Model.CompanyId/Image_Preview.png" />
+                                }
+                                else if (!String.IsNullOrWhiteSpace(Model.CoverImageLoc) && Model.CoverImageLoc != null && Model.IsDefault.HasValue && Model.IsDefault.Value == false)
+                                {
+                                    <img id="UploadCustomerFileBtn_cover" class="cursor-pointer custom-file" src="/@Model.State.ToLower()/@Model.City.ToLower()/@Model.UrlSlug.ToLower()/CoverImage/W1400/H930/@Model.Id/@Model.ReferCompanyId/Image_Preview.png" />
+                                }
+                                else
+                                {
+                                    <img id="UploadCustomerFileBtn_cover" class="cursor-pointer custom-file" src="~/Content/img/toppng.com-file-upload-image-icon-980x980.png" />
+                                }
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.CoverImageLoc))
+                        {
+                            <div class="deleteDoc_cover cursor-pointer">
+                                <img src="~/Content/Icons/cross-image-delete.png" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="deleteDoc_cover cursor-pointer hidden">
+                                <img src="~/Content/Icons/cross-image-delete.png" />
+                            </div>
+                        }
+                        <div class="change-picture-logo_cover white-color cursor-pointer text-align-center">
+                            <span class="chooseFilebtn_cover"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                            <span class="changeFilebtn_cover hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                        </div>
+                        <div class="crop-picture-logo_cover white-color cursor-pointer text-align-center hidden" id="crop_button_cover">
+                            <span class="chooseFilebtn_cover">@Localize.T("Crop & Save")</span>
+                        </div>
+                        <div class="LoadPreviewDocument hidden">
+                            <div class="show-image PropertyLogoPreviewPic">
+                                <div class="image-delete" data-id="">
+                                    <img src="~/Content/Icons/cross-image-delete.png" />
+                                </div>
+                                <img class="Preview_Doc T360image-photo T360image" src="" />
+                            </div>
+                            <div class="change-picture-logo_cover white-color cursor-pointer text-align-center T360image">
+                                <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 progress-container file-progress" style="        display: none;
+        padding-left: 0;
+        padding-right: 0;
+        margin-top: 15px;
+">
+                        <div class="progress progress-striped active">
+                            <div class="progress-bar progress-bar-success" style="width:0%">
+                                <span> 0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    @*<label class="label red position-relative hidden" id="uploadfileerror">@Localize.T("File required")</label>*@
+                </div>
+                <div class="LoadPreviewDocument hidden">
+                    <div class="show-image">
+                        <img id="Preview_Doc" src="" />
+                        <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                    <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                        <span><img src="~/Content/Icons/edit-icon.png" /></span>
+                    </div>
+                </div>
+                <div class="LoadPreviewDocument1 hidden">
+                    <div class="show-image">
+                        <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+                        <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                </div>
+                <div class="UploadedVideo hidden">
+                    <div class="show-image">
+                        <span>Click save button for add this video</span>
+                    </div>
+                </div>
+                <div class="">
+                    @{
+                        if (!string.IsNullOrWhiteSpace(Model.ImageLoc))
+                        {
+                            <input type="hidden" id="UploadedPath" value="@Model.ImageLoc" />
+                        }
+                        else
+                        {
+                            <input type="hidden" id="UploadedPath" value="" />
+                        }
+                        if (!string.IsNullOrWhiteSpace(Model.CoverImageLoc))
+                        {
+                            <input type="hidden" id="UploadedPath_cover" value="@Model.CoverImageLoc" />
+                        }
+                        else
+                        {
+                            <input type="hidden" id="UploadedPath_cover" value="" />
+                        }
+                    }
+                    <input type="file" name="CustomerFile" class="hidden" id="UploadedFile_cover" />
+                </div>
+            </div>
+            <div class="custom_form_group">
+                <span class="span-style">@Localize.T("Meta Title")</span>
+                @Html.TextBoxFor(x => x.MetaTitle, new { @class = "form-control", id = "MetaTitle", placeholder = "Meta Title" })
+            </div>
+            <div class="custom_form_group">
+                <span class="span-style">@Localize.T("Meta Description")</span>
+                @Html.TextAreaFor(x => x.MetaDescription, new { @class = "form-control", id = "MetaDescription", style = "height: 75px !important;", placeholder = "Meta Description" })
+            </div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.OperationStartTime) && Model.OperationStartTime != "-1" && !string.IsNullOrWhiteSpace(Model.OperationEndTime) && Model.OperationEndTime != "-1")
+        {
+            <div class="load_hours_opt_data">
+
+            </div>
+            <div class="load_order_hours_opt_data">
+
+            </div>
+            if (Model.Id > 0)
+            {
+                <div class="load_hours_operation"></div>
+            }
+        }
+    </div>
+    <div class="add_site_location_footer">
+        <button onclick="CloseTopToBottomModal()" class="btn btn-danger"><i class="fa fa-times" aria-hidden="true"></i> @Localize.T("Close")</button>
+
+        <button class="btn btn-default" id="SaveWebLocation"><i class="fa fa-save" aria-hidden="true"></i> @Localize.T("Save")</button>
+        <button class="btn btn-default" id="SaveWebLocationAndClose"> @Localize.T("Save and Close")</button>
+    </div>
+</div>

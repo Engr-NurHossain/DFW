@@ -1,0 +1,564 @@
+﻿@{
+    Layout = null;
+    
+}
+@using HS.Framework
+
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@model HS.Entities.Knowledgebase
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+@Styles.Render("~/styles/AddEmployeesPtoCSS")
+<link href="~/Content/Css/Tagit/Tagit.css" rel="stylesheet" />
+<link href="~/Content/Css/Tagit/Tagit_ui_Zendesk.css" rel="stylesheet" />
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<link href="~/Content/Css/SupportTicket/AddSupportTicket.css" rel="stylesheet" />
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/Js/Tagit/Tagit.js"></script>
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Tiny/tiny.js"></script>
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+@{
+    var user = new { Name = "John", Age = 30 };
+}
+<script>
+    var UserVal = '@Html.Raw(Json.Encode(user))';
+    UserVal = JSON.parse(UserVal);
+</script>
+
+
+<style>
+    .tiny_container {
+        width: 100%;
+        float: left;
+    }
+
+    #Groups {
+        display: block !important;
+    }
+
+    .AddKnowledgeBaseContainer {
+        width: 100%;
+        float: left;
+    }
+
+    .AddProductFooter {
+        width: 100%;
+        float: left;
+        height: 50px;
+        bottom: 0px;
+        right: 0px;
+        text-align: right;
+        padding-right: 10px;
+        padding-top: 10px;
+        background-color: rgb(244, 245, 248);
+    }
+
+    .addcarrier_inner {
+        width: 100%;
+        float: left;
+        overflow: auto;
+    }
+
+    .business_class_table tr th span {
+        white-space: nowrap;
+    }
+
+    .business_class_table_container {
+        width: 100%;
+        float: left;
+        overflow: auto;
+        max-height: 600px;
+    }
+    /*.bootstrap-select > .dropdown-toggle {
+        width: 35% !important;
+    }
+    .bootstrap-select.btn-group .dropdown-menu {
+        width: 35% !important;
+    }*/
+    #mceu_13 {
+        float: left;
+    }
+
+    #btnProjectUpload {
+        float: right;
+    }
+
+    .tt-menu {
+        background: white;
+        font-size: 12px;
+        -webkit-box-shadow: 0 5px 20px rgb(0 0 0 / 30%);
+        box-shadow: 0 5px 20px rgb(0 0 0 / 30%);
+        position: absolute;
+        z-index: 100;
+        display: none;
+        text-align: left;
+        width: 300px;
+        top: 72px;
+    }
+
+    .tt-suggestion {
+        width: 100%;
+        float: left;
+        padding: 5px 10px;
+        border-bottom: 1px solid #e1e1e1;
+        cursor: pointer;
+    }
+
+    .tt-menu .tt-suggestion:nth-child(odd) {
+        background-color: #f8f8f8;
+    }
+
+    .tt-menu .tt-suggestion:hover {
+        background-color: #f4f5f8;
+    }
+
+    .tt_container {
+        width: 100%;
+        float: left;
+        position: relative;
+    }
+
+    .NewProjectSuggestion {
+        overflow: auto;
+    }
+
+    .pre-check {
+        margin: 1px 0px 0px 3px !important;
+        height: 30px;
+        width: 30px;
+    }
+
+    .knowledgebase-delete {
+        float: left;
+    }
+</style>
+
+<script src="~/Content/Js/KnowledgeBase/KnowledgeBase.js"></script>
+<div class="AddKnowledgeBaseContainer">
+
+    <div class="AddPtoHeader col-md-12">
+        @if (Model.Id > 0)
+                {
+                    if (Model.IsDocumentLibrary)
+                    {
+                        <span>@Localize.T("Update Document Library")</span>
+                    }
+                    else
+                    {
+                        <span>@Localize.T("Update Knowledgebase")</span>
+                    }
+                }
+            else
+                {
+                    if (Model.IsDocumentLibrary)
+                    {
+                        <span>@Localize.T("Add Document Library")</span>
+                    }
+                    else
+                    {
+                        <span>@Localize.T("Add Knowledgebase")</span>
+                    }
+                }
+         
+    </div>
+    <div class="addcarrier_inner">
+        <div class="AddPtoBody col-md-12">
+            <div class="hidden">
+                @Html.HiddenFor(x => x.Id)
+                @Html.HiddenFor(x => x.IsDocumentLibrary)
+            </div>
+            <div class="row">
+                <div class="addpto_row clearfix col-md-6">
+                    <label class="add_pto_info_header">@Localize.T("Title")<span class="red">*</span></label>
+                    @Html.TextBoxFor(x => x.Title, new { @class = "form-control" })
+                </div>
+                <div class="addpto_row clearfix col-md-6" style="position:relative;">
+                    <label class="add_pto_info_header">@Localize.T("Tags")</label>
+                    <input class="form-control" placeholder="Tags" name="tags" value="@(string.IsNullOrWhiteSpace(Model.Tags) ? Model.Tags : Model.Tags.Replace("&amp;", "&"))" id="Tag" />
+                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                    <span class="spnProductName"></span>
+                </div>
+            </div>
+            <div class="addpto_row clearfix">
+                <div class="row">
+                    @if (PermissionChecker.IsPermitted(PermissionList.MenuPermissions.ShowHideArticleBox))
+                    {
+                        <div class="col-md-3">
+                            <label class="add_pto_info_header">
+                                @Html.CheckBoxFor(x => x.IsHidden, new { @class = "pre-check" })
+                                @Localize.T("Hide Article")
+                            </label>
+                       
+                        </div>
+                    }
+                    </div>
+            </div>
+            
+            @if (Model.IsDocumentLibrary)
+            {
+                <div class="addpto_row clearfix">
+                    <label class="add_pto_info_header">@Localize.T("Description")</label>
+                    <div class="tiny_container"> @Html.TextAreaFor(x => x.Answer, new { @class = "form-control", @id = "BodyMessage" })</div>
+                </div>
+            }
+            else
+            {
+                <div class="addpto_row clearfix">
+                    <label class="add_pto_info_header">@Localize.T("Answer")<span class="red">*</span> <span style="color:red;" id="lblcomments"></span></label>
+                    <div class="tiny_container"> @Html.TextAreaFor(x => x.Answer, new { @class = "form-control", @datarequired = "true", @id = "BodyMessage" })</div>
+                </div>
+            }
+
+        </div>
+
+
+        <div class="AddPtoHeader col-md-12">
+            <span>@Localize.T("Hyperlinks")</span>
+        </div>
+        <div class="AddPtoBody col-md-12">
+            <table style="" class="hiperlink_table table" id="hiperlink_table">
+                <thead>
+                    <tr>
+                        <th class="thead-th-style1">
+                            <span>
+                                @Localize.T("Title")
+                            </span>
+                        </th>
+                        <th class="thead-th-style1">
+                            <span>
+                                @Localize.T("Link")
+                            </span>
+                        </th>
+                        <th class="thead-th-style1">
+                            <span>
+                                @Localize.T("Action")
+                            </span>
+                        </th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.KnowledgeWeblinkList != null && Model.KnowledgeWeblinkList.Count > 1)
+                        {
+                            foreach (var item in Model.KnowledgeWeblinkList)
+                            {
+                    <tr>
+                        <td valign='top'>
+                            <input type='text' class='form-control titlename' placeholder='Title' value="@item.Title" />
+                        </td>
+                        <td valign='top'>
+                            <input type='text' class='form-control addlink' placeholder='https://url link' value="@item.Link" />
+                        </td>
+                        <td valign='top' class='tableActions'>
+                            <button class="btn red_button">
+                                <i class='fa fa-trash-o' aria-hidden='true'></i>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                        }
+                    else if (Model.KnowledgeWeblinkList != null && Model.KnowledgeWeblinkList.Count == 1)
+                        {
+                            foreach (var item in Model.KnowledgeWeblinkList)
+                            {
+                    <tr>
+                        <td valign='top'>
+                            <input type='text' class='form-control titlename' placeholder='Title' value="@item.Title" />
+                        </td>
+                        <td valign='top'>
+                            <input type='text' class='form-control addlink' placeholder='https://url link' value="@item.Link" />
+                        </td>
+                        <td valign='top' class='tableActions'>
+                            <button class="btn red_button">
+                                <i class='fa fa-trash-o' aria-hidden='true'></i>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                    <tr>
+                        <td valign='top'>
+                            <input type='text' class='form-control titlename' placeholder='Title' />
+                        </td>
+                        <td valign='top'>
+                            <input type='text' class='form-control addlink' placeholder='https://url link' />
+                        </td>
+                        <td valign='top' class='tableActions'>
+                            <button class="btn red_button">
+                                <i class='fa fa-trash-o' aria-hidden='true'></i>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                        else
+                        {
+                    <tr>
+                        <td valign='top'>
+                            <input type='text' class='form-control titlename' placeholder='Title' />
+                        </td>
+                        <td valign='top'>
+                            <input type='text' class='form-control addlink' placeholder='https://url link' />
+                        </td>
+                        <td valign='top' class='tableActions'>
+                            <button class="btn red_button">
+                                <i class='fa fa-trash-o' aria-hidden='true'></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td valign='top'>
+                            <input type='text' class='form-control titlename' placeholder='Title' />
+                        </td>
+                        <td valign='top'>
+                            <input type='text' class='form-control addlink' placeholder='https://url link' />
+                        </td>
+                        <td valign='top' class='tableActions'>
+                            <button class="btn red_button">
+                                <i class='fa fa-trash-o' aria-hidden='true'></i>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="AddPtoHeader col-md-12">
+            <span>@Localize.T("Related Articles")</span>
+        </div>
+        <div class="AddPtoBody col-md-12">
+            <table style="" class="hiperlink_table table" id="relatedlink_table">
+                <thead>
+                    <tr>
+                        @*<th class="thead-th-style1">
+                                <span>
+                                    @Localize.T("Title")
+                                </span>
+                            </th>*@
+                        <th class="thead-th-style1">
+                            <span>
+                                @Localize.T("Link")
+                            </span>
+                        </th>
+                        <th class="thead-th-style1">
+                            <span>
+                                @Localize.T("Action")
+                            </span>
+                        </th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.RelatedArticleList != null && Model.RelatedArticleList.Count > 1)
+                        {
+                            foreach (var item in Model.RelatedArticleList)
+                            {
+                    <tr>
+                        <td valign='top'>
+                            <input type='text' class='form-control addlink' placeholder='https://url link' value="@item.Link" />
+                        </td>
+                        <td valign='top' class='tableActions'>
+                            <button class="btn red_button">
+                                <i class='fa fa-trash-o' aria-hidden='true'></i>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                        }
+                    else if (Model.RelatedArticleList != null && Model.RelatedArticleList.Count == 1)
+                        {
+                            foreach (var item in Model.RelatedArticleList)
+                            {
+                    <tr>
+                        <td valign='top'>
+                            <input type='text' class='form-control addlink' placeholder='https://url link' value="@item.Link" />
+                        </td>
+                        <td valign='top' class='tableActions'>
+                            <button class="btn red_button">
+                                <i class='fa fa-trash-o' aria-hidden='true'></i>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                    <tr>
+                        <td valign='top'>
+                            <input type='text' class='form-control addlink' placeholder='https://url link' />
+                        </td>
+                        <td valign='top' class='tableActions'>
+                            <button class="btn red_button">
+                                <i class='fa fa-trash-o' aria-hidden='true'></i>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                        else
+                        {
+                    <tr>
+                        <td valign='top'>
+                            <input type='text' class='form-control addlink' placeholder='https://url link' />
+                        </td>
+                        <td valign='top' class='tableActions'>
+                            <button class="btn red_button">
+                                <i class='fa fa-trash-o' aria-hidden='true'></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td valign='top'>
+                            <input type='text' class='form-control addlink' placeholder='https://url link' />
+                        </td>
+                        <td valign='top' class='tableActions'>
+                            <button class="btn red_button">
+                                <i class='fa fa-trash-o' aria-hidden='true'></i>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="AddPtoHeader col-md-12">
+            <span class="image_header_text">
+                Attachments
+                <span class="sugg_text">Allowed file types: doc, docx, gif, jpeg, jpg, msg, png, ppt, pptx, pdf, txt, xls, xlsx.</span>
+            </span>
+            <button class="btn green_button" id="btnProjectUpload" title="Allowed file types: doc, docx, gif, jpeg, jpg, msg, png, ppt, pptx, pdf, txt, xls, xlsx."><i class="fa fa-upload" aria-hidden="true"></i> Upload File</button>
+        </div>
+        <div class="RugImages">
+            <div class="AddImageDiv">
+                <div class="upload-gallary">
+                    @if (Model.SavedImages != null && Model.SavedImages.Count > 0)
+                    {
+                        foreach (var item in Model.SavedImages)
+                        {
+                            <div id="NewFileUp_@item.Id" class="dv-preview-pic  preview_@item.Id">
+                                <div class="image-delete" newimgdataid="0" data-id="@item.Id">
+                                    <img title="Delete" src="/Content/Icons/cross_update.png">
+                                </div>
+                                @if (item.ImageLoc.Contains(".pdf"))
+                                {
+                                    <div class="dv-preview-pic-inner">
+                                        <img class="preview-pic project-photo" data-size="@item.Size" data-link="@item.ImageLoc" src="/Content/Icons/pdf.png">
+                                    </div>
+                                }
+                                else if (item.ImageLoc.Contains(".doc") || item.ImageLoc.Contains(".docx"))
+                                {
+                                    <div class="dv-preview-pic-inner">
+                                        <img class="preview-pic project-photo" data-size="@item.Size" data-link="@item.ImageLoc" src="/Content/Icons/docx.png">
+                                    </div>
+                                }
+                                else if (item.ImageLoc.Contains(".xlsx") || item.ImageLoc.Contains(".xls"))
+                                {
+                                    <div class="dv-preview-pic-inner">
+                                        <img class="preview-pic project-photo" data-size="@item.Size" data-link="@item.ImageLoc" src="/Content/Icons/xlsx.png">
+                                    </div>
+                                }
+                                else if (item.ImageLoc.Contains(".mp4") || item.ImageLoc.Contains(".mov"))
+                                {
+                                    <div class="dv-preview-pic-inner">
+                                        <img class="preview-pic project-photo" data-size="@item.Size" data-link="@item.ImageLoc" src="/Content/Icons/mp4.png">
+                                    </div>
+                                }
+                                else if (item.ImageLoc.Contains(".txt"))
+                                {
+                                    <div class="dv-preview-pic-inner">
+                                        <img class="preview-pic project-photo" data-size="@item.Size" data-link="@item.ImageLoc" src="/Content/Icons/text.png">
+                                    </div>
+                                }
+                                else if (item.ImageLoc.Contains(".msg"))
+                                {
+                                    <div class="dv-preview-pic-inner">
+                                        <img class="preview-pic project-photo" data-size="@item.Size" data-link="@item.ImageLoc" src="/Content/Icons/msg.png">
+                                    </div>
+                                }
+                                else if (item.ImageLoc.Contains(".pptx"))
+                                {
+                                    <div class="dv-preview-pic-inner">
+                                        <img class="preview-pic project-photo" data-size="@item.Size" data-link="@item.ImageLoc" src="/Content/Icons/pptx.png">
+                                    </div>
+                                }
+                                else if (item.ImageLoc.Contains(".ppt"))
+                                {
+                                    <div class="dv-preview-pic-inner">
+                                        <img class="preview-pic project-photo" data-size="@item.Size" data-link="@item.ImageLoc" src="/Content/Icons/ppt.png">
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="dv-preview-pic-inner">
+                                        <img class="preview-pic project-photo" data-size="@item.Size" data-link="@item.ImageLoc" src="@item.ImageLoc">
+                                    </div>
+                                }
+                                <input type="text" value="@item.ImageType" class="image-caption" placeholder="Add caption">
+                                <label class="label hidden red lblCaptionError" id="lblCaptionErr_undefined">The content have exceeded 30 characters.</label>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        @*<div class="AddPtoHeader col-md-12">
+            <span class="image_header_text">Access</span>
+        </div>
+        <div class="addpto_row clearfix">
+            <label class="add_pto_info_header">@Localize.T("Group")</label>
+            @Html.DropDownListFor(x =>x.UserGroups, ViewBag.UserGroupList as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple", @title = "Select Group" })
+        </div>
+        <div class="addpto_row clearfix">
+            <label class="add_pto_info_header">@Localize.T("Is Default?")</label>
+            <input type="checkbox" class="pre-check" />
+            @Html.CheckBoxFor(x =>x.IsDefault, new { @class = "pre-check" })
+        </div>*@
+
+
+        @*@if (PermissionChecker.IsPermitted(PermissionList.MenuPermissions.KnowledgebaseGroupAccessPermission))
+            {
+                <div class="AddPtoHeader col-md-12">
+                    <span class="image_header_text">Access</span>
+                </div>
+                <div class="addpto_row clearfix">
+                    <label class="add_pto_info_header">@Localize.T("Group")</label>
+                    @Html.DropDownListFor(x => x.UserGroups, ViewBag.UserGroupList as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple", @title = "Select Group" })
+                </div>
+                <div class="addpto_row clearfix">
+                    <label class="add_pto_info_header">@Localize.T("Is Default?")</label>
+                    @Html.CheckBoxFor(x => x.IsDefault, new { @class = "pre-check" })
+                </div>
+         }*@
+    </div>
+    <div class="AddProductFooter col-md-12">
+        @if (Model.Id > 0)
+        { 
+
+            <a href="javascript:void(0)" class="btn red_button knowledgebase-delete" onclick="DeleteKnowledgeBase(@Model.Id)" data-id="@Model.Id" title="Delete">
+                <i class="fa fa-trash-o" aria-hidden="true"></i> Delete
+            </a>
+             
+        }
+        <button class="btn btnSavePto" id="SaveKnowledge">@Localize.T("Save")</button>
+    </div>
+       @*<div class="AddProductFooter col-md-12">
+            @if (Model.Id > 0)
+            {
+                if (PermissionChecker.IsPermitted(PermissionList.QTIPermission.DeleteKnowledgeBase) && !@Model.IsDeleted)
+                {
+                    <a href="javascript:void(0)" class="btn red_button knowledgebase-delete" onclick="DeleteKnowledgeBase(@Model.Id)" data-id="@Model.Id" title="Delete">
+                        <i class="fa fa-trash-o" aria-hidden="true"></i> Delete
+                    </a>
+                }
+            }
+            <button class="btn btnSavePto" id="SaveKnowledge">@Localize.T("Save")</button>
+        </div>*@
+    <div>
+        <div style="display:none;">
+            @Html.Hidden("UploadedImagePath", string.Empty, new { id = "hf-uploaded-image-path" })
+            <input id="fu-my-project-upload" name="ImageFile" type="file" value="" multiple>
+        </div>
+    </div>
+</div>

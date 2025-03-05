@@ -1,0 +1,535 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+}
+@using HS.Framework
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@*@model List<HS.Entities.CustomerCancellationQueue>*@
+@model HS.Entities.CustomerCancellationQueueListWithCount
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script src="~/Content/Select2/Select2.min.js"></script>
+@Styles.Render("~/styles/CancellationCuePartial")
+@Scripts.Render("~/scripts/CancellationCuePartial")
+<style>
+    #btnCancellationCueDownload {
+        float: right;
+    }
+
+    #CancellationReasonDFW {
+        width: 20%;
+        float: left;
+        margin-top: 10px;
+    }
+
+    #effective_min_date {
+        width: 20%;
+        float: left;
+        margin-top: 10px;
+    }
+    #effective_max_date {
+        width: 20%;
+        float: left;
+        margin-top: 10px;
+    }
+    #ContractSigned , .cancell_reason{
+        width: 20%;
+        float: left;
+        margin-top: 10px;
+    }
+    .single_filter_div_style22 {
+        height: 35px;
+        margin-left: 10px;
+        margin-top: 10px;
+        float:left;
+    }
+
+</style>
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var cn = '@ViewBag.CurrentNumber';
+    var pagesize;
+
+    var DataTablePageSize = 50;
+    var LeadsStartDatepicker;
+    var LeadsEndDatepicker;
+    var CancellationReasonValue = "@ViewBag.CancellationReasonValue";
+    var DFWCancellationReasonValue = "@ViewBag.DFWCancellationReasonValue";
+    var ContractSignedValue = "@ViewBag.ContractSignedValue";
+    //if (CancellationReasonValue != null && CancellationReasonValue != "") {
+    //    $("#CancellationReason").val(CancellationReasonValue);
+    //}
+    var listreason = '@Html.Raw(Json.Encode(@ViewBag.CancellReason))';
+    listreason = JSON.parse(listreason);
+
+     if (DFWCancellationReasonValue != null && DFWCancellationReasonValue != "") {
+        $("#CancellationReasonDFW").val(DFWCancellationReasonValue);
+    }
+    if (ContractSignedValue != null && ContractSignedValue != "") {
+        $("#ContractSigned").val(ContractSignedValue);
+    }
+    $("#btnCancellationCueDownload").click(function () {
+         pagesize = parseInt(cn);
+        var effectivemindate = $("#effective_min_date").val();
+        var effectivemaxdate = $("#effective_max_date").val();
+        var CancellationReason = encodeURI($("#CancellationReason").val());
+        var DFWCancellationReason = encodeURI($("#CancellationReasonDFW").val());
+        var ContractSigned = $("#ContractSigned").val();
+        var customer = encodeURI($("#cus_name").val());
+
+        window.location.href = domainurl + "/Reports/CancellationCuePartial?pageno=1&GetReport=true&pagesize="+pagesize + "&effectivemindate=" + effectivemindate +"&effectivemaxdate="+effectivemaxdate+"&reason="+CancellationReason+"&employeereason="+DFWCancellationReason+"&contractSigned="+ContractSigned +"&name="+customer;
+    })
+        var ChangeContractSigned = function (id, IsSigned) {
+        console.log("hlw");
+
+
+        if ($(this).prop("checked")) {
+            IsSigned = true;
+        }
+        $.ajax({
+            url: domainurl + "/Customer/ChangeContractSigned",
+            data: {
+                id: id,
+                IsSigned: IsSigned
+            },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result == true) {
+            $(".CustomerCancellation_report").html(TabsLoaderText);
+            $(".CustomerCancellation_report").load(domainurl + "/Reports/CancellationCuePartial?pagesize=50&GetReport=false"+"&pageno="+pageno);
+                }
+            },
+
+            error: function () {
+            }
+        });
+    }
+    $(document).ready(function () {
+               // CustomerSearchKeyUp(1);
+      
+        $(".btn-filter").click(function () {
+            $("#CancellationReason").selectpicker("val", "");
+            $("#effective_min_date").val("");
+            $("#effective_max_date").val("");
+            $("#CancellationReasonDFW").val(-1);
+            $("#ContractSigned").val(-1);
+            $("#cus_name").val("");
+        });
+
+        $(".icon_sort_bi").click(function () {
+            var orderval = $(this).attr('data-val');
+            $(".CustomerCancellation_report").html(TabsLoaderText);
+            $(".CustomerCancellation_report").load(domainurl + "/Reports/CancellationCuePartial?pagesize=50&GetReport=false&order=" + orderval+"&pageno="+pageno);
+
+        });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#effective_min_date')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#effective_max_date')[0] });
+
+        $(".StatusToogle").bootstrapToggle({
+            on: 'Unsign',
+            off: 'Sign'
+        });
+        $(".StatusToogle").unbind("onchange");
+
+        var IsSigned = false;
+               if (listreason != null) {
+            if (listreason.length != 0) {
+                $("#CancellationReason").selectpicker('val', listreason);
+            }
+            else {
+                $("#CancellationReason").selectpicker('val', '');
+            }
+        }
+    //   $("#CancellationReason").select2({placeholder: " Cancellation Reason"}).val(listreason).trigger("change");
+
+    })
+</script>
+<div class="row lrp_bottom_border">
+    <div class="lead_total_color"> @Localize.T("Total: ") @string.Format("{0:#,##0}", ViewBag.OutOfNumber)</div>
+</div>
+<div class="cancel_que_top_bar">
+    <div class="cancel_cue_search">
+        <div class="cancel_cue_search_bar">
+            <div class="cancell_reason">
+                @Html.DropDownList("CancellationReason", ViewBag.CancellationReason as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Cancellation Reason" })
+
+            </div>
+            @if (ViewBag.CancellationEmployeeReason == true)
+            {
+                @Html.DropDownList("CancellationReasonDFW", ViewBag.DFWCancelReasonList as List<SelectListItem>, new { @class = "form-control" })
+
+            }
+
+
+            @Html.DropDownList("ContractSigned", ViewBag.ContractSigned as List<SelectListItem>, new { @class = "form-control" })
+
+
+            <input class="form-control effective_min_date" value="@ViewBag.effectivemindate" placeholder="Effective Min Date" id="effective_min_date" />
+
+            <input class="form-control effective_max_date" value="@ViewBag.effectivemaxdate" placeholder="Effective Max Date" id="effective_max_date" />
+
+            <div class="input-group add-on">
+
+                <input class="form-control cus_name" value="@ViewBag.name" placeholder="Customer Name" id="cus_name" />
+
+                <div class="input-group-btn">
+                    <button class="btn SearchCacncelledCustomer green_button" type="button" title="@Localize.T(" Search")"><i class="glyphicon glyphicon-search" title="@Localize.T(" Search")" data-placement="bottom"></i></button>
+                </div>
+
+            </div>
+            <div class="single_filter_div_style22 reset_button">
+                <button class="btn btn-filter green_button" title="Filter">
+                    <i class="fa fa-undo"></i>
+                </button>
+            </div>
+        </div>
+
+
+        <button onclick="MakeRemoveFromQueue()" class="btn Can_Cue_btn green_button" title="Remove from Queue">Remove from Queue</button>
+        <button onclick="MakeCancelCustomer()" class="btn Can_Cue_btn red_button" title="Cancel Customer"><i class="fa fa-ban" aria-hidden="true"></i> Cancel</button>
+        <button onclick="MakeSelectAll()" class="btn SelectAll" title="Select all Customer">Select All</button>
+        <button class="btn" id="btnCancellationCueDownload"><i class="fa fa-download"></i></button>
+    </div>
+</div>
+
+<div class="leads_report_table">
+    <table id="LeadsReportTable" class="can_cue_table">
+        <thead>
+            <tr>
+                <th>
+                    <div>@Localize.T("Customer")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/customer"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/customer"></i></div>
+
+                </th>
+                <th>
+                    <div>@Localize.T("Signed")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/signed"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/signed"></i></div>
+
+                </th>
+                <th>
+                    <div>@Localize.T("Cancellation Reason")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/reason"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/reason"></i></div>
+
+                </th>
+                <th>
+                    <div>@Localize.T("Contract Reason")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/empreason"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/empreason"></i></div>
+
+                </th>
+                <th>
+                    <div>@Localize.T("Effective Date")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/date"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/date"></i></div>
+
+                </th>
+
+                @*<th>@Localize.T("Reason")</th>*@
+                <th>
+                    <div>@Localize.T("Unpaid Invoice")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/unpaid"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/unpaid"></i></div>
+
+                </th>
+                <th>@Localize.T("Others")</th>
+                <th>
+                    <div>@Localize.T("Cancellation By")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/cancelledby"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/cancelledby"></i></div>
+
+                </th>
+                <th>@Localize.T("Action")</th>
+
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.CustomerCancellationQueueList)
+            {
+                <tr class="CancellationCus" id="@item.Id" customerid="@item.CustomerId">
+                    <td>
+                        <div>@Localize.T("Customer") <span>:</span></div>
+                        <a href="/Customer/Customerdetail?id=@item.CustomerIdInt" title="Customer Id" class="cus-anchor" target="_blank">@item.CustomerIdInt</a><br />
+                        @if (!string.IsNullOrEmpty(item.CustomerNo))
+                        {
+                            <span title="Customer No">@item.CustomerNo</span><br />
+                        }
+                        <div>
+                            <a class="name_anchor_style" href="/Customer/Customerdetail?id=@item.CustomerIdInt" target="_blank">@item.CustomerName</a><br />
+                            <span>@item.Address</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Signed") <span>:</span></div>
+                        <div>
+                            <span style="padding-right:5px;">@(item.IsSigned == true ? "Yes" : "No")</span>
+                            @if (PermissionChekcer.IsPermitted(Permissions.ReportsPermissions.CancellationQueueDocumentSigned))
+                            {
+                                if (item.IsSigned == true)
+                                {
+                                    <input type="checkbox" @(item.IsSigned == true ? "checked" : "unchecked") class="StatusToogle" style="width:73px;" onchange="ChangeContractSigned('@item.Id',false)" data-toggle="toggle" data-on="Open" data-off="Closed" data-onstyle="success" data-offstyle="danger" data-value="@item.Id">
+
+                                }
+                                else
+                                {
+                                    <input type="checkbox" @(item.IsSigned == false ? "unchecked" : "checked") class="StatusToogle" style="width:73px;" onchange="ChangeContractSigned('@item.Id',false)" data-toggle="toggle" data-on="Open" data-off="Closed" data-onstyle="success" data-offstyle="danger" data-value="@item.Id">
+
+                                }
+                            }
+
+
+                        </div>
+
+
+
+                    </td>
+                    <td>
+                        <div>@Localize.T("Cancellation Reason") <span>:</span></div>
+                        <div>
+
+                            <span>@item.Reason</span>
+                        </div>
+                    </td>
+
+                    <td>
+                        <div>@Localize.T("Contract Reason") <span>:</span></div>
+                        <div>
+
+                            <span>@item.EmployeeReason</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Effective Date") <span>:</span></div>
+                        <div>
+                            <span>@(item.CancellationDate.HasValue ? string.Format(item.CancellationDate.Value.ToString("M/d/yy")) : "")</span>
+                        </div>
+                    </td>
+                    @*<td>
+                            <div>@Localize.T("Reason") <span>:</span></div>
+                            <div>
+                               @if (item.Reason != "Others")
+                               {
+                                    <span>@item.Reason</span>
+                               }
+                               else
+                               {
+                                    <span>@item.Note</span>
+                               }
+
+                            </div>
+                        </td>*@
+                    <td>
+                        <div>@Localize.T("Unpaid Invoice") <span>:</span></div>
+                        <div>
+                            <a class="unpaid_amount_style" href="javascript:void(0);" onclick="OpenReceivePayment(@item.CustomerIdInt)">
+                                @Currency@LabelHelper.FormatAmount(item.RemainingBalance)
+                            </a>
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Others") <span>:</span></div>
+                        <div>
+                            <span>Monitoring Station</span>
+                            @if (item.IsInvoiceOff == true)
+                            {
+                                <input class="IsInvoiceOff_@item.Id" checked type="checkbox" customerid="@item.CustomerId" /><br />
+                            }
+                            else
+                            {
+                                <input class="IsInvoiceOff_@item.Id" type="checkbox" customerid="@item.CustomerId" /><br />
+                            }
+                            <span>Billing</span>
+                            @if (item.IsBillingOff == true)
+                            {
+                                <input class="IsBillingOff_@item.Id" checked type="checkbox" customerid="@item.CustomerId" /><br />
+                            }
+                            else
+                            {
+                                <input class="IsBillingOff_@item.Id" type="checkbox" customerid="@item.CustomerId" /><br />
+                            }
+
+
+
+                            <span>Alarm.Com</span>
+                            @if (item.IsAlarmOff == true)
+                            {
+                                <input class="IsAlarmOff_@item.Id" checked type="checkbox" customerid="@item.CustomerId" /><br />
+                            }
+                            else
+                            {
+                                <input class="IsAlarmOff_@item.Id" type="checkbox" customerid="@item.CustomerId" /><br />
+                            }
+
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Cancellation By") <span>:</span></div>
+                        <div>
+
+                            <span>@item.CreatedByVal</span><br />
+                            <span>@item.CreatedDate.Value.ToString("M/d/yy")</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Cancel") <span>:</span></div>
+                        <div>
+                            @if (item.CustomerIsActive)
+                            {
+                                if (item.IsCancelled == true)
+                                {
+                                    <span>Processing</span>
+                                }
+
+                                <input class="cancel-item IsCancelItem_@item.Id" type="checkbox" customerid="@item.CustomerId" />
+                            }
+                            @*<a class="undoCustomer_@item.Id cus-anchor" onclick="UndoCustomer(@item.Id)">Undo</a>*@
+                        </div>
+                    </td>
+                </tr>
+            }
+            <tr class="table_total_bg">
+                <td colspan="5" class="total_bg_none_device">
+                    <b class="float_right">@Localize.T("Total:")</b>
+                </td>
+                <td>
+                    <div>@Localize.T("Total Unpaid Invoice") <span>:</span></div>
+                    <div>
+                        <b title="@Localize.T("Total Unpaid Invoice")">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.TotalUnpaidInvoiceAmount.TotalUnpaidAmount.ToString("#,##0.00")</b>
+                    </div>
+                </td>
+                <td colspan="3" class="total_bg_none_device"></td>
+            </tr>
+        </tbody>
+
+    </table>
+    @*<div class="AgentListPagination">
+            <div class="paginationContainer">
+                @if (ViewBag.PageCount > 0)
+                {
+                    <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+                }
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">1</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?" disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:" "))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?" activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?" activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==2? " disabledBtn": "" )" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:" "))">
+                            Next
+                        </button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?" disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:" "))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?" activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?" activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==3?" activeBtn":"")" onclick="CustomerSearchKeyUp(3)">3</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==3?" disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:" "))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons disabledBtn" onclick="CustomerSearchKeyUp()">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 2)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                }
+            </div>
+        </div>*@
+</div>
+

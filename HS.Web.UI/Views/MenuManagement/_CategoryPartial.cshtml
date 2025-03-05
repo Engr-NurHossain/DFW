@@ -1,0 +1,385 @@
+﻿@model HS.Entities.CategoryListModel
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HtmlAgilityPack;
+@Styles.Render("~/styles/CategoryListPartial")
+@Scripts.Render("~/scripts/CategoryList")
+<style>
+    .img_category{
+        max-width:80px;
+        width:auto;
+        height:auto;
+    }
+</style>
+<script>
+    var categoryArr = [];
+    var DeleteCategoryById = function (id) {
+        var url = "/MenuManagement/DeleteCategoryById";
+        var param = JSON.stringify({
+            MenuId: id
+        })
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenIeateryPopupModal("Success", data.message);
+                    LoadCategoriesTab();
+                }
+                else {
+                    OpenErrorMessageNew("Error", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    var UpdateIeateryCategory = function () {
+        $("#tblCategory tbody tr").each(function () {
+            categoryArr.push({
+                id: $(this).attr('data-categoryid'),
+                orderid: $(this).find('.order-by-category').text()
+            });
+        })
+        var url = "/MenuManagement/UpdateIeateryCategory";
+        var param = JSON.stringify({
+            categoryArr: categoryArr
+        })
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                LoadCategoriesTab();
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $(".del_category").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirmation", "Are you sure, you want to delete this item?", function () {
+                DeleteCategoryById(idval);
+            });
+        })
+        $("#tblCategory tbody").sortable({
+        update: function () {
+            var i = 1;
+            $("#tblCategory tbody tr td.order-by-category").each(function () {
+                $(this).text(i);
+                i += 1;
+            });
+                UpdateIeateryCategory();
+        }
+    }).disableSelection();
+    })
+</script>
+
+<div class="category_list_container">
+        <div class="category_search_filter">
+            <div class="input-group add-on">
+                <input value="@TempData["data"]" class="form-control filterinput border_radius_0 category_search_text" @*id="searchtext"*@ placeholder="Search">
+                <div class="input-group-btn"> <button title="Search" class="btn search_category_btn" id="btnsearchtext"><i class="glyphicon glyphicon-search"></i></button></div>
+            </div>
+                <button title="@Localize.T("Create Category")" class="btn create_category_btn btnAddNewCategory" @*id="btnAddNewTicket"*@>@Localize.T("Create Category")</button>           
+        </div>
+    <div class="category-table">
+        <table class="display all_category category_list_partial_info" id="tblCategory">
+            <thead class="table-head-border">
+                <tr>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Category Name")</div>
+                        @if (ViewBag.order == "ascending/categoryname" || ViewBag.order == "descending/categoryname")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categoryname"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categoryname"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categoryname"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categoryname"></i></div>
+                        }
+
+
+                        @*<th class="thead-th-style">
+                <div>@Localize.T("Description")</div>
+                @if (ViewBag.order == "ascending/categorydescription" || ViewBag.order == "descending/categorydescription")
+                {
+                    <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categorydescription"></i> <i  style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categorydescription"></i></div>
+                }
+                else
+                {
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categorydescription"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categorydescription"></i></div>
+                }
+
+
+            </th>*@
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Days Available")</div>
+                        @if (ViewBag.order == "ascending/categorydayavailable" || ViewBag.order == "descending/categorydayavailable")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categorydayavailable"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categorydayavailable"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categorydayavailable"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categorydayavailable"></i></div>
+                        }
+
+
+                    </th>
+                    @*<th class="thead-th-style">
+                        <div>@Localize.T("Time Available")</div>
+                        @if (ViewBag.order == "ascending/categorytimeavailable" || ViewBag.order == "descending/categorytimeavailable")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categorytimeavailable"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categorytimeavailable"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categorytimeavailable"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categorytimeavailable"></i></div>
+                        }
+
+
+                    </th>*@
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Status")</div>
+                        @if (ViewBag.order == "ascending/categorystatus" || ViewBag.order == "descending/categorystatus")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categorystatus"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categorystatus"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categorystatus"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categorystatus"></i></div>
+                        }
+
+
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Image")</div>
+                        @if (ViewBag.order == "ascending/categoryid" || ViewBag.order == "descending/categoryid")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categoryid"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categoryid"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/categoryid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/categoryid"></i></div>
+                        }
+
+
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Action")</div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Categoriess)
+                {
+                    <tr class="tr-style CheckItems" idval="@item.Id" data-categoryid="@item.Id">
+                        <td class="hidden order-by-category"></td>
+                        <td class="table-body-td-style" valign="top">
+                                    <div class="category_list_partial_device_header">@Localize.T("Category Name")<span>:</span></div>
+                                    <div class="category_list_partial_device_info"> <a class="cus-anchor" onclick="OpenCategoryById(@item.Id)" href="javascript:void(0)">@item.CategoryName</a></div>
+                        </td>
+                        @*<td class="table-body-td-style" valign="top">
+                                <div class="category_list_partial_device_header">@Localize.T("Description")<span>:</span></div>
+                                <div class="category_list_partial_device_info" style="width:100px;">
+                                    <span style="display: inline-block;width: 100px;white-space: nowrap;overflow: hidden !important;text-overflow: ellipsis;">@Html.Raw(item.Description)</span>
+                                </div>
+                        </td>*@
+                        <td class="table-body-td-style" valign="top">
+                            <div class="category_list_partial_device_header">@Localize.T("Days Available")<span>:</span></div>
+                            <div class="category_list_partial_device_info">
+                                @if (!string.IsNullOrWhiteSpace(item.DaysAvailableOption) && item.DaysAvailableOption == "default")
+                                {
+                                    <span>Store Default</span>
+                                }
+                                else if (!string.IsNullOrWhiteSpace(item.DaysAvailableOption) && item.DaysAvailableOption == "custom")
+                                {
+                                    <span>Custom</span>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </div>
+                        </td>
+                        @*<td class="table-body-td-style" valign="top">
+                            <div class="category_list_partial_device_header">@Localize.T("Time Available")<span>:</span></div>
+                            <div class="category_list_partial_device_info"><span>@item.TimeAvailable</span></div>
+                        </td>*@
+                        <td class="table-body-td-style" valign="top">
+                            <div class="category_list_partial_device_header">@Localize.T("Status")<span>:</span></div>
+                            @{
+                                if (item.Status == true)
+                                {
+                                    <div class="category_list_partial_device_info">Active</div>
+                                }
+                                else
+                                {
+                                    <div class="category_list_partial_device_info" style="color:red;">Inactive</div>
+                                }
+                            }
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="category_list_partial_device_header">@Localize.T("Image")<span>:</span></div>
+                            <div class="category_list_partial_device_info">
+                                @if (!string.IsNullOrWhiteSpace(item.Image))
+                                {
+                                    <img class="img_category" src="/@(((HS.Entities.WebsiteLocation)ViewBag.WebLoc).State.ToLower())/@(((HS.Entities.WebsiteLocation)ViewBag.WebLoc).City.ToLower())/@(((HS.Entities.WebsiteLocation)ViewBag.WebLoc).UrlSlug.ToLower())/Category/@item.UrlSlug.ToLower()/Image/W80/H80/@item.Id/@(((HS.Entities.WebsiteLocation)ViewBag.WebLoc).CompanyId)/Image_Preview.png" />
+                                }
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="category_list_partial_device_header">@Localize.T("Action")<span>:</span></div>
+                            <div class="category_list_partial_device_info"><span><i class="fa fa-trash cus-anchor del_category" data-id="@item.Id"></i></span></div>
+                        </td>
+                    </tr>
+                                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="CategoryListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CategoryListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CategoryListLoad(1, '@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CategoryListLoad(2,'@(ViewBag.order)')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="CategoryListLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CategoryListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CategoryListLoad(1,'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CategoryListLoad(2,'@(ViewBag.order)''@(ViewBag.order)')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="CategoryListLoad(3,'@(ViewBag.order)')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="CategoryListLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CategoryListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CategoryListLoad(@(ViewBag.PageNumber-2),'@(ViewBag.order)')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CategoryListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="CategoryListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="CategoryListLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CategoryListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CategoryListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CategoryListLoad(@(ViewBag.PageNumber + 2),'@(ViewBag.order)')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="CategoryListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CategoryListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CategoryListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CategoryListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="CategoryListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CategoryListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CategoryListLoad(@(ViewBag.PageNumber - 1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="CategoryListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CategoryListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="CategoryListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>

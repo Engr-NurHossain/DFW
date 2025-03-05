@@ -1,0 +1,137 @@
+﻿@{
+    Layout = null;
+}
+@model List<HS.Entities.BuildLog>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<link href="~/Content/Css/Contacts/contactlist.css" rel="stylesheet" />
+<style>
+    .build_log_edit, .build_log_edit:hover, .build_delete, build_delete:hover {
+        color: #2ca01c;
+        cursor: pointer !important; 
+    }
+
+    .Report-Tabs table tr th {
+        font-weight: bold;
+    }
+
+    .Report-Tabs table tr td, .Report-Tabs table tr th {
+        border: 1px solid #ccc !important;
+        padding: 10px 10px;
+    }
+
+    .frt_table .same_size {
+        width: 150px;
+    }
+
+    .frt_table .act_size {
+        width: 80px !important;
+    }
+
+    .frt_table tr td:last-child {
+        text-align: center;
+    }
+
+    .fa {
+        cursor: pointer !important;
+    }
+
+        .fa.fav_heart {
+            color: #d71920;
+            float: left;
+            margin-left: 5px;
+            cursor: unset !important;
+            margin-top: 4px;
+        }
+</style>
+<script>
+    //var Sortknowledgebaselist = function (tag, order) {
+    //    OpenTopToBottomModal("/App/TagedKnowledgebaseList/?search=" + tag + "&order=" + order);
+    //}
+    $(document).ready(function () {
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val'); 
+            FilterVersion(orderval);
+        });
+        $(".build_log_edit").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenRightToLeftModal("/App/AddBuilLog?id=" + idval);
+        })
+        
+        $(".build_delete").click(function () {
+            var idval = $(this).attr('data-id');
+            var vrsion = $(this).attr('data-name');
+            OpenConfirmationMessageNew("Confirmation", "Are you sure you want to delete " + vrsion +"?", function () {
+                var url = "/App/DeleteBuildLog";
+                var param = JSON.stringify({
+                    Id: idval
+                })
+                $.ajax({
+                    type: "POST",
+                    ajaxStart: $(".loader-div").show(),
+                    url: url,
+                    data: param,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    cache: false,
+                    success: function (data) {
+                        if (data) {
+                            window.location.reload();
+                            LoadBuildVersion(true);
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    }
+                });
+            })
+        });
+    })
+</script>
+<div class="custom_table Report-Tabs">
+    <table class="Contacts_table frt_table">
+        <thead>
+            <tr>
+                <th>
+                    <div>@Localize.T("Version")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/vesion"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/vesion"></i></div>
+                </th>
+                <th>
+                    <div>@Localize.T("Build Date")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/builddate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/builddate"></i></div>
+                </th> 
+                <th class="act_size"><div>@Localize.T("Action")</div></th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                if (Model != null && Model.Count > 0)
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div>
+                                    @Localize.T("Version")
+                                    </div>@(!string.IsNullOrWhiteSpace(item.Version) ? item.Version : "")<div>
+                                </div>
+                            </td> 
+                            <td><div>@Localize.T("Version Date")</div>
+                                <div>
+                                    @HS.Framework.DateTimeExtension.UTCToClientTime(item.BuildDate.Value).ToString("M/d/yy")
+                                    @*@HS.Framework.DateTimeExtension.UTCToClientTime(item.BuildDate.HasValue ? item.BuildDate.Value : new DateTime()).ToString("hh:mm tt")*@
+                                </div></td>
+                            <td><div>@Localize.T("Action")</div>
+                            <div> 
+                                <a class="build_log_edit" data-id="@item.Id"><i class="fa fa-edit"></i></a>
+                                
+                                <a class="build_delete" data-id="@item.Id" data-name="@item.Version"><i class="fa fa-trash"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+    </table>
+</div>
+

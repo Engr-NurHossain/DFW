@@ -1,0 +1,132 @@
+﻿@model HS.Entities.InventoryWarehouse
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<style>
+    .AddEquipmentHeader {
+        width: 100%;
+        background-color: #f4f5f8;
+        font-size: 2rem;
+        font-weight: 400;
+        color: #393a3d;
+        padding: 12px 10px;
+        margin-bottom: 15px;
+    }
+
+    .AddEquipmentFooter {
+        width: 100%;
+        height: 50px;
+        text-align: right;
+        padding-right: 10px;
+        padding-top: 10px;
+        background-color: #f4f5f8;
+    }
+
+    .addequipment_row {
+        padding-bottom: 15px;
+    }
+
+    .Equipment_Notes {
+        width: 100%;
+    }
+
+    .btnSaveEquipment {
+        background-color: #2ca01c;
+        color: white;
+    }
+</style>
+<script>
+    var AssignEquipment = function () {
+        var Param = {
+            EquipmentId: '@Model.EquipmentId',
+            Quantity: $("#Quantity").val(),
+            PurchaseOrderId: '@Model.PurchaseOrderId',
+            TechnicianId: $("#TechnicianId").val()
+        };
+        $("#btnAssignEquipment").prop('disabled', true);
+        var url =domainurl +  "/Inventory/EquipmentAssignSave";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data) {
+                    //OpenSuccessMessageNew("Success!", "Equipment assign successfully",function(){
+                    OpenSuccessMessageNew("Success!", "Equipment transfer sent for approval", function () {
+                        if(typeof(OpenInventoryTab) !="undefined"){
+                            OpenInventoryTab();
+                        }
+                    });
+                } else {
+                    OpenErrorMessageNew("Error!", "Something is wrong");
+                }
+                $(".close").trigger('click');
+
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+                $("#btnAssignEquipment").prop('disabled', false);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $(".AddEquipmentBody").height(window.innerHeight - 120);
+        $("#btnAssignEquipment").click(function () {
+            var techId = $("#TechnicianId").val();
+            var quantity=$("#Quantity").val();
+            var quantityOnHand =@Model.Quantity;
+            if (techId == "-1") {
+                OpenErrorMessageNew("Error", "Please select a Technician.");
+                return 0; 
+            }
+
+            if (parseInt(quantity) > parseInt(quantityOnHand)) {
+                OpenErrorMessageNew("Error", "Transfer quantity can't be more than OnHand quantity.");
+                Proceed = false;
+                return 0;
+            }
+
+            if(quantity!="" && parseInt(quantity)!=0 && parseInt(quantity)>0 && parseInt(quantity) <=parseInt(quantityOnHand))
+            {
+                AssignEquipment();
+            }
+            else{
+                OpenErrorMessageNew("Error!", "Transfer quantity can't be Negative or Zero.");
+                Proceed = false;
+                return 0;
+            }
+
+        });
+    });
+     $(window).resize(function () {
+         $(".AddEquipmentBody").height(window.innerHeight - 120);
+    })
+</script>
+<div class="AddEquipmentContainer">
+    <div class="AddEquipmentHeader col-md-12">
+        <span>@Localize.T("Assign Equipment")</span>
+    </div>
+    <div class="AddEquipmentBody col-md-12">
+        <div class="addequipment_row">
+            <label>@Localize.T("Equipment Name")</label>
+            <span>@Model.Name</span>
+        </div>
+        <div class="addequipment_row clearfix">
+            <label>@Localize.T("Select Technician")</label>
+            @Html.DropDownList("TechnicianId", (List<SelectListItem>)ViewBag.TechnicianList, new { @class = "form-control" })
+        </div>
+        <div class="addequipment_row clearfix">
+            <label>@Localize.T("Quantity")</label>
+            <span>Quantity on Hand : @Model.Quantity</span>
+            <input type="text" id="Quantity" name="Quantity" placeholder="Quantity" class="form-control" />
+        </div>
+    </div>
+    <div class="AddEquipmentFooter col-md-12">
+        <button id="btnAssignEquipment" class="btn btnSaveEquipment">@Localize.T("Assign Equipment")</button>
+    </div>
+</div>

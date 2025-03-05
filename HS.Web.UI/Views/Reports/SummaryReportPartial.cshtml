@@ -1,0 +1,215 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@model List<HS.Entities.InventoryTech>
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+<script>
+    var DataTablePageSize = 50;
+    var LeadsStartDatepicker;
+    var LeadsEndDatepicker;
+    var listcategory = '@Html.Raw(Json.Encode(@ViewBag.listcategory))';
+    listcategory = JSON.parse(listcategory);
+    var listmanu = '@Html.Raw(Json.Encode(@ViewBag.listmanu))';
+    listmanu = JSON.parse(listmanu);
+    var pageno = '@ViewBag.PageNumber';
+    var listtech = '@Html.Raw(Json.Encode(@ViewBag.listtech))';
+    listtech = JSON.parse(listtech);
+    var my_date_format = function (input) {
+        console.log(input+" r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var FilterInventoryReport = function (pageno,order) {
+        //if(typeof(pageno) != "undefined" && pageno != null && pageno != ""){
+        //    pagno = 1;
+        //}
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+        var category = encodeURI($("#eqpCategory_transfer").val());
+        var manufacturer = encodeURI($("#manufacturer_transfer").val());
+        var tecnician = encodeURI($("#tech_user_summary").val());
+        var searchtext = $(".SummaryInventoryReport_search").val();
+        var Transferred_Date_From = $("#Transferred_Date_From").val();
+        var Transferred_Date_To = $("#Transferred_Date_To").val();
+
+
+        $(".SummaryInvetory_report_table").html(TabsLoaderText);
+        $(".SummaryInvetory_report_table").load(domainurl + "/Reports/SummaryReportPartialList/?Start=" + StartDateVal + "&End=" + EndDateVal +"&order="+order+ "&category=" + category + "&manufact=" + manufacturer + "&PageNo=" + pageno + "&PageSize=" + DataTablePageSize + "&technician=" + tecnician + "&SearchText=" + encodeURI(searchtext) + "&Transferred_Date_From=" + encodeURI(Transferred_Date_From) + "&Transferred_Date_To=" + encodeURI(Transferred_Date_To));
+    }
+        var ResetFilter = function () {
+            $(".Transferred_Date_From").val("");
+           $(".Transferred_Date_To").val("");
+
+        $("#tech_user_summary").selectpicker("val", "");
+        $(".SummaryInventoryReport_search").val("");
+        FilterInventoryReport(1);
+    }
+    $(document).ready(function () {
+        $(".single_filte_info_container").hide();
+        $(".btn-filter").click(function () {
+
+            if ($(".single_filte_info_container").is(":visible")) {
+                $(".single_filte_info_container").hide();
+
+            } else {
+                $(".single_filte_info_container").show();
+
+            }
+        });
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".LoaderWorkingDiv").hide();
+        $("#LeadReportTab .invoice-loader").hide();
+
+        //var table = $('#LeadsReportTable').DataTable({
+        //    "pageLength": DataTablePageSize,
+        //    "destroy": true,
+        //    "language": {
+        //        "emptyTable": "No data available"
+        //    }
+        //});
+        if (StartDate != "" && EndDate != "")
+        {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        $("#btnDownloadLeadsReport_summary_inventory").click(function () {
+
+            var category = encodeURI($("#eqpCategory_transfer").val());
+            var manufacturer = encodeURI($("#manufacturer_transfer").val());
+            var tecnician = encodeURI($("#tech_user_summary").val());
+            var searchtext = $(".SummaryInventoryReport_search").val();
+            var Transferred_Date_From = $("#Transferred_Date_From").val();
+            var Transferred_Date_To = $("#Transferred_Date_To").val();
+               var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+            if (StartDateVal.trim().length == 10 && EndDateVal.trim().length == 10) {
+                //StartDateVal = StartDateVal.replaceAll('/', '_');
+                //EndDateVal = EndDateVal.replaceAll('/', '_');
+                location.href = domainurl + "/Reports/SummaryReportPartialList/?Start=" + StartDateVal + "&End=" + EndDateVal + "&GetReport=true" + "&category=" + category + "&manufact=" + manufacturer + "&pageno=" + 0 + "&pagesize=" + 0 + "&technician=" + tecnician + "&RepType=Transfer" + "&SearchText=" + encodeURI(searchtext) + "&Transferred_Date_From=" + encodeURI(Transferred_Date_From) + "&Transferred_Date_To=" + encodeURI(Transferred_Date_To);
+            } else {
+                location.href = domainurl + "/Reports/SummaryReportPartialList/?GetReport=true" + "&category=" + category + "&manufact=" + manufacturer + "&pageno=" + 0 + "&pagesize=" + 0 + "&technician=" + tecnician + "&RepType=Transfer" + "&SearchText=" + encodeURI(searchtext) + "&Transferred_Date_From=" + encodeURI(Transferred_Date_From) + "&Transferred_Date_To=" + encodeURI(Transferred_Date_To)+"&Start=" + StartDateVal + "&End=" + EndDateVal;
+            }
+        });
+
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+
+
+            UpdatePtoCookie();
+            //$("#InventoryReportTab").html(TabsLoaderText);
+            //$("#InventoryReportTab").load(domainurl + "/Reports/InventoryReportPartial/?Start=" + StartDateVal + "&End=" + EndDateVal);
+            FilterInventoryReport(1);
+        });
+        if (listmanu.length != 0) {
+            $("#manufacturer_transfer").selectpicker('val', listmanu);
+        }
+        else {
+            $("#manufacturer_transfer").selectpicker('val', '');
+        }
+        if (listcategory.length != 0) {
+            $("#eqpCategory_transfer").selectpicker('val', listcategory);
+        }
+        else {
+            $("#eqpCategory_transfer").selectpicker('val', '');
+        }
+        if (listtech.length != 0) {
+            $("#tech_user_summary").selectpicker('val', listtech);
+        }
+        else {
+            $("#tech_user_summary").selectpicker('val', '');
+        }
+        FilterInventoryReport(1);
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#Transferred_Date_To')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#Transferred_Date_From')[0] });
+       
+
+    });
+</script>
+
+<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+
+<div class="row lrp_bottom_border">
+    <div class="lead_total_color"></div>
+</div>
+    <div class="row leads_report_top_bar">
+        <div class="single_filter_div_container">
+            <div class="input-group add-on hidden">
+                <input class="form-control SummaryInventoryReport_search" placeholder="Search" type="text">
+                <div class="input-group-btn"><button class="btn search_ticket_btn green_button" id="btnsearchtext" title="@Localize.T("Search")" onclick="FilterInventoryReport(1)"><i class="glyphicon glyphicon-search"></i></button></div>
+            </div>
+            <div class="single_filter_div_style filter_fill">
+                <button class="btn btn-filter green_button" title="Filter">
+                    <i class="glyphicon glyphicon-filter"></i>
+                </button>
+            </div>
+        </div>
+       
+
+      
+
+            @Html.DropDownList("eqpCategory_transfer", ViewBag.eqpCategory as List<SelectListItem>, new { @class = "form-control border_radius_0 hidden", @multiple = "multiple", @title = "Select Category" })
+
+            @Html.DropDownList("manufacturer_transfer", ViewBag.manufacturer as List<SelectListItem>, new { @class = "form-control border_radius_0 hidden", @multiple = "multiple", @title = "Select Manufacturer" })
+
+           
+               
+               
+
+           
+
+          
+        
+
+
+
+  
+
+
+
+        <button title="@Localize.T(" Download")" class="report_btn lrp_float_right" id="btnDownloadLeadsReport_summary_inventory"><i class="fa fa-download" aria-hidden="true"></i></button>
+    </div>
+
+<div class="single_filte_info_container">
+    <div class="single_filter_info_inner">
+        <div class="single_filter_info_inner_content"> @Html.DropDownList("tech_user_summary", ViewBag.techlist as List<SelectListItem>, new { @class = "form-control border_radius_0", @multiple = "multiple", @title = "Select Technician" })</div>
+        <div class="single_filter_info_inner_content"><input class="form-control Transferred_Date_From" placeholder="Transferred Date From" id="Transferred_Date_From" /></div>
+
+        <div class="single_filter_info_inner_content"><input class="form-control Transferred_Date_To" placeholder="Transferred Date To" id="Transferred_Date_To" /></div>
+       
+    </div>
+    <div class="single_filter_info_footer">
+        <button class="btn search_ticket_btn green_button" id="btnsearchtext" title="@Localize.T("Filter")" onclick="FilterInventoryReport(1)"><i class="fa fa-check" aria-hidden="true"></i>@Localize.T("Apply")</button>
+        <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilter()">@Localize.T("Reset")</button>
+
+    </div>
+</div>
+
+
+
+    <div class="SummaryInvetory_report_table"></div>

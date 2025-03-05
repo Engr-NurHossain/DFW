@@ -1,0 +1,304 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using HS.Framework
+@*@model List<HS.Entities.AdjustmentFunding>*@
+@model HS.Entities.AdjustmentFundingReport
+
+<script>
+        var pagenumber = '@ViewBag.PageNumber';
+
+    var OpenAddAdjustment = function (id) {
+        OpenRightToLeftModal(domainurl + "/Reports/AddAdjustment?Id=" + id);
+    }
+    var DeleteAdjustment = function (id) {
+        $.ajax({
+            url: "/Reports/DeleteAdjustment",
+            data: {
+                Id: id
+            },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result == true) {
+                    NavigateAdjustmentFundingListing(1);
+                    OpenSuccessMessageNew("Success!", "", "");
+                }
+            },
+
+            error: function () {
+            }
+        });
+    }
+    $(document).ready(function () {
+        $(".item-delete-adjustment").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirmation", "Are you sure, you want to delete?", function () {
+                DeleteAdjustment(idval);
+            });
+        
+        })
+             $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            NavigateAdjustmentFundingListing(pagenumber, orderval);
+        });
+    });
+</script>
+<div class="opportunity_list_container">
+    @if (ViewBag.OutOfNumber == 0)
+    {
+        @ViewBag.Message;
+    }
+    else
+    {
+
+        <div class="tech_report_table_container">
+
+            <table id="PayrollReportTable">
+                <thead>
+                    <tr>
+                        <th class="tick_id">
+                            <div>@Localize.T("User Name")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/username"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/username"></i></div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Amount")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/amount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/amount"></i></div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Reason")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/reason"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/reason"></i></div>
+                        </th>
+
+                        <th>
+                            <div>@Localize.T("Date")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/date"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/date"></i></div>
+                        </th>
+
+
+                        @if (!ViewBag.IsPaid)
+                        {
+                            <th>
+                                <div>@Localize.T("Funding")</div>
+                                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/funding"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/funding"></i></div>
+                            </th>
+                        }
+                        else
+                        {
+                            <th>
+                                <div>@Localize.T("Original Batch")</div>
+                                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/batch"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/batch"></i></div>
+                            </th>
+                            <th>
+                                <div>@Localize.T("Payroll Date")</div>
+                                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/payrolldate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/payrolldate"></i></div>
+                            </th>
+                        }
+                        <th>
+                            @Localize.T("Action")
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.PayrollReportList)
+                    {
+                    <tr>
+                        <td>
+                            <div class="rpt_pr_fnd_mb">@Localize.T("User Name") <span>:</span></div>
+                            <div class="rpt_pr_fnd_dtp">
+                                <span class="cus-anchor" onclick="OpenAddAdjustment(@item.Id)">@item.UserName</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="rpt_pr_fnd_mb">@Localize.T("Amount") <span>:</span></div>
+                            <div class="rpt_pr_fnd_dtp">
+                                <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="rpt_pr_fnd_mb">@Localize.T("Reason") <span>:</span></div>
+                            <div class="rpt_pr_fnd_dtp">
+                                <span title="RMR Comm.">@Html.Raw(item.Reason)</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="rpt_pr_fnd_mb">@Localize.T("Date") <span>:</span></div>
+                            <div class="rpt_pr_fnd_dtp">
+                                @if (item.Date != new DateTime() && item.Date != null)
+                                {
+                                    <span>@item.Date.Value.ToString("MM/dd/yyyy")</span>
+                                }
+                            </div>
+                        </td>
+
+                        @if (!ViewBag.IsPaid)
+                        {
+                            <td>
+                                <div class="rpt_pr_fnd_mb">Funding<span>:</span></div>
+                                <div class="rpt_pr_fnd_dtp">
+                                    <input class="IsPaidItemFunding" fundingid="@item.Id" type="checkbox" @((item.IsPaid.HasValue && item.IsPaid.Value) ? "checked" : "") />
+                                </div>
+                            </td>
+                        }
+                        else
+                        {
+                            <td>
+                                <div class="rpt_pr_fnd_mb">@Localize.T("Original Batch") <span>:</span></div>
+                                <div class="rpt_pr_fnd_dtp">@item.Batch</div>
+                            </td>
+                            <td>
+                                <div class="rpt_pr_fnd_mb">@Localize.T("Payroll Date") <span>:</span></div>
+                                <div class="rpt_pr_fnd_dtp">
+                                    <span>@item.PayrollDate.ToString("MM/dd/yyyy")</span>
+                                </div>
+                            </td>
+                        }
+                        <td>
+                            <a href="javascript:void(0)" class="item-delete-adjustment" data-id="@item.Id" title="Delete">
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    }
+                    <tr class="table_total_bg">
+                        <td>
+                            <b class="float_right">@Localize.T("Total:")</b>
+                        </td>
+                        <td>
+                            <div class="rpt_pr_fnd_mb">@Localize.T("Total Amount") <span>:</span></div>
+                            <div class="rpt_pr_fnd_dtp">
+                                <b title="@Localize.T("Total Amount")">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.TotalAmount.Amount.ToString("#,##0.00")</b>
+                            </div>
+                        </td>
+                        <td colspan="4">
+
+                        </td>
+                    </tr>
+                </tbody>
+                
+            </table>
+        </div>
+
+        <div class="report_pagination_container">
+            <div class="report_pagination_inner">
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton activeBtn" onclick="NavigateTechComListing(@(ViewBag.PageNumber),'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons disabledBtn" disabled>Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigateAdjustmentFundingListing(1, '@ViewBag.order')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigateAdjustmentFundingListing(2,'@ViewBag.order')">2</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons" disabled="@(ViewBag.PageNumber == 2 ? "disabled" : "")" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber != 2 ? ViewBag.PageNumber + 1 : ""),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigateAdjustmentFundingListing(1,'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigateAdjustmentFundingListing(2,'@ViewBag.order')">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 3 ? "activeBtn" : "")" onclick="NavigateAdjustmentFundingListing(3,'@ViewBag.order')">3</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons" disabled="PaginationButtons @(ViewBag.PageNumber == 3 ? "disabled" : "")" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber != 3 ? ViewBag.PageNumber + 1 : ""),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv" id="pagination">
+                            <button class="PaginationButtons" disabled onclick="NavigateAdjustmentFundingListing()">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigateFundedListing(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateFundedListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateFundedListing(@(ViewBag.PageNumber + 2),'@ViewBag.order')">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigateFundedListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')" id="pagination">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber - 2),'@ViewBag.order')" id="pagination">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')" id="pagination">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber),'@ViewBag.order')" id="pagination">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" disabled onclick="NavigateAdjustmentFundingListing()">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigateAdjustmentFundingListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">Next</button>
+                        </div>
+
+                    }
+                }
+            </div>
+            <div class="area_zip_code_pagination_inner">
+                @if (ViewBag.PageCount > 0)
+                {
+                    <div class="paginationtextdv">
+                        <span>Showing item @ViewBag.CurrentNumber of @ViewBag.OutOfNumber</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+    }
+
+</div>
+
+

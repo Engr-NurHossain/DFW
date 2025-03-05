@@ -1,0 +1,160 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Report/RecurringBillingReportPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<style>
+</style>
+<script>
+    var SalesPersonList = '@Html.Raw(Json.Encode(@ViewBag.EmployeeList))';
+    SalesPersonList = JSON.parse(SalesPersonList);
+
+    var InstallerList = '@Html.Raw(Json.Encode(@ViewBag.TechnicianList))';
+    InstallerList = JSON.parse(InstallerList);
+
+    var pageno = '@ViewBag.PageNumber';
+        var OpenTicketById = function(ticketId){
+        OpenTopToBottomModal(domainurl + "/Ticket/AddTicket/?Id=" + ticketId);
+    }
+    var LoadInstalledDeal = function (pageno) {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        var searchtext = $("#InstalledDealText").val();
+        var SalesPerson = encodeURI($("#SalesMan").val());
+        var Installer = encodeURI($("#Installer").val());
+        $(".InstalledDealReport").html(TabsLoaderText);
+        $(".InstalledDealReport").load(domainurl + "/Reports/InstalledDealsReportList?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&searchtext=" + encodeURI(searchtext) + "&pageno=" + pageno + "&pagesize=20" + "&SalesList=" + SalesPerson + "&InstallerList=" + Installer);
+    }
+    var ResetFilter = function () {
+        $('.SalesPerson').selectpicker("val", "");
+        $('.Installer').selectpicker("val", "");
+        LoadInstalledDeal(1);
+    }
+    $(document).ready(function () {
+        $(".installed_deal_report_filter").hide();
+        LoadInstalledDeal(1);
+        $("#filterbtndeal").click(function () {
+            console.log("filter");
+            if ($(".installed_deal_report_filter").is(":visible")) {
+                $(".installed_deal_report_filter").hide();
+
+            } else {
+                $(".installed_deal_report_filter").show();
+
+            }
+        });
+
+        if (SalesPersonList.length != 0) {
+            $("#SalesMan").selectpicker('val', SalesPersonList);
+        }
+        else {
+            $("#SalesMan").selectpicker('val', '');
+        }
+        if (InstallerList.length != 0) {
+            $("#Installer").selectpicker('val', InstallerList);
+        }
+        else {
+            $("#Installer").selectpicker('val', '');
+        }
+
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+            UpdatePtoCookie();
+            LoadInstalledDeal(1, null);
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        });
+
+        $("#btnInstalledDeal").click(function () {
+            var StartDate = $(".min-date").val();
+            var EndDate = $(".max-date").val();
+            var searchtext = $("#InstalledDealText").val();
+            var SalesPerson = encodeURI($("#SalesMan").val());
+            var Installer = encodeURI($("#Installer").val());
+            window.location.href = domainurl + "/Reports/InstalledDealsReportList?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&GetReport=true" + "&searchtext=" + encodeURI(searchtext) + "&pageno=" + pageno + "&pagesize=20" + "&SalesList=" + SalesPerson + "&InstallerList=" + Installer;
+        })
+           $("#InstalledDealText").keydown(function (e) {
+
+                if (e.which == 13) {
+                    LoadInstalledDeal(1);
+                }
+            });
+    });
+    $(window).resize(function () {
+        //if (window.innerWidth > 1025) {
+        //    $(".new_sales_report_table_div").height(window.innerHeight - 338);
+        //}
+
+    })
+
+
+</script>
+
+<div class="sales_summery_report_top_bar">
+    <div class="input-group add-on">
+        @if (ViewBag.searchtext != "" && ViewBag.searchtext != "undefined")
+        {
+            <input class="form-control" placeholder="Search Text" value="@ViewBag.searchtext" id="InstalledDealText" />
+        }
+        else
+        {
+            <input class="form-control" placeholder="Search Text" value="" id="InstalledDealText" />
+        }
+
+        <div class="input-group-btn"> <button class="btn green_button" onclick="LoadInstalledDeal(1)" id="btn_new_sales" title="@Localize.T("Search")"><i class="fa fa-search"></i></button></div>
+    </div>
+
+    <button class="btn convert_cus_div lilrp_filter_btn" id="filterbtndeal">
+        <span title="Filter" class="glyphicon glyphicon-filter"></span>
+    </button>
+
+    <button title="@Localize.T(" Download")" class="btn btn-primary" id="btnInstalledDeal"><i class="fa fa-download"></i></button>
+
+    <div class="installed_deal_report_filter">
+        <div class="convert_cus_report_filte_innerr convert_cus_div">
+            <div class="form-group clearfix">
+                <label>@Localize.T("Installer")</label>
+                @Html.DropDownList("Installer", (List<SelectListItem>)ViewBag.TechnicianList, new { @class = "form-control  Installer", id = "Installer", @multiple = "multiple", @title = "Select Installer" })
+            </div>
+
+            <div class="form-group clearfix">
+                <label>@Localize.T("Sales Person")</label>
+                @Html.DropDownList("SalesMan", (List<SelectListItem>)ViewBag.EmployeeList, new { @class = "form-control  SalesMan", id = "SalesMan", @multiple = "multiple", @title = "Select Sales Person" })
+            </div>
+        </div>
+        <div class="convert_cus_report_footer convert_cus_div">
+            <button class="btn green_button" id="apply_btn_filter" onclick="LoadInstalledDeal(1)">@Localize.T("Apply")</button>
+            <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilter()">@Localize.T("Reset")</button>
+        </div>
+    </div>
+</div>
+<div class="col-md-12">
+    &nbsp;
+</div>
+
+<div class="InstalledDealReport">
+
+
+</div>
+
+
+

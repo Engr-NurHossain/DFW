@@ -1,0 +1,713 @@
+﻿
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using cs = HS.Entities.Customer
+@using InvoiceStatus = HS.Web.UI.Helper.LabelHelper.InvoiceStatus
+@model HS.Entities.CreateInvoice
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Js/TinyInvoice.js"></script>
+<script>
+    var Invoice_int_Id = '@Model.Invoice.Id';
+    var InvoiceId = '@Model.Invoice.InvoiceId';
+    var InvoiceStatus = '@Model.Invoice.Status';
+    var UrlModelInvoiceId = '@Model.Invoice.Id';
+
+    var DefaultDueDate = "60";
+    var InvoiceShippingSetting = '@Model.InvoiceSetting.ShippingSetting';
+    var InvoiceDepositSetting = '@Model.InvoiceSetting.DepositSetting';
+    var InvoiceDiscountSetting = '@Model.InvoiceSetting.DiscountSetting';
+    var DiscountAmountDbValue = '@Model.Invoice.DiscountAmount';
+    var DiscountPercentDbValue = '@Model.Invoice.Discountpercent';
+    var TaxDbValue = '@Model.Invoice.Tax';
+    var TaxTypeDbValue = '@Model.Invoice.TaxType';
+    var ShipAddress1 = $("#Invoice_BillingAddress").val();
+    var DueDate= '@(Model.Invoice.DueDate.HasValue? Model.Invoice.DueDate.Value.ToString("MM/dd/yy"):(Model.Invoice.InvoiceDate.HasValue?Model.Invoice.InvoiceDate.Value.AddDays(60).ToString("MM/dd/yyyy"):""))';
+    var invDate= '@(Model.Invoice.InvoiceDate.HasValue? Model.Invoice.InvoiceDate.Value.ToString("MM/dd/yy"):"")';
+    var TransMakeCurrency = '@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)';
+    var ShowShipping = '@ViewBag.ShowShipping';
+    var memopermit = '@PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowInvoiceMemo)';
+    Date.prototype.addDays = function(days) {
+        var dat = new Date(this.valueOf());
+        dat.setDate(dat.getDate() + days);
+        return dat;
+    }
+
+    @if (Model.Invoice.BalanceDue.HasValue)
+    {
+        <text>var InvoiceBalanceDue = @Model.Invoice.BalanceDue</text>
+    }
+    else
+    {
+         <text>var InvoiceBalanceDue = "";</text>
+    }
+    var ReceivePaymentByInv = function (invId) {
+        OpenTopToBottomModal(domainurl + "/Transaction/ReceivePayment/?CustomerId=" + customerId + "&InvoiceId=" + invId);
+    }
+
+  
+    $(document).ready(function () {
+
+       
+        //$(".shippingAddress").val($("#Invoice_BillingAddress").val());
+        if (InvoiceStatus == "Undefined" || InvoiceStatus == "Init") {
+            $(".invoice-make-payment-div").hide();
+            $(".balance-info-due").show();
+            $(".balance-info-paid").hide();
+            $(".balance-info-Cancel").hide();
+        }
+        else if (InvoiceStatus == "Open") {
+            $(".invoice-make-payment-div").show();
+            $(".balance-info-paid").hide();
+            $(".balance-info-due").show();
+            $(".balance-info-Cancel").hide();
+        }
+        else if (InvoiceStatus == "Partial") {
+            $(".InvoiceSaveButton").hide();
+            $(".balance-info-paid").hide();
+            $(".balance-info-Cancel").hide();
+        }
+        else if (InvoiceStatus == "Paid") {
+            $(".invoice-make-payment-div").hide();
+            $(".balance-info-due").hide();
+            $(".balance-info-paid").show();
+            $(".InvoiceSaveButton").hide();
+            $(".balance-info-Cancel").hide();
+        }
+        else if (InvoiceStatus == "Cancelled"
+            || InvoiceStatus == "Cancel"
+            || InvoiceStatus == "Declined"
+            || InvoiceStatus == "Rolled Over") {
+            $(".invoice-make-payment-div").hide();
+            $(".balance-info-due").hide();
+            $(".balance-info-paid").hide();
+            $(".InvoiceSaveButton").hide();
+            $(".balance-info-Cancel").show();
+        }
+       
+
+        //$(".CheckPrintAndSendInvoice").click(function () {
+        //    if ($(".HasItem").length == 0) {
+        //        OpenErrorMessageNew("Error!", "You have to select at least one equipment to proceed", "");
+        //    }
+        //});
+       
+        /*Set DueDate and Invoice Date*/
+        if ($("#Invoice_Terms").val() != '' && InvoiceStatus == "Init" ) {
+            $("#Invoice_Terms").val(DefaultDueDate);
+            var NewInvoiceDate = new Date($("#Invoice_InvoiceDate").val());
+            if(NewInvoiceDate == "Invalid Date"){
+                NewInvoiceDate = new Date();
+                $("#Invoice_InvoiceDate").val(NewInvoiceDate.getMonth() + 1 + "/" + NewInvoiceDate.getDate() + "/" + NewInvoiceDate.getFullYear());
+            }
+            if(!isNaN($("#Invoice_Terms").val())){
+                NewInvoiceDate = NewInvoiceDate.addDays(parseInt($("#Invoice_Terms").val()));
+            }
+            $(".DueDate").val(NewInvoiceDate.getMonth() + 1 + "/" + NewInvoiceDate.getDate() + "/" + NewInvoiceDate.getFullYear());
+        }else{
+            if(DueDate != "" && DueDate != null){
+                $("#Invoice_DueDate").val(DueDate);
+            }
+            if(invDate != "" && invDate != null){
+                $("#Invoice_InvoiceDate").val(invDate);
+            }
+        }
+        /*Set Due Date Ends*/
+        /*Set Defult Terms & Due Date*/
+        //$(".invoiceTerms").val("0");
+        //if($(".invoiceTerms").val("0")){
+        //    $(".DueDate").val($("#Invoice_InvoiceDate").val());
+        //}
+        /*Set Defult Terms & Due Date End*/
+    });
+</script>
+<style>
+    #mceu_15-body, #mceu_22-body, #mceu_29-body, .mce-menubar, #mceu_54-body, #mceu_61-body{
+        display:none;
+    }
+    .SaveaButtonsDiv_customer {
+       width: 100%;
+    float: left;
+    text-align: right;
+    padding: 4px 20px;
+    background-color: #504f4f;
+}
+</style>
+@Styles.Render("~/styles/AddInvoice")
+<script src="~/Content/Js/AddInvoice/AddInvoiceCustomer2.js"></script>
+ <script src="~/Content/Js/Invoice/AddInvoiceCustomer.js"></script>
+<input type="hidden" value="@Model.Invoice.CustomerId"  id="InvoiceCustomerId" />
+
+
+<div class="add-invoice-container">
+    <div class="div-header clearfix">
+        <div class="header-title">
+            <span class="custom-title-span">
+                Invoice: @Model.Invoice.InvoiceId
+            </span>
+        </div>
+    </div>
+    <div class="invoie_contents_scroll">
+        <div class="invoice_info_container">
+            <div class="width_100p">
+                <div class="balance-info balance_info_for_mobile">
+                    <div>
+                        <span class="span-style balance-info-due">@Localize.T("Balance due")</span>
+                        <span class="span-style balance-info-paid">@Localize.T("Balance paid")</span>
+                        <span class="span-style balance-info-Cancel">@Localize.T("Rolled Over balance")</span>
+                    </div>
+                    <span class="amount amount-span-style big-amount-top amount-big">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+
+                    <div class="balance-info-paid PaidDivClass">
+                        <span>PAID</span>
+                    </div>
+                    <div class="balance-info-Cancel CancelDivClass">
+                        <span>@((Model.Invoice.Status == InvoiceStatus.Declined) ? @InvoiceStatus.Declined : @InvoiceStatus.RolledOver)</span>
+                    </div>
+                </div>
+                <div class="invoice-info-left-70p invoice_owner_info">
+                    <div class="clearfix width-25p customer_name_insert_div add_invoice_info_div_device">
+                        <span class="span-style">@Localize.T("Select a customer")</span>
+                        @{
+                            if (!string.IsNullOrWhiteSpace(Model.CusBussinessName) && Model.CusType == "Commercial")
+                            {
+                                <input type="text" class="form-control" onkeydown="CustomerSearchKeyDown(this,event)" onkeyup="CustomerSearchKeyUp(this,event)" value="@Model.CusBussinessName" id="CustomerList" />
+                            }
+                            else
+                            {
+                                <input type="text" class="form-control" onkeydown="CustomerSearchKeyDown(this,event)" onkeyup="CustomerSearchKeyUp(this,event)" value="@Model.Invoice.CustomerName" id="CustomerList" />
+                            }
+                        }
+                        
+                        <div class='tt-menu'>
+                            <div class='tt-dataset tt-dataset-autocomplete'> </div> 
+                        </div>
+                    </div>
+                    @*<div class="clearfix width-25p add_invoice_info_div_device">
+                        <span class="span-style">@Localize.T("Send email")</span>
+                        @Html.TextBoxFor(x => x.EmailAddress, new { @class = "form-control" })
+                    </div>*@
+                    @if (Model.Invoice.Status == "Open")
+                    {
+                        <div class="clearfix width-25p">
+                            <span class="span-style">@Localize.T("Status")</span>
+                            @Html.DropDownListFor(x => x.Invoice.Status, ViewBag.InvoiceStatus as List<SelectListItem>, new { @class = "form-control" })
+                        </div>
+                        if (Model.Invoice.EstimateTerm == "50% Due Upon Acceptance/50% Due Upon Completion")
+                        {
+                            <div class="clearfix width-25p">
+                                <span class="span-style">@Localize.T("Payment Terms")</span>
+                                <input type="text" class="form-control" readonly="readonly" value="@Model.Invoice.EstimateTerm" />
+                            </div>
+                        }
+                    }
+                    @if (Model.Invoice.Status == "Cancel" || Model.Invoice.Status == "Cancelled")
+                    {
+                        <div class="clearfix width-25p">
+                            <span class="span-style">@Localize.T("Status")</span>
+                            @Html.TextBoxFor(x => x.Invoice.Status, new { @class = "form-control", @readonly = "readonly" })
+                        </div>
+                    }
+                </div>
+
+                <div class="balance-info balance_info_for_desktop">
+                    <div>
+                        <span class="span-style balance-info-due">@Localize.T("Balance due")</span>
+                        <span class="span-style balance-info-paid">@Localize.T("Balance paid")</span>
+                        <span class="span-style balance-info-Cancel">@Localize.T("Rolled Over balance")</span>
+                    </div>
+                    <span class="amount amount-span-style big-amount-top amount-big">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+
+                    <div class="balance-info-paid PaidDivClass">
+                        <span>PAID</span>
+                    </div>
+                    <div class="balance-info-Cancel CancelDivClass">
+                        <span>@((Model.Invoice.Status == InvoiceStatus.Declined)? @InvoiceStatus.Declined : @InvoiceStatus.RolledOver)</span>
+                    </div>
+                </div>
+
+                <div class="invoice-info-left-70p top_pad_for_add_invoice invoice_billing_info">
+                    <div class="clearfix width-25p add_invoice_info_div_device invoice_address_div">
+                        <span class="span-style">@Localize.T("Billing address")</span>
+                        @Html.TextAreaFor(x => x.Invoice.BillingAddress, new { @class = "BillingAddress form-control tinymce" })
+                    </div>
+                    <div class="clearfix width-25p">
+                        <span class="span-style">@Localize.T("Terms")</span>
+                        @Html.DropDownListFor(x => x.Invoice.Terms, (List<SelectListItem>)ViewBag.Term, new { @class = "invoiceTerms form-control" })
+                        @*<input type="text" id="Terms" class="Terms form-control" />*@
+                    </div>
+                    <div class="clearfix width-25p">
+                        <span class="span-style">@Localize.T("Invoice date")</span>
+                        @Html.TextBoxFor(x => x.Invoice.InvoiceDate, "{0:MM/dd/yy}", new { @class = "InvoiceDate form-control"})
+
+                    </div>
+                    <div class="clearfix width-25p">
+                        <span class="span-style">@Localize.T("Due Date")</span>
+                        @Html.TextBoxFor(x => x.Invoice.DueDate, "{0:MM/dd/yy}", new { @class = "DueDate form-control" })
+                    </div>
+                </div>
+                <div class="invoice-make-payment-div hidden">
+                    <button type="button" class="btn btn-default invoice-make-poayment" onclick="ReceivePaymentByInv(@Model.Invoice.Id)" data-val="@Model.Invoice.Id">@Localize.T("Receive Payment")</button>
+                </div>
+            </div>
+            @*<div class="shipping-div shipping_div_style shipping">
+                <div class="invoice-info-left-70p top_pad_for_add_invoice">
+                    <div class="clearfix width-25p add_invoice_info_div_device">
+                        <span class="span-style">@Localize.T("Shipping Address")</span>
+                        @Html.TextAreaFor(x => x.Invoice.ShippingAddress, new { @class = "shippingAddress form-control tinymce" })
+
+                    </div>
+                    <div class="clearfix width-25p">
+                        <span class="span-style">@Localize.T("Shipping Via")</span>
+                        @Html.TextBoxFor(x => x.Invoice.ShippingVia, new { @class = "form-control" })
+
+                    </div>
+                    <div class="clearfix width-25p">
+                        <span class="span-style">@Localize.T("Shipping Date")</span>
+                        @Html.TextBoxFor(x => x.Invoice.ShippingDate, "{0:MM/dd/yyyy}", new { @class = "ShippingDatePicker form-control" })
+
+                    </div>
+                    <div class="clearfix width-25p" style="position:relative;">
+                        <span class="span-style">@Localize.T("Tracking No.")</span>
+                        @Html.TextBoxFor(x => x.Invoice.TrackingNo, new { @class = "form-control" })
+                    </div>
+                </div>
+            </div>*@
+        </div>
+
+        <div class="div-body-contents">
+            <div class="invoice-informations">
+                <div class="add_invoice_table_style">
+                    <table class="CustomerInvoiceTab" id="CustomerInvoiceTab">
+                        <thead>
+                            <tr>
+                                <th class="thead-th-style1 tab-index">
+                                    <span>
+
+                                    </span>
+                                </th>
+                                <th class="thead-th-style1 tab-Product">
+                                    <span>
+                                        @Localize.T("Product/Service")
+                                    </span>
+                                </th>
+                                <th class="thead-th-style2 tab-Desc">
+                                    <span>
+                                        @Localize.T("Description")
+                                    </span>
+                                </th>
+                                <th class="thead-th-style2 tab-Quantity">
+                                    <span>
+                                        @Localize.T("QTY")
+                                    </span>
+                                </th>
+                                <th class="thead-th-style2 tab-Rate">
+                                    <span>
+                                        @Localize.T("Rate")
+                                    </span>
+                                </th>
+                                <th class="thead-th-style2 tab-Amount">
+                                    <span>
+                                        @Localize.T("Amount")
+                                    </span>
+                                </th>
+                                <th class="thead-th-style2 tab-Action">
+
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.InvoiceDetailList.Count() > 0)
+                            {
+                                foreach (var item in Model.InvoiceDetailList)
+                                {
+                                    <tr data-id="@item.EquipmentId" class="HasItem @((item.Taxable.HasValue && !item.Taxable.Value)?"NonTaxable":"")">
+                                        <td valign="top"></td>
+                                        <td valign="top">
+
+                                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                            <span class="spnProductName">@item.EquipName</span>
+                                        </td>
+                                        <td valign="top">
+                                           
+                                            <span class="spnProductDesc">@item.EquipDetail</span>
+                                        </td>
+                                        <td valign="top">
+                                            
+                                            <span class="spnProductQuantity">@item.Quantity</span>
+                                        </td>
+                                        <td valign="top">
+                                          
+                                            <span class="spnProductRate">@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.UnitPrice.Value)</span>
+                                        </td>
+                                        <td valign="top">
+                                            <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" value="@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalPrice.Value)" />
+                                            <span class="spnProductAmount">@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalPrice.Value)</span>
+                                        </td>
+                                        <td valign="top" class="tableActions">
+                                            <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                                        </td>
+                                    </tr>
+                                }
+                                if (Model.Invoice.Status != InvoiceStatus.Paid
+                                    && Model.Invoice.Status != InvoiceStatus.Partial
+                                    && Model.Invoice.Status != InvoiceStatus.Credited
+                                    && Model.Invoice.Status != InvoiceStatus.OnHold
+                                    && Model.Invoice.Status != InvoiceStatus.Declined
+                                    && Model.Invoice.Status != InvoiceStatus.Cancelled)
+                                {
+
+                                    <tr>
+                                        <td valign="top"></td>
+                                        <td valign="top">
+                                           
+                                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                            <span class="spnProductName"></span>
+                                        </td>
+                                        <td valign="top">
+                                           
+                                            <span class="spnProductDesc"></span>
+                                        </td>
+                                        <td valign="top">
+                                           
+                                            <span class="spnProductQuantity"></span>
+                                        </td>
+                                        <td valign="top">
+                                         
+                                            <span class="spnProductRate"></span>
+                                        </td>
+                                        <td valign="top">
+  
+                                            <span class="spnProductAmount"></span>
+                                        </td>
+                                        <td valign="top" class="tableActions">
+                                            <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td valign="top"></td>
+                                    <td valign="top">
+                                       
+                                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                        <span class="spnProductName"></span>
+                                    </td>
+                                    <td valign="top">
+                                       
+                                        <span class="spnProductDesc"></span>
+                                    </td>
+                                    <td valign="top">
+                                       
+                                        <span class="spnProductQuantity"></span>
+                                    </td>
+                                    <td valign="top">
+                                        
+                                        <span class="spnProductRate"></span>
+                                    </td>
+                                    <td valign="top">
+                                     
+                                        <span class="spnProductAmount"></span>
+                                    </td>
+                                    <td valign="top" class="tableActions">
+                                        <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td valign="top"></td>
+                                    <td valign="top">
+
+                                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                        <span class="spnProductName"></span>
+                                    </td>
+                                    <td valign="top">
+                                   
+                                        <span class="spnProductDesc"></span>
+                                    </td>
+                                    <td valign="top">
+                                      
+                                        <span class="spnProductQuantity"></span>
+                                    </td>
+                                    <td valign="top">
+                            
+                                        <span class="spnProductRate"></span>
+                                    </td>
+                                    <td valign="top">
+                                        
+                                        <span class="spnProductAmount"></span>
+                                    </td>
+                                    <td valign="top" class="tableActions">
+                                        <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="OtherInfos">
+                   
+                        <div class="col-md-12">
+                            <div class="invoive_description_container add_invoice_bootom_left">
+                                <div class="InvoiceMgmtDiv">
+                                    @*<button class="btnAddLines">@Localize.T("Add Lines")</button>
+            <button class="btnClearLines">@Localize.T("Clear Lines")</button>*@
+                                    <button class="btnAddSubtotal hidden">@Localize.T("Add Subtotal")</button>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="billing_text_align">
+                                            <span>@Localize.T("Invoice Description")</span>
+                                        </div>
+                                        <textarea id="InvoiceDescription" maxlength="5000" rows="4" class="InvoiceMessage">@Model.Invoice.Description</textarea>
+                                        <div class="invoice_message_div">
+                                            <span class="DescStartCount">0</span> out of <span class="DescEndCount">5000</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row hidden">
+                                    <div class="col-md-12">
+                                        <div class="billing_text_align">
+                                            <span>@Localize.T("Message displayed on invoice")</span>
+                                        </div>
+                                        <textarea id="InvoiceMessage" maxlength="1000" rows="4" class="InvoiceMessage">@(string.IsNullOrWhiteSpace(Model.Invoice.Message)? ViewBag.InvoiceMessage : Model.Invoice.Message)</textarea>
+                                        <div class="invoice_message_div">
+                                            <span class="StartCount">0</span> out of <span class="EndCount">500</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowInvoiceMemo))
+                                {
+                                    <div class="row hidden">
+                                        <div class="col-md-12">
+                                            <div class="billing_text_align">
+                                                <span>@Localize.T("Memo displayed on invoice")</span>
+                                            </div>
+                                            <textarea id="Memo" maxlength="1000" rows="4" class="Memo">@Model.Invoice.Memo</textarea>
+                                            <div class="invoice_memo_counter">
+                                                <span class="MemoStartCount">0</span> out of <span class="MemoEndCount">500</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                                <div class="row hidden">
+                                    <div class="InvNotesContainer">
+                                        <div class="InvoiceNotesList">
+                                            @if (Model.InvoiceNotes != null && Model.InvoiceNotes.Count() > 0)
+                                            {
+                                                foreach (var item in Model.InvoiceNotes)
+                                                {
+                                                    <div class="templates">
+                                                        <div class="NoteTemplate">
+                                                            <div class="InvoiceNote">@Html.Raw(item.Note)</div>
+                                                            <div class="InvoiceNoteOptions clearfix">
+                                                                <div class="NoteAddedByDiv">
+                                                                    <div>
+                                                                        <span><b>@Localize.T("Added By")</b>:<span class="NoteAddedBy">@item.AddedByText</span></span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <span><b>@Localize.T("Added Date")</b>:<span class="NoteAddedDate">@item.AddedDate.UTCToClientTime().ToString("MM/dd/yy hh:mm:ss")</span></span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                        <div class="addNewInvoiceNoteDiv">
+
+                                            <textarea rows="5" id="InvoiceNote" class="InvoiceNotTxt"></textarea>
+                                            <div class="billing_text_align">
+                                                <span>@Localize.T("Notes for invoice")</span>
+                                            </div>
+                                            <div class="clearfix">
+                                                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerInvoiceAddNote))
+                                                {
+                                                    <button class="AddNewInvNotBtn btn green_button" title="@Localize.T("Add New Note")">
+                                                        <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                                                        @Localize.T("New Note")
+                                                    </button>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="invoive_calculation_div add_invoice_bootom_right">
+                                <div class="InvoiceCalculationsDiv">
+                                    <div class="subtotal-amount-div row add_estimate_margin_top">
+                                        <div class="col-xs-8">
+                                            <span class="float-right subtotal_text">@Localize.T("Subtotal")</span>
+                                        </div>
+                                        <div class="col-xs-4">
+                                            <span class="amount float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                                        </div>
+                                    </div>
+                                    <div class="Discount discount-amount-div row margin-TB-5p">
+                                        <div class="col-xs-6">
+                                            @Html.DropDownListFor(x => x.Invoice.DiscountType, (List<SelectListItem>)ViewBag.DiscountMethod, new { @class = "form-control", disabled = "disabled" })
+                                            <span class="discount_text_custom">@Localize.T("Discount")</span>
+                                        </div>
+                                        <div class="col-xs-2">
+                                            @if (Model.Invoice.DiscountType == "percent")
+                                            {
+                                                if (Model.Invoice.Discountpercent > 0)
+                                                {
+                                                    <input type="text" id="discountAmount" class="float-right form-control" value="@Model.Invoice.Discountpercent" disabled />
+                                                }
+                                                else
+                                                {
+                                                    <input type="text" id="discountAmount" class="float-right form-control" disabled/>
+                                                }
+                                            }
+                                            else if (Model.Invoice.DiscountType == "amount")
+                                            {
+                                                if (Model.Invoice.DiscountAmount > 0)
+                                                {
+                                                    <input type="text" id="discountAmount" class="float-right form-control" value="@Model.Invoice.DiscountAmount" disabled />
+                                                }
+                                                else
+                                                {
+                                                    <input type="text" id="discountAmount" class="float-right form-control" disabled />
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <input type="text" id="discountAmount" class="float-right form-control" />
+                                            }
+                                        </div>
+                                        <div class="col-xs-4">
+                                            <span class="shipping-aount-span">
+                                                <span class="shippingAmountTxt float-right">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                                            </span>
+                                        </div>
+                                        <div class="Discount-total add_estimate_margin_top">
+                                            <div class="col-xs-8">
+                                                <span class="float-right subtotal_text">@Localize.T("Subtotal")</span>
+                                            </div>
+                                            <div class="col-xs-4">
+                                                <span class="shipping-aount-span">
+                                                    @{
+                                                        if (Model.Invoice.DiscountAmount != 0)
+                                                        {
+                                                            <span class="DiscountAmountTxt float-right subtotal_text">@Model.Invoice.DiscountAmount</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="DiscountAmountTxt float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                                                        }
+                                                    }
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                              
+                                    <div class="tax-amount-div row margin-TB-5p add_estimate_margin_top">
+                                        <div class="col-xs-8">
+                                            @Html.DropDownList("taxType", (List<SelectListItem>)ViewBag.TaxListItem, new { @class = "form-control add_estimate_dropdown_style", disabled = "disabled" })
+                                        </div>
+                                        <div class="col-xs-4">
+                                            <span class="tax float-right tax_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="total-amount-div row add_estimate_margin_top clearfix">
+                                        <div class="col-xs-8">
+                                            <span class="float-right subtotal_text">@Localize.T("Subtotal"):</span>
+                                        </div>
+                                        <div class="col-xs-4 custom_pad_add_estimate">
+                                            <span class="FinalTotalTxt float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                                        </div>
+                                    </div>
+
+                                    <div id="ShippingField" class="row">
+                                        <div class="col-xs-8">
+                                            <span class="float-right add_estimate_margin_top">@Localize.T("Shipping")</span>
+                                        </div>
+                                        <div class="col-xs-4 custom_pad_add_estimate">
+                                            <span class="shipping-amount-span">
+                                                @Html.TextBoxFor(x => x.Invoice.ShippingCost, new { @class = "DipositeAmount form-control", disabled = "disabled" })
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="Diposit  deposit-amount-div row margin-TB-5p">
+                                        <div class="col-xs-8">
+                                            <span class="float-right">@Localize.T("Deposit")</span>
+                                        </div>
+                                        <div class="col-xs-4">
+                                            <span class="shipping-aount-span">
+                                                @Html.TextBoxFor(x => x.Invoice.Deposit, new { @class = "DipositeAmount form-control", disabled = "disabled" })
+                                                @*<input type="text" id="DipositeAmount" class="float-right form-control" />*@
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="balance-due-amount-div row">
+                                        <div class="col-xs-8">
+                                            <span class="float-right subtotal_text">@Localize.T("Balance Due"):</span>
+                                        </div>
+                                        <div class="col-xs-4 custom_pad_add_estimate">
+                                            <span class="balanceDueAmount float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                   
+                    <div class="row">
+                        <div class="col-md-12">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div> 
+    <div class="SaveaButtonsDiv_customer">
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerInvoiceSave))
+        {          
+            <div class="btn-group dropup">
+                <a onclick="CloseTopToBottomModal();" class="btn btn-default CloseInvoiceOnly">@Localize.T("Close")</a>
+            </div>
+            
+        }
+    </div>
+</div>
+
+<div class="AddInvoiceLoader hidden">
+    <div class='invoice-loader'><div><div class="lds-css ng-scope"><div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div></div></div></div>
+    @*<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>*@
+</div>
+
+<div class="hidden" style="display:none; visibility:hidden;"> 
+    <div class="templates">
+        <div class="NoteTemplate">
+            <div class="InvoiceNote">
+            </div>
+            <div class="InvoiceNoteOptions clearfix">
+                <div class="NoteAddedByDiv">
+                    <div>
+                        <span>@Localize.T("Added By"):<span class="NoteAddedBy"></span></span>
+                    </div>
+                    <div>
+                        <span>@Localize.T("Added Date"):<span class="NoteAddedDate"></span></span>
+                    </div>
+                </div>
+                @*<div class="NoteDeleteDiv">
+                    <button class="DeleteInvoiceNoteBtn">@Localize.T("Delete")</button>
+                </div>*@
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -1,0 +1,152 @@
+﻿
+@{
+    Layout = null;
+}
+ 
+@model HS.Entities.EquipmentListWithCountModel
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using UserTypes = HS.Web.UI.Helper.LabelHelper.UserTypes
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@{
+    int Count = 1;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+
+@Styles.Render("~/styles/EquipmentList")
+<script src="~/Content/Js/ProductList/ProductList.js"></script>
+<link href="~/Content/Css/Equipment/FilteredEquipmentList.css" rel="stylesheet" />
+<link href="~/Content/Css/Equipment/FilteredEquipmentListCustom.css" rel="stylesheet" />
+<link href="~/Content/Css/Inventory/ProductListPartial.css" rel="stylesheet" />
+
+<script>
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var LoadNewEquipment = function () {
+        OpenRightToLeftLgModal("Inventory/AddEquipmentServiceBundleView");
+    }
+    var EquipmentSearchKeyUp = function (pageNumber,order) {
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var ActiveStatus = $("#ActiveStatus").val();
+        var EquipmentClass = $("#EquipmentClass").val();
+        var EquipmentCategory = $("#EquipmentCategory").val();
+        var StockStatus = $("#StockStatus").val();
+        var searchtext = $('.srch-term').val();
+        $('.filter-inventory-product').html('');
+        $('.filter-inventory-product').load("/Inventory/FilterProductList/?ActiveStatus=" + ActiveStatus + "&EquipmentClass=" + EquipmentClass + "&EquipmentCategory=" + EquipmentCategory + "&StockStatus=" + StockStatus + "&PageNo=" + pageNumber + "&SearchText=" + searchtext + "&order=" + order);
+    }
+    var EquipmentSearchKeyUp1 = function (pageNumber) {
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        var ActiveStatus = $("#ActiveStatus").val();
+        var EquipmentClass = $("#EquipmentClass").val();
+        var EquipmentCategory = $("#EquipmentCategory").val();
+        var StockStatus = $("#StockStatus").val();
+        var searchtext = encodeURI($('.srch-term').val());
+        $('.filter-inventory-product').html(TabsLoaderText);
+        $('.filter-inventory-product').load(domainurl + "/Inventory/FilterProductList/?ActiveStatus=" + ActiveStatus + "&EquipmentClass=" + EquipmentClass + "&EquipmentCategory=" + EquipmentCategory + "&StockStatus=" + StockStatus + "&PageNo=" + pageNumber + "&SearchText=" + searchtext+"&Transferred_Date_To="+StartDate+"&Transferred_Date_From="+EndDate);
+    }
+    $(document).ready(function () {
+        EquipmentSearchKeyUp(1);
+        $(".btn-filter").click(function () {
+            $(".product-fliter-list").toggle();
+        });
+        $(".btn-apply-filter").click(function () {
+            EquipmentSearchKeyUp(1);
+            $(".product-fliter-list").hide();
+        });
+        $(".btn-reset-filter").click(function () {
+            $("#ActiveStatus").val("-1");
+            $("#EquipmentClass").val("-1");
+            $("#EquipmentCategory").val("-1");
+            $("#StockStatus").val("-1");
+        });
+        $(".equipment-grid-col-pservice").click(function () {
+            OpenRightToLeftModal(domainurl + "/Inventory/ProductServiceGridSettings");
+        });
+        $("#btnDownloadAllProduct").click(function () {
+            var pageNumber = 1;
+            var StartDate = $(".min-date").val();
+            var EndDate = $(".max-date").val();
+            var ActiveStatus = $("#ActiveStatus").val();
+            var EquipmentClass = $("#EquipmentClass").val();
+            var EquipmentCategory = $("#EquipmentCategory").val();
+            var StockStatus = $("#StockStatus").val();
+            var searchtext = encodeURI($('.srch-term').val());
+            location.href = domainurl + "/Reports/DownloadFilterProductList/?ActiveStatus=" + ActiveStatus + "&EquipmentClass=" + EquipmentClass + "&EquipmentCategory=" + EquipmentCategory + "&StockStatus=" + StockStatus + "&PageNo=" + pageNumber + "&SearchText=" + searchtext + "&Transferred_Date_To=" + StartDate + "&Transferred_Date_From=" + EndDate;
+
+        })
+    })
+</script>
+
+
+<div class="container-fluid product_list_partial_container">
+    <div class="row">
+        <div class="col-md-5 left-items product_list_partial_search_bar">
+            <div class="product_list_partial_search_only">
+                <div class="input-group add-on">
+                    <input class="form-control srch-term" onkeyup="EquipmentSearchKeyUp1(1)" placeholder="Find an Equipment" @*id="srch-term"*@ type="text">
+                    <div class="input-group-btn">
+                        <button class="btn btn-default custom-btn green_button" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="equipment-list-filter-product">
+                <button class="btn btn-filter" title="@Localize.T("Filter")">
+                    <span class="glyphicon glyphicon-filter"></span>
+                </button>
+                <div class="product-fliter-list">
+                    <div class="filter-by-status sub-list">
+                        <span>@Localize.T("Status")</span>
+                        @Html.DropDownList("ActiveStatus", (List<SelectListItem>)ViewBag.EquipmentActiveStatus, new { @class = "form-control", id = "ActiveStatus" })
+                    </div>
+                    <div class="filter-by-equipmentClass sub-list">
+                        <span>@Localize.T("Type")</span>
+                        @Html.DropDownList("EquipmentClass", (List<SelectListItem>)ViewBag.EquipmentClassTypeList, new { @class = "form-control", id = "EquipmentClass" })
+                    </div>
+                    <div class="filter-by-equipmentType sub-list">
+                        <span>@Localize.T("Category")</span>
+                        @Html.DropDownList("EquipmentCategory", (List<SelectListItem>)ViewBag.EquipmentTypeList, new { @class = "form-control", id = "EquipmentCategory" })
+                    </div>
+                    <div class="filter-by-stock-status sub-list">
+                        <span>@Localize.T("Stock Status")</span>
+                        @Html.DropDownList("StockStatus", (List<SelectListItem>)ViewBag.StockStatus, new { @class = "form-control", id = "StockStatus" })
+                    </div>
+
+                    <div class="sub-list-btn">
+                        <button class="btn-reset-filter">
+                            <i class="fa fa-refresh" aria-hidden="true"></i> @Localize.T("Reset")
+                        </button>
+                        <button class="btn-apply-filter">
+                            <i class="fa fa-check" aria-hidden="true"></i>  @Localize.T("Apply")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7 product_list_partial_btn_div" style="float:right;">
+            <button title="@Localize.T(" Download")" class="btn green_button" id="btnDownloadAllProduct" style="margin-left:10px; float:right;"><i class="fa fa-download"></i></button>
+
+            <button onclick="LoadNewEquipment()" class="addnewProductButton">
+                <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                @Localize.T("Add Equipment")
+            </button>
+
+            <div class="product_list_settings_container">
+
+                <button class="product_list_settings" data-toggle="dropdown" title="@Localize.T("Customize columns")"><i class="fa fa-cog cus-setting" aria-hidden="true"></i></button>
+                <ul class="dropdown-menu custom_column_dropdown">
+                    <li class="equipment-grid-col-pservice"><a href="javascript:void(0)">@Localize.T("Customize columns")</a></li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+</div>
+ <div class="filter-inventory-product">
+
+</div>

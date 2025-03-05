@@ -1,0 +1,386 @@
+﻿@model HS.Entities.AddSmartLeadEquipment
+@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+    double TotalPrice = 0;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+<script>
+    var NonCommissionableEqpList = [];
+    var DeleteNonCommissionableEqpList = [];
+    var EquipmentPartialLeadId = @ViewBag.EquipmentPartialLeadId;
+    var Currency = '@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency()';
+    var SaveNonCommissionableEqpList = function (NonCommissionableServiceList) {
+        var url = "/SmartLeads/SaveNonCommissionableEqpList";
+        var param = JSON.stringify({
+            NonCommissionableEqpList: NonCommissionableEqpList,
+            EquipmentPartialLeadId: EquipmentPartialLeadId,
+            DeleteNonCommissionableEqpList: DeleteNonCommissionableEqpList
+        });
+        $.ajax({
+        type: "POST",
+        ajaxStart: $(".loader-div").show(),
+        url: url,
+        data: param,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+        success: function (data) {
+
+        }
+    });
+    }
+    $(document).ready(function () {
+        $("#btnSavandNex").removeClass("hidden");
+        $(".chk_non_commission_eqp").click(function () {
+            var id = $(this).attr('data-id');
+            if ($(this).prop("checked")) {
+                OpenConfirmationMessageNew("Confirmation", "Do you want to make non commissionable equipment?", function () {
+                    NonCommissionableEqpList.push(id);
+                    SaveNonCommissionableEqpList(NonCommissionableEqpList, null);
+                    $("#chk_non_commission_eqp_" + id).prop("checked", true);
+                }, function () {
+                    $("#chk_non_commission_eqp_" + id).prop("checked", false);
+                });
+            }
+            else {
+                DeleteNonCommissionableEqpList.push(id);
+                SaveNonCommissionableEqpList(null, DeleteNonCommissionableEqpList);
+            }
+        })
+        $(".chk_non_commission_eqp").each(function () {
+                var id = $(this).attr('data-id');
+                if ($("#chk_non_commission_eqp_" + id).prop("checked")) {
+                    NonCommissionableEqpList.push(id);
+                }
+        })
+    });
+</script>
+@Styles.Render("~/styles/SmartEquipmentPartial")
+@Scripts.Render("~/scripts/SmartEquipmentPartial")
+<div class="">
+    <input id="step" type="hidden" value="3" />
+    <div class="SEP_table_container">
+        <table class="LeadEquipmentTab" id="LeadEquipmentTab">
+            <thead class="header_text_style">
+                <tr>
+                    <th class="thead-th-style1 tab-index">
+                        <span>
+
+                        </span>
+                    </th>
+                    <th class="thead-th-style1 tab-Product">
+                        <span>
+                            @Localize.T("Product")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Quantity">
+                        <span>
+                            @Localize.T("Quantity")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Rate">
+                        <span>
+                            @Localize.T("Unit Price")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Amount">
+                        <span>
+                            @Localize.T("Charge Unit Price")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Amount">
+                        <span>
+                            @Localize.T("Package Discount")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Amount">
+                        <span>
+                            @Localize.T("Total Equipment Price")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Action">
+
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.LeadCustomerAppointmentEquipmentList != null)
+                {
+                    foreach (var item in Model.LeadCustomerAppointmentEquipmentList)
+                    {
+                        <tr data-ispackageeqp="@item.IsPackageEqp" data-isinclude="@item.IsIncluded" data-isdevice="@item.IsDevice" data-isoptionaleqp="@item.IsOptionalEqp" dataid="@item.Id" data-id="@item.EquipmentId" data-serviceId="@item.ServiceId" class="HasItem">
+                            <td valign="top"></td>
+                            <td valign="top">
+                                <input type="text" class="ProductName" value="@item.EquipmentServiceName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                <span class="spnProductName">@item.EquipmentServiceName</span>
+                            </td>
+                            <td valign="top">
+                                <input type="number" value="@item.Quantity" class="txtProductQuantity" />
+                                <span class="spnProductQuantity">@item.Quantity</span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" class="txtProductRate hidden" value="@item.UnitPrice" />
+                                <p class="spnProductRate">@item.UnitPrice</p>
+                            </td>
+                            <td valign="top">
+                                <input type="text" class="txtProductDiscountRate" value="@item.DiscountUnitPricce" />
+                                <span class="spnProductDiscountRate">@item.DiscountUnitPricce</span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" class="txtProductPackageDiscount hidden" value="@item.DiscountPckage" />
+                                <p class="spnProductDiscountRate">@item.DiscountPckage</p>
+                            </td>
+                            <td valign="top">
+                                <input type="text" class="txtTotalAmount hidden" value="@item.Total" />
+                                <p class="spnTotalAmount">@item.Total</p>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td valign="top"></td>
+                        <td valign="top">
+                            <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                            <span class="spnProductName"></span>
+                        </td>
+                        <td valign="top">
+                            <input type="number" class="txtProductQuantity" />
+                            <span class="spnProductQuantity"></span>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G hidden">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtProductRate" />
+                            </div>
+                            <p class="spnProductRate"></p>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtProductDiscountRate" />
+                            </div>
+                            <span class="spnProductDiscountRate"></span>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G hidden">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtProductPackageDiscount" />
+                            </div>
+                            <p class="spnProductPackageDiscount"></p>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G hidden">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtTotalAmount" />
+                            </div>
+                            <p class="spnTotalAmount"></p>
+                        </td>
+                        <td valign="top" class="tableActions">
+                            <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td valign="top"></td>
+                        <td valign="top">
+                            <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                            <span class="spnProductName"></span>
+                        </td>
+                        <td valign="top">
+                            <input type="number" class="txtProductQuantity" />
+                            <span class="spnProductQuantity"></span>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G hidden">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtProductRate" />
+                            </div>
+                            <p class="spnProductRate"></p>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtProductDiscountRate" />
+                            </div>
+                            <span class="spnProductDiscountRate"></span>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G hidden">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtProductPackageDiscount" />
+                            </div>
+                            <p class="spnProductPackageDiscount"></p>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G hidden">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtTotalAmount" />
+                            </div>
+                            <p class="spnTotalAmount"></p>
+                        </td>
+                        <td valign="top" class="tableActions">
+                            <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="SaveEquipmentButtonDiv">
+        <button type="button" class="btn" id="SaveEquipments">
+            <i class="fa fa-floppy-o" aria-hidden="true"></i> <span>@Localize.T("Save Equipment")</span>
+        </button>
+    </div>
+</div>
+
+<div class="existing-equipments">
+    @if (Model.PackageEquipmentsList != null && Model.PackageEquipmentsList.Count > 0)
+    {
+        <div class="leadsetup_equip_header head_space">
+            @Localize.T("Setup Equipment")
+        </div>
+        <div class="smrt_eqpt_partial_table">
+            <table class="Setup-Equipments-Table">
+                <thead>
+                    <tr>
+                        @if (PermissionChecker.IsPermitted(PermissionList.MenuPermissions.ShowNonCommission))
+                        {
+                            <th>
+                                @Localize.T("Non Commission")
+                            </th>
+                        }
+                        <th>
+                            @Localize.T("Product")
+                        </th>
+                        <th>
+                            @Localize.T("Qty")
+                        </th>
+                        <th>
+                            @Localize.T("Unit Price")
+                        </th>
+                        <th>
+                            @Localize.T("Discount Unit Price")
+                        </th>
+                        <th>
+                            @Localize.T("Total Retail")
+                        </th>
+                        <th>
+                            @Localize.T("Total Discount")
+                        </th>
+                        <th>
+                            @Localize.T("Total Price")
+                        </th>
+                        <th style="width:5%;">
+
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in Model.PackageEquipmentsList)
+                    {
+                        <tr class="Equipment_@item.Id">
+                            @if (PermissionChecker.IsPermitted(PermissionList.MenuPermissions.ShowNonCommission))
+                            {
+                                <td style="text-align:center;"><input type="checkbox" @(item.IsNonCommissionable.HasValue && item.IsNonCommissionable.Value == true ? "checked" : "") class="chk_non_commission_eqp" id="chk_non_commission_eqp_@item.Id" data-id="@item.Id" /></td>
+                            }
+                            <td @(item.IsEqpExist == true ? "Style=color:#e400ff" : "")>
+                                @item.EquipmentServiceName
+                            </td>
+                            <td>
+                                @item.Quantity
+                            </td>
+                            <td>
+                                <!--Unit Price-->
+                                @Currency<span>@LabelHelper.FormatAmount(item.UnitPrice)</span>
+                            </td>
+                            <td>
+                                <!--Discount Unit Price-->
+                                @Currency<span>@LabelHelper.FormatAmount(item.UnitPrice - item.DiscountUnitPricce)</span>
+                            </td>
+                            <td>
+                                <!--Total Retail-->
+                                @Currency<span>@LabelHelper.FormatAmount(item.UnitPrice * item.Quantity)</span>
+                            </td>
+                            <td>
+                                <!--Total Discount-->
+                                @*@Currency<span>@LabelHelper.FormatAmount(item.DiscountPckage)</span>*@
+                                @*@Currency<span>@LabelHelper.FormatAmount((item.DiscountUnitPricce * item.Quantity) + item.DiscountPckage)</span>*@
+                                @Currency<span>@LabelHelper.FormatAmount(item.DiscountPckage * item.Quantity)</span>
+                            </td>
+                            <td>
+                                <!--Total Price-->
+                                @Currency<span class="total_price">@LabelHelper.FormatAmount(item.Total)</span>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                @if ((item.IsIncluded == true || item.IsDevice == true || item.IsOptionalEqp == true))
+                                {
+                                    if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.SmartSetUpIncludeEqpEdit) || ViewBag.IsFinanced == true)
+                                    {
+                                        <i data-ispackageeqp="@item.IsPackageEqp" data-isinclude="@item.IsIncluded" data-isdevice="@item.IsDevice" data-isoptionaleqp="@item.IsOptionalEqp" class="fa fa-edit cursor-pointer editEquipment" dataid="@item.Id" data-equipId="@item.EquipmentId"
+                                           data-EquipName="@item.EquipmentServiceName" data-serviceId="@item.ServiceId" data-quantity="@item.Quantity" data-unitprice="@(Math.Round(item.UnitPrice.Value, 2))"
+                                           data-discount="@(Math.Round(item.DiscountUnitPricce.Value, 2))" data-packagediscount="@(Math.Round(item.DiscountPckage.Value, 2))"
+                                           data-total="@Math.Round(item.Total.Value, 2)" aria-hidden="true"></i>
+                                    }
+                                }
+                                else
+                                {
+                                    <i data-ispackageeqp="@item.IsPackageEqp" data-isinclude="@item.IsIncluded" data-isdevice="@item.IsDevice" data-isoptionaleqp="@item.IsOptionalEqp" class="fa fa-edit cursor-pointer editEquipment" dataid="@item.Id" data-equipId="@item.EquipmentId"
+                                       data-EquipName="@item.EquipmentServiceName" data-serviceId="@item.ServiceId" data-quantity="@item.Quantity" data-unitprice="@(Math.Round(item.UnitPrice.Value, 2))"
+                                       data-discount="@(Math.Round(item.DiscountUnitPricce.Value, 2))" data-packagediscount="@(Math.Round(item.DiscountPckage.Value, 2))"
+                                       data-total="@Math.Round(item.Total.Value, 2)" aria-hidden="true"></i>
+                                }
+                                @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.SmartSetUpServicePackageEqp))
+                                {
+                                    <i class="fa fa-trash-o cursor-pointer" dataid="@item.Id" aria-hidden="true"></i>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    <tr class="BottomTotalTr">
+                        @if (PermissionChecker.IsPermitted(PermissionList.MenuPermissions.ShowNonCommission))
+                        {
+                            <td></td>
+                        }
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>Total</td>
+                        <td class="retail-total">@Currency@LabelHelper.FormatAmount(Model.PackageEquipmentsList.Sum(x => x.UnitPrice * x.Quantity))</td>
+                        <td class="retail-total">@Currency@LabelHelper.FormatAmount(Model.PackageEquipmentsList.Sum(x => x.DiscountPckage * x.Quantity))</td>
+                        <td class="sub-total">@Currency@LabelHelper.FormatAmount(Model.PackageEquipmentsList.Sum(x => x.Total))</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

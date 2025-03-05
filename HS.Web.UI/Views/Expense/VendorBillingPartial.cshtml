@@ -1,0 +1,146 @@
+﻿@{
+    Layout = null;
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.ExpenseSummary
+@using AppConfig = HS.Framework.Utils.AppConfig;
+<link href="~/Content/Css/VendorBill/VendorBillingPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Supplier/SupplierListCustom.css" rel="stylesheet" />
+<script src="~/Content/Js/VendorBill/VendorBillList.js"></script>
+<script>
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+
+    var pageno = '@ViewBag.PageNumber';
+
+    var my_date_format = function (input) {
+        console.log(input + " r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+
+    var MakePaymentByBillId = function (BillId) {
+
+    }
+    var MakePayment = function () {
+        OpenTopToBottomModal(domainurl +  "/Expense/MakePayment/");
+    }
+    var NavigatePageListing = function (pagenumber, order) {
+        var searchText = $(".SearchBill").val();
+        var billstatus = $(".bill_paid_unpaid").val();
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+        //var filterText = $("#BillingType").val();
+        $(".vendor-bill-list").html(TabsLoaderText);
+
+        $(".vendor-bill-list").load(domainurl + "/Expense/VendorBillList", { PageNumber: pagenumber, SearchText: searchText, Order: order, BillStatus: billstatus, StartDate: StartDateVal, EndDate: EndDateVal });
+    }
+
+    $(document).ready(function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+
+        if (StartDate != "" && EndDate != "") {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+
+        NavigatePageListing(1);
+        $("#addNewVendorBilling").click(function () {
+            OpenTopToBottomModal(domainurl +  "/Expense/AddVendorBill");
+        });
+
+        $(".btn-apply-Datefilter").click(function () {
+            NavigatePageListing(1, null);
+        });
+        $('.billing_search').keypress(function (e) {
+            if (e.which == 13) {
+                NavigatePageListing(1);
+            }
+        });
+    })
+</script>
+
+<div class="vbp_container">
+    <div class="vendor_billing_info_container">
+       
+        @if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.ExpenseBillingSummary))
+        {
+            <div class="row vi_left_zero vi_right_zero">
+                <div class="per_vendor_info">
+                    <div class="vendor_info_heading">@Localize.T("Unpaid Last 365 Days")</div>
+                    <div class="vendor_overdue">
+                        <div class="vendor_info_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.OverDue)</div>
+                        <div class="vendor_info_text">Overdue</div>
+                    </div>
+                    <div class="vendor_openbill">
+                        <div class="vendor_info_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.OpenBill)</div>
+                        <div class="vendor_info_text">Open Bill</div>
+                    </div>
+                </div>
+                <div class="per_vendor_info_right">
+                    <div class="vendor_info_heading">@Localize.T("Paid")</div>
+                    <div class="vendor_paidlast">
+                        <div class="vendor_info_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Paid)</div>
+                        <div class="vendor_info_text">Paid Last 30 Days</div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+        <div class="expense_billing_searchbar_container">
+           
+            <div class="expense_billing_searchdiv">
+               
+
+                <input class="form-control SearchBill billing_search" placeholder="Search" type="text">
+                @*<span>@Localize.T("Sales")</span>*@
+                @*@Html.DropDownList("UserList", (List<SelectListItem>)ViewBag.LeadUserList, new { @class = "form-control select_leaduser UserList", id = "UserList" })*@
+                <div class="input-group add-on">
+                    @*@Html.DropDownList("BillingType", (List<SelectListItem>)ViewBag.BillTypeList, new { @class = "form-control  opportunitytype", id = "BillingType" })*@
+                  
+                    <select class="form-control bill_paid_unpaid">
+                        <option value="Paid">@Localize.T("Paid")</option>
+                        <option value="Unpaid" selected="selected">@Localize.T("Unpaid")</option>
+                    </select>
+                    <div class="input-group-btn"><button class="btn search_bill_btn  green_button" id="btnsearchtext" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button></div>
+                </div>
+            </div>
+            @if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.ExpneseBillingAddBill))
+            {
+                <button type="button" class="btn btn-primary" id="addNewVendorBilling">
+                    <i class="fa fa-plus-circle" aria-hidden="true"></i>@Localize.T(" New")
+                </button>
+            }
+            @if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.ExpenseBillingMakePayment))
+            {
+                <button type="button" class="btn btn-primary" onclick="MakePayment()" id="MakePayment">@Localize.T("Make Payment")</button>
+            }
+            
+        </div>
+        <div class="expense_billing_searchbar_container vbp_top_margin">
+            <div class="vendor-bill-list">
+
+            </div>
+        </div>
+</div>

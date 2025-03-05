@@ -1,0 +1,229 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+}
+@model List<HS.Entities.CustomerCredit>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using HS.Framework
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@Styles.Render("~/styles/Modals")
+<link href="~/Content/Css/Customer/CustomerCreditBalanceTransactions.css" rel="stylesheet" />
+<style>
+    #__ConfirmationMessageModal_ {
+        background-color: #2ca01c;
+        color: #fff;
+    }
+
+    .width-25-percent {
+        padding-left: 5px;
+        text-align: left;
+        width: 25%;
+    }
+
+    .width-30-percent {
+        padding-left: 5px;
+        text-align: left;
+        width: 30%;
+        border-right: .5px dotted #cdcdcd;
+    }
+
+    .width-15-percent {
+        padding-left: 3px;
+        text-align: left;
+        width: 15%;
+        border-right: .5px dotted #cdcdcd;
+    }
+    .ccbt_table table th,
+    .ccbt_table table td {
+        border: 1px solid #CCC !important;
+    }
+</style>
+<script>
+    var tca = '@ViewBag.TotalCreditAmount';
+    var creditreson = @Html.Raw(ViewBag.CreditReasons);
+    var credittypes = @Html.Raw(ViewBag.CreditType);
+
+    var creditamount = '@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.TotalCreditAmount)';
+    var SaveCreditAmount = function (amount, note, isrmr, CreditReason, CreditType) {
+
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: "/Customer/SaveCreditAmount",
+            data: JSON.stringify({ Id: 0, CustomerId: CustomerLoadGuid, Amount: amount, Note: note, IsRMRCredit: isrmr, CreditReason: CreditReason, CreditType: CreditType }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data) {
+                    OpenRightToLeftLgModal(false);
+                    LoadCustomerDetail(CustomerLoadId, true);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    var OpenAddCredit = function () {
+
+        var creditReasonOptions = "<select class='form-control' id='credit_reason'>";
+
+        creditreson.forEach(function (item) {
+            creditReasonOptions += "<option value='" + item.Value + "'>" + item.Text + "</option>";
+        });
+
+        creditReasonOptions += "</select>";
+
+        var creditTypeOptions = "<select class='form-control' id='credit_type'>";
+        credittypes.forEach(function (item) {
+            creditTypeOptions += "<option value='" + item.Value + "'>" + item.Text + "</option>";
+        });
+        creditTypeOptions += "</select>";
+
+        OpenCreditAmountModal("Add Credit Amount",
+            "<div class='form-group clearfix acm_field'><label>Amount: </label><input type='number' class='form-control' id='credit_amount' placeholder='Amount' value='0' /></div>" +
+            "<div class='form-group clearfix acm_field'><label>Credit Reason: </label>" + creditReasonOptions + "</div>" +
+            "<div class='form-group clearfix acm_field'><label>Credit Type: </label>" + creditTypeOptions + "</div>" +
+            "<div class='form-group clearfix acm_field'><label>Credit Memos: </label><textarea class='form-control' id='credit_note' placeholder='Credit Memos'></textarea></div>",
+            function () {
+                var amount = $("#credit_amount").val();
+                var note = $("#credit_note").val();
+                var CreditReason = $("#credit_reason").val();
+                var CreditType = $("#credit_type").val(); 
+                var isrmr = false;
+
+                if (parseFloat(amount) > 0) {
+                    SaveCreditAmount(amount, note, isrmr, CreditReason, CreditType);
+                } else {
+                    OpenErrorMessageNew("Error", "Refund amount not equal to zero");
+                }
+            }
+        )
+    }
+    var DeleteCredit = function (Id) {
+        console.log(Id);
+        OpenConfirmationMessageNew("", "Do You Want To Delete ?", function () {
+            var url = domainurl + "/Customer/DeleteCreditAmount";
+            var param = JSON.stringify({
+                "Id": Id
+            });
+
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    location.reload();
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+        }, function () {
+
+        });
+    }
+    var OpenAddRMRCredit = function () {
+        OpenCreditAmountModal("Add Credit Amount", "<div class='form-group clearfix acm_field'><label>Amount: </label><input type=number class='form-control' id='credit_amount' placeholder='Amount' value = '0' /></div><div class='form-group clearfix acm_field'><label>Credit Reason: </label><textarea class='form-control' id='credit_reason' placeholder='Credit Reason'></textarea></div><div class='form-group clearfix acm_field'><label>Credit Note: </label><textarea class='form-control' id='credit_note' placeholder='Credit Note'></textarea></div>", function () {
+            var amount = $("#credit_amount").val();
+            var note = $("#credit_note").val();
+            var CreditReason = $("#credit_reason").val();
+            var isrmr = true;
+            if (parseFloat(amount) > 0) {
+                SaveCreditAmount(amount, note, isrmr, CreditReason);
+            }
+            else {
+                OpenErrorMessageNew("Error", "Refund amount not equal to zero");
+            }
+        })
+    }
+    var OpenInvById = function (invId) {
+        if (typeof (invId) != "undefined" && invId > 0) {
+            OpenTopToBottomModal(domainurl + "/Invoice/AddInvoice/?Id=" + invId);
+        }
+        else if (typeof (invId) != "undefined" && invId.indexOf('INV') > -1) {
+            OpenTopToBottomModal(domainurl + "/Invoice/AddInvoice/?InvoiceId=" + invId);
+        }
+    }
+</script>
+<div class="CustomerCreditBalanceTransactions_container">
+    <div class="CustomerCreditBalanceTransactions_header">@Localize.T("Customer Credit Balance")</div>
+    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.RMRCreditAdd))
+    {
+        <div class="refund_credit"><button class="btn" onclick="OpenAddRMRCredit()">@Localize.T("Add RMR Credit")</button></div>
+    }
+    <div class="refund_credit"><button class="btn" onclick="OpenAddCredit()">@Localize.T("Add General Credit")</button></div>
+    @*@if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerCreditRefund))
+        {
+            <div class="refund_credit"><button class="btn" onclick="RefundCreditAmount()">@Localize.T("Refund")</button></div>
+        }*@
+    <div class="ccbt_table">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th class="thead-th-style">@Localize.T("Date & Amount")</th>
+                    <th class="thead-th-style">@Localize.T("Status")</th>
+                    <th class="thead-th-style">@Localize.T("Credit Reasons")</th>
+                    <th class="thead-th-style">@Localize.T("Credit Type")</th>
+                    <th class="thead-th-style">@Localize.T("Credit Memos")</th>
+                    <th class="thead-th-style">@Localize.T("User")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td class="">
+                            @item.CreatedDate.ToString("MM/dd/yy")
+                            @if (item.Type == "Debit")
+                            {
+                                @Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount * (-1))
+                            }
+                            else
+                            {
+                                @Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)
+                            }
+                            @if (item.IsRMRCredit.HasValue && item.IsRMRCredit.Value)
+                            {
+                                <i title="RMR Credit Balance" class="fa fa-registered" aria-hidden="true"></i>
+                            }
+                        </td>
+                        @{
+                            @*if (item.Type == "Debit" && item.IsRMRCredit.HasValue && item.IsRMRCredit.Value)
+            {
+                <td class="width-15-percent">Debit</td>
+            }
+            else if (item.Type == "Debit")
+            {
+                <td class="width-15-percent">Refund</td>
+            }
+            else
+            {
+                <td class="width-15-percent">@item.Type</td>
+            }*@
+                            <td class="">@item.Type</td>
+
+                        }
+                        <td class="">@item.CreditReason</td>
+                        <td class="">@item.CreditType</td>
+                        <td class="">@Html.Raw(item.Note)</td>
+                        <td class="">
+                            @item.CreatedByVal
+                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowCustomerCreditDeleteBtn))
+                            {
+                                <span>| </span><i title="Delete" onclick="DeleteCredit(@item.Id)" class="fa fa-trash-o" aria-hidden="true"></i>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

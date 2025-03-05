@@ -1,0 +1,400 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+@model HS.Entities.AddUser
+@{
+
+    if (Model.PermissionGroup.Name == "Regular User" || Model.PermissionGroup.Id == 0)
+    {
+        ViewBag.usertype = "user";
+    }
+    else if (Model.PermissionGroup.Name == "Company Admin")
+    {
+        ViewBag.usertype = "admin";
+    }
+    else if (Model.PermissionGroup.Name == "Reports Only")
+    {
+        ViewBag.usertype = "reports";
+    }
+    else if (Model.PermissionGroup.Name == "Custom User")
+    {
+        ViewBag.usertype = "custom";
+    }
+    else
+    {
+        ViewBag.usertype = "user";
+    }
+
+}
+<html>
+<head>
+    <style>
+        .LoadImg {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .LoadImgDiv {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            background: white;
+            z-index: 8888;
+        }
+        /*.RouteList .dropdown-menu.open{
+            display: unset !important;
+        }*/
+    </style>
+    @Styles.Render("~/styles/AddUser")
+    <script src="~/Content/Js/Login/domainurl.js"></script>
+
+    <link href="~/Content/Select2/select2.css" rel="stylesheet" />
+    <link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+    <script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+    <script src="~/Content/Select2/Select2.min.js"></script>
+    @Scripts.Render("~/scripts/AddUser")
+    <script>
+    @*var RouteList = '@Html.Raw(Json.Encode(@ViewBag.RouteList))';
+        RouteList = JSON.parse(RouteList);*@
+        var withEmailText ="@Localize.T("An email has been sent to the email address with an activation link to login to the platform. ")";
+        var withOutEmailText ="@Localize.T("User was added. Please activate the user manually. ")";
+        $(document).ready(function () {
+            $(".add_user_content_scroll").height(window.innerHeight - 103);
+            $("#Route").select2({ placeholder: " Select Route" });
+
+            $("#NextBtn").click(function () {
+                var EmployeeRole = $('input[name=PermissionGroup]:checked').val();
+                console.log(EmployeeRole);
+                if (EmployeeRole == "Admin") {
+                    $(".RouteListTitle").addClass('hidden');
+                    $(".RouteList").addClass('hidden');
+                }
+                else {
+                    $(".RouteListTitle").removeClass('hidden');
+                    $(".RouteList").removeClass('hidden');
+                }
+            });
+
+
+        });
+    </script>
+</head>
+
+<body>
+    @Html.HiddenFor(x => x.UserLogin.Id)
+    <div class="ChooseUserTypeHeader">
+        <div id="UserCreateTitleDivId">@Localize.T("Choose User Type")</div>
+    </div>
+    <div class="MainContainerDiv">
+        <div class="hidden LoadImgDiv">
+            <div class="lds-css ng-scope">
+                <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+            </div>
+        </div>
+        <div class="choosePermissionGroup p1">
+
+            <div class="add_user_content_scroll">
+                <table class="usertypeTbl">
+
+                    <tr class="tr-branchList custom_height">
+                        <td>
+                            <label class="left-allign add_user_branch_header">@Localize.T("Branch")</label>
+                            <div class="left-allign">
+                                @Html.DropDownList("branchId", (List<SelectListItem>)ViewBag.BranchList, new { @class = "form-control" })
+                            </div>
+                        </td>
+                        @*<td>
+                                <div>
+                                    @Html.DropDownList("branchId", (List<SelectListItem>)ViewBag.BranchList, new { @class = "form-control" })
+                                </div>
+                            </td>*@
+                    </tr>
+
+                    @foreach (var item in Model.PermissionGroupList)
+                    {
+                        <tr class="permisson-content">
+                            <td valign="top">
+                                <div class="PermissionRadioDiv">
+                                    <input class="PermissionGroupRadio" type="radio" @(ViewBag.usertype == "user" ? "checked" : "") name="PermissionGroup" value="@item.Name" />
+                                </div>
+                            </td>
+                            <td>
+                                <div class="PermissionGroupDiv">
+                                    <h5>@item.Name</h5>
+                                    @*<span>@Localize.T("You specify which areas of Shapla CRM Online Plus this user can access.")</span>*@
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                    @*<tr class="permisson-content">
+                            <td valign="top">
+                                <div class="PermissionRadioDiv">
+                                    <input class="PermissionGroupRadio" type="radio" @(ViewBag.usertype == "custom" ? "checked" : "") name="PermissionGroup" value="Custom" />
+                                </div>
+                            </td>
+                            <td>
+                                <div class="PermissionGroupDiv">
+                                    <h5>@Localize.T("Custom Permissions")</h5>
+                                    <span></span>
+                                </div>
+                            </td>
+                        </tr>*@
+                </table>
+            </div>
+            <div class="Navigation">
+                <div class="CandelBtnDiv">
+                    <button class="CancelBtn btn btn-danger">@Localize.T("Cancel")</button>
+                </div>
+                <div class="NextBtnDiv">
+                    <button id="NextBtn" class="btn btn-success">@Localize.T("Next")</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="UserInputForm hidden p2">
+            <div class="add_user_content_scroll">
+                @*<div class="ChooseUserTypeHeader">
+                    <h4>@Localize.T("Add User Details")</h4>
+                </div>*@
+
+                <div class="UserDetailContents">
+                    <div class="NameDiv form-group">
+                        @*<div class="width-33p padding-right-5">*@
+                        @*<label>Title</label>*@
+                        @*@Html.TextBoxFor(x=>x.Employee.Title, new { @id= "UserLogin_Title", @class = "form-control", @placeholder = "Title" })*@
+                        @*<label rel="Employee.Title" class="label hidden red position-absolute">@Localize.T("First name required")</label>*@
+
+                        @*</div>*@
+
+                        @if (PermissionChecker.IsPermitted(PermissionList.MenuPermissions.QuickMenuMyCompanyManageUserShowRoute))
+                        {
+                            <div class="width-33p padding-right-5 RouteListTitle">
+                                <label>@Localize.T("Route")<span class="red">*</span></label>
+                            </div>
+
+                            <div class="width-67p RouteList padding-right-5">
+                                @Html.DropDownList("Route", (List<SelectListItem>)ViewBag.RouteList, new { @class = "form-control", id = "Route", @multiple = "multiple", datarequired = "true" })
+                                <label rel="Route" class="label hidden red position-absolute">*@Localize.T("Route required")</label>
+                            </div>
+                            <div class="clearfix width-100p">
+                                &nbsp;
+                            </div>
+
+                        }
+                        <div class="width-33p padding-right-5">
+                            <label>@Localize.T("First Name")</label>
+                        </div>
+
+                        <div class="width-67p padding-right-5">
+                            @Html.TextBoxFor(x => x.Employee.FirstName, new { @id = "UserLogin_FirstName", @class = "form-control", @placeholder = "First Name", datarequired = "true" })
+                            <label rel="Employee.FirstName" class="label hidden red position-absolute">*@Localize.T("First name required")</label>
+                        </div>
+                        <div class="clearfix width-100p">
+                            &nbsp;
+                        </div>
+
+                        <div class="width-33p padding-right-5">
+                            <label>@Localize.T("Last Name")</label>
+                        </div>
+
+                        <div class="width-67p padding-right-5">
+                            @Html.TextBoxFor(x => x.Employee.LastName, new { @id = "UserLogin_LastName", @class = "form-control", @placeholder = "Last Name", datarequired = "true" })
+                            <label rel="Employee.LastName" class="label hidden red position-absolute">*@Localize.T("Last name required")</label>
+                        </div>
+                    </div>
+
+                    <div class="clearfix width-100p">
+                        &nbsp;
+                    </div>
+
+                    <div class="EmailAddressDiv form-group">
+                        <div class="width-33p padding-right-5">
+                            <label>@Localize.T("Email Address")</label>
+                        </div>
+                        <div class="width-67p padding-right-5">
+                            @Html.TextBoxFor(x => x.UserLogin.UserName, new { @class = "form-control", datarequired = "true", dataformat = "email", @placeholder = "Email address" })
+                            <label rel="UserLogin.UserName" class="label hidden red position-absolute">*@Localize.T("Valid email address required")</label>
+                            <label class="label hidden red position-absolute userexistsmsg">*@Localize.T("Username already exists")</label>
+                        </div>
+                        <div class="clearfix width-100p">
+                            &nbsp;
+                        </div>
+                        <div class="width-33p padding-right-5">
+                            <label>@Localize.T("Confirm Email Address")</label>
+                        </div>
+                        <div class="width-67p padding-right-5">
+                            @Html.TextBoxFor(x => x.UserLogin.EmailAddress, new { @class = "form-control", @placeholder = "Verify email address" })
+                            <label class="label hidden red position-absolute ConfirmEmail">*@Localize.T("Email address not matched")</label>
+                        </div>
+                    </div>
+
+                    <div class="clearfix width-100p">
+                        &nbsp;
+                    </div>
+                    <div class="form-group SendEmailDiv">
+                        <div class="width-100p">
+                            <label><input type="checkbox" id="SendEmailNotification" checked /> @Localize.T("Send notification email.")</label>
+                        </div>
+                    </div>
+
+                    @*<div class="EmployeePermissionsDiv form-group">
+                            <div class="width-40p padding-right-5">
+                                <label>@Localize.T("For setting appointments")</label>
+                                <div class="tooltipw"><span>@Localize.T("?")</span>
+                                    <span class="tooltiptext">@Localize.T("The system looks at this field and determines if the user should be in the drop down list when you are setting up an appointment.")</span>
+                                </div>
+                            </div>
+                            <div class="width-60p padding-right-5">
+                                <table>
+                                    <tr>
+                                        <td valign="top" class="padding-bottom-10"><input type="checkbox" name="IsSalesPerson" id="IsSalesPerson"  @(Model.Employee.IsSalesPerson?"checked":"")/></td>
+                                        <td><span class="font-12">&nbsp;@Localize.T("User runs sales appointment.")</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td valign="top" class="padding-bottom-10"><input type="checkbox" name="IsInstaller" id="IsInstaller" @(Model.Employee.IsInstaller?"checked":"") /></td>
+                                        <td><span class="font-12">&nbsp;@Localize.T("This user installs jobs.")</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td valign="top" class="padding-bottom-10"><input type="checkbox" name="IsServiceCall" id="IsServiceCall"  @(Model.Employee.IsServiceCall?"checked":"")/></td>
+                                        <td><span class="font-12">&nbsp;@Localize.T("This user runs service calls.")</span></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>*@
+
+                </div>
+            </div>
+
+            <div class="Navigation">
+                <div class="CandelBtnDiv">
+                    <button class="CancelBtn btn btn-danger">@Localize.T("Cancel")</button>
+                </div>
+                <div class="NextBtnDiv">
+                    <button id="NextBtnP2" class="btn btn-success nextbtn">@Localize.T("Next")</button>
+                </div>
+                <div class="BackBtnDiv">
+                    <button id="BackBtnP2" class="btn btn-primary">@Localize.T("Back")</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="CustomPermissionDiv hidden p3">
+            <div class="add_user_content_scroll">
+                <div class="ChooseUserTypeHeader">
+                    <h4>@Localize.T("Choose permission from list")</h4>
+                </div>
+
+                <div class="PermissionListTreeView">
+
+                    @foreach (var roles in ViewBag.DistincRoles)
+                    {
+                        int Count = Model.CustomUserPermissionList.Where(s => s.RoleName == roles).Count();
+                        <ul class="tree">
+                            <li class="has">
+                                <input type="checkbox" name="domain[]">
+                                <label>@roles<span class="total"> (@Count)</span></label>
+                                <ul class="subdomain">
+                                    @foreach (var permissions in Model.CustomUserPermissionList)
+                                    {
+                                        if (permissions.RoleName == roles)
+                                        {
+                                            <li class="">
+                                                <input class="checkbox-custom" type="checkbox" name="subdomain[]" idval="@permissions.PermissionId">
+                                                <label>@permissions.PermissionName</label>
+
+                                            </li>
+                                        }
+                                    }
+                                </ul>
+                            </li>
+                        </ul>
+                    }
+
+                </div>
+            </div>
+
+
+            @*@foreach (var item in (List<HS.Entities.Permission>)ViewBag.PermissionList)
+                {
+                    <ul class="tree">
+                        <li class="has">
+                            <input type="checkbox" name="domain[]" value="@item.Id">
+                            <label>@item.Name<span class="total">(15)</span></label>
+                            <ul>
+                                <li class="">
+                                    <input type="checkbox" name="subdomain[]" value="Agriculture, Dairy &amp; Animal Science">
+                                    <label>Agriculture, Dairy &amp; Animal Science </label>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                }*@
+
+
+
+            @*<div class="PermissionsList">
+                    <table class="display" id="tblVideo">
+                        <thead class="table-head-border">
+                            <tr>
+                                <th class="thead-th-style">@Localize.T("Permission Title")</th>
+                                <th class="thead-th-style th-select-style">@Localize.T("Select")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in (List<HS.Entities.Permission>)ViewBag.PermissionList)
+                            {
+                                <tr class="tr-style">
+                                    <td class="table-body-td-style" valign="top">@item.Name</td>
+                                    <td class="table-body-td-style text-center" valign="top">
+                                        <input idval="@(item.Id)" id="checkbox-@(item.Id)" class="checkbox-custom" name="checkbox-@(item.Id)" type="checkbox">
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>*@
+            <div class="Navigation">
+                <div class="CandelBtnDiv">
+                    <button class="CancelBtn btn btn-danger">@Localize.T("Cancel")</button>
+                </div>
+                <div class="NextBtnDiv">
+                    <button id="NextBtnP3" class="btn btn-success nextbtn">@Localize.T("Next")</button>
+                </div>
+                <div class="BackBtnDiv">
+                    <button id="BackBtnP3" class="btn btn-primary">@Localize.T("Back")</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="FinishDiv hidden p4">
+            <div class="add_user_content_scroll">
+                @*<div class="ChooseUserTypeHeader">
+                    <h4>@Localize.T("Finish adding user")</h4>
+                </div>*@
+
+                <div class="FinishMessage">
+                    <span id="FinishMsgTxt"></span><br />
+                </div>
+            </div>
+
+            <div class="Navigation">
+                <div class="CandelBtnDiv">
+                    <button class="CancelBtn btn btn-danger">@Localize.T("Cancel")</button>
+                </div>
+                <div class="NextBtnDiv">
+                    <button id="FinishBtn" class="btn btn-success nextbtn">@Localize.T("Finish")</button>
+                </div>
+                <div class="BackBtnDiv">
+                    <button id="BackBtnP4" class="btn btn-primary">@Localize.T("Back")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

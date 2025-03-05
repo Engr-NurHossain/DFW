@@ -1,0 +1,311 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.CreateTicketModel
+@using HS.Framework
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using TickType = HS.Web.UI.Helper.LabelHelper.TicketType
+@using DateTimeExt = HS.Framework.DateTimeExtension
+@using TickStat = HS.Web.UI.Helper.LabelHelper.TicketStatus
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Css/Ticket/AddTicket.css" rel="stylesheet" />
+<script>
+    $(document).ready(function () {
+        var idlist = [{ id: ".ClockMapPopUp", type: 'iframe', width: 500, height: 500 }];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+        $(".OpenMapPopup").click(function () { 
+                var latval = $(this).attr('data-lat');
+                var lngval = $(this).attr('data-lng');
+                var mapLoadUrl = "@(AppConfig.DomainSitePath)/App/OpenPosition/?lat=" + latval + "&lng=" + lngval;
+                $(".ClockMapPopUp").attr("href", mapLoadUrl);
+                $(".ClockMapPopUp").click();
+        });
+
+        $(".addressMapPopup").click(function () {
+            CustomerGuidID = $(this).attr('data-id');
+            var CustomerAddressId = $("#CustomerAddressId").val()
+            var mapLoadUrl = domainurl + "/Customer/CustomerAddressMapForTicket?CustomerId=" + CustomerGuidID + "&CustomerAddressId=" + CustomerAddressId;
+            $(".MapManufacturerMagnific").attr("href", mapLoadUrl);
+            $(".MapManufacturerMagnific").click();
+        });
+    });
+</script>
+
+<input class="hidden" id="CustomerAddressId" value="@Model.Ticket.CustomerAddressId"/>
+<table class="ticket_log_table ticketTable @((Model.Ticket.Status == TickStat.Init)?"table_style_for_new":"")" id="ticket_table">
+    <tr class="ticket_created_header">
+        <td colspan="2">
+            <div class="ticke_info_header">
+                <b>@Localize.T("Created By")</b>
+                <div class="ticket_profile_credit">@Model.Ticket.CreatedByVal</div>
+                <span class="ticket_profile_time">@Model.Ticket.CreatedDateVal</span>
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td valign="top" class="ticket_created_info_left">
+            <div class="ticket_created_profile_info">
+
+                <div class="ticket_created_profile_pic_div pd_left_custom">
+                    <div class="ticket_created_profile_pic">
+                        <img src="/EmpShow/W50H50X@(Model.Ticket.CreatedBy)Dtrue" alt="~/Content/img/user.png" />
+                    </div>
+                </div>
+            </div>
+        </td>
+        <td class="ticket_created_info_right">
+            @if (Model.Customer != null && !string.IsNullOrWhiteSpace(Model.Customer.Street) || (!string.IsNullOrWhiteSpace(Model.Customer.City) && !string.IsNullOrWhiteSpace(Model.Customer.State) && !string.IsNullOrWhiteSpace(Model.Customer.ZipCode)))
+            {
+                <span class="customeraddress_style">@Localize.T("Location: ")  @Model.Customer.Street @Model.Customer.City, @Model.Customer.State @Model.Customer.ZipCode <img class="addressMapPopup green-tooltip" data-id="@Model.Customer.CustomerId" src="~/Content/img/location.png" data-toggle="tooltip" title="View Map" style="cursor:pointer" /></span>
+            }
+        </td>
+    </tr>
+    <tr class="blank_row"><td colspan="2">&nbsp;</td></tr>
+    @if (Model.Ticket.Status != TickStat.Init)
+    {
+        if (Model.TicketReplyList.Count() > 0)
+        {
+            foreach (var item in Model.TicketReplyList)
+            {
+                string ticketstyleclass = "ticket_reply_style";
+                if (item.TypeReply == "File")
+                {
+                    ticketstyleclass = "ticket_file_style";
+
+                }
+                else if (item.Message.IndexOf("<span>Attached an") == 0)
+                {
+                    ticketstyleclass = "ticket_attached_style";
+                }
+                else if (item.Message.IndexOf("<span data='itemsremoved'>") == 0
+                    || item.Message.IndexOf("<span data='servicesremoved'>") == 0)
+                {
+                    ticketstyleclass = "ticket_itemremoved_style";
+                }
+                else if (item.Message.IndexOf("<span data='itemsadded'>") == 0
+                    || item.Message.IndexOf("<span data='servicesadded'>") == 0)
+                {
+                    ticketstyleclass = "ticket_itemsadded_style";
+                }
+                if (ViewBag.UserRole != "Customer")
+                {
+                    <tr class="Ticket_replies @ticketstyleclass">
+                        <td valign="top">
+                            <div class="ticket_add_custom_style">
+                                @if (item.TypeReply == "File")
+                                {
+                                    <div class="ticke_info_header"><i class="fa fa-upload"></i> @Localize.T("Uploaded by")</div>
+                                    if (item.IsPrivate == true)
+                                    {
+                                        <span><i class="fa fa-expeditedssl"></i></span>
+                                    }
+                                    <div class="ticket_created_profile_pic_div">
+                                        <div class="ticket_created_profile_pic">
+                                            <img src="/EmpShow/W50H50X@(item.UserId)Dtrue" alt="~/Content/img/user.png" />
+                                        </div>
+                                    </div>
+                                }
+                                else if (item.Message.IndexOf("<span>Attached an") == 0)
+                                {
+                                    <div class="ticke_info_header"><i class="fa fa-paperclip"></i> @Localize.T("Attached by")</div>
+                                    if (item.IsPrivate == true)
+                                    {
+                                        <span><i class="fa fa-expeditedssl"></i></span>
+                                    }
+                                    <div class="ticket_created_profile_pic_div">
+                                        <div class="ticket_created_profile_pic">
+                                            <img src="/EmpShow/W50H50X@(item.UserId)Dtrue" alt="~/Content/img/user.png" />
+                                        </div>
+                                    </div>
+                                }
+                                else if (item.Message.IndexOf("<span data='itemsremoved'>") == 0)
+                                {
+                                    <div class="ticke_info_header"><i class="fa fa-times-circle"></i> @Localize.T("Products Removed by")</div>
+                                    if (item.IsPrivate == true)
+                                    {
+                                        <span><i class="fa fa-expeditedssl"></i></span>
+                                    }
+                                    <div class="ticket_created_profile_pic_div">
+                                        <div class="ticket_created_profile_pic">
+                                            <img src="/EmpShow/W50H50X@(item.UserId)Dtrue" alt="~/Content/img/user.png" />
+                                        </div>
+                                    </div>
+                                }
+                                else if (item.Message.IndexOf("<span data='itemsadded'>") == 0)
+                                {
+
+                                    <div class="ticke_info_header"><i class="fa fa-cart-plus"></i> @Localize.T("Product Added By")</div>
+                                    if (item.IsPrivate == true)
+                                    {
+                                        <span><i class="fa fa-expeditedssl"></i></span>
+                                    }
+                                    <div class="ticket_created_profile_pic_div">
+                                        <div class="ticket_created_profile_pic">
+                                            <img src="/EmpShow/W50H50X@(item.UserId)Dtrue" alt="~/Content/img/user.png" />
+                                        </div>
+                                    </div>
+                                }
+                                else if (item.Message.IndexOf("<span data='servicesold'>") == 0)
+                                {
+
+                                    <div class="ticke_info_header"><i class="fa fa-cart-plus"></i> @Localize.T("Service Sold By")</div>
+                                    if (item.IsPrivate == true)
+                                    {
+                                        <span><i class="fa fa-expeditedssl"></i></span>
+                                    }
+                                    <div class="ticket_created_profile_pic_div">
+                                        <div class="ticket_created_profile_pic">
+                                            <img src="/EmpShow/W50H50X@(item.UserId)Dtrue" alt="~/Content/img/user.png" />
+                                        </div>
+                                    </div>
+                                }
+                                else if (item.Message.IndexOf("<span data='itemssold'>") == 0)
+                                {
+                                    <div class="ticke_info_header"><i class="fa fa-cart-plus"></i> @Localize.T("Product Sold By")</div>
+                                    if (item.IsPrivate == true)
+                                    {
+                                        <span><i class="fa fa-expeditedssl"></i></span>
+                                    }
+                                    <div class="ticket_created_profile_pic_div">
+                                        <div class="ticket_created_profile_pic">
+                                            <img src="/EmpShow/W50H50X@(item.UserId)Dtrue" alt="~/Content/img/user.png" />
+                                        </div>
+                                    </div>
+                                }
+                                else if (item.Message.IndexOf("<span data='servicesremoved'>") == 0)
+                                {
+                                    <div class="ticke_info_header"><i class="fa fa-times-circle"></i> @Localize.T("Services Removed by")</div>
+                                    if (item.IsPrivate == true)
+                                    {
+                                        <span><i class="fa fa-expeditedssl"></i></span>
+                                    }
+                                    <div class="ticket_created_profile_pic_div">
+                                        <div class="ticket_created_profile_pic">
+                                            <img src="/EmpShow/W50H50X@(item.UserId)Dtrue" alt="~/Content/img/user.png" />
+                                        </div>
+                                    </div>
+                                }
+                                else if (item.Message.IndexOf("<span data='servicesadded'>") == 0)
+                                {
+                                    <div class="ticke_info_header"><i class="fa fa-cart-plus"></i> @Localize.T("Services Added By")</div>
+                                    if (item.IsPrivate == true)
+                                    {
+                                        <span><i class="fa fa-expeditedssl"></i></span>
+                                    }
+                                    <div class="ticket_created_profile_pic_div">
+                                        <div class="ticket_created_profile_pic">
+                                            <img src="/EmpShow/W50H50X@(item.UserId)Dtrue" alt="~/Content/img/user.png" />
+                                        </div>
+                                    </div>
+                                }
+                                else if (item.Message.IndexOf("<") < 0)
+                                {
+                                    <div class="ticke_info_header">
+                                        <i class="fa fa-reply-all"></i> @Localize.T("Reply from")
+                                        @if (item.IsPrivate == true)
+                                        {
+                                            <span><i class="fa fa-expeditedssl"></i></span>
+                                        }
+
+                                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerTicketDelete))
+                                        {
+                                            <a href="javascript:void(0)" class="Ticket-delete-reply" data-id="@item.Id" id="@item.Id" style="float:right;cursor:pointer;" title="@Localize.T("Delete")">
+                                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                                                    <div class="ticket_created_profile_pic_div">
+                                                                        <div class="ticket_created_profile_pic">
+                                                                            <img src="/EmpShow/W50H50X@(item.UserId)Dtrue" alt="~/Content/img/user.png" />
+                                                                        </div>
+                                                                        @if (!string.IsNullOrWhiteSpace(Model.Ticket.Signature))
+                                                                        {
+                                                                            <div class="ticket_created_profile_pic ticket_sign_style">
+                                                                                <img src="@Model.Ticket.Signature" />
+                                                                            </div>
+                                                                        }
+                                                                        
+                                                                    </div>
+                                }
+                            </div>
+                        </td>
+                        @if (item.TypeReply == "Reply" && item.Message.IndexOf("<p") < 0)
+                        {
+                            if (item.Message.IndexOf("<") == 0)
+                            {
+                                <td valign="top" class="ticket_td_height">
+                                    <div class="ticket_add_custom_style ticket_add_info_mobile">
+                                        <div class="ticke_info_header tick_info_header_mobile">
+                                            <div class="ticket_profile_credit">@item.CreatedByVal</div>
+                                            <span class="ticket_profile_time">@item.RepliedDateVal @*on @(string.Format(DateTimeExt.UTCToClientTime(item.RepliedDate).ToString("MM/dd/yy {0} hh:mm:ss tt"), "at"))*@</span>
+                                            @if (!string.IsNullOrWhiteSpace(item.Lat) && !string.IsNullOrWhiteSpace(item.Lng) && item.Lat != "0" && item.Lng != "0")
+                                            {
+                                                <img class="OpenMapPopup map_icon_style" data-lat="@item.Lat" data-lng="@item.Lng" src="~/Content/Icons/rmr_map_marker.png" />
+                                            } 
+                                        </div>
+                                        <p> @Html.Raw(item.Message) </p>
+                                    </div>
+                                </td>
+                            }
+                            else
+                            {
+                                <td valign="top" class="ticket_td_height">
+                                    <div class="ticket_add_custom_style ticket_add_info_mobile">
+                                        <div class="ticke_info_header tick_info_header_mobile">
+                                            <div class="ticket_profile_credit">@item.CreatedByVal</div>
+                                            <span class="ticket_profile_time">@item.RepliedDateVal @*on @(string.Format(DateTimeExt.UTCToClientTime(item.RepliedDate).ToString("MM/dd/yy {0} hh:mm:ss tt"), "at"))*@</span>
+                                            @if (!string.IsNullOrWhiteSpace(item.Lat) && !string.IsNullOrWhiteSpace(item.Lng) && item.Lat != "0" && item.Lng != "0")
+                                            {
+                                                <img class="OpenMapPopup map_icon_style" data-lat="@item.Lat" data-lng="@item.Lng" src="~/Content/Icons/rmr_map_marker.png" />
+                                            } 
+                                        </div>
+                                        <p> @Html.Raw(item.Message) </p>
+                                    </div>
+                                </td>
+                            }
+
+                        }
+                        @if (item.TypeReply == "File")
+                        {
+                            var profile = "";
+                            if (!string.IsNullOrWhiteSpace(item.ProfilePicture))
+                            {
+                                profile = item.ProfilePicture.Substring(0, 15) + ".....";
+                            }
+                            else
+                            {
+                                profile = item.ProfilePicture;
+                            }
+                            <td valign="top" class="ticket_td_height">
+                                <div class="ticket_add_custom_style ticket_add_info_mobile">
+                                    <div class="ticke_info_header tick_info_header_mobile">
+                                        <div class="ticket_profile_credit"><span>@profile</span></div>
+                                        <span class="ticket_profile_time">@item.RepliedDateVal @*on @(string.Format(DateTimeExt.UTCToClientTime(item.RepliedDate).ToString("MM/dd/yy {0} hh:mm:ss tt"), "at"))*@</span>
+                                        @if (!string.IsNullOrWhiteSpace(item.Lat) && !string.IsNullOrWhiteSpace(item.Lng) && item.Lat != "0" && item.Lng != "0")
+                                        {
+                                            <img class="OpenMapPopup map_icon_style" data-lat="@item.Lat" data-lng="@item.Lng" src="~/Content/Icons/rmr_map_marker.png" />
+                                        } 
+                                    </div>
+                                    <p>
+                                        @Html.Raw(item.Message)
+                                    </p>
+                                </div>
+                            </td>
+                        }
+                    </tr>
+                }
+                <tr class="blank_row"><td colspan="2">&nbsp;</td></tr>
+            }
+        }
+    }
+</table>
+
+<div>
+    <a href="" class="ClockMapPopUp"></a>
+</div>
+

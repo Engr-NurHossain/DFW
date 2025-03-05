@@ -1,0 +1,127 @@
+﻿@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.Customer
+
+<style>
+    .CloseButtonDiv {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        cursor: pointer;
+    }
+
+        .CloseButtonDiv img {
+            width: 25px;
+        }
+</style>
+<script src="~/Content/JQuery/jquery-3.2.1.min.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=@ViewBag.GoogleMapAPIKey"></script>
+<script>
+    function initialize() {
+        var geocoder;
+        var map;
+        var address = $(".LeadAddress").text();
+        geocoder = new google.maps.Geocoder();
+        var latlng = new google.maps.LatLng(31.616285, -99.121231);
+        var myOptions = {
+            zoom: 16,
+            center: latlng,
+            mapTypeControl: true,
+            mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU },
+            navigationControl: true,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+        map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+        if (geocoder) {
+            geocoder.geocode({ 'address': address }, function (results, status) {
+                if (status == google.maps.GeocoderStatus.OK) {
+                    if (status != google.maps.GeocoderStatus.ZERO_RESULTS) {
+                        map.setCenter(results[0].geometry.location);
+
+                        var infowindow = new google.maps.InfoWindow(
+                            {
+                                content: '<b>' + address + '</b>',
+                                size: new google.maps.Size(150, 50)
+                            });
+
+                        var marker = new google.maps.Marker({
+                            position: results[0].geometry.location,
+                            map: map,
+                            title: address
+                        });
+                        google.maps.event.addListener(marker, 'click', function () {
+                            infowindow.open(map, marker);
+                        });
+
+                    } else {
+                        alert("No results found");
+                    }
+                } else {
+                    alert("Geocode was not successful for the following reason: Address Not Found!");
+                }
+            });
+        }
+    }
+
+
+    $(document).ready(function () {
+        initialize();
+
+    });
+</script>
+
+<body>
+
+
+    <div class="container-fluid">
+        <div class="row">
+            @*<div class="col-md-12">
+                    <h3>
+                        @Localize.T("Customer Address in google map")
+                    </h3>
+                </div>*@
+            <div style="display:none" class="col-md-12">
+                <span>@Localize.T("Address: ")</span>
+
+                @{
+                    var formattedAddress = "";
+
+                    if (Model.Street != "" && Model.City != "" && Model.State != "" && Model.ZipCode != "")
+                    {
+                        formattedAddress = Model.Street + " " + Model.City + "," + Model.State + "-" + Model.ZipCode;
+                    }
+                    else if (Model.Street == "" && Model.City == "" && Model.State == "" && Model.ZipCode == "")
+                    {
+                        formattedAddress = "";
+                    }
+                    else
+                    {
+                        if (Model.Street != "")
+                        {
+                            formattedAddress += Model.Street + " ";
+                        }
+                        if (Model.City != null)
+                        {
+                            formattedAddress += Model.City + " ";
+                        }
+                        if (Model.State != null)
+                        {
+                            formattedAddress += Model.State + " ";
+                        }
+                        if (Model.ZipCode != null)
+                        {
+                            formattedAddress += Model.ZipCode;
+                        }
+                    }
+                }
+                <span class="LeadAddress">@formattedAddress</span>
+            </div>
+        </div>
+        <div class="col-md-12">
+            <div id="map_canvas" style="width:100%; height:100%"></div>
+        </div>
+    </div>
+
+    <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+        <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+    </div>
+</body>

@@ -1,0 +1,95 @@
+﻿@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+@model HS.Entities.BadInventoryUserAssignModel
+@{
+    var SystemUserSelect = false;
+    if (Model.CustomerAppointmentEquipment.InstalledByUid == new Guid("22222222-2222-2222-2222-222222222222"))
+    {
+        SystemUserSelect = true;
+    }
+}
+<script>
+    var appeqpid = '@Model.CustomerAppointmentEquipment.Id';
+    var TicketIntId = '@Model.Ticket.Id';
+    var count = '@ViewBag.count';
+    $(document).ready(function () {
+        $(".userassignpopup_height").height(window.innerHeight - 75);
+    });
+    $(window).resize(function () {
+        $(".userassignpopup_height").height(window.innerHeight - 75);
+    })
+</script>
+@Styles.Render("~/styles/BadInventoryUserAssign")
+@Scripts.Render("~/scripts/BadInventoryUserAssign")
+<div class="CloseButtonDiv_lb" onclick="parent.ClosePopup()">
+    <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+</div>
+<div class="userassignpopup">
+    <div class="userassignpopup_header">
+        &nbsp;
+    </div>
+    <div class="userassignpopup_height">
+        <div class="userassignpopup_container">
+            <div class="d_down_container">
+                @if (PermissionChecker.IsPermitted(PermissionList.CustomerTicketPermission.SoldBy))
+                {
+                    <div class="form-group clearfix d_down">
+                        <span class="bad_inventory_txt">@Localize.T("Sold By")</span>
+                        @Html.DropDownListFor(m => m.CustomerAppointmentEquipment.CreatedByUid, ViewBag.UserList as List<SelectListItem>, new { @class = "form-control" })
+                    </div>
+                }
+                @if (PermissionChecker.IsPermitted(PermissionList.CustomerTicketPermission.InstalledBy) && Model.CustomerAppointmentEquipment.IsService != true)
+                {
+                    <div class="form-group clearfix d_down">
+                        <span class="bad_inventory_txt">@Localize.T("Installed By")</span>
+                        <select class="form-control" id="InstalledBy">
+                            <option value="-1">@Localize.T("Select One")</option>
+                            <option @(SystemUserSelect ? "selected" : "") value="22222222-2222-2222-2222-222222222222">System User</option>
+                            @foreach (var item in (List<HS.Entities.Employee>)ViewBag.TechnicianList)
+                            {
+                                <option @(Model.CustomerAppointmentEquipment.InstalledByUid == item.UserId ? "selected" : "") value="@item.UserId" email="@item.Email" phone="@item.Phone">@item.FirstName @item.LastName</option>
+                            }
+                        </select>
+                    </div>
+                }
+            </div>
+            @if (Model.CustomerAppointmentEquipment.IsService == false)
+            {
+                <div class="form-group clearfix">
+                    <input type="checkbox" @(Model.CustomerAppointmentEquipment.IsEquipmentExist != null && Model.CustomerAppointmentEquipment.IsEquipmentExist == true ? "checked" : "") class="chk_equipment_exist" /> <span>@Localize.T("Equipment Exist")</span>
+                </div>
+            }
+            @if (PermissionChecker.IsPermitted(PermissionList.MenuPermissions.ShowNonCommission))
+            {
+                <div class="form-group clearfix">
+                    <input type="checkbox" @(Model.CustomerAppointmentEquipment.IsNonCommissionable != null && Model.CustomerAppointmentEquipment.IsNonCommissionable == true ? "checked" : "") class="chk_isnoncommissionable" /> <span>@Localize.T("Non Commissionable")</span>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="userassignpopup_footer">
+        @if (ViewBag.qty > 0 && Model.CustomerAppointmentEquipment.IsService == false)
+        {
+            <button class="btn green_button" id="btn_reorder_eqp" title="@Localize.T("Move to Bad Inventory")"><i class="fa fa-reorder"></i> @Localize.T("RMA")</button>
+        }
+        <button class="btn green_button" id="btn_submit_data"><i class="fa fa-save"></i> @Localize.T("Submit")</button>
+    </div>
+</div>
+
+<div class="container-fluid badinvpopup hidden">
+    <div class="form-group clearfix ass_user">
+        <span class="bad_inventory_txt">@Localize.T("Reason")</span>
+        @Html.DropDownList("badinvreason", ViewBag.BadInvReason as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+    </div>
+    <div class="form-group clearfix ass_user">
+        <span class="bad_inventory_txt">@Localize.T("Description")</span>
+        @Html.TextArea("badinvdes", new { @class = "form-control" })
+    </div>
+    <div class="form-group clearfix btnPObadinv hidden">
+        <button class="btn" id="btn_submit_data_PObad"><i class="fa fa-save"></i> @Localize.T("Submit")</button>
+    </div>
+    <div class="form-group clearfix btnbadinv hidden">
+        <button class="btn" id="btn_submit_data_bad"><i class="fa fa-save"></i> @Localize.T("Submit")</button>
+    </div>
+</div>

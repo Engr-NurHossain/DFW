@@ -1,0 +1,241 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@*@model List<HS.Entities.InventoryTech>*@
+
+@model HS.Entities.InventoryTechModel
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+<script>
+
+    $(".btn-apply-Datefilter").click(function () {
+        var StartDateVal = my_date_format($(".min-date").val());
+        var EndDateVal = my_date_format($(".max-date").val());
+
+        if (StartDateVal != "NaN undefined, NaN" && EndDateVal != "NaN undefined, NaN") {
+            $(".DateFilterContents .date-start").html(StartDateVal).val();
+            $(".DateFilterContents .date-end").html(EndDateVal).val();
+            $(".DateFilterContents .dropdown-filter").hide();
+            UpdatePtoCookie();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+            UpdatePtoCookie();
+        }
+
+    })
+
+    $(document).ready(function () {
+        var pageno = '@ViewBag.PageNumber';
+
+        var totalcount = '@Localize.T("Total:") @string.Format("{0:#,##0}", ViewBag.TotalLeads)';
+        $(document).ready(function () {
+            parent.$(".lead_total_color").html(totalcount);
+        $(".icon_sort_bi").click(function () {
+            var orderval = $(this).attr('data-val');
+            FilterInventoryReport(pageno, orderval);
+        });
+        })
+
+    });
+</script>
+
+
+<div class="leads_report_table">
+    <table id="LeadsReportTable" class="inventory_report_table">
+        <thead>
+            <tr>
+                <th>
+                    <div>@Localize.T("Date Transferred")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/date"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/date"></i></div>
+
+                </th>
+                <th>
+                    <div>@Localize.T("Origin")</div> 
+                  <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/origin"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/origin"></i></div>
+
+                 </th>
+                <th>
+                    <div>@Localize.T("Sales Person")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/username"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/username"></i></div>
+
+                </th>
+                <th>
+                    <div>@Localize.T("No. of Units")</div>
+                    <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/noofunits"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/noofunits"></i></div>
+
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.InventoryTech)
+            {
+                <tr>
+                    <td>
+                        <div>@Localize.T("Date Transferred") <span>:</span></div>
+                        <div>
+                            @item.TransferredDate.ToString("MM/dd/yyyy")
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Origin") <span>:</span></div>
+                        <div>@Localize.T("WareHouse")</div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Sales Person") <span>:</span></div>
+                        <div>@item.TechnicianName</div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("No. of Units") <span>:</span></div>
+                        <div>
+                            <a style="cursor:pointer;color:#2ca01c;" onclick="OpenTopToBottomModal(domainurl + '/Reports/LoadTransferInventoryForTechAndDateFilter?techid=@item.TechnicianId&transferdate=@item.TransferredDate.ToString("MM/dd/yyyy")')">@item.Quantity</a>
+                        </div>
+                    </td>
+                </tr>
+            }
+        <tr class="table_total_bg">
+            <td colspan="3">
+                <b class="float_right">@Localize.T("Total:")</b>
+            </td>
+            <td>
+                <div>@Localize.T("Total Unit") <span>:</span></div>
+                <div>
+                    <b title="@Localize.T("Total Unit")">@Model.TotalQuantity</b>
+                </div>            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="AgentListPagination">
+        <div class="paginationContainer">
+            @if (ViewBag.PageCount > 0)
+            {
+                <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+            }
+            @if (ViewBag.PageCount == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons disabledBtn">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="FilterInventoryReport(@(ViewBag.PageNumber))">1</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FilterInventoryReport(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FilterInventoryReport(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FilterInventoryReport(2)">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="FilterInventoryReport(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FilterInventoryReport(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FilterInventoryReport(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FilterInventoryReport(2)">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="FilterInventoryReport(3)">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="FilterInventoryReport(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount > 3)
+            {
+                if (ViewBag.PageNumber == ViewBag.PageCount)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="FilterInventoryReport(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="FilterInventoryReport(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="FilterInventoryReport(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="FilterInventoryReport(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="FilterInventoryReport()">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="FilterInventoryReport(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="FilterInventoryReport(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="FilterInventoryReport(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="FilterInventoryReport(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="FilterInventoryReport(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="FilterInventoryReport(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="FilterInventoryReport(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="FilterInventoryReport(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="FilterInventoryReport(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="FilterInventoryReport(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="FilterInventoryReport(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="FilterInventoryReport(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="FilterInventoryReport(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>

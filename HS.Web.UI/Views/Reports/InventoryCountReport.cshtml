@@ -1,0 +1,125 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Css/Inventory/PurchaseOrderPartial.css" rel="stylesheet" />
+<script>
+    var my_date_format = function (input) {
+        console.log(input + " r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var InventoryCountReportLoad = function (pageNo, order) {
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+
+        if (typeof (pageNo) != "undefined" && pageNo > 0) {
+            var LoadUrl = domainurl + "/Reports/InventoryCountReportPartial/?SearchText=" + encodeURI($(".InventoryCountReportText").val()) + "&Start=" + StartDateVal + "&End=" + EndDateVal
+                + "&PageNo=" + pageNo + "&order=" + order + "&pagesize=20";
+            $(".InventoryCountReportTable").html(TabsLoaderText);
+            $(".InventoryCountReportTable").load(LoadUrl);
+        }
+    }
+
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide();
+
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+
+        if (StartDate != "" && EndDate != "") {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+
+        $("#btnInventoryCountReportSearch").click(function () {
+            InventoryCountReportLoad(1, null);
+        });
+        $(".InventoryCountReportText").keydown(function (e) {
+            if (e.which == 13) {
+                InventoryCountReportLoad(1, null);
+            }
+        });
+
+      
+        InventoryCountReportLoad(1, null);
+
+        $(".btn-apply-Datefilter").click(function () {
+
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            var pageNo = 1;
+            var order = "";
+            var pagesize = 20;
+            var LoadUrl = domainurl + "/Reports/InventoryCountReportPartial/?Start=" + StartDateVal + "&End=" + EndDateVal
+              + "&PageNo=" + pageNo + "&order=" + order + "&pagesize=20";
+            $(".InventoryCountReportTable").html(TabsLoaderText);
+            $(".InventoryCountReportTable").load(LoadUrl);
+        })
+        $(".btn-apply-Datefilter").click(function () {
+            var StartDateVal = my_date_format($(".min-date").val());
+            var EndDateVal = my_date_format($(".max-date").val());
+
+            if (StartDateVal != "NaN undefined, NaN" && EndDateVal != "NaN undefined, NaN") {
+                $(".DateFilterContents .date-start").html(StartDateVal).val();
+                $(".DateFilterContents .date-end").html(EndDateVal).val();
+                $(".DateFilterContents .dropdown-filter").hide();
+                UpdatePtoCookie();
+            }
+            else {
+                $(".DateFilterContents .date-start").html("All Time");
+                $(".DateFilterContents .date-end").html("");
+                $(".DateFilterContents .dropdown-filter").hide();
+                UpdatePtoCookie();
+            }
+
+        })
+        
+
+        $("#btnInventoryCountReportDownload").click(function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            location.href = domainurl + "/Reports/DownloadInventoryCountReport/?Start=" + StartDateVal + "&End=" + EndDateVal + "&searchtext=" + encodeURI($(".InventoryCountReportText").val());
+
+        })
+    });
+</script>
+
+<div class="purchase_order_partial_container">
+    <div class="purchase_order_partial_search_add">
+        <div class="input-group add-on">
+            <input class="form-control InventoryCountReportText" @*id="InventoryCountReportText"*@ type="text" placeholder="Search By Name or SKU" />
+
+            <div class="input-group-btn"><button class="btn search_Count_btn green_button" id="btnInventoryCountReportSearch" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button></div>
+        </div>
+        <button class="report_btn lrp_float_right" id="btnInventoryCountReportDownload"><i class="fa fa-download"></i></button>
+
+    </div>
+
+    <div class="InventoryCountReportTable active" id="InventoryCountReportTable">
+
+    </div>
+</div>

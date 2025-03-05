@@ -1,0 +1,522 @@
+﻿
+@{
+    Layout = "~/Views/Shared/_PublicLayout.cshtml"; 
+}
+@model HS.Entities.Estimator
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using invstat = HS.Web.UI.Helper.LabelHelper.InvoiceStatus
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@Styles.Render("~/styles/GetInvoice")
+<link href="~/Content/Css/Public/LeadsEstimate.css" rel="stylesheet" />
+<style>
+    .green_button,
+    .green_button:hover,
+    .green_button:focus {
+        background-color: #2ca01c !important;
+        color: #fff !important;
+        border-color: #2ca01c !important;
+    }
+</style>
+<script>
+    var status;
+    var clicked = false;
+    var sigclicked = false;
+    var LeadConvertId = "@ViewBag.LeadId";
+    var Token = "@ViewBag.Token";
+    var CustomerSignature = "@Model.EstimatorSignature";
+    var signaturePad;
+    var EnableSign = '@ViewBag.EnableSign';
+    var printFrame = function (id) {
+        var frm = document.getElementById(id).contentWindow;
+        frm.focus();// focus on contentWindow is needed on some ie versions
+        frm.print();
+        return false;
+    }
+    var EventDocumentClick = function () {
+        var inFormOrLink;
+        $('a').on('click', function () { inFormOrLink = true; });
+        $('form').on('submit', function () { inFormOrLink = true; });
+
+        $(window).on("beforeunload", function () {
+            return inFormOrLink ? "Do you really want to close?" : null;
+        });
+    };
+
+    var IAgreeSetup = function (status, DeclinedReason) {
+        $(".LoadImgDiv").removeClass('hidden');
+        $.ajax({
+            url: domainurl + "/Public/LeadsEstimateAgree/",
+            data: {
+                code: Token,
+                status: status,
+                DeclinedReason: DeclinedReason
+            },
+            type: "Post",
+            dataType: "Json",
+            success: function () {
+                $(".LoadImgDiv").addClass('hidden');
+            }
+        }).done(function (data) {
+            $(".LoadImgDiv").addClass('hidden');
+            if (data.result == true) {
+                if (ContractSubmit == "True") {
+                    OpenSuccessMessageNew("Success!", data.message, function () {
+                        $(".sign-document").addClass('hidden');
+                        $(".bodyConentsDiv1").removeClass('hidden');
+                        $(".footerContents-agreement").removeClass('hidden');
+                        $(".sign-div").remove();
+                        $(".sign_doc_div").remove();
+                        var ifr = $('iframe')[0];
+                        if (ifr != undefined) {
+                            ifr.src = ifr.src;
+                        }
+                        else {
+                            LoadEstimateHtmlForMobile();
+                        }
+                    });
+                }
+                else {
+                    if (typeof (data.IsReload) != undefined && data.IsReload) {
+                        OpenSuccessMessageNew("Success!", data.message, function () {
+                            location.href = location.href;
+                        });
+                    } else {
+                        OpenSuccessMessageNew("Success!", data.message, function () {
+                            $(".footerContents-agreement").remove()
+                            $(".sign-div").remove();
+                            $(".sign_doc_div").remove();
+                        });
+                    }
+                }
+            }
+            else {
+                $(".LoadImgDiv").addClass('hidden');
+                $(".LoadDecline").removeClass('hidden');
+                $(".EstimateDocument").addClass('hidden')
+            }
+        });
+    }
+    var SignatureInit = function () {
+        var canvas = $('#signature-pad');
+        var ctx = $('#signature-pad')[0].getContext('2d');
+        signaturePad = new SignaturePad($('#signature-pad')[0]);
+        function resizeCanvas() {
+            var ratio = Math.max(1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas[0].getContext("2d").scale(ratio, ratio);
+        }
+        resizeCanvas();
+        var img = new Image();
+        img.onload = function () {
+            ctx.drawImage(img, 0, 0);
+        };
+        img.crossOrigin = 'anonymous';
+        function download(dataURL, filename) {
+            var blob = dataURLToBlob(dataURL);
+            var url = window.URL.createObjectURL(blob);
+
+            var a = document.createElement("a");
+            a.style = "display: none";
+            a.href = url;
+            a.download = filename;
+
+            document.body.appendChild(a);
+            a.click();
+
+            window.URL.revokeObjectURL(url);
+        }
+        function dataURLToBlob(dataURL) {
+            var parts = dataURL.split(';base64,');
+            var contentType = parts[0].split(":")[1];
+            var raw = window.atob(parts[1]);
+            var rawLength = raw.length;
+            var uInt8Array = new Uint8Array(rawLength);
+
+            for (var i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+            }
+
+            return new Blob([uInt8Array], { type: contentType });
+        }
+        $('#clear').click(function () {
+            signaturePad.clear();
+        });
+        $("#save-png").click(function () {
+            if (signaturePad.isEmpty()) {
+                OpenErrorMessageNew("Error!", "Please Draw Your Signature.");
+            }
+            else {
+                //    if (ContractSubmit == "True") {
+                //    $(".LoadImgDiv").removeClass('hidden');
+                //}
+                sigclicked = true;
+                counter += 1;
+                var data = signaturePad.toDataURL('image/png');
+                //var url = domainurl + "/Public/UploadCustomerSignatureImage";
+                var url = domainurl + "/Public/UploadEstimatorSignatureImage";
+                $.ajax({
+                    url: url,
+                    data: {
+                        data, Token
+                    },
+                    type: "Post",
+                    dataType: "Json",
+                    success: function (data) {
+                        if (data.uploadImage == true) {
+                            OpenSuccessMessageNew("Success!", "Signature added successfully. Scroll to the bottom to fully review your signed estimate.", function () {
+                                $(".sign-document").addClass('hidden');
+                                $(".bodyConentsDiv1").removeClass('hidden');
+                                $(".btnSign").addClass('hidden');
+                                //$(".LoadImgDiv").removeClass('hidden');
+                                //$(".footerContents-agreement").removeClass('hidden');
+                                var ifr = $('iframe')[0];
+                                if (ifr != undefined) {
+                                    $("#iframePdf").attr("src", data.SignPdfPath);
+                                    ifr.src = ifr.src;
+                                }
+                                //else {
+                                //    LoadEstimateHtmlForMobile();
+                                //}
+                            });
+                            setTimeout(function () {
+                                $(".LoadImgDiv").addClass('hidden');
+                                $('html, body').animate({ scrollTop: $(document).height() }, 'slow');
+                            }, 3000);
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    }
+                })
+            }
+        })
+    }
+    var counter = 0;
+    var GetCardType = function (number) {
+        if (typeof (number) == "undefined") {
+            return "";
+        }
+        // visa
+        var re = new RegExp("^4");
+        if (number.match(re) != null)
+            return "Visa";
+
+        // Mastercard
+        // Updated for Mastercard 2017 BINs expansion
+        if (/^(5[1-5][0-9]{14}|2(22[1-9][0-9]{12}|2[3-9][0-9]{13}|[3-6][0-9]{14}|7[0-1][0-9]{13}|720[0-9]{12}))$/.test(number))
+            return "Mastercard";
+
+        // AMEX
+        re = new RegExp("^3[47]");
+        if (number.match(re) != null)
+            return "AMEX";
+
+        // Diners
+        re = new RegExp("^36");
+        if (number.match(re) != null)
+            return "Diners";
+
+        return "";
+    }
+
+    var LoadEstimateHtmlForMobile = function () {
+        var Url = domainurl + "/Public/LeadsEstimateHtml/?Code=" + Token;
+        $("#AggrementDivMobileEstimate").load(Url);
+    }
+    var MakePayment = function () {
+        var CardInfo = {
+            "CardNumber": $(".card_number").val(),
+            "ExpiredDate": $(".exp_date").val(),
+            "NameOnCard": $(".name_on_card").val(),
+            "SecurityCode": $(".ccv_number").val(),
+            "CardType": GetCardType($(".card_number").val()),
+        };
+        var ACHInfo = {
+            "RoutingNo": $(".ach_routing_no").val(),
+            "AccountNo": $(".ach_account_no").val(),
+            "AccountType": $("#ach_account_type").val(),
+            "ECheckType": $("#ach_e_check_type").val(),
+            "BankName": $(".ach_bank_name").val(),
+            "AccountName": $(".ach_account_name").val(),
+        };
+        var param = JSON.stringify({
+            token: Token,
+            PaymentMethod: $("input[type='radio'][name='PaymentMethod']:checked").val(),
+            CardInfo: CardInfo,
+            ACHInfo: ACHInfo,
+            PaymentTransId: $("#PaymentTransId").val()
+        });
+        $(".LoadImgDiv").removeClass('hidden');
+        $.ajax({
+            url: domainurl + "/Public/CustomerEstimatePayment",
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            type: "Post",
+            success: function (data) {
+                $(".LoadImgDiv").addClass('hidden');
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", "Payment successful.", function () {
+                        window.location.href = window.location.href;
+                    });
+                } else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            }
+        }).done(function () {
+            $(".LoadImgDiv").addClass('hidden');
+        });
+    }
+
+    var EstimeApproveById = function (EstimateConvertId,status,pdf) {
+        $.ajax({
+            url: domainurl + "/Public/EstimeApproveById",
+            data: { Id: EstimateConvertId, Status: status,pdf:pdf },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) { 
+                if (typeof (OpenAcceptedTab) != "undefined") {
+                    OpenEstimatorTabLoad(); 
+                }
+                OpenSuccessMessageNew("", data.message);
+                 
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        //var calcheight = window.innerHeight - $(".HeadContents").height() - $('.sign-div').height() - $('.footerContents-agreement').height() - $(".navbar").height() - 84;
+        console.log(EnableSign);
+        if (EnableSign.toLowerCase() == "false") {
+            $(".sign_doc_div").addClass('hidden');
+        }
+        else {
+            $(".sign_doc_div").removeClass('hidden');
+        }
+
+
+        $("input[type='radio'][name='PaymentMethod']").change(function () {
+            if ($(this).val() == "CreditCard" || $(this).val() == "DebitCard") {
+                $(".credit_debit_info").removeClass('hidden');
+                $(".ach_info").addClass('hidden');
+                $(".Common_info").addClass('hidden');
+                $(".pay_now_btn").removeClass('hidden');
+                $("#btnPayNow").text("Pay Now!");
+            }
+            else if ($(this).val() == "ACH") {
+                $(".credit_debit_info").addClass('hidden');
+                $(".ach_info").removeClass('hidden');
+                $(".Common_info").addClass('hidden');
+                $(".pay_now_btn").removeClass('hidden');
+                $("#btnPayNow").text("Pay Now!");
+            }
+            else {
+                $(".credit_debit_info").addClass('hidden');
+                $(".ach_info").addClass('hidden');
+                $(".transid_info").removeClass('hidden');
+                $("#PaymentTransId").attr("placeholder", $(this).attr("data-placeholder"));
+                $("#btnPayNow").text("Save");
+                $(".Common_info").addClass('hidden');
+                $(".pay_now_btn").removeClass('hidden');
+            }
+        });
+        $(".card_number").blur(function () {
+            if ($(".card_number").val().trim() != '') {
+                var res = GetCardType($(".card_number").val().trim());
+                if ($(".card_number").val().length < 12) {
+                    $(".not_a_valid_card").removeClass('hidden');
+                }
+                if (res != 'AMEX' && res != 'Mastercard' && res != 'Visa' && res != 'Visa Electron') {
+                    $(".not_a_valid_card").removeClass('hidden');
+                } else {
+                    $(".not_a_valid_card").addClass('hidden');
+                }
+            } else {
+                $(".not_a_valid_card").addClass('hidden');
+            }
+        });
+        $("#btnPayNow").click(function () {
+            if (CommonUiValidation()) {
+                MakePayment();
+            }
+        });
+
+
+
+        $(".HeadContents").addClass('hidden');
+        //$(".footerContents-agreement").addClass('hidden');
+        //$("#AggrementDiv").height(calcheight);
+
+        $(".btnSign").click(function () {
+            $(".bodyConentsDiv1").addClass('hidden');
+            $(".sign-document").removeClass('hidden');
+            $(".footerContents-agreement").addClass('hidden');
+        });
+
+        $(".btnIAgree").click(function () {
+            if ((!signaturePad.isEmpty() && counter == 1) || CustomerSignature != "") {
+                clicked = true;
+                IAgreeSetup(true, "");
+            }
+            else {
+                if (signaturePad.isEmpty()) {
+                    $(".wrapper").css("border-color", "red");
+                    OpenErrorMessageNew("Error!", "Please press sign document");
+                }
+                if (!signaturePad.isEmpty() && counter == 0) {
+                    OpenErrorMessageNew("Error!", "Please Save your signature first");
+                    $(".wrapper").css("border-color", "#ccc");
+                }
+            }
+        });
+        $(".btnDec").click(function () {
+            $(".sign-div").addClass('hidden');
+            $(".declinationreason").removeClass('hidden');
+            //IAgreeSetup(false);
+        });
+        $(".DeclineCancel").click(function () {
+            $(".sign-div").removeClass('hidden');
+            $(".declinationreason").addClass('hidden');
+        });
+        $(".DeclineConfirm").click(function () {
+            if ($(".declinationreasontxt").val().trim() == "") {
+                $("#DeclinedErr").removeClass('hidden');
+            } else {
+                $("#DeclinedErr").addClass('hidden');
+                IAgreeSetup(false, $(".declinationreasontxt").val());
+            }
+        });
+        $(".declinationreasontxt").blur(function () {
+            if ($(".declinationreasontxt").val().trim() == "") {
+                $("#DeclinedErr").removeClass('hidden');
+            } else {
+                $("#DeclinedErr").addClass('hidden');
+            }
+        });
+        SignatureInit();
+        LoadEstimateHtmlForMobile();
+    })
+</script>
+<div class="hidden LoadImgDiv">
+    <div class="lds-css ng-scope">
+        <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+    </div>
+</div>
+<div class="dark_shade">
+
+</div>
+<div id="body_id">
+    <div class="row company-name-row">
+        <div class="col-xs-12 company-name">
+            @if (string.IsNullOrWhiteSpace(Model.CustomerBussinessName))
+            {
+            <div class="business_name_div">
+                <span>Estimate for @Model.CustomerName</span>
+            </div>
+            }
+            else
+            {
+            <div class="business_name_div">
+                <span>Estimate for @Model.CustomerBussinessName</span>
+                <div class="cus_name_div">
+                    <span>(@Model.CustomerName)</span>
+                </div>
+            </div>
+
+            }
+        </div>
+    </div>
+
+    <div class="white_Starts">
+        <div class="payment_options_div">
+            <div class="">
+                <p class="invoice-title">Estimate</p>
+            </div>
+            <div class="row inv_det_table_div">
+                <div class="col-md-6">
+                    <table class="col-md-12 invo_det_table">
+                        <tr>
+                            <td>Estimate</td>
+                            <td>@Model.EstimatorId</td>
+                        </tr>
+                        @if (Model.CreatedDate != new DateTime())
+                        {
+                            <tr>
+                                <td>Created Date</td>
+                                <td>@Model.CreatedDate.ToString("MMMM dd,yyyy")</td>
+                            </tr>
+                        }
+                        <tr>
+                            <td>Estimate Total</td>
+                            <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(ViewBag.CompanyId)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Convert.ToDouble(Model.TotalPrice) + Convert.ToDouble(Model.ServiceTotalAmount) + Convert.ToDouble(Model.TaxAmount) + Convert.ToDouble(Model.ServiceTaxAmount)) </td>
+                        </tr>
+                    </table>
+                    @*<div class="col-md-12 padding-left-0 margin-top-10 sign_doc_div">
+                        <button class="btnSign"><i class="fa fa-sign-in" aria-hidden="true"></i>&nbsp;Sign</button>
+                    </div>*@
+                    <div class="col-md-12 padding-left-0 margin-top-10 sign_doc_div">
+                        <button class="btnApprove btn green_button" onclick="EstimeApproveById(@Model.Id,'Approve','@ViewBag.Pdf')">Approve</button> 
+                        <button class="btnDecline btn green_button" onclick="EstimeApproveById(@Model.Id,'Decline','@ViewBag.Pdf')">Decline</button>
+                    </div>
+                </div>
+                @*<div class="col-md-6 inv_calc_div">
+                    <div class="sign-div" style="float:right; margin-top:10px;">
+                        <div>
+                            <button class="btnDec btn btn-default"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp;&nbsp;Decline</button>
+                        </div>
+                    </div>
+                    <div class="declinationreason hidden">
+                        <label>Please let us know your decline reason</label>
+                        <textarea id="declinationreasontxt" class="declinationreasontxt" rows="3"></textarea>
+                        <label class="label hidden red position-abs" id="DeclinedErr">*This field is required.</label>
+                        <div class="margin-top-15">
+                            <button class="DeclineCancel btn btn-default"><i class="fa fa-times" aria-hidden="true"></i>&nbsp;&nbsp;Cancel</button>
+                            <button class="DeclineConfirm btn btn-default"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp;&nbsp;Confirm</button>
+                        </div>
+                    </div>
+                </div>*@
+            </div>
+        </div>
+
+        <div class="EstimatorDocument">
+            <div class="HeadContents">
+                <h4 class="sign-head">Sign</h4>
+            </div>
+            <div class="sign-document hidden">
+                <div class="wrapper">
+                    <canvas id="signature-pad" class="signature-pad" width=300 height=100 style="float:left;"></canvas>
+                </div>
+
+                <button class="btn all_button" id="save-png"><i class="fa fa-floppy-o" aria-hidden="true"></i>&nbsp;&nbsp;Approve And Send</button>
+
+                <button class="btn all_button" id="clear"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp;&nbsp;Clear</button>
+            </div>
+            @if (Request.Browser.IsMobileDevice)
+            {
+            @*<a href="@(AppConfig.DomainSitePath)/Public/EstimatorSignPdf/?Code=@ViewBag.Token" target="_blank" download>Download Estimate</a>*@
+        <a href="@(AppConfig.DomainSitePath)@ViewBag.Pdf" target="_blank" download>Download Estimate</a>
+            <div class="HtmlContainerEstimate" id="AggrementDivMobileEstimate">
+
+            </div>
+            }
+            else
+            {
+            <div class="bodyConentsDiv1" id="AggrementDiv">
+                <iframe name="iframe" class="pdf-styles cus-pdf-style" id="iframePdf" src="@(AppConfig.SiteDomain)@ViewBag.Pdf"></iframe>
+                @*<iframe name="iframe" class="pdf-styles cus-pdf-style" id="iframePdf" src="@(AppConfig.DomainSitePath)/Public/EstimatorSignPdf/?Code=@ViewBag.Token"></iframe>*@
+
+            </div>
+            }
+        </div>
+        @*<div class="hidden LoadDecline custom-body_id">Lead Estimate Declined</div>*@
+    </div>
+
+    <div class="footer">
+        <div class="stick-right">
+            <p>
+                <span>@Html.Raw(ViewBag.FooterCompanyInformation)</span>
+            </p>
+        </div>
+    </div>
+</div>

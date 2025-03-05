@@ -1,0 +1,181 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+@model List<HS.Entities.Invoice>
+
+<script>
+    var InvoiceStartDatePicker;
+    var InvoiceEndDatePicker;
+    var DataTablePageSize = 50;
+
+    $(document).ready(function () {
+        var InvoiceStatusDownload;
+        var InvoiceTypeDownload;
+        var InvoiceStatus;
+        InvoiceStatus = $("#StatusId").val();
+        $(".StatusId").val('@ViewBag.ValStatus');
+        InvoiceStatusDownload = '@ViewBag.ValStatus';
+        var InvoiceType;
+        InvoiceType = $("#TypeId").val();
+        $(".TypeId").val('@ViewBag.ValType');
+        InvoiceTypeDownload = '@ViewBag.ValType';
+        $("#StatusId").change(function () {
+            InvoiceStatus = $("#StatusId").val();
+        });
+        $("#TypeId").change(function () {
+            InvoiceType = $("#TypeId").val();
+        })
+        $("#InvoiceReportTab .invoice-loader").hide();
+        var table = $('#InvoiceReportTable').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+
+        InvoiceStartDatePicker = new Pikaday({
+            format: 'MM/DD/YYYY',
+            yearRange: [2017, (new Date()).getFullYear()],
+            field: $('#report_InvoiceStartDate')[0]
+        });
+
+        InvoiceEndDatePicker = new Pikaday({
+            format: 'MM/DD/YYYY',
+            yearRange: [2017, (new Date()).getFullYear()],
+            field: $('#report_InvoiceEndDate')[0]
+        });
+
+        $("#btnDownloadInvoiceReport").click(function () {
+            var StartDate = $("#report_InvoiceStartDate").val();
+            var EndDate = $("#report_InvoiceEndDate").val();
+
+
+            if ((StartDate.trim().length == 10 && EndDate.trim().length == 10) || InvoiceStatusDownload != "-1" || InvoiceTypeDownload != "-1") {
+                //StartDate = StartDate.replaceAll('/', '_');
+                //EndDate = EndDate.replaceAll('/', '_');
+                location.href = domainurl + "/Reports/InvoiceReportPartial/?Start=" + StartDate + "&End=" + EndDate + "&Status=" + InvoiceStatusDownload + "&Type=" + escape(InvoiceTypeDownload) + "&GetReport=true";
+            } else {
+                location.href = domainurl + "/Reports/InvoiceReportPartial/?GetReport=true";
+            }
+        });
+        $("#InvoiceFilterButton").click(function () {
+            var StartDate = $("#report_InvoiceStartDate").val();
+            var EndDate = $("#report_InvoiceEndDate").val();
+            InvoiceType = $("#TypeId").val();
+            //StartDate = StartDate.replaceAll('/', '_');
+            //EndDate = EndDate.replaceAll('/', '_');
+            $("#InvoiceReportTab").html(TabsLoaderText);
+            $("#InvoiceReportTab").load(domainurl + "/Reports/InvoiceReportPartial/?Start=" + StartDate + "&End=" + EndDate + "&Status=" + InvoiceStatus + "&Type=" + escape(InvoiceType));
+        });
+
+
+    });
+</script>
+<link href="~/Content/Css/Report/InvoiceReportPartial.css" rel="stylesheet" />
+<div class="invoice_report_top_info">
+    <div class="col-md-4 irp_total_invoice">
+        @Localize.T("Total Invoices :") @ViewBag.TotalInvoice
+    </div>
+    <div class="col-md-4 irp_total_pd">
+       @Localize.T("Total Payment Due :") @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.TotalDue)
+    </div>
+    <div class="col-md-4 irp_total_amount">
+        @Localize.T("Total Amount :") @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.TotalAmount)
+    </div>
+</div>
+@*<div class="col-md-12">
+    <a href="/Reports/InvoiceReportPartial/?GetReport=true" target="_blank">Download</a>
+</div>*@
+
+
+<div class="col-xs-12 invoice_filter_container">
+   
+    <div class="col-xs-2 ir_right_zero ir_left_zero">
+        <label>@Localize.T("Status")</label>
+        @Html.DropDownList("StatusId", ViewBag.ReportStatus as List<SelectListItem>, new { @class = "form-control StatusId" })
+    </div>
+    <div class="col-xs-2 invoice_report_right_pad invoice_report_left_pad">
+        <label>@Localize.T("Type")</label>
+        @Html.DropDownList("TypeId", ViewBag.PaymentMethods as List<SelectListItem>, new { @class = "form-control TypeId" })
+    </div>
+    <div class="col-xs-6 invoice_report_right_pad invoice_report_left_pad">
+        @*<div class="col-xs-2 invoice_report_right_pad">
+            <label class="invoice_report_margin_top">Filter</label>
+        </div>*@
+        <div class="col-xs-5 ir_left_zero invoice_report_right_pad">
+            <label>@Localize.T("Start Date")</label>
+            <input class="form-control" type="text" value="@ViewBag.Start" id="report_InvoiceStartDate" placeholder="Start Date" />
+        </div>
+        <div class="col-xs-5 ir_left_zero ir_right_zero">
+            <label>@Localize.T("End Date")</label>
+            <input class="form-control" type="text" value="@ViewBag.End" id="report_InvoiceEndDate" placeholder="End Date" />
+        </div>
+        <div class="col-xs-2 invoice_report_left_pad">
+            <button class="invoice_report_btn invoice_report_filter_btn" id="InvoiceFilterButton"><i class="fa fa-filter" aria-hidden="true"></i>@Localize.T(" Filter")</button>
+        </div>
+    </div>
+    @if (PermissionChekcer.IsPermitted(Permissions.ReportsPermissions.InvoiceReportDownload))
+    {
+        <div class="col-xs-2 ir_right_zero">
+            <button title="@Localize.T(" Download")" class="invoice_report_btn invoice_report_float_right" id="btnDownloadInvoiceReport"><i class="fa fa-download" aria-hidden="true"></i></button>
+        </div>
+    }
+
+    @*<div class="col-md-2 padding-left-0">
+        <h4>Filter</h4>
+    </div>
+    <div class="col-md-3">
+        <label>Status</label>
+        @Html.DropDownList("StatusId", ViewBag.ReportStatus as List<SelectListItem>, new { @class = "form-control StatusId" })
+    </div>
+    <div class="col-md-3">
+        <label>Payment Type</label>
+        @Html.DropDownList("TypeId", ViewBag.PaymentMethods as List<SelectListItem>, new { @class = "form-control TypeId" })
+    </div>
+    <div class="col-md-3">
+        <label>Start Date</label>
+        <input type="text" value="@ViewBag.Start" id="report_InvoiceStartDate" placeholder="Start Date" />
+    </div>
+    <div class="col-md-3">
+        <label>End Date</label>
+        <input type="text" value="@ViewBag.End" id="report_InvoiceEndDate" placeholder="End Date" />
+    </div>
+    <div class="col-md-1 padding-left-0 padding-right-0">
+        <button class="report_btn" id="InvoiceFilterButton">Filter</button>
+    </div>
+    <div class="col-md-2 padding-left-0 padding-right-0">
+        <button class="report_btn" id="btnDownloadInvoiceReport">Download</button>
+    </div>
+    <div class="col-md-12 report-bottom-border">
+
+    </div>*@
+</div>
+
+    <table id="InvoiceReportTable">
+        <thead>
+            <tr>
+                <th>Invoice Id</th>
+                <th>Customer Name</th>
+                <th>Total Amount</th>
+                <th>Balance Due</th>
+                <th>Created On</th>
+            </tr>
+        </thead>
+        <tbody>
+             @foreach(var item in Model)
+             {
+                 <tr>
+                     <td>@item.InvoiceId</td>
+                     <td>@item.CustomerName</td>
+                     <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalAmount.Value)</td>
+                     <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.BalanceDue.Value)</td>
+                     <td>@item.CreatedDate.ToString("MM/dd/yy") at @item.CreatedDate.ToString("hh:mm tt")</td>
+                 </tr>
+             }
+        </tbody>
+    </table>

@@ -1,0 +1,261 @@
+﻿@model HS.Entities.Ticket
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using System.Collections;
+<script src="~/Content/Jquery-ui/jquery.js"></script>
+<script src="~/Content/Js/SignaturePad/SignaturePad.js"></script>
+<link href="~/Content/Css/Ticket/LoadTicketAgreement.css" rel="stylesheet" />
+@*<style>
+        .wrapper {
+            border: 1px solid #ccc;
+            -webkit-border-radius: 4px;
+            -moz-border-radius: 4px;
+            border-radius: 4px;
+            margin: 9px 9px 9px 0px;
+            position: relative;
+            width: 300px;
+            height: 200px;
+            margin-right: 35px;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .signature-pad {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 300px;
+            height: 100px;
+        }
+        .sign-document {
+            padding-top:25px;
+        }
+        .CloseButtonDiv{
+            float:right;
+            cursor:pointer;
+        }
+        #save-png{
+            background-color: #2ca01c;
+        color: white;
+        border: none;
+        height: 35px;
+        /* width: 35px; */
+        border-radius: 4px;
+        cursor: pointer;
+        }
+        #clear{
+            background-color: #555555bd;
+        color: white;
+        border: none;
+        height: 35px;
+        /* width: 35px; */
+        border-radius: 4px;
+        cursor: pointer;
+        }
+    </style>*@
+
+<script>
+    var counter = 0;
+    var ticketid = '@Model.Id';
+    $(document).ready(function () {
+        console.log("sign");
+        $(".ticket_agree_inner").height((window.innerHeight - 89));
+        var canvas = $('#signature-pad');
+        var ctx = $('#signature-pad')[0].getContext('2d');
+        var signaturePad = new SignaturePad($('#signature-pad')[0]);
+        function resizeCanvas() {
+            var ratio = Math.max(1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas[0].getContext("2d").scale(ratio, ratio);
+        }
+        resizeCanvas();
+        var img = new Image();
+        img.onload = function () {
+            ctx.drawImage(img, 0, 0);
+        };
+        img.crossOrigin = 'anonymous';
+        function download(dataURL, filename) {
+            var blob = dataURLToBlob(dataURL);
+            var url = window.URL.createObjectURL(blob);
+
+            var a = document.createElement("a");
+            a.style = "display: none";
+            a.href = url;
+            a.download = filename;
+
+            document.body.appendChild(a);
+            a.click();
+
+            window.URL.revokeObjectURL(url);
+        }
+        function dataURLToBlob(dataURL) {
+            var parts = dataURL.split(';base64,');
+            var contentType = parts[0].split(":")[1];
+            var raw = window.atob(parts[1]);
+            var rawLength = raw.length;
+            var uInt8Array = new Uint8Array(rawLength);
+
+            for (var i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+            }
+
+            return new Blob([uInt8Array], { type: contentType });
+        }
+        $('#clear').click(function () {
+            signaturePad.clear();
+        });
+        $("#save-png").click(function () {
+            if (signaturePad.isEmpty()) {
+                parent.OpenErrorMessageNew("Error!", "Please Draw Your Signature");
+            }
+            else {
+                sigclicked = true;
+                counter += 1;
+                var data = signaturePad.toDataURL('image/png');
+                var url = "/Ticket/LoadTicketSignatureImage";
+                var doctext = $(".ticket_agree_inner_info_block_info .document_text").text();
+                var doctext2 = $(".ticket_agree_inner_info_block_info .document_text2").text();
+                $.ajax({
+                    url: url,
+                    data: { data, ticketid: ticketid, doctext: doctext, doctext2: doctext2},
+                    type: "Post",
+                    dataType: "Json",
+                    success: function (data) {
+                        if (data) {
+                            parent.AddTicketConfirmation();
+                            parent.ClosePopup();
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    }
+                })
+            }
+        })
+    })
+</script>
+@*<div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+        <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+    </div>*@
+<div class="ticket_agree_container">
+    <div class="ticket_agree_header">
+        <label>@Localize.T("Agreement for Ticket #")@Model.Id (@Model.TicketType)</label>
+        <img class="CloseButtonDiv" onclick="parent.ClosePopup()" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+    </div>
+
+    @{
+        if (Model.TicketType == "Drop Off")
+        {
+            <div class="ticket_agree_inner">
+                <div class="ticket_agree_inner_info_block">
+                    <div class="ticket_agree_inner_info_block_header">
+                        @Localize.T("Customer Satisfaction")
+                    </div>
+                    <div class="ticket_agree_inner_info_block_info">
+                        <span class="document_text span">This is to certify that the rug cleaning services provided by Dalworth Rug Cleaning of the above-mentioned rugs has been completed to my/our satisfation. Upon execution of this certificate and payment of all related invoices, I hereby release Dalworth Rug Cleaning of any and all future claims.</span>
+                    </div>
+                </div>
+                <div class="ticket_agree_inner_info_block">
+                    <div class="ticket_agree_inner_info_block_header">
+                        @Localize.T("Signature")
+                    </div>
+                    <div class="ticket_agree_inner_info_block_info">
+                        <div class="sign-document">
+                            <div class="wrapper">
+                                <canvas id="signature-pad" class="signature-pad" width=300 height=100 style="float:left;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ticket_agree_footer">
+                <button class="btn" id="save-png"><i class="fa fa-plus-circle" aria-hidden="true"></i>&nbsp;@Localize.T(" Save")</button>
+                <button class="btn" id="clear"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp;@Localize.T(" Clear")</button>
+            </div>
+        }
+        else if (Model.TicketType == "Pick Up")
+        {
+            <div class="ticket_agree_inner">
+                <div class="ticket_agree_inner_info_block">
+                    <div class="ticket_agree_inner_info_block_header">
+                        @Localize.T("Work authorization")
+                    </div>
+                    <div class="ticket_agree_inner_info_block_info">
+                        <span class="document_text span">Prior to beginning the work listed on the invoice for the job number identified above i have read and agree with the general contion of the rug as started hereIn. I hereby authorize dalworth to do the job based on the conditions described above. I hereby realesed Dalworth from responsibility for unforseen chemical conditions which may be present int the rug including, but not limited to, urline, pesticides, acne medication, make-up, Ink splits or marker tips, which could cause permanent stains to appear during or after the cleaning. Occasionally white knots can become more apparant after your rug has been cleaned. This is a characteristics of certain rugs.</span>
+                    </div>
+                </div>
+                <div class="ticket_agree_inner_info_block">
+                    <div class="ticket_agree_inner_info_block_header">
+                        @Localize.T("Signature")
+                    </div>
+                    <div class="ticket_agree_inner_info_block_info">
+                        <div class="sign-document">
+                            <div class="wrapper">
+                                <canvas id="signature-pad" class="signature-pad" width=300 height=100 style="float:left;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ticket_agree_inner_info_block">
+                    @*<div class="ticket_agree_inner_info_block_header"></div>*@
+                    <div class="ticket_agree_inner_info_block_info">
+                        <span class="document_text2 span">Any controversy or claim arising out of or relating to this contract, or the breach thereof, shall be settled by arbitration administered by American Arbitration Association under Commercial Arbitration Rules, and judgement on the award rendered by the arbitrator(s) may be entered in any court having jurisdication thereof.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="ticket_agree_footer">
+                <button class="btn" id="save-png"><i class="fa fa-plus-circle" aria-hidden="true"></i>&nbsp;@Localize.T(" Save")</button>
+                <button class="btn" id="clear"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp;@Localize.T(" Clear")</button>
+            </div>
+        }
+        else
+        {
+            <div class="ticket_agree_inner">
+                @if (PermissionChekcer.IsPermitted(Permissions.CustomerTicketPermission.DisclaimerTextForThompson))
+                {
+                    <div class="ticket_agree_inner_info_block">
+                        <div class="ticket_agree_inner_info_block_header">
+                            @Localize.T("Disclaimer")
+                        </div>
+                        <div class="ticket_agree_inner_info_block_info">
+                            <span class="document_text span">By signing below, the customer agrees to the following: Customer shall hereby hold harmless Thompson Satellite & Security (and its representatives) from any and all actual or alleged claims, demands, liability, loss, and/or injury to property or persons (including death), whether this is brought by an individual or another legal entity, or imposed by a court of law that may arise out of any acts, omissions, negligence or misconduct of Thompson Satellite & Security. This indemnification shall be governed by the laws of the State of New Mexico in Bernalillo County and any applicable Federal Law, and shall apply to and include without limitation the payment of all penalties, fines, attorneys fees, and related costs and any reimbursements to Thompson Satellite & Security for all legal expenses. Each party hereby warrants that they both have the legal power and right to make this agreement and bind each party. The customer hereby understands and agrees that Thompson Satellite & Security shall not be held liable for any offers, incentives, or agreements outside of those made by the Installation Agreement and standard corporate contract for the services selected. Any such offers, incentives, or agreements discussed with a representative of Thompson Satellite & Security is made exclusively by and between that representative and the customer, absent any knowledge, involvement, or liability from Thompson Satellite & Security. The customer certifies that the installation, modification, or repair performed by Thompson Satellite & Security (and its representatives) was done to customer satisfaction and the system is working properly and to its full function.</span>
+                        </div>
+                    </div>
+                }
+                <div class="ticket_agree_inner_info_block">
+                    <div class="ticket_agree_inner_info_block_header">
+                        @Localize.T("Signature")
+                    </div>
+                    <div class="ticket_agree_inner_info_block_info">
+                        <div class="sign-document">
+                            <div class="wrapper">
+                                <canvas id="signature-pad" class="signature-pad" width=300 height=100 style="float:left;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ticket_agree_footer">
+                <button class="btn" id="save-png"><i class="fa fa-plus-circle" aria-hidden="true"></i>&nbsp;@Localize.T(" Save")</button>
+                <button class="btn" id="clear"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp;@Localize.T(" Clear")</button>
+            </div>
+        }
+    }
+</div>
+
+@*<div class="sign-document">
+        <div class="wrapper">
+            <canvas id="signature-pad" class="signature-pad" width=300 height=100 style="float:left;"></canvas>
+        </div>
+        <button class="btn" id="save-png"><i class="fa fa-plus-circle" aria-hidden="true"></i>&nbsp;@Localize.T(" Save")</button>
+        <button class="btn" id="clear"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp;@Localize.T(" Clear")</button>
+    </div>*@

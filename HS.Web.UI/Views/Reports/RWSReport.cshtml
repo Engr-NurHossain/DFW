@@ -1,0 +1,196 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+    <link href="~/Content/Css/Inventory/PurchaseOrderPartial.css" rel="stylesheet" />
+    <link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+<script>
+        var my_date_format = function (input) {
+            console.log(input + " r");
+            var d = new Date(Date.parse(input.replace(/-/g, "/")));
+            var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+            return (date);
+        };
+        var liststatus = '@Html.Raw(Json.Encode(@ViewBag.CustomerStatus))';
+        liststatus = JSON.parse(liststatus);
+
+        @*var listsalesperson = '@Html.Raw(Json.Encode(@ViewBag.SalesPersonList))';
+        listsalesperson = JSON.parse(listsalesperson);*@
+
+
+        var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+        var RWSReportLoad = function (pageNo, order) {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            var Status = encodeURI($("#CustomerStatus11").val());
+            var SalesPerson = encodeURI($("#SalesPerson").val());
+            if (typeof (pageNo) != "undefined" && pageNo > 0) {
+                var LoadUrl = domainurl + "/Reports/RWSReportPartial/?SearchText=" + encodeURI($(".RWSText").val()) + "&Start=" + StartDateVal + "&End=" + EndDateVal
+                    + "&PageNo=" + pageNo + "&order=" + order + "&pagesize=20" + "&Status=" + Status + "&SalesPerson=" + SalesPerson;
+                $(".RWSTable").html(TabsLoaderText);
+                $(".RWSTable").load(LoadUrl);
+            }
+        }
+
+       var ResetFilter = function () {
+          
+        $("#CustomerStatus11").selectpicker("val", "");
+      
+
+        $(".RWSText").val("");
+        RWSReportLoad(1);
+    }
+        $(document).ready(function () {
+            var StartDate = $(".min-date").val();
+            var EndDate = $(".max-date").val();
+            console.log(liststatus);
+            if (liststatus.length != 0) {
+                $("#CustomerStatus11").selectpicker('val', liststatus);
+            }
+            else {
+                $("#CustomerStatus11").selectpicker('val', '');
+            }
+            //if (listsalesperson.length != 0) {
+            //    $("#SalesPerson").selectpicker('val', listsalesperson);
+            //}
+            //else {
+            //    $("#SalesPerson").selectpicker('val', '');
+            //}
+            //if (StartDate != "" && EndDate != "") {
+            //    StartDate = my_date_format(StartDate);
+            //    EndDate = my_date_format(EndDate);
+            //    console.log(StartDate + " " + EndDate);
+            //    if (StartDate == "NaN undefined, NaN") {
+            //        StartDate = "All Time";
+            //        EndDate = "";
+            //    }
+
+            //    $(".DateFilterContents .date-start").html("");
+            //    $(".DateFilterContents .date-end").html("");
+            //    $(".DateFilterContents .date-start").html(StartDate);
+            //    $(".DateFilterContents .date-end").html(EndDate);
+            //    $(".DateFilterContents .dropdown-filter").hide();
+            //}
+            //else {
+            //    $(".DateFilterContents .date-start").html("All Time");
+            //    $(".DateFilterContents .date-end").html("");
+            //    $(".DateFilterContents .dropdown-filter").hide();
+            //}
+
+            //$("#dateviewed").on('click', '.btn-apply-Datefilter', function (e) {
+
+            //    RWSReportLoad(1, null);
+                
+            //});
+
+            //$(".btn-apply-Datefilter").click(function () {
+            //    console.log("rws");
+            //    //var StartDateVal = encodeURI($(".min-date").val());
+            //    //var EndDateVal = encodeURI($(".max-date").val());
+            //    //var pageNo = 1;
+            //    //var order = "";
+            //    //var Status = encodeURI($("#CustomerStatus11").val());
+            //    //var SalesPerson = encodeURI($("#SalesPerson").val());
+            //    //var LoadUrl = domainurl + "/Reports/RWSReportPartial/?SearchText=" + encodeURI($(".RWSText").val()) + "&Start=" + StartDateVal + "&End=" + EndDateVal
+            //    //  + "&PageNo=" + pageNo + "&order=" + order + "&pagesize=20" + "&Status=" + Status + "&SalesPerson=" + SalesPerson;
+            //    //$(".RWSTable").html(TabsLoaderText);
+            //    //$(".RWSTable").load(LoadUrl);
+            //    RWSReportLoad(1, null);
+            //})
+               $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+            UpdatePtoCookie();
+
+            RWSReportLoad(1, null);
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        });
+
+            $("#btnRWSSearch").click(function () {
+                RWSReportLoad(1, null);
+            });
+            $(".RWSText").keydown(function (e) {
+                if (e.which == 13) {
+                    RWSReportLoad(1, null);
+                }
+            });
+
+            RWSReportLoad(1, null);
+
+            $("#btnRWSDownload").click(function () {
+                var StartDateVal = $(".min-date").val();
+                var EndDateVal = $(".max-date").val();
+                var Status = encodeURI($("#CustomerStatus11").val());
+                var SalesPerson = encodeURI($("#SalesPerson").val());
+                location.href = domainurl + "/Reports/DownloadRWSReportData/?Start=" + StartDateVal + "&End=" + EndDateVal + "&Searchtext=" + encodeURI($(".RWSText").val()) + "&Status=" + Status + "&SalesPerson=" + SalesPerson;
+
+            })
+
+            $(".single_filte_info_container").hide();
+            $(".btn-filter").click(function () {
+
+                if ($(".single_filte_info_container").is(":visible")) {
+                    $(".single_filte_info_container").hide();
+
+                } else {
+                    $(".single_filte_info_container").show();
+
+                }
+            });
+       
+
+
+        });
+</script>
+
+
+
+<div class="purchase_order_partial_container">
+    <div class="purchase_order_partial_search_add">
+
+        <div class="input-group add-on">
+            <input class="form-control RWSText" @*id="RWSText"*@ type="text" placeholder="Search by Customer Name" />
+
+            <div class="input-group-btn"><button class="btn search_PurchaseOrder_btn green_button" id="btnRWSSearch" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button></div>
+        </div>
+        <div class="single_filter_div_style filter_fill">
+            <button class="btn btn-filter green_button" title="Filter">
+                <i class="glyphicon glyphicon-filter"></i>
+            </button>
+        </div>
+        <button title="@Localize.T("Download")" class="report_btn lrp_float_right" id="btnRWSDownload"><i class="fa fa-download"></i></button>
+
+    </div>
+    <div class="single_filte_info_container">
+        <div class="single_filter_info_inner">
+            <div class="single_filter_info_inner_content"> @Html.DropDownList("CustomerStatus11", ViewBag.CustomerStatus as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Select Status" })</div>
+            @*<div class="single_filter_info_inner_content"> @Html.DropDownList("AssignDate", ViewBag.AssignDate as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Select Assign Date" })</div>*@
+            @*<div class="single_filter_info_inner_content"> @Html.DropDownList("SalesPerson", ViewBag.SalesPersonList as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Select Sales Person" })</div>*@
+        </div>
+        <div class="single_filter_info_footer">
+            <button class="btn search_ticket_btn green_button" id="btnsearchtext" title="@Localize.T("Apply Filter")" onclick="RWSReportLoad(1, null)"><i class="fa fa-check" aria-hidden="true"></i>@Localize.T(" Apply")</button>
+            <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilter()">@Localize.T("Reset")</button>
+
+        </div>
+    </div>     
+    <div class="RWSTable">
+
+    </div>
+</div>
+

@@ -1,0 +1,402 @@
+﻿@*@model List<HS.Entities.Equipment>*@
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.Equipment
+
+@Styles.Render("~/styles/AddEquipmentServiceBundle")
+@Scripts.Render("~/scripts/AddEquipmentServiceBundle")
+<style>
+    .add_equipment_contents{
+        padding-left: 20px;
+        padding-right: 20px;
+        overflow-y: scroll; 
+    }
+    .footer-section {
+        background: #eceef1;
+        height: 50px;
+        position: fixed;
+        width: 100%;
+        bottom: 0;
+    }
+    .btn-save-Inventory-product {
+        float: right;
+        margin: 10px 20px 08px 30px;
+        background-color: #2ca01c;
+        color: #ffffff;
+        border-radius: 3px 0 0 3px;
+        -webkit-border-radius: 3px 0 0 3px;
+        -moz-border-radius: 3px 0 0 3px;
+        box-shadow: none;
+        border-right: none;
+        border: 1px solid #8d9096;
+        outline: none;
+        padding: 0 15px;
+        font-weight: 600;
+        min-width: 80px;
+        cursor: pointer;
+        font-size: 1.4rem;
+        height: 34px;
+        line-height: 34px;
+        overflow: visible;
+        text-align: center;
+    }
+    .padding-right-15{
+        padding-right:15px;
+    }
+</style>
+<script>
+
+    var EquipmentClassId = '@Model.EquipmentClassId';
+    var GlobalSettings = '@Html.Raw(Json.Encode(@ViewBag.GlobalSettings))';
+    GlobalSettings = JSON.parse(GlobalSettings);
+    //console.log(GlobalSettings)
+
+    $(".equipment-entity").each(function (index, element) {        
+        var isVisible = "true";
+        var position = "99";
+        var content = this;
+        var childContent = ($(this).children('.form-control'));
+        if (childContent.length == 0) {
+            console.log(["child content length ", childContent.length, content])
+        }
+        $(childContent).each(function () {
+            var entity_id = $(this).attr("id");
+            $.each(GlobalSettings, function (id, value) {
+             //   console.log(entity_id.toLocaleLowerCase(), value.SearchKey.toLowerCase())
+                if (entity_id.toLowerCase() == value.SearchKey.toLowerCase()) {
+                    isVisible = value.Value.toLowerCase();
+                    position = value.OrderBy;
+                }
+            });         
+        });
+        if (isVisible == 'false') {
+            $(this).addClass("hidden");
+        }    
+        if (position != "99") {
+            $(this).attr("order", position);      
+        }        
+    });
+
+    function sortNumber(a, b) {
+        return a - b;
+    }
+
+    var pos = [];
+    $('[order]').each(function (index, element) {
+        pos.push(parseInt($(this).attr("order")));
+    });
+    pos.sort(sortNumber);
+    for (var i = pos.length; i > 0; i--) {
+        var id = '[order=' + (pos[i-1]) + ']';
+        $(id).prependTo("#equipment-content");
+    }    
+
+    var Asofdatepicker;
+
+    var saveNonInventory = function () { 
+        var url = domainurl + "/Inventory/AddInventoryEquipment/";
+        var param = JSON.stringify({
+            id: $("#Id").val(),
+            name: $("#Name").val(),
+            SKU: $("#SKU").val(),
+            EquipmentTypeId: $("#EquipmentTypeId").val(),
+            StrAsOfDate: $("#AsOfDate").val(),
+            reorderpoint: $("#reorderpoint").val(),
+            Cost: $("#Cost").val(),
+            ManufacturerId: $("#ManufacturerId").val(),
+            SupplierCost: $("#SupplierCost").val(),
+            SupplierId: $("#SupplierId").val(),
+            CreatedDate: $("#CreatedDate").val(),
+            CompanyId: $("#CompanyId").val(),
+            EquipmentId: $("#EquipmentId").val(),
+            EquipmentClassId: EquipmentClassId,
+            IsActive: $("#IsActive").val(),
+            Retail: $("#Retail").val(),
+            QtyOnHand: $("#QtyOnHand").val(),
+            Comments: $("#Comments").val(),
+            IsKit: $("#IsKit").is(':checked'),
+            RepCost: $("#RepCost").val(),
+            RackNo: $("#RackNo").val()
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                //OpenRightToLeftLgModal();
+                //parent.LoadEquipmentList();
+                window.location.reload();
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+
+    $(document).ready(function () {
+
+        Asofdatepicker = new Pikaday({ format: 'MM/DD/YYYY', field: $('#AsOfDate')[0] });
+        $(".add_equipment_contents").height(window.innerHeight - 50);
+
+        $("#saveProduct").click(function () {
+            saveNonInventory();
+        });
+
+    });
+</script>
+
+<div class="container @(Model.Id > 0 ? "hidden" : "") AddEquipmentContainer">
+    <div class="row custom-bottom-style bottom-padding-15p">
+        <div class="col-md-12">
+            <h3>@Localize.T("Equipment/Service Information")</h3>
+            <div class="custom-sub-hearder">
+                @Localize.T("Select a type : ")
+            </div>
+        </div>
+    </div>
+    <div class="row custom-bottom-style add-equipments">
+        <div class="inventory-type-div">
+            <div class="inventory-type-img-container">
+                <span class="type-icon">
+                    <img class="" src="~/Content/img/inventory.png" />
+                </span>
+            </div>
+            <div class="inventory-type-title-container">
+                <div class="sub-title">
+                    @Localize.T("Inventory")
+                </div>
+                <div>
+                    @Localize.T("Equipment you buy and/or sell and that you track quantities of.")
+                </div>
+            </div>
+        </div>
+    </div>
+    @*<div class="row custom-bottom-style add-nonInventory">
+        <div class="inventory-type-div">
+            <div class="inventory-type-img-container">
+                <span class="type-icon">
+                    <img class="" src="~/Content/img/inventory.png" />
+                </span>
+            </div>
+            <div class="inventory-type-title-container">
+                <div class="sub-title">
+                    @Localize.T("Non-Inventory")
+                </div>
+                <div>
+                    @Localize.T("Equipment you buy and/or sell and that you track quantities of.")
+                </div>
+            </div>
+        </div>
+    </div>*@
+    <div class="row custom-bottom-style add-services">
+        <div class="inventory-type-div">
+            <div class="inventory-type-img-container">
+                <span class="type-icon">
+                    <img class="padding-15p" src="~/Content/img/service.png" />
+                </span>
+            </div>
+            <div class="inventory-type-title-container">
+                <div class="sub-title">
+                    @Localize.T("Service")
+                </div>
+                <div>
+                    @Localize.T("Services that you provide to customers, for example, landscaping or tax preparation services.")
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="addequipment_div @(Model.Id == 0 ? "hidden" : "")">
+    <div class="hidden">
+        @Html.HiddenFor(x => x.Id, new { id = "Id" })
+        @Html.HiddenFor(x => x.CreatedDate, new { id = "CreatedDate" })
+        @Html.HiddenFor(x => x.CompanyId, new { id = "CompanyId" })
+        @Html.HiddenFor(x => x.EquipmentId, new { id = "EquipmentId" })
+        @Html.HiddenFor(x => x.IsActive, new { id = "IsActive" })
+    </div>
+    <div class="add_equipment_contents">
+        <div class="header-title custom-padding header_back">
+            <h3>@Localize.T("Equipment/Service information")</h3>
+        </div> 
+        <div class="drawer-content-title custom-padding">
+            <div class="row">
+                <div class="col-md-6">
+                    <span>@Localize.T("Type"):</span>
+                    <span class="EquipmentClass">@{
+                        if (Model.EquipmentClassId == 1)
+                        {
+                            <span>Inventory</span>
+                        }
+                        else if (Model.EquipmentClassId == 2)
+                        {
+                            <span>Non-Inventory</span>
+                        }
+                        else if (Model.EquipmentClassId == 3)
+                        {
+                            <span>Service</span>
+                        }
+                    }</span>
+                </div>
+                <div class="col-md-6"> 
+                    <span class="cus-anchor change_type">@Localize.T("Change Type")</span> 
+                </div>
+            </div>
+        </div>
+
+        <div class="content-details" id="equipment-content">
+
+            @*<div class="custom-border-top">
+                <div class="form-group clearfix equipment-entity">
+                    <span class="span-style">@Localize.T("Name")<span class="red">*</span></span>
+                    @Html.TextBoxFor(x => x.Name, new { @class = "form-control required-field", placeholder = "Name", datarequired = "true" })
+                    <label rel="Name" class="label hidden red position-absolute">*@Localize.T("Name Required")</label>
+                </div>
+
+                <div class="form-group clearfix equipment-entity">
+                    <span class="span-style">@Localize.T("SKU")</span>
+                    @Html.TextBoxFor(x => x.SKU, new { @class = "form-control", placeholder = "SKU" })
+                </div>
+                <div class="form-group clearfix equipment-entity">
+                    <span class="span-style">@Localize.T("Description")</span>
+                    @Html.TextAreaFor(x => x.Comments, new { @class = "form-control", id = "Comments", placeholder = "Product description", style = "height:unset;" })
+                    @*<textarea style="height:unset;" class="form-control" id="Comments" name="Comments" placeholder="Product description" rows="2">@Model.Comments</textarea>*@
+                </div>
+
+                <div class="form-group clearfix equipment-entity">
+                    <span class="span-style">@Localize.T("Category")<span class="red">*</span></span>
+                    @Html.DropDownListFor(x => x.EquipmentTypeId, (List<SelectListItem>)ViewBag.EquipmentTypeList, new { @class = "form-control", datarequired = "true" })
+                    <label rel="EquipmentTypeId" class="label hidden red position-absolute">*@Localize.T("Please select one")</label>
+                </div>
+                @*<div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Product Image")</span>
+                <button class="btn" id="UploadProductPic">@Localize.T("Upload")</button>
+            </div>*@
+            @*</div>*@
+
+
+
+
+
+
+            @*<div class="custom-padding custom-border-top padding-top-10p">*@
+                @*<div class="form-group clearfix">
+                <span class="span-style width-50p padding-top-7p">@Localize.T("Initial Quantity On Hand ")</span>
+                @Html.TextBoxFor(x => x.QtyOnHand, new { @class = "form-control width-40p required-field", id = "QtyOnHand", @type = "number" })
+            </div>*@
+
+                <div class="form-group clearfix equipment-entity">
+                    <span class="span-style width-50p padding-top-7p">@Localize.T("As Of Date")</span>
+                    @Html.TextBoxFor(x => x.AsOfDate, "{0:MM/dd/yy}", new { @class = "form-control width-40p", placeholder = "As Of Date", id = "AsOfDate", @readonly = "readonly" })
+                </div>
+
+                <div class="form-group clearfix equipment-entity">
+                    <span class="span-style width-50p padding-top-7p">@Localize.T("Reorder Point ")</span>
+                    @Html.TextBoxFor(x => x.reorderpoint, new { @class = "form-control width-40p", id = "reorderpoint", @type = "number" })
+                </div>
+            @*</div>*@
+
+
+
+
+
+            @*<div class="custom-border-top">*@
+                <div class="form-group clearfix">
+                    <span class="span-style">@Localize.T("Purchasing information")</span>
+                </div>
+
+                @*<div class="form-group clearfix">*@
+                    <div class="form-group clearfix width-40p padding-right-15 equipment-entity">
+                        <span class="span-style">@Localize.T("Wholesale Price")<span class="span-valid">@Localize.T("*")</span></span>
+                        @Html.TextBoxFor(x => x.SupplierCost, new { @class = "form-control required-field", placeholder = "Purchasing Cost", id = "SupplierCost", @type = "number" })
+                    </div>
+                    <div class="form-group clearfix width-40p equipment-entity">
+                        <span class="span-style">@Localize.T("Wholeseller/Distributor")<span class="span-valid">@Localize.T("*")</span></span>
+                        @Html.DropDownListFor(x => x.SupplierId, (List<SelectListItem>)ViewBag.SupplierList, new { @class = "form-control", id = "SupplierId", placeholder = "Supplier List", })
+                    </div>
+                @*</div>*@
+            @*</div>*@
+
+
+
+            @*<div class="custom-border-top equipment-entity">*@
+                <div class="form-group clearfix equipment-entity">
+                    <span class="span-style">@Localize.T("Retail Price")</span>
+                    @Html.TextBoxFor(x => x.Retail, new { @class = "form-control required-field", placeholder = "Purchasing Cost", datarequired = "true", @type = "number" })
+                    <label rel="Retail" class="label hidden red position-absolute">*@Localize.T("Retail Price Required")</label>
+                </div>
+            @*</div>*@
+
+            @*<div class="custom-border-top ">*@
+                <div class="form-group clearfix equipment-entity checkbox_add_equipment_service">
+
+                   
+                    @{
+                    bool checkedData = (Model.IsKit.HasValue) ? Model.IsKit.Value : false;
+                    }
+                    <label class="label-cbx">
+                        <input id="IsCheckVal" type="checkbox" class="form-control invisible" @((checkedData == true) ? "checked" : "") />
+                        <div class="checkbox">
+                            <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                <polyline points="4 11 8 15 16 6"></polyline>
+                            </svg>
+                        </div>
+                    </label>
+                    <label rel="IsKit" class="label hidden red position-absolute">*@Localize.T("Is Kit")</label>
+                    <div class="span-style">@Localize.T("Is Kit")</div>
+                </div>
+            @*</div>*@
+
+            @*<div class="custom-border-top equipment-entity">*@
+                <div class="form-group clearfix equipment-entity">
+                    <span class="span-style">@Localize.T("Rep Cost")</span>
+                    @Html.TextBoxFor(x => x.RepCost, new { @class = "form-control", placeholder = "Rep Cost", @type = "number" })
+                    <label rel="RepCost" class="label hidden red position-absolute">*@Localize.T("Rep Cost")</label>
+                </div>
+            @*</div>*@
+
+            @*<div class="custom-border-top equipment-entity">*@
+                <div class="form-group clearfix equipment-entity">
+                    <span class="span-style">@Localize.T("Rack No")</span>
+                    @Html.TextBoxFor(x => x.RackNo, new { @class = "form-control", placeholder = "Rack No" })
+                    <label rel="RackNo" class="label hidden red position-absolute">*@Localize.T("Rack No")</label>
+                </div>
+            @*</div>*@
+
+        </div>
+
+    </div>
+    <div class="footer-section">
+        <div class="footer">
+            <div class="save-Inventory-product">
+                <button class="btn-save-Inventory-product" id="saveProduct">@Localize.T("Save")</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+@*<div class="show-equipment-add-div">
+
+</div>
+
+<div class="show-non-inventory-div">
+
+</div>
+
+<div class="show-service-add-div">
+
+</div>*@
+
+
+
+
+
+

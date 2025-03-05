@@ -1,0 +1,270 @@
+﻿@{
+    Layout = null;
+
+}
+@model HS.Entities.ServiceDetailInfoView
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<link href="~/Content/Css/Lead/SmartServicePartialNew.css" rel="stylesheet" />
+<script>
+    var SelectedServiceId = '@Model.ServiceId.ToString()';
+    var ShowManufacturer = @Model.ShowManufacturer.ToString().ToLower();
+    var ShowLocation= @Model.ShowLocation.ToString().ToLower();
+    var ShowType= @Model.ShowType.ToString().ToLower();
+    var ShowModel= @Model.ShowModel.ToString().ToLower();
+    var ShowFinish= @Model.ShowFinish.ToString().ToLower();
+    var ShowCapacity= @Model.ShowCapacity.ToString().ToLower();
+
+    var MatchedEquipmentCount = 0;
+    
+
+
+    var OptionShowList = [];
+    if(ShowManufacturer){
+        OptionShowList.push({Name: "Manufacturer",IsView:false,Id:1});
+    }
+    if(ShowLocation){
+        OptionShowList.push({Name: "Location",IsView:false,Id:2});
+    }
+    if(ShowType){
+        OptionShowList.push({Name: "Type",IsView:false,Id:3});
+    }
+    if(ShowModel){
+        OptionShowList.push({Name: "Model",IsView:false,Id:4});
+    }
+    if(ShowFinish){
+        OptionShowList.push({Name: "Finish",IsView:false,Id:5});
+    }
+    if(ShowCapacity){
+        OptionShowList.push({Name: "Capacity",IsView:false,Id:6});
+    }
+
+    var ShowServiceOption =function(OptionName,DataId){
+        console.log("hlww");
+        var url = domainurl + "/SmartLeads/GetOptionsListForService";
+        var Param = JSON.stringify({
+            ManufacturerId :$("#Select_Manufacturer").val(),
+            LocationId :$("#Select_Location").val(),
+            TypeId :$("#Select_Type").val(),
+            ModelId :$("#Select_Model").val(),
+            FinishId :$("#Select_Finish").val(),
+            CapacityId :$("#Select_Capacity").val(),
+            ServiceId : SelectedServiceId,
+            SelectedTypeName: OptionName
+        });
+        $.ajax({
+            type: "POST",
+            /*ajaxStart: $(".loader-div").show(),*/
+            url: url,
+            data: Param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    var OptionsList = "";
+                    for (let option of data.SelectData) { 
+                        OptionsList+="<option value='"+option.Value+"'>"+option.Text+"</option>";
+                    }
+                    $(".ServiceOptionSelect_"+DataId).html(OptionsList);
+                    MatchedEquipmentCount= data.MatchedEquipmentCount;
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var GetMatchEquipmentCount = function(){
+        var url = domainurl + "/SmartLeads/GetMatchedEquipmentCountForService";
+        var Param = JSON.stringify({
+            ManufacturerId :$("#Select_Manufacturer").val(),
+
+            LocationId :$("#Select_Location").val(),
+            Location :$("#Select_Location option:selected").text(),
+
+            TypeId :$("#Select_Type").val(),
+            Type:$("#Select_Type option:selected").text(),
+
+            ModelId :$("#Select_Model").val(),
+            Model:$("#Select_Model option:selected").text(),
+
+            FinishId :$("#Select_Finish").val(),
+            Finish:$("#Select_Finish option:selected").text(),
+
+            CapacityId :$("#Select_Capacity").val(),
+            Capacity:$("#Select_Capacity option:selected").text(),
+
+            ServiceId : SelectedServiceId,   
+        });
+        $.ajax({
+            type: "POST",
+            /*ajaxStart: $(".loader-div").show(),*/
+            url: url,
+            data: Param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) { 
+                    MatchedEquipmentCount= data.MatchedEquipmentCount;
+                    if (data.MatchedEquipmentCount > 0) { 
+
+                        OpenConfirmationMessageNew("",data.MatchedEquipmentCount + " equipment matched with this service, do you want to charge for the pieces of equipment?",
+                            function(){
+                                ChargeForFirstEquipment = true;
+                                AddServiceWithOptions();
+                            },
+                            function(){
+                                ChargeForFirstEquipment = false;
+                                AddServiceWithOptions();
+                            });
+                    }
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var InitiateServiceOption = function(SelectedId){
+        var LastRow = true;
+        for (let option of OptionShowList) { 
+            if (option.Id > SelectedId) {
+                $(".ServiceOption_"+option.Id).removeClass('hidden');
+                var DataName = $(".ServiceOptionSelect_"+option.Id).attr('data-name');
+                ShowServiceOption(DataName,option.Id);
+                LastRow =false;
+                break;
+            }
+        }
+        if(LastRow){
+            GetMatchEquipmentCount();
+        }
+    }
+    var HideAllOptionsAfterSelected = function(index){
+        console.log("index"+index);
+        for (let option of OptionShowList) { 
+            if (option.Id > index) {
+                $(".ServiceOption_"+option.Id).addClass('hidden');
+                $(".ServiceOptionSelect_"+option.Id).val('00000000-0000-0000-0000-000000000000');
+            }
+        }
+    }
+    $(document).ready(function(){
+        for (let option of OptionShowList) { 
+            $(".ServiceOption_"+option.Id).removeClass('hidden');
+            var DataName = $(".ServiceOptionSelect_"+option.Id).attr('data-name');
+            ShowServiceOption(DataName,option.Id);
+            break; 
+        }
+
+        $(".ServiceOptionSelect").change(function(e){
+            //ServiceDropdownValidation();
+            console.log("aysii");
+            var DataID = $(e.target).attr('data-id');
+            console.log("HideAllOptionsAfterSelected");
+            HideAllOptionsAfterSelected(DataID);
+            if($(e.target).val()!="00000000-0000-0000-0000-000000000000"){ 
+                if(DataID == 1){
+                    $(".manufacturerError").addClass("hidden");
+                }
+                else if(DataID == 2){
+                    $(".locationError").addClass("hidden");
+                }
+                else if(DataID == 3){
+                    $(".typeError").addClass("hidden");
+                }
+                else if(DataID == 4){
+                    $(".ModelError").addClass("hidden");
+                }
+                else if(DataID == 5){
+                    $(".finishError").addClass("hidden");
+                }
+                else if(DataID == 6){
+                    $(".capacityError").addClass("hidden");
+                }
+                InitiateServiceOption(DataID);
+            }else{
+                if(DataID == 1){
+                    $(".manufacturerError").removeClass("hidden");
+                }
+                else if(DataID == 2){
+                    $(".locationError").removeClass("hidden");
+                } 
+                
+                if(DataID == 3){
+                    $(".typeError").removeClass("hidden");
+                }
+                else if(DataID == 4){
+                    $(".ModelError").removeClass("hidden");
+                } 
+
+                if(DataID == 5){
+                    $(".finishError").removeClass("hidden");
+                }
+                else if(DataID == 6){
+                    $(".capacityError").removeClass("hidden");
+                } 
+            }
+        });
+        //$(".ServiceOption").change(function(item){
+        //    var DataId = $(this).attr('data-id');
+        //    HideAllOptionsAfterSelected(DataId);
+        //});
+    });
+
+</script>
+<div class="show_service_option_container">
+    @if (Model.ShowManufacturer)
+    {
+        <div class="ServiceOption ServiceOption_1 Option_Manufacturer hidden">
+            <div>@Localize.T("Manufacturer")</div>
+            <div><select data-id="1" class="ServiceOptionSelect ServiceOptionSelect_1 form-control" data-name="Manufacturer" id="Select_Manufacturer"></select></div>
+            <label class="manufacturerError errorMsg hidden">Please select a manufacturer</label>
+        </div>
+    }
+    @if (Model.ShowLocation)
+    {
+        <div class="ServiceOption ServiceOption_2 Option_Location hidden">
+            <div>@Localize.T("Location")</div>
+            <div><select data-id="2" class="ServiceOptionSelect ServiceOptionSelect_2 form-control" data-name="Location" id="Select_Location"></select></div>
+            <label class="locationError errorMsg hidden">Please select a location</label>
+        </div>
+    }
+    @if (Model.ShowType)
+    {
+        <div class="ServiceOption ServiceOption_3 Option_Type hidden">
+            <div>@Localize.T("Type")</div>
+            <div><select data-id="3" class="ServiceOptionSelect ServiceOptionSelect_3 form-control" data-name="Type" id="Select_Type"></select></div>
+            <label class="typeError errorMsg hidden">Please select a site type</label>
+        </div>
+    }
+    @if (Model.ShowModel)
+    {
+        <div class="ServiceOption ServiceOption_4 Option_Model hidden">
+            <div>@Localize.T("Model")</div>
+            <div><select data-id="4" class="ServiceOptionSelect ServiceOptionSelect_4 form-control" data-name="Model" id="Select_Model"></select></div>
+            <label class="ModelError errorMsg hidden">Please select a model</label>
+      
+        </div>
+    }
+    @if (Model.ShowFinish)
+    {
+        <div class="ServiceOption ServiceOption_5 Option_Finish hidden">
+            <div>@Localize.T("Finish")</div>
+            <div><select data-id="5" class="ServiceOptionSelect ServiceOptionSelect_5 form-control" data-name="Finish" id="Select_Finish"></select></div>
+            <label class="finishError errorMsg hidden">Please select a finish</label>
+        </div>
+    }
+    @if (Model.ShowCapacity)
+    {
+        <div class="ServiceOption ServiceOption_6 Option_Capacity hidden">
+            <div>@Localize.T("Capacity")</div>
+            <div><select data-id="6" class="ServiceOptionSelect ServiceOptionSelect_6 form-control" data-name="Capacity" id="Select_Capacity"></select></div>
+            <label class="capacityError errorMsg hidden">Please select a capacity</label>
+        </div>
+    }
+</div>
+
+
+

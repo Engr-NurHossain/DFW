@@ -1,0 +1,185 @@
+﻿
+@model HS.Entities.PermissionGroupWithUserList
+
+@{
+    Layout = null;
+    int a = 1;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@Styles.Render("~/styles/DataTableBundles")
+@Styles.Render("~/styles/UserManagement")
+@Scripts.Render("~/scripts/DataTableBundles")
+@Scripts.Render("~/scripts/UserGroup")
+
+<script>
+    var DataTablePageSize = 50;
+    var selectedDeleteId = 0;
+    var UsergroupDelete = function () {
+        var delitem = selectedDeleteId;
+        $.ajax({
+            url: domainurl + "/UserMgmt/DeleteUserGroup",
+            data: { id: delitem },
+            type: "Post",
+            dataType: "Json",
+            success: function (result) {
+                if (result) {
+                    parent.LoadUserGroup(true);
+                }
+            },
+
+            error: function () {
+            }
+
+        });
+
+    }
+    var EditUserGroup = function (id) {
+        OpenRightToLeftModal(domainurl + "/UserMgmt/AddUserGroup?id=" + id);
+    }
+    var EditChangeUserGroupPermission = function (id) {
+        OpenRightToLeftModal(domainurl + "/UserMgmt/PermissionGroupList?id=" + id);
+    }
+    var AddClonePermission = function (id) {
+        OpenRightToLeftModal(domainurl + "/UserMgmt/AddClonePermission?id=" + id);
+    }
+    var DeleteUserGroup = function (id, userCount) {
+        if (typeof (userCount) != 'undefined' && userCount > 0) {
+            OpenErrorMessageNew("", "This group already contains " + userCount + " user(s). This cannot be deleted.")
+        } else {
+            selectedDeleteId = id;
+            OpenConfirmationMessageNew("Confirm?", "Are you sure, you want to delete this?", UsergroupDelete);
+        }
+    }
+    var ShowTag = function (id, item) {
+        $(".tooltipmsg_" + id).attr("data-original-title", "");
+        $(".tooltipmsg_" + id).attr("data-original-title", item);
+    }
+    $(document).ready(function () {
+        //$('[data-toggle="tooltip"]').tooltip();
+        parent.$('.close').click(function () {
+            parent.$(".modal-body").html('');
+        })
+        var table = $('#tblAccFee').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        $(".LoaderWorkingDiv").hide();
+        $(".AddActvation").click(function () {
+            OpenRightToLeftModal(domainurl + "/UserMgmt/AddUserGroup");
+        })
+        $('#tblAccFee tbody').on('click', 'tr', function () {
+
+            if ($(this).hasClass('selected')) {
+                $(this).removeClass('selected');
+            }
+            else {
+                table.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+            }
+        });
+
+        $(".srch-term-acc").keyup(function () {
+            $("#tblAccFee_filter input").val($(".srch-term-acc").val());
+            $("#tblAccFee_filter input").trigger('keyup');
+        });
+    });
+</script>
+
+<div class="page-wrap user_group_container">
+    <div class="container-fluid">
+        <div class="user_group_header">@Localize.T("Manage Groups")</div>
+        <div class="left_div">
+            @*"searchbardiv" class removed*@
+            <div class="input-group add-on">
+                @*<input class="form-control srch-term-acc" placeholder="Find a user group" name="srch-term-acc" @*id="srch-term-acc" type="text">*@
+                <input class="form-control srch-term-acc" placeholder="Find a group" name="srch-term-acc" @*id="srch-term"*@ type="text">
+                <div class="input-group-btn">
+                    <button class="btn custom-btn green_button green_button" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+                </div>
+            </div>
+        </div>
+        <div class="right_div">
+            <button class="AddActvation"><i class="fa fa-plus-circle" aria-hidden="true"></i>@Localize.T(" New")</button>
+        </div>
+        <div class="custom-table user_group_table_container">
+            <table class="display user_group_table" id="tblAccFee">
+                <thead class="table-head-border">
+                    <tr>
+                        <th class="thead-th-style sorting">
+                            @Localize.T("Name")
+                        </th>
+                        <th class="thead-th-style sorting">
+                            @Localize.T("Group Permission")
+                        </th>
+                        <th class="thead-th-style sorting ">
+                            @Localize.T("Actions")
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.PermissionGroupList)
+                    {
+                        <tr class="tr-style">
+                            <td onmouseover="ShowTag(@item.Id,'@item.Tag')" class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Name")</div>
+                                <div>
+                                    <a href="javascript:void(0)" onclick="EditUserGroup(@item.Id)" class="item-edit-acc name-anchor-style green-tooltip tooltipmsg_@item.Id" data-id="@item.Id" data-placement="right" data-toggle="tooltip">
+                                        @item.Name (<span title="Active Users">@item.UserCount</span>/<span title="Total Users">@item.TotalUserCount</span>)
+                                    </a>
+                                    @if (item.UserCount > 0)
+                                    {
+                                <span class="group_list_count" title="Show user details">
+                                    <a><i class="fa fa-search-plus" id="@a" onclick="ShowDetailsPopup(event)" aria-hidden="true"></i></a>
+                                    <span id="popup_@a" class="popup_cl hidden">
+                                        <span class="calerrorpopupclose" onclick="HidePopupDetails()">&times;</span>
+
+                                        @foreach (var itemUser in item.UserList)
+                                        {
+                                            <span>
+
+                                                <a target="_blank" href="/UserInformation?Id=@itemUser.Id" class="contactname">@itemUser.ContactName</a>
+
+                                            </span>
+                                        }
+                                    </span>
+                                </span>
+
+                                    }
+                                    
+                                    @* <span> + data[i].TicketId + '</span><br /><span><a href="javascript:void(0)" class="bothmargin-5px" data-details="' + data[i].PopupDetails + '" onclick="ShowDetailsPopup(event)" title="Details Information" id="' + data[i].TicketId + '"><i class="fa fa-search-plus" aria-hidden="true"></i></a></span><br /><span>' + data[i].TicketAddress + '</span><br /><span>' + data[i].TicketTypeDisplayText + '</span><br /><span>' + data[i].Status + '</span>
+                                    *@
+                                </div>
+                            </td>
+                            <td class="table-body-td-style" valign="top">
+                                <div>@Localize.T("Group Permission")</div>
+                                <div>
+                                    <a href="javascript:void(0)" onclick="EditChangeUserGroupPermission(@item.Id)" class="item-edit-acc name-anchor-style" data-id="@item.Id">
+                                        Change
+                                    </a>
+                                </div>
+                            </td>
+                            <td class="table-body-td" valign="top">
+                                <div>@Localize.T("Actions")</div>
+                                <div>
+                                    <a href="javascript:void(0)" onclick="AddClonePermission(@item.Id)" class="item-edit-acc name-anchor-style" data-id="@item.Id">
+                                        <i class="fa fa-clone"></i>
+                                        @Localize.T("Clone") /
+                                    </a>
+                                    <a href="javascript:void(0)" class="item-delete-panel-acc information_style_device " onclick="DeleteUserGroup(@item.Id,@item.UserCount)" data-id="@item.Id" title="@Localize.T("Delete")">
+                                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        a++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

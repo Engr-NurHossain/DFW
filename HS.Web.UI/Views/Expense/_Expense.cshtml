@@ -1,0 +1,188 @@
+﻿@{
+    ViewBag.Title = "Expense";
+    Layout = null;
+}
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<link href="~/Content/Css/Expense/Expense.css" rel="stylesheet" />
+<script>
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+
+    var OpenedTab = 1;
+    var tab = '@ViewBag.tab';
+    var RemoveAllActive = function () {
+        $("ul.expenses_menu li").removeClass("active");
+        $(".expenses_menu_content .tab-pane").removeClass("active");
+    }
+
+    var my_date_format = function (input) {
+        console.log(input + " r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+
+    var OpenExpBillingTab = function () {
+        RemoveAllActive();
+        $(".BillingTab").addClass("active");
+        $("#billing").addClass("active");
+        $("#billing").load(domainurl + "/Expense/VendorBillingPartial");
+        
+    }
+
+    var OpenExpPaymentTab = function (order) {
+        RemoveAllActive();
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+        $(".PaymentTab").addClass("active");
+        $("#expense_payment").addClass("active");
+        $("#expense_payment").html(TabsLoaderText);
+
+        $("#expense_payment").load(domainurl + "/Expense/BillPaymentPartial", { Start: StartDateVal, End: EndDateVal,Order: order });
+    }
+    var OpenExpExpenseTab = function () {
+        RemoveAllActive();
+        $(".ExpenseTab").addClass("active");
+        $("#Expense").addClass("active");
+        $("#Expense").html(TabsLoaderText);
+
+        $("#Expense").load(domainurl + "/Expense/ShowExpensePartial");
+    }
+    var OpenExpVendorsTab = function () {
+        RemoveAllActive();
+        $(".VendorsTab").addClass("active");
+        $("#expense_vendor_list").addClass("active");
+
+        $("#expense_vendor_list").load(domainurl + "/Supplier/SupplierPertial");
+    }
+    var OpenExpPayrollTab = function () {
+        RemoveAllActive();
+        $(".PayrollTab").addClass("active");
+    }
+    var OpenExpAccountsPayableTab = function (order) {
+        RemoveAllActive();
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+        $(".AccountsPayableTab").addClass("active");
+        $("#Payablebill").addClass("active");
+        $("#Payablebill").html(TabsLoaderText);
+
+        $("#Payablebill").load(domainurl + "/Expense/BillAccountsPayable", { Start: StartDateVal, End: EndDateVal , Order: order });
+    }
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide();
+        OpenExpBillingTab();
+
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+
+        if (StartDate != "" && EndDate != "") {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+
+        $("#expense_vendor_list_tab").click(function () {
+            OpenedTab = 2;
+        });
+        if (tab != "" && tab != null) { 
+            if (tab == "4") {
+                OpenExpVendorsTab();
+            }
+        } else {
+            if (top.location.hash != '') {
+                if ($("[tabname='" + top.location.hash + "']").length > 0) {
+
+                    TabPopStateCheck = true;
+                    $("[tabname='" + top.location.hash + "']").click();
+                }
+            }
+        }
+
+        $('ul.expenses_menu li a').click(function (e) {
+            if (!TabPopStateCheck) {
+                window.history.pushState({ urlPath: window.location.pathname }, "", $(e.target).attr('tabname'));
+            }
+            TabPopStateCheck = false;
+        });
+
+        $(".btn-apply-Datefilter").click(function () {
+            if ($(".PaymentTab").hasClass("active") == true) {
+                
+                OpenExpPaymentTab();
+            }
+            if ($(".AccountsPayableTab").hasClass("active") == true) {
+
+                OpenExpAccountsPayableTab();
+            }
+            
+        })
+
+    });
+
+    
+
+</script>
+ 
+<div class="container-fluid expenses_container">
+   
+    <div class="row">
+    <div class="col-xs-12 expenses_title">@Localize.T("Wholesalers/Distributors")
+        <div class="dateviewed">
+            @{Html.RenderAction("DateViewPartial", "Customer");}
+        </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <ul class="nav nav-tabs expenses_menu">
+                <li class="BillingTab">
+                    <a tabname="#Billing" data-target="#billing" data-toggle="tab" onclick="OpenExpBillingTab()">@Localize.T("Billing")</a>
+                </li>
+                <li class="PaymentTab">
+                    <a tabname="#Payment" data-target="#expense_payment" data-toggle="tab" onclick="OpenExpPaymentTab()">@Localize.T("Payment")</a>
+                </li>
+                <li class="ExpenseTab">
+                    <a tabname="#Expense" data-target="#Expense" data-toggle="tab" onclick="OpenExpExpenseTab()">@Localize.T("Expense")</a>
+                </li>
+                <li class="VendorsTab">
+                    <a tabname="#Vendors" data-target="#expense_vendor_list" id="expense_vendor_list_tab" data-toggle="tab" onclick="OpenExpVendorsTab()">@Localize.T("Vendors")</a>
+                </li>
+                @*<li class="PayrollTab">
+                    <a tabname="#Payroll" data-target="#Payrollbill" data-toggle="tab" onclick="OpenExpPayrollTab()">@Localize.T("Payroll")</a>
+                </li>*@
+                <li class="AccountsPayableTab">
+                    <a tabname="#AccountsPayable" data-target="#Payablebill" data-toggle="tab" onclick="OpenExpAccountsPayableTab()">@Localize.T("Accounts Payable")</a>
+                </li>
+            </ul>
+
+            <div class="tab-content expenses_menu_content">
+                <div class="tab-pane active" id="billing">
+                    <div class="billingExpenseContents"></div>
+                </div>
+                <div id="Expense" class="tab-pane"></div>
+                <div class="tab-pane expense_vendor_list" id="expense_vendor_list"></div> 
+                <div id="Payrollbill" class="tab-pane"></div>
+                <div id="Payablebill" class="tab-pane"></div>
+                <div id="expense_payment" class="tab-pane"></div>
+            </div>
+        </div>
+    </div>
+</div>

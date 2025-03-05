@@ -1,0 +1,1429 @@
+﻿
+@model  HS.Entities.FinalGrid
+
+@{
+    Layout = null;
+    int rowcount = Model.GridGroupSetting.Count;
+    float width = (100 - rowcount) / rowcount;
+
+}
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using AppConfig = HS.Framework.Utils.AppConfig;
+<style>
+    .frequent {
+            padding: 0px 5px;
+    color: #fff;
+    background-color: #2ca01c;
+    margin-left: 5px;
+    font-size: 8px;
+    position: absolute;
+    border: 1px solid #127704;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+    /* width: 65px; */
+    float: left;
+    height: 15px;
+    letter-spacing: 1px;
+    line-height: 15px;
+    right: 10px;
+    top: 1px;
+        }
+</style>
+<script type="text/x-handlebars-template" id="hbCustomerTemplate">
+
+    <div class="filter-customer-container">
+        <div class="header-content">
+
+            <div class="custom-table">
+                <div class="row less_padding table-head">
+                    <div class="col-md-1 thead-th-style col_width_big custom_center customer_list_checkbox">
+                        <label for="IsCheckVal1" class="label-cbx">
+                            <input id="IsCheckVal1" type="checkbox" style="position:relative;" class="cus-checkBox invisible " autocomplete="off">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                    </div>
+                    @foreach (var item in Model.GridGroupSetting)
+                    {
+                        <div class="clfn_table_width thead-th-style col_width_big custom_center customer-header" data-header="@item.SelectedColumn" style="width:@(width)% !important;float:left !important;">
+                            <div class="customer-header-text">@Localize.T(item.SelectedColumn)</div>
+                            <div class="customer-header-icon"><i class="fa fa-angle-up icon_sort_customer" data-val="ascending/@item.SelectedColumn.ToLower().Replace(" "," ")"></i><i class="fa fa-angle-down icon_sort_customer" data-val="descending/@item.SelectedColumn.ToLower().Replace(" "," ")"></i></div>
+                        </div>
+                    }
+                </div>
+            </div>
+            {{#CustomerList}}
+            <div class="tbody-container">
+                <div class="row less_padding tr-style Export_excel_customer " data-id="">
+                    <div class="table-body-td-style col-md-1 col_width_big customer_list_checkbox" valign="top">
+                        <label for="pp_{{Id}}" class="label-cbx">
+                            <input id="pp_{{Id}}" idval="{{Id}}" type="checkbox" class="CheckItemsCustomer invisible" value="">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                    </div>
+                    @foreach (var Cols in Model.GridGroupSetting)
+                    {
+                        List<HS.Entities.GridSetting>
+                            tempGridSettings = Model.GridSetting.Where(x => x.ColumnGroup == Cols.SelectedColumn).ToList();
+                        var SelectStreetType = Model.GridSetting.Where(x => x.SelectedColumn == Localize.T("StreetType")).FirstOrDefault();
+                        var SelectAppartment = Model.GridSetting.Where(x => Localize.T(x.SelectedColumn) == Localize.T("Appartment")).FirstOrDefault();
+                <div class="clfn_table_width table-body-td-style col_width_big" valign="top" data-header="@Cols.SelectedColumn" style="width:@(width)% !important;float:left !important;position:relative;">
+                    <div class="cl_heading_for_mobile">@Localize.T(Cols.SelectedColumn)</div>
+
+                    @{
+                        foreach (var cellcol in tempGridSettings)
+                        {
+                            if (Localize.T(cellcol.SelectedColumn) == Localize.T("DisplayName"))
+                            {
+
+                                <div class="content_for_mobile">
+                                    <a href="@(AppConfig.DomainSitePath)/Customer/Customerdetail/?id={{Id}}" class="name-anchor-style leads-name-anchor-style" onclick="ShowCustomerDetail(this , event)" id="{{Id}}" id-val="{{CustomerId}}">
+                                        <span href="@(AppConfig.DomainSitePath)/Customer/Customerdetail/?id={{Id}}" title="{{Note}}">{{DisplayName}}</span>
+                                    </a>
+                                </div>
+                                <text>
+                                    {{#xif "this.OrderCount > 0 && this.OrderCount >= this.FrequentCusLimit"}}
+                                    <div class="frequent">
+                                        Frequent
+                                    </div>
+                                    {{/xif}}
+                                </text>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BusinessName"))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>{{BusinessName}}</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Address"))
+                            {
+                                <text>
+                                    {{#xif "this.Street!='' && this.Street!=null"}}
+                                    <span class="content_for_mobile">{{Street}}</span>
+                                    <br />
+                                    {{/xif}}
+
+                                    {{#xif "this.ZipCode!=''  && this.ZipCode!=null"}}
+                                    <span class="content_for_mobile">{{City}}, {{State}} {{ZipCode}} </span>
+                                    {{/xif}}
+
+                                </text>
+
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PlatformId"))
+                            {
+                                <text>
+                                    {{#xif "this.PlatformId!='' && this.PlatformId!='-1'  && this.PlatformId!=null"}}
+                                    @if (cellcol.IsCustomerLabel == true)
+                                    {
+                                        <span class="fllp_sp_head">@Localize.T("Platform ID"):</span>
+                                    }
+                                    <span class="content_for_mobile">{{PlatformId}}</span>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if ((Localize.T(cellcol.SelectedColumn) == Localize.T("LeadSource") || Localize.T(cellcol.SelectedColumn) == Localize.T("Lead Source")))
+                            {
+                                <text>
+                                    {{#xif "this.LeadSource!='' && this.LeadSource!='-1'  && this.LeadSource!=null"}}
+                                    <div class="heading_for_mobile">@Localize.T("Lead Source")</div>
+                                    <span class="content_for_mobile">
+                                        @if (cellcol.IsCustomerLabel == true)
+                                        {
+                                            @Localize.T("Lead Source: ")
+                                        }
+                                        {{LeadSource}}
+                                    </span>
+                                    {{/xif}}
+                                </text>
+                            }
+                            else if ((Localize.T(cellcol.SelectedColumn) == Localize.T("LeadSourceType") || Localize.T(cellcol.SelectedColumn) == Localize.T("Lead Source Type")))
+                            {
+                                <text>
+                                    {{#xif "this.LeadSourceType!='' && this.LeadSourceType!='-1'  && this.LeadSourceType!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Lead Source Type: ")
+                                            }
+                                            {{LeadSourceType}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PrimaryPhone"))
+                            {
+                                <text>
+                                    {{#xif "this.PrimaryPhone!='' && this.PrimaryPhone!=null"}}
+                                    <div class="content_for_mobile"><i class="fa fa-phone"></i> {{PrimaryPhone}}</div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SecondaryPhone"))
+                            {
+                                <text>
+                                    {{#xif "this.SecondaryPhone!='' && this.SecondaryPhone!=null"}}
+                                    <div class="content_for_mobile"><i class="fa fa-mobile-phone"></i> {{SecondaryPhone}}</div>
+                                    {{/xif}}
+                                </text>
+                            }
+
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("County"))
+                            {
+                                <text>
+                                    {{#xif "this.County!='' && this.County!='-1'  && this.County!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("County: ")
+                                            }
+                                            {{County}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("EmailAddress"))
+                            {
+                                <text>
+                                    {{#xif "this.EmailAddress!='' && this.EmailAddress!='-1'  && this.EmailAddress!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span><i class="fa fa-envelope"></i> {{EmailAddress}}</span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ReferringCustomer"))
+                            {
+                                <text>
+                                    {{#xif "this.ReferringCustomer!='' && this.ReferringCustomer!='-1'  && this.ReferringCustomer!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Referring Customer: ")
+                                            }
+                                            {{ReferringCustomer}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("DateofBirth"))
+                            {
+                                <text>
+                                    {{#xif "this.DateofBirth!='' && this.DateofBirth!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Date of Birth: ")
+                                            }
+                                            {{formatDate DateofBirth}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("InstallDate"))
+                            {
+                                <text>
+                                    {{#xif "this.InstallDate!='' && this.InstallDate!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Install Date: ")
+                                            }
+                                            {{formatDate InstallDate}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SSN"))
+                            {
+                                <text>
+                                    {{#xif "this.SSN!=''  && this.SSN!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("SSN: ")
+                                            }
+                                            {{SSN}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Note"))
+                            {
+                                <text>
+                                    {{#xif "this.Note!=''  && this.SSN!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Note: ")
+                                            }
+                                            {{Note}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Id"))
+                            {
+                                <text>
+                                    {{#xif "this.DisplayName=='' || this.DisplayName==null || this.DisplayName==' '"}}
+
+                                    <a href="@(AppConfig.DomainSitePath)/Customer/Customerdetail/?id={{Id}}" class="name-anchor-style leads-name-anchor-style" onclick="ShowCustomerDetail(this , event)" id="{{Id}}" id-val="{{CustomerId}}">
+                                        <div class="content_for_mobile"><span href="@(AppConfig.DomainSitePath)/Customer/Customerdetail/?id={{Id}}"><b style="color:black;">@Localize.T("ID: ")</b> {{Id}}</span></div>
+                                    </a>
+
+                                    {{else}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                <b>@Localize.T("ID: ")</b>
+                                            }
+                                            {{Id}}
+                                        </span>
+                                    </div>
+
+                                    {{/xif}}
+
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CustomerNo"))
+                            {
+                                <text>
+                                    {{#xif "this.CustomerNo!=''  && this.CustomerNo!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                <b>@Localize.T("Acct: ")</b>
+                                            }
+                                            {{CustomerNo}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Title"))
+                            {
+                                <text>
+                                    {{#xif "this.Title!='' && this.Title!='-1'  && this.Title!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Title: ")
+                                            }
+                                            {{Title}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Type"))
+                            {
+                                <text>
+                                    {{#xif "this.Type!='' && this.Type!='-1' && this.Type!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Type: ")
+                                            }
+                                            {{Type}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CellNo"))
+                            {
+                                <text>
+                                    {{#xif "this.CellNo!='' && this.CellNo!=null"}}
+
+                                    <div class="content_for_mobile"><i class="fa fa-mobile-phone"></i> <span>{{CellNo}}</span></div>
+                                    {{/xif}}
+                                </text>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Fax"))
+                            {
+                                <text>
+                                    {{#xif "this.Fax!='' && this.Fax!=null"}}
+
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Fax: ")
+                                            }
+                                            {{Fax}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CallingTime"))
+                            {
+                                <text>
+                                    {{#xif "this.CallingTime!='' && this.CallingTime!='-1'  && this.CallingTime!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Calling Time")
+                                            }
+                                            {{CallingTime}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+                            }
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AccountNo"))
+                            {
+                                <text>
+                                    {{#xif "this.AccountNo!=''  && this.AccountNo!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Account No: ")
+                                            }
+                                            {{AccountNo}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CreditScore"))
+                            {
+                                <text>
+                                    {{#xif "this.CreditScore!='' && this.CreditScore!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Credit Score: ")
+                                            }
+                                            {{CreditScore}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CreditScoreValue"))
+                            {
+                                <text>
+                                    {{#xif "this.CreditScoreValue!='' && this.CreditScoreValue!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Credit Score Value: ")
+                                            }
+                                            {{CreditScoreValue}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("FundingCompany"))
+                            {
+                                <text>
+                                    {{#xif "this.FundingCompany!='' && this.FundingCompany!='-1' && this.FundingCompany!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Funding Company: ")
+                                            }
+                                            {{FundingCompany}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("MonthlyMonitoringFee"))
+                            {
+
+                                <text>
+                                    {{#xif "this.MonthlyMonitoringFee!='0' && this.MonthlyMonitoringFee!='' && this.MonthlyMonitoringFee!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Monitoring Fee: ")
+                                            }
+                                            ${{MonthlyMonitoringFee}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SalesDate"))
+                            {
+                                <text>
+                                    {{#xif "this.SalesDate!='' && this.SalesDate!=null "}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Sales Date: ")
+                                            }
+                                            {{formatDate SalesDate}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CutInDate"))
+                            {
+                                <text>
+                                    {{#xif "this.CutInDate!='' && this.CutInDate!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Cut In Date: ")
+                                            }
+                                            {{formatDate CutInDate}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("FundingDate"))
+                            {
+                                <text>
+                                    {{#xif "this.FundingDate!='' && this.FundingDate!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Funding Date: ")
+                                            }
+                                            {{formatDate FundingDate}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ReminderDate"))
+                            {
+                                <text>
+                                    {{#xif "this.ReminderDate!='' && this.ReminderDate!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Reminder Date: ")
+                                            }
+                                            {{formatDate ReminderDate}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillAmount"))
+                            {
+                                <text>
+                                    {{#xif "this.BillAmount!='' && this.BillAmount!='-1' && this.BillAmount!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Bill Amount: ")
+                                            }
+                                            {{BillAmount}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PaymentMethod"))
+                            {
+
+                                <text>
+                                    {{#xif "this.PaymentMethod!='-1' && this.PaymentMethod!='' && this.PaymentMethod!=null"}}
+                                    <span>
+                                        @if (cellcol.IsCustomerLabel == true)
+                                        {
+                                            @Localize.T("Payment Method: ")
+                                        }
+                                        {{PaymentMethod}}
+                                    </span>
+                                    {{/xif}}
+                                </text>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillCycle"))
+                            {
+                                <text>
+                                    {{#xif "this.BillCycle!='' && this.BillCycle!='-1' && this.BillCycle!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Bill Cycle: ")
+                                            }
+                                            {{BillCycle}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillDay"))
+                            {
+                                <text>
+                                    {{#xif "this.BillDay!='' && this.BillDay!='-1' && this.BillDay!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Bill Day: ")
+                                            }
+                                            {{BillDay}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillNotes"))
+                            {
+                                <text>
+                                    {{#xif "this.BillNotes!='' && this.BillNotes!='-1' && this.BillNotes!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Bill Notes: ")
+                                            }
+                                            {{BillNotes}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillTax"))
+                            {
+                                <text>
+                                    {{#xif BillTax}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Bill Tax: ")
+                                            }
+                                            @Localize.T("Yes")
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillOutStanding"))
+                            {
+                                <text>
+                                    {{#xif "this.BillOutStanding!='' && this.BillOutStanding!='-1' && this.BillOutStanding!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Bill OutStanding: ")
+                                            }
+                                            {{BillOutStanding}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Area"))
+                            {
+                                <text>
+                                    {{#xif "this.Area!='' && this.Area!='-1' && this.Area!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Area: ")
+                                            }
+                                            {{Area}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("MapscoNo"))
+                            {
+                                <text>
+                                    {{#xif "this.MapscoNo!='' && this.MapscoNo!='-1' && this.MapscoNo!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Mapsco Number: ")
+                                            }
+                                            {{MapscoNo}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SecondCustomerNo"))
+                            {
+                                <text>
+                                    {{#xif "this.SecondCustomerNo!='' && this.SecondCustomerNo!='-1' && this.SecondCustomerNo!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Second Customer No: ")
+                                            }
+                                            {{SecondCustomerNo}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AdditionalCustomerNo"))
+                            {
+                                <text>
+                                    {{#xif "this.AdditionalCustomerNo!='' && this.AdditionalCustomerNo!='-1' && this.AdditionalCustomerNo!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Additional Customer No: ")
+                                            }
+                                            {{AdditionalCustomerNo}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Passcode"))
+                            {
+                                <text>
+                                    {{#xif "this.Passcode!='' && this.Passcode!='-1' && this.Passcode!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Passcode: ")
+                                            }
+                                            {{Passcode}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ActivationFee"))
+                            {
+                                <text>
+                                    {{#xif "this.ActivationFee!='' && this.ActivationFee!='-1' && this.ActivationFee!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Activation Fee: ")
+                                            }
+                                            {{ActivationFee}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("FirstBilling"))
+                            {
+                                <text>
+                                    {{#xif "this.FirstBilling!='' && this.FirstBilling!='-1' && this.FirstBilling!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("First Billing: ")
+                                            }
+                                            {{FirstBilling}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ActivationFeePaymentMethod"))
+                            {
+                                <text>
+                                    {{#xif "this.ActivationFeePaymentMethod!='' && this.ActivationFeePaymentMethod!='-1' && this.ActivationFeePaymentMethod!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("ActivationFee Payment Method: ")
+                                            }
+                                            {{ActivationFeePaymentMethod}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("LastGeneratedInvoice"))
+                            {
+                                <text>
+                                    {{#xif "this.LastGeneratedInvoice!='' && this.LastGeneratedInvoice!='-1' && this.LastGeneratedInvoice!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Last Generated Invoice: ")
+                                            }
+                                            {{LastGeneratedInvoice}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("JoinDate"))
+                            {
+                                <div class="content_for_mobile">
+                                    @if (cellcol.IsCustomerLabel == true)
+                                    {
+                                        @Localize.T("Customer Since: ")
+                                    }
+                                    {{formatDate JoinDate}}
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CreatedDate"))
+                            {
+                                <div class="content_for_mobile word_break_style">
+                                    <span>
+                                        @if (cellcol.IsCustomerLabel == true)
+                                        {
+                                            @Localize.T("Created Date: ")
+                                        }
+                                        {{formatDate CreatedDate}}
+                                    </span>
+                                </div>
+                            }
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("LastUpdatedDate"))
+                            {
+                                <text>
+                                    {{#xif "this.LastUpdatedDate!='' && this.LastUpdatedDate!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Updated Date: ")
+                                            }
+                                            {{formatDate LastUpdatedDate}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BusinessAccountType"))
+                            {
+                                <text>
+                                    {{#xif "this.BusinessAccountType!='' && this.BusinessAccountType!='-1' && this.BusinessAccountType!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Business Account Type: ")
+                                            }
+                                            {{BusinessAccountType}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("EsistingPanel"))
+                            {
+                                <text>
+                                    {{#xif "this.EsistingPanel!='' && this.EsistingPanel!='-1' && this.EsistingPanel!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Esisting Panel: ")
+                                            }
+                                            {{EsistingPanel}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Ownership"))
+                            {
+                                <text>
+                                    {{#xif "this.Ownership!='' && this.Ownership!='-1' && this.Ownership!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Ownership: ")
+                                            }
+                                            {{Ownership}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PurchasePrice"))
+                            {
+                                <text>
+                                    {{#xif "this.PurchasePrice!='' && this.PurchasePrice!='-1' && this.PurchasePrice!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Purchase Price: ")
+                                            }
+                                            ${{PurchasePrice}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ContractValue"))
+                            {
+                                <text>
+                                    {{#xif "this.ContractValue!='' && this.ContractValue!='-1' && this.ContractValue!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Contract Value: ")
+                                            }
+                                            {{ContractValue}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ChildOf"))
+                            {
+                                <text>
+                                    {{#xif "this.ChildOf!='' && this.ChildOf!='-1' && this.ChildOf!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Child Of: ")
+                                            }
+                                            {{ChildOf}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                          
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SubscriptionStatus"))
+                            {
+                                <text>
+                                    {{#xif "this.SubscriptionStatus!='-1' && this.SubscriptionStatus!='' && this.SubscriptionStatus!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Subscription Status: ")
+                                            }
+                                            {{SubscriptionStatus}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AnnualRevenue"))
+                            {
+                                <text>
+                                    {{#xif "this.AnnualRevenue!='' && this.AnnualRevenue!='-1' && this.AnnualRevenue!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Annual Revenue: ")
+                                            }
+                                            {{AnnualRevenue}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Website"))
+                            {
+                                <text>
+                                    {{#xif "this.Website!='' && this.Website!='-1' && this.Website!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Website: ")
+                                            }
+                                            {{Website}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Market"))
+                            {
+                                <text>
+                                    {{#xif "this.Market!='' && this.Market!='-1' && this.Market!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Market: ")
+                                            }
+                                            {{Market}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Passengers"))
+                            {
+                                <text>
+                                    {{#xif "this.Passengers!='' && this.Passengers!='-1' && this.Passengers!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Passengers: ")
+                                            }
+                                            {{Passengers}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Budget"))
+                            {
+                                <text>
+                                    {{#xif "this.Budget!='' && this.Budget!='-1' && this.Budget!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Budget: ")
+                                            }
+                                            {{Budget}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SmartSetUpStep"))
+                            {
+                                <text>
+                                    {{#xif "this.SmartSetUpStep!='' && this.SmartSetUpStep!='-1' && this.SmartSetUpStep!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Smart SetUp Step: ")
+                                            }
+                                            {{SmartSetUpStep}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CustomerAccountType"))
+                            {
+                                <text>
+                                    {{#xif "this.CustomerAccountType!='' && this.CustomerAccountType!='-1' && this.CustomerAccountType!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Customer Account Type: ")
+                                            }
+                                            {{CustomerAccountType}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ContractTeam"))
+                            {
+                                <text>
+                                    {{#xif "this.ContractTeam!='' && this.ContractTeam!='-1' && this.ContractTeam!=null"}}
+                                    <div class="content_for_mobile cust_text_style">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Contract Term: ")
+                                            }
+                                            {{ContractTeam}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("HomeOwner"))
+                            {
+                                <text>
+                                    {{#xif "this.HomeOwner!='' && this.HomeOwner!='-1' && this.HomeOwner!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("HomeOwner: ")
+                                            }
+                                            {{HomeOwner}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AccessGivenTo"))
+                            {
+                                <text>
+                                    {{#xif "this.AccessGivenTo!='' && this.AccessGivenTo!='-1' && this.AccessGivenTo!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Access Given: ")
+                                            }
+                                            {{AccessGivenTo}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("DoNotCall"))
+                            {
+                                <text>
+                                    {{#xif "this.DoNotCall!='' && this.DoNotCall!='-1' && this.DoNotCall!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Do Not Call: ")
+                                            }
+                                            {{DoNotCall}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PreferredContactMethod"))
+                            {
+                                <text>
+                                    {{#xif "this.PreferredContactMethod!='' && this.PreferredContactMethod!='-1' && this.PreferredContactMethod!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Preferred Contact Method: ")
+                                            }
+                                            {{PreferredContactMethod}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("MovingDate"))
+                            {
+                                <text>
+                                    {{#xif "this.MovingDate!='' && this.MovingDate!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Moving Date: ")
+                                            }
+                                            {{formatDate MovingDate}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("InstalledStatus"))
+                            {
+                                <text>
+                                    {{#xif "this.InstalledStatus!='' && this.InstalledStatus!='-1' && this.InstalledStatus!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Installed Status: ")
+                                            }
+                                            {{InstalledStatus}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CustomerStatus"))
+                            {
+                                <text>
+                                    {{#xif "this.CustomerStatus!='' && this.CustomerStatus!=null"}}
+                                    <div class="content_for_mobile">
+                                        <span>
+                                            @if (cellcol.IsCustomerLabel == true)
+                                            {
+                                                @Localize.T("Customer Status: ")
+                                            }
+                                            {{CustomerStatus}}
+                                        </span>
+                                    </div>
+                                    {{/xif}}
+                                </text>
+
+                            }
+                          
+                                else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AcquiredFrom"))
+                                {
+                                    <text>
+                                        {{#xif "this.AcquiredFrom!='' && this.AcquiredFrom!='-1' && this.AcquiredFrom!=null"}}
+                                        <div class="content_for_mobile">
+                                            <span>
+                                                @if (cellcol.IsCustomerLabel == true)
+                                                {
+                                                    @Localize.T("Acquired From: ")
+                                                }
+                                                {{AcquiredFrom}}
+                                            </span>
+                                        </div>
+                                        {{/xif}}
+                                    </text>
+
+                                }
+                                else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Maintenance"))
+                                {
+                                    <text>
+                                        {{
+#if Maintenance}}
+                                        <div class="content_for_mobile">
+                                            <span>
+                                                @if (cellcol.IsCustomerLabel == true)
+                                                {
+                                                    @Localize.T("Maintenance: ")
+                                                }
+                                                @Localize.T("Yes")
+                                            </span>
+                                        </div>
+                                        {{/if}}
+                                    </text>
+                                }
+                                else if (Localize.T(cellcol.SelectedColumn) == Localize.T("IsAgreement"))
+                                {
+                                    <text>
+                                        {{#if IsAgreement}}
+                                        <div class="content_for_mobile">
+                                            <span>
+                                                @if (cellcol.IsCustomerLabel == true)
+                                                {
+                                                    @Localize.T("Sign Agreement: ")
+                                                }
+                                                @Localize.T("Yes")
+                                            </span>
+                                        </div>
+                                        {{/if}}
+                                    </text>
+                                }
+                                else if (Localize.T(cellcol.SelectedColumn) == Localize.T("OrderCount"))
+                                {
+                                    <text>
+                                        <div class="content_for_mobile">
+                                            {{OrderCount}}
+                                        </div>
+
+                                    </text>
+
+                                }
+                                else if (Localize.T(cellcol.SelectedColumn) == Localize.T("OrderValue"))
+                                {
+                                    <text>
+                                        {{#xif "this.OrderValue > 0"}}
+                                        <div class="content_for_mobile">
+                                            ${{OrderValue}}
+                                        </div>
+                                        {{/xif}}
+                                    </text>
+                                }
+                                else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Soldby"))
+                                {
+
+                                    <text>
+                                        {{#xif "this.Soldby!='-1' && this.Soldby!='' && this.Soldby!=null"}}
+                                        <div class="content_for_mobile">
+                                            <span>
+                                                @if (cellcol.IsCustomerLabel == true)
+                                                {
+                                                    @Localize.T("Sold By: ")
+                                                }
+                                                {{Soldby}}
+                                            </span>
+                                        </div>
+                                        {{/xif}}
+                                    </text>
+
+                                }
+                                else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Route"))
+                                {
+
+                                    <text>
+                                        {{#xif "this.RouteName !='-1' && this.RouteName !='' && this.RouteName !=null"}}
+                                        <div class="content_for_mobile">
+                                            <span>{{RouteName}}</span>
+                                        </div>
+                                        {{/xif}}
+                                    </text>
+
+                                }
+                                else if (Localize.T(cellcol.SelectedColumn) == Localize.T("GeeseCount"))
+                                {
+
+                                    <text>
+                                        {{#xif "this.GeeseCount !='-1' && this.GeeseCount !='' && this.GeeseCount !=null"}}
+                                        <div class="content_for_mobile">
+                                            <span>{{GeeseCount}}</span>
+                                        </div>
+                                        {{/xif}}
+                                    </text>
+
+                                }
+                                else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Media/Note"))
+                                {
+
+                                    <text>
+                                        {{#xif "this.MediaCount >'-1' && this.NoteCount >'-1'"}}
+                                        <div class="content_for_mobile">
+                                            <a class="name-anchor-style leads-name-anchor-style" onclick="GetCustomerMediaDetails('{{CustomerId}}')">
+                                                <span>{{MediaCount}} Media | {{NoteCount}} Note</span>
+                                            </a>
+
+                                        </div>
+                                        {{/xif}}
+                                    </text>
+
+                                }
+                            }
+                    }
+                </div>
+                    }
+
+                </div>
+            </div>
+            {{/CustomerList}}
+        </div>
+    </div>
+</script>
+@*<script>
+        $(document).ready(function () {
+            setTimeout(function () {
+                $("#IsCheckVal1").click(function () {
+                    if ($(this).is(':checked')) {
+                        $(".CheckItemsCustomer").each(function () {
+                            $(this).prop('checked', true);
+                        });
+                    }
+                    else {
+                        $(".CheckItemsCustomer").each(function () {
+                            $(this).prop('checked', false);
+                        });
+                    }
+                });
+            },1000);
+
+            });
+    </script>*@

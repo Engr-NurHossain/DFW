@@ -1,0 +1,457 @@
+﻿@{
+    Layout = null;
+    string addressdata1stLine = "";
+    string addressdata2ndLine = "";
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.AddCustomerAppointment
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@Styles.Render("~/styles/ServiceOrderProductInstallation")
+@Scripts.Render("~/scripts/ServiceOrderProductInstallation")
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<script>
+    var Emparr = [];
+    @if(@Model.ListCustomerAppointmentTechnician != null){
+        @: Emparr = [
+    foreach(var item in Model.ListCustomerAppointmentTechnician)
+        {
+        @: '@item.EmployeeId',
+        }
+    @:];
+    }
+    var taxtype = '@Model.CustomerAppointment.TaxType';
+    var AppointmentIdForAddProduct = '@Model.CustomerAppointment.AppointmentId';
+    var cusid = '@Model.CustomerAppointment.CustomerId';
+    var IsComplete = false;
+    var MakeServiceOrderComplete = function (ServiceOrderId, IsComplete) {
+        SaveServiceOrderEquipmentDetails(IsComplete);
+    }
+
+    $(document).ready(function () {
+        $('.selectpicker').selectpicker('val', Emparr);
+        if (taxtype != null && taxtype != "" && taxtype != "undefined") {
+            $("#CustomerAppointment_TaxPercent option:contains('@Model.CustomerAppointment.TaxType')").attr('selected', true);
+        }
+        $('.scroll-body').height($(window).height() - $('.pi_service_order_div_header').height() - $('.invoice-footer').height() - 26);
+
+        /*$(".select_search").select2({});*/
+
+        $(".complete-service-order").click(function () {
+            var tval = $(".total ").text();
+            var Id = $(this).attr("data-SOId");
+            var ServiceCusName = $(this).attr("idval");
+            var ServiceCusMail = $(this).attr("idval1");
+            IsComplete = true;
+            if ($(".HasItem").length == 0) {
+                OpenErrorMessageNew("Error!", "Please enter a product to complete order", "");
+            }
+            else {
+                if (tval != "$0.00") {
+                    MakeServiceOrderComplete(Id, IsComplete);
+                }
+                else {
+                    OpenErrorMessageNew("Error!", "Please enter product amount", "");
+                }
+            }
+        });
+
+        $(".btnSendEmailServiceOrder").click(function () {
+            var amount = parseInt(parent.$("#CollectedAmount").val());
+            if ($(".HasItem").length == 0) {
+                OpenErrorMessageNew("Error!", "You have to select All Fields to proceed", "");
+            }
+            else {
+                var customerId = $(this).attr("idval");
+                var employeeid = $(this).attr("idval1");
+                var appointmentid = $(this).attr("idval2");
+                $.ajax({
+                    url: domainurl + "/ServiceOrder/ServiceOrderInformationSendMail/",
+                    data: { customerId, employeeid, appointmentid },
+                    type: "Post",
+                    dataType: "Json"
+                }).done(function () {
+                    OpenSuccessMessageNew("Success!", "Email sent successfully.");
+                });
+            }
+
+        })
+    });
+</script>
+
+<div class="pi_service_order_div_header clearfix">
+    <div class="service_order_header_title">
+        <span class="service_order_title_span">
+            @Localize.T("Product Installation-Service Order")
+        </span>
+        @{
+            if (Model.CustomerAppointment.Status != true)
+            {
+                <div class="complete-task-btn-container">
+                    <button type="button" class="btn complete-service-order" data-SOId="@Model.CustomerAppointment.Id" idval="@Model.ServiceOrderCustomerName" idval1="@Model.ServiceOrderCustomerEmail">@Localize.T("Mark as Complete") </button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+
+
+<div class="scroll-body">
+
+    <div class="service_order_info">
+        <div class="row">
+            <div class="col-md-12">
+                @*<div class="page-installation-title">
+                        <div class="custom-h1">@Localize.T("Product Installation-Service Order")</div>
+                    </div>
+                    @{ if (Model.CustomerAppointmentEquipmentList != null)
+                        {
+                            if (Model.CustomerAppointment.Status != true)
+                            {
+                                <div class="complete-task-btn-container">
+                                    <button type="button" class="btn btn-default complete-service-order" data-SOId="@Model.CustomerAppointment.Id" idval="@Model.ServiceOrderCustomerName" idval1="@Model.ServiceOrderCustomerEmail">@Localize.T("Mark as Complete") </button>
+                                </div>
+                            }
+                        }
+
+                    }*@
+                <div class="col-md-6">
+                    <div class="customer-details">
+                        <div class="custom-h2">
+                            @Localize.T("Customer Information")
+                        </div>
+                        <div class="row label_container_div">
+                            <label class="col-xs-2 custom-label-static">@Localize.T("Name")</label>
+                            <div class="col-xs-10 sop_top_pad">@Model.ServiceOrderCustomerName</div>
+                        </div>
+                        <div class="row label_container_div">
+                            <label class="col-xs-2 custom-label-static">@Localize.T("Phone No")</label>
+                            @{
+                                if (Model.ServiceOrderCustomerPhone != "")
+                                {
+                                    <div class="col-xs-10 sop_top_pad">@Model.ServiceOrderCustomerPhone</div>
+                                }
+                                else
+                                {
+                                    <div class="col-xs-10 sop_top_pad">@Localize.T("-")</div>
+                                }
+                            }
+
+                        </div>
+                        <div class="row label_container_div">
+                            <label class="col-xs-2 custom-label-static">@Localize.T("Email")</label>
+                            <div class="col-xs-10 sop_top_pad">@Model.ServiceOrderCustomerEmail</div>
+                        </div>
+                        <div class="row label_container_div border_none">
+                            <label class="col-xs-2 custom-label-static">@Localize.T("Address")</label>
+                            @{
+
+                                if (!string.IsNullOrWhiteSpace(Model.ServiceOrderCustomerAddress) && Model.ServiceOrderCustomerAddress.Trim() != ",")
+                                {
+                                    addressdata1stLine = string.Format("{0}", Model.StreetName);
+                                    addressdata2ndLine = string.Format("{0}, {1} {2}", (Model.CityName.ToString().Substring(0, 1).ToUpper()) + (Model.CityName.ToString().Substring(1, Model.CityName.ToString().Length - 1)), Model.StateName, Model.ZipName);
+
+                                    <span>@addressdata1stLine <br />@addressdata2ndLine</span>
+                                    @*<div class="custom-label-data">@addressdata2ndLine</div>*@
+                                }
+                            }
+                        </div>
+                    </div>
+                </div> 
+                <div class="col-md-6">
+                    <div class="service-order-details">
+                        <div class="custom-h2">
+                            @Localize.T("Service Order Information")
+                        </div>
+                        <div class="row label_container_div">
+                            <label class="col-xs-2 sop_right_pad custom-label-static">@Localize.T("Service Person")</label>
+                            @*<label class="custom-label">@Model.WorkOrderEmployeeName</label>*@
+
+                            <div class="col-xs-5">@Html.DropDownListFor(x => x.CustomerAppointment.EmployeeId, (List<SelectListItem>)ViewBag.ServiceProviderEmployeeList, new { @class = "form-control select_search", id = "ServiceOrderEmployeeType" })</div>
+                            <div class="col-xs-5">@Html.DropDownList("ListHelperTech", ViewBag.Technician as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple" })</div>
+
+                        </div>
+                        <div class="row label_container_div">
+
+                            <label class="col-xs-2 custom-label-static"> @Localize.T("Date")</label>
+
+
+
+                            <div class="col-xs-10">
+                                <div class="date_things">
+                                    @Html.TextBoxFor(model => model.CustomerAppointment.AppointmentDate, "{0:MM/dd/yy}", new { @class = "form-control AddPickAdayService", @readonly = "readonly", id = "ServiceOrderDate" })
+                                </div>
+                                <div class="date_things">
+                                    @Html.DropDownListFor(model => model.CustomerAppointment.AppointmentStartTime, (List<SelectListItem>)ViewBag.AppointmentTime, new { @class = "form-control select_search", id = "ServiceOrderAppointmentStartTime", datarequired = "true" })
+                                </div>
+                                <div class="date_things date_style">
+                                    @Html.DropDownListFor(model => model.CustomerAppointment.AppointmentEndTime, (List<SelectListItem>)ViewBag.AppointmentTime, new { @class = "form-control select_search", id = "ServiceOrderAppointmentEndTime", datarequired = "true" })
+                                </div>
+                            </div>
+
+
+                        </div>
+                        <div class="row label_container_div border_none">
+                            <label class="col-xs-2 custom-label-static">@Localize.T("Notes")</label>
+                            <div class="col-xs-10">@Html.TextAreaFor(x => x.CustomerAppointment.Notes, new { @class = "form-control service-not", placeholder = "Please add something to your note", id = "ServiceOrderNote" })</div>
+                            @*<label class="custom-label">@Model.CustomerAppointment.Notes</label>*@
+                        </div>
+                        @*<div class="col-md-12 label-container-div">
+                                <div class="col-md-4" style="padding-left:0;">
+                                    <label class="">@Localize.T("Service Person")</label>
+                                </div>
+
+                                <div class="col-md-8" style="padding-left:0; padding-right:0;">
+                                    @Html.DropDownListFor(x => x.CustomerAppointment.EmployeeId, (List<SelectListItem>)ViewBag.ServiceProviderEmployeeList, new { @class = "form-control custom-form-control-name select_search", id = "ServiceOrderEmployeeType" })
+                                </div>
+                            </div>
+                            <div class="col-md-12 label-container-div">
+                                <div class="col-md-3" style="padding-left:0; padding-right:0;">
+                                    <label class="">@Localize.T("Date")</label>
+                                </div>
+                                <div class="col-md-3" style="padding-left:50px; padding-right:0;">
+                                    @Html.TextBoxFor(model => model.CustomerAppointment.AppointmentDate, "{0:MM/dd/yyyy}", new { @class = "form-control AddPickAday", @readonly = "readonly", id = "ServiceOrderDate" })
+                                </div>
+                                <div class="col-md-3" style="padding-right:0;">
+                                    @Html.DropDownListFor(model => model.CustomerAppointment.AppointmentStartTime, (List<SelectListItem>)ViewBag.AppointmentTime, new { @class = "form-control select_search", id = "ServiceOrderAppointmentStartTime", datarequired = "true" })
+                                </div>
+                                <div class="col-md-3" style="padding-right:0;">
+                                    @Html.DropDownListFor(model => model.CustomerAppointment.AppointmentEndTime, (List<SelectListItem>)ViewBag.AppointmentTime, new { @class = "form-control select_search", id = "ServiceOrderAppointmentEndTime", datarequired = "true" })
+                                </div>
+                            </div>
+                            <div class="col-md-12 label-container-div">
+                                <div class="col-md-4" style="padding-left:0; padding-right:0;">
+                                    <label class="">@Localize.T("Notes")</label>
+                                </div>
+
+                                <div class="col-md-8" style="padding-left:0; padding-right:0;">
+                                    @Html.TextAreaFor(x => x.CustomerAppointment.Notes, new { @class = "form-control service-not", placeholder = "Please add something to your note", id = "ServiceOrderNote" })
+                                </div>
+                            </div>*@
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-12"></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <table class="CustomerInvoiceTab" id="CustomerInvoiceTab">
+                <thead>
+                    <tr>
+                        <th class="thead-th-style1 tab-index">
+                            <span>
+
+                            </span>
+                        </th>
+                        <th class="thead-th-style1 tab-Product">
+                            <span>
+                                @Localize.T("Product/Service")
+                            </span>
+                        </th>
+                        @*<th class="thead-th-style2 tab-Desc">
+                                <span>
+                                    @Localize.T("Description")
+                                </span>
+                            </th>*@
+                        <th class="thead-th-style2 tab-Quantity">
+                            <span>
+                                @Localize.T("Quantity")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Rate">
+                            <span>
+                                @Localize.T("Rate")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Amount">
+                            <span>
+                                @Localize.T("Amount")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Action">
+
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.CustomerAppointmentEquipmentList != null)
+                    {
+                        foreach (var item in Model.CustomerAppointmentEquipmentList)
+                        {
+                            <tr data-id="@item.EquipmentId" class="HasItem">
+                                <td valign="top"></td>
+                                <td valign="top">
+                                    <input type="text" class="ProductName" value="@item.EquipmentServiceName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                    <span class="spnProductName">@item.EquipmentServiceName</span>
+                                </td>
+                                <td valign="top">
+                                    <input type="number" onkeydown='OthersKeyDown(this, event)' value="@item.Quantity" class="txtProductQuantity" />
+                                    <span class="spnProductQuantity">@item.Quantity</span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductRate" value="@item.UnitPrice" />
+                                    <span class="spnProductRate">@item.UnitPrice</span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" value="@item.TotalPrice" />
+                                    <span class="spnProductAmount">@item.TotalPrice</span>
+                                </td>
+                                <td valign="top" class="tableActions">
+                                    <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                                </td>
+                            </tr>
+                        }
+                        if (!Model.CustomerAppointment.Status.HasValue || Model.CustomerAppointment.Status == false)
+                        {
+                            <tr>
+                                <td valign="top"></td>
+                                <td valign="top">
+                                    <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                    <span class="spnProductName"></span>
+                                </td>
+                                <td valign="top">
+                                    <input type="number" onkeydown='OthersKeyDown(this, event)' class="txtProductQuantity" />
+                                    <span class="spnProductQuantity"></span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductRate" />
+                                    <span class="spnProductRate"></span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" />
+                                    <span class="spnProductAmount"></span>
+                                </td>
+                                <td valign="top" class="tableActions">
+                                    <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td valign="top"></td>
+                            <td valign="top">
+                                <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                <span class="spnProductName"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="number" onkeydown='OthersKeyDown(this, event)' class="txtProductQuantity" />
+                                <span class="spnProductQuantity"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductRate" />
+                                <span class="spnProductRate"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" />
+                                <span class="spnProductAmount"></span>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                            </td>
+                        </tr>
+                            <tr>
+                                <td valign="top"></td>
+                                <td valign="top">
+                                    <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                    <span class="spnProductName"></span>
+                                </td>
+                                <td valign="top">
+                                    <input type="number" onkeydown='OthersKeyDown(this, event)' class="txtProductQuantity" />
+                                    <span class="spnProductQuantity"></span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductRate" />
+                                    <span class="spnProductRate"></span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" />
+                                    <span class="spnProductAmount"></span>
+                                </td>
+                                <td valign="top" class="tableActions">
+                                    <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                                </td>
+                            </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="InvoiceCalculationsDiv InvoiceCalculationsDiv1">
+        <div class="WorkOrderTaxCalculation">
+            <div class="clearfix"><div class="text_bold">@Localize.T("Subtotal"):</div> <div class="text_normal amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</div></div>
+            <div class="clearfix"><div class="text_bold"><div class="tax_dropdown">@Html.DropDownListFor(x => x.CustomerAppointment.TaxPercent, (List<SelectListItem>)ViewBag.TaxListItem, new { @class = "form-control select_TaxList" })</div></div><div class="text_normal tax-amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</div></div>
+            <div class="clearfix"><div class="text_bold">@Localize.T("Total"):</div> <div class="text_normal total total_text_norm">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</div></div>
+            @*<div>
+                    <span>@Localize.T("Sub Total"):&nbsp;&nbsp;</span>
+                    <span class="amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                </div>
+                <div>
+                    <span>@Localize.T("Sub Tax Total") :&nbsp;&nbsp; </span>
+                    <span class="tax-amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span><br />
+                    <span>@Localize.T("Tax Percent") :&nbsp;&nbsp;</span>
+                    <span class="tax-percent">0%</span>
+                </div>
+                <div>
+                    <span>@Localize.T("Total"):&nbsp;&nbsp;</span>
+                    <span class="total">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                </div>*@
+            @*@Html.DropDownList("TaxableSubTotal", (List<SelectListItem>)ViewBag.TaxListItem, new { @class = "form-control select_TaxList" })*@
+        </div>
+    </div>
+    @*<div class="InvoiceCalculationsDiv">
+
+            <div class="WorkOrderTaxCalculation">
+                <div>
+                    <span>@Localize.T("Sub Total"):&nbsp;&nbsp;</span>
+                    <span class="amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                </div>
+                <div>
+                    <span>@Localize.T("Sub Tax Total") :&nbsp;&nbsp; </span>
+                    <span class="tax-amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span><br />
+                    <span>@Localize.T("Tax Percent") :&nbsp;&nbsp;</span>
+                    <span class="tax-percent">0%</span>
+                </div>
+                <div>
+                    <span>@Localize.T("Total"):&nbsp;&nbsp;</span>
+                    <span class="total">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                </div>
+                @Html.DropDownList("TaxableSubTotal", (List<SelectListItem>)ViewBag.TaxListItem, new { @class = "form-control select_TaxList" })
+            </div>
+        </div>*@
+
+
+    <div class="invoice-footer col-md-12">
+        <div class="cancelbtnDiv col-md-3">
+            <button class="btnInv InvoiceCancelButton">@Localize.T("Cancel")</button>
+        </div>
+        <div class="InnerOptionsDiv col-md-3">
+            <a class="InvEstPreview" href="@(AppConfig.DomainSitePath)/ServiceOrder/GetCustomerAppointmentPdfView/@Model.CustomerAppointment.Id">@Localize.T("Print Preview")</a>
+        </div>
+        <div class="col-md-6">
+            <div class="div-style">
+                <div class="Savemailbutton">
+                    <button class="btnSendEmailServiceOrder" idval="@Model.CustomerAppointment.CustomerId" idval1="@Model.CustomerAppointment.EmployeeId" idval2="@Model.CustomerAppointment.AppointmentId">@Localize.T("Send Email")</button>
+                </div>
+
+                @*idval="@Model.WorkOrderCustomerName"*@
+                @if (Model.CustomerAppointment.Status != true)
+                {
+                    <div class="SaveaButtonsDiv">
+                        <button class="btnInv InvoiceSaveButton" id="SaveServiceOrder">@Localize.T("Save")</button>
+                    </div>
+                }
+
+            </div>
+        </div>
+
+    </div>
+
+</div>

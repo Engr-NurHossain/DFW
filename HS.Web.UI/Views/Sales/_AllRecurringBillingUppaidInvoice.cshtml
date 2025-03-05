@@ -1,0 +1,148 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<style>
+    .all_returns_container {
+        width: 100%;
+        float: left;
+    }
+
+    .all_returns_search_div {
+        width: 100%;
+        float: left;
+        padding: 10px 0px;
+    }
+
+        .all_returns_search_div .input-group {
+            width: 40% !important;
+            float: left;
+        }
+
+            .all_returns_search_div .input-group .AllReturnsSearch {
+                width: 60% !important;
+                float: left;
+            }
+
+            .all_returns_search_div .input-group .paymentfilter {
+                width: 30% !important;
+                float: left;
+            }
+
+            .all_returns_search_div .input-group .input-group-btn {
+                width: 10% !important;
+                float: left;
+            }
+
+        .all_returns_search_div .mailandprintandupload {
+            float: right;
+        }
+
+    .all_returns_container .AllUnpaidInvoicesLoadDiv {
+        width: 100%;
+        float: left;
+    }
+
+    @@media(max-width:414px) {
+        .all_returns_search_div .input-group {
+            width: 100% !important;
+            margin-bottom: 10px;
+        }
+    }
+</style>
+<script>
+
+    var LoadAllUnpaidInvoices = function (PageNo, OrderBy) {
+        if (typeof (PageNo) == "undefined") {
+            PageNo = 1;
+        }
+        if (typeof (OrderBy) == "undefined") {
+            OrderBy = "";
+        }
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+        var SearchText = $("#RMRSearch").val();
+        var paymentmethod = $("#PaymentMethodFilter").val();
+        var Url = String.format(domainurl + "/Sales/AllRecurringBillingUppaidInvoiceByFilter/?StartDate=" + StartDateVal + "&EndDate=" + EndDateVal + "&Paymentmethod=" + paymentmethod + "&SearchText=" + encodeURI(SearchText) + "&PageNo=" + PageNo + "&Order=" + OrderBy);
+        //var redirectUrl = Url.replace(" ", "");
+        //console.log(redirectUrl);
+        $(".AllUnpaidInvoicesLoadDiv").html(TabsLoaderText);
+        $(".AllUnpaidInvoicesLoadDiv").load(Url);
+    }
+    $(document).ready(function () {
+        $("#btnDownloadUnpaidRMRInvoices").hide();
+        $("#btnUploadPaymentRMRInformation").hide();
+        LoadAllUnpaidInvoices(1);
+        $("#btnRMRSearch").click(function () {
+            LoadAllUnpaidInvoices(1);
+        });
+        $("#PaymentMethodFilter").change(function () {
+            LoadAllUnpaidInvoices(1);
+        });
+
+        $(".AllReturnsSearch").keydown(function (e) {
+
+            if (e.which == 13) {
+                LoadAllUnpaidInvoices(1);
+            }
+        });
+    });
+</script>
+<div class="all_returns_container">
+    <div class="all_returns_search_div">
+        <div class="input-group add-on">
+            <input type="text" placeholder="Search by customer name or invoice id" class="form-control AllReturnsSearchTxt AllReturnsSearch" id="RMRSearch" autocomplete="off" />
+            @Html.DropDownList("PaymentMethodFilter", (List<SelectListItem>)ViewBag.PaymentMethodList, new { @class = "form-control paymentfilter" })
+            <div class="input-group-btn"><button class="btn green_button" id="btnRMRSearch" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button></div>
+
+        </div>
+        <div class="mailandprintandupload">
+            @if (PermissionChecker.IsPermitted(Permissions.RMRPermissions.GroupRMRInvoiceEmailButtonShow))
+            {
+                <span class="InvSendMail">
+                    <a title="Send Email" class="btn green_button SendMailSelectedInvoice" onclick="SendMailSelectedInvoice(event);"><i class="fa fa-envelope" aria-hidden="true"></i></a>
+                </span>
+            }
+            @if (PermissionChecker.IsPermitted(Permissions.RMRPermissions.GroupRMRInvoicePrintButtonShow))
+            {
+                <span class="InvPrintforallRecurringBill">
+                    <a title="Print" class="btn green_button InvPrintforRecurringBill" onclick="InvPrintforallRecurringBill(event);"><i class="fa fa-print" aria-hidden="true"></i></a>
+                </span>
+            }
+            @if (PermissionChecker.IsPermitted(Permissions.RMRPermissions.GroupRMRStatementEmailButtonShow))
+            {
+                <span class="StatementSendMail">
+                    <a title="Send Email Statement" class="btn green_button SendMailStatementSelectedInvoice" onclick="SendMailStatementSelectedInvoice(event);"><i class="fa fa-envelope" aria-hidden="true"></i></a>
+                </span>
+            }
+            @if (PermissionChecker.IsPermitted(Permissions.RMRPermissions.GroupRMRStatementPrintButtonShow))
+            {
+                <span class="StatementPrintforallRecurringBill">
+                    <a title="Print Statement" class="btn green_button StatementPrintforRecurringBill" onclick="PrintGroupRMRInvoiceStatement(event);"><i class="fa fa-print" aria-hidden="true"></i></a>
+                </span>
+            }
+            @if (PermissionChecker.IsPermitted(Permissions.RMRPermissions.CreatingRMRUnpaidInvoiceButtonShow))
+            {
+                <button title="Creating Recurring Invoices" onclick="CreatingRecurringUnpaidInvoices(event);" class="btn green_button CreatingRecurringUnpaidInvoices"><i class="fa fa-file-text-o" aria-hidden="true"></i> Generate Invoices</button>
+            }
+            @if (PermissionChecker.IsPermitted(Permissions.RMRPermissions.CollectPaymentUnpaidRMRButtonShow))
+            {
+                <button title="Collect Payments" id="CollectPaymentsforUnpaidRB" onclick="CollectPaymentsforUnpaidRB(event);" class="btn green_button CollectPaymentsforUnpaidRB"><i class="fa fa-money" aria-hidden="true"></i> Collect Payments</button>
+            }
+            @if (PermissionChecker.IsPermitted(Permissions.RMRPermissions.DownloadUnpaidRMRInvoiceButtonShow))
+            {
+                <button class="report_btn lrp_float_right" id="btnDownloadUnpaidRMRInvoices" onclick="DownloadSelectedInvoice(event);" title="Download unpaid RMR invoices"><i class="fa fa-download"></i></button>
+            }
+            @if (PermissionChecker.IsPermitted(Permissions.RMRPermissions.UploadInvoiceInformationForPaymentButtonShow))
+            {
+                <button onclick="OpenRightToLeftModal(domainurl + '/sales/uploaddeclinereport')" id="btnUploadPaymentRMRInformation" class="btn all_returns_upload green_button" title="Upload payment RMR information"><i class="glyphicon glyphicon-upload"></i></button>
+            }
+            </div>
+
+    </div>
+    <div class="AllUnpaidInvoicesLoadDiv">
+
+    </div>
+</div>

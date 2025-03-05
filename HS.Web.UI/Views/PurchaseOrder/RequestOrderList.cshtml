@@ -1,0 +1,563 @@
+﻿@{
+    Layout = null;
+    var count = 0;
+}
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@*@model HS.Entities.CreatePurchaseOrder*@
+@using POStat = HS.Web.UI.Helper.LabelHelper.PurchaseOrderStatus
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency
+@Styles.Render("~/styles/AddInvoice")
+<link href="~/Content/Css/Expense/AddVendorBill.css" rel="stylesheet" />
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script src="~/Content/Js/Site/Validation.js"></script>
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Js/TinyInvoice.js"></script>
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script>
+    @*var SupplierId ='@Model.Supplier.SupplierId';
+    var PurchaseOrder_int_Id=@Model.PurchaseOrderWarehouse.Id;
+    var SupplierAddress;
+    var POStatus = '@Model.PurchaseOrderWarehouse.Status';
+    var Amount = parseFloat(@Model.PurchaseOrderWarehouse.Amount);
+    var TotalAmount = parseFloat(@Model.PurchaseOrderWarehouse.TotalAmount);
+    var Currency = '@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)';
+    var Receiving = @Model.ReceiveNow.ToString().ToLower();
+    var OpenTab='@ViewBag.OpenTab';
+    var purchaseorderId = '@Model.PurchaseOrderWarehouse.PurchaseOrderId';*@
+    var StartDatepicker;
+    var EndDatepicker;
+    var fullfillmentDate = "";
+    var pickupShippedVal = "";
+    var supplierId = "";
+    var technicianId = "";
+    var emptyGuid = '@Guid.Empty.ToString()';
+    var FullfillmentDatepicker;
+    var FirstDayOfWeek = '@ViewBag.FirstDayOfWeek';
+    var FirstDayOfMonthForAll = '@ViewBag.FilterStartDate';
+    $("#Shortcut").val('ThisWeek');
+    var LoadRequestOrderList = function () {
+    $("#RequestOrderList").load(domainurl + "/PurchaseOrder/RequestOrderListPartial/");
+    }
+
+    var makeSendEmailUrl = function () {
+        //if (CommonUiValidation()) {
+            //mailAddVendor = encodeURIComponent($("#Vendor").find(':selected').attr('emailaddress'));
+            fullfillmentDate = encodeURIComponent($("#FullfillmentDate").val());
+            pickupShippedVal = encodeURIComponent($("#PickupShipped").find(':selected').val());
+            supplierId = encodeURIComponent($("#Vendor").find(':selected').val());
+            technicianId = encodeURIComponent($("#User").find(':selected').val());
+            SendEmailUrl = domainurl + "/PurchaseOrder/SendEmailRequisition/?SupplierId=" + supplierId + "&TechnicianId=" + technicianId + "&PickupShipped=" + pickupShippedVal + "&FullfillmentDate=" + fullfillmentDate;
+            console.log("Email link created.:" + SendEmailUrl);
+            $("#RequestOredrInfoPrintAndSend").attr("href", SendEmailUrl);
+        //}
+    }
+
+    var SendRequisitionList = function () {
+            makeSendEmailUrl();
+            SaveRequest(false);
+    }
+    var OpenRequestOrderSend = function () {
+    setTimeout(function () {
+        $("#RequestOredrInfoPrintAndSend").trigger('click');
+    },500);
+}
+    var SaveRequest = function (SendEmail, SendEmailAddress, EmailDescription, EmailSubject, ccEmail) {
+        var orderingqtyvalidation = false;
+        var IsRequestOrderSendClicked = true;
+        console.log("Save invoice fired");
+        var DetailList = [];
+        $(".HasItem").each(function () {
+            console.log("DetailsFired");
+            if ($(this).find('.CAEId').is(':checked')) {
+                if ($(this).find('.OrderingQuantity').val() <= 0) {
+                    orderingqtyvalidation = true;
+                }
+                DetailList.push({
+                EquipmentId:$(this).find('.EquipmentId').val(),
+                WarehouseQTY: $(this).find('.WarehouseQTY').val(),
+                QTYOnHand:$(this).find('.QTYOnHand').val(),
+                    ProductSKU: $(this).find('.ProductSKU').val(),
+                    ManufacturerName: $(this).find('.ManufacturerName').val(),
+                    EquipmentName: $(this).find('.EquipmentName').val(),
+                    Quantity: $(this).find('.Quantity').val(),
+                    OrderingQuantity:$(this).find('.OrderingQuantity').val()
+                });
+            }
+        });
+        if (orderingqtyvalidation) {
+            IsRequestOrderSendClicked = false;
+
+            OpenErrorMessageNew("Error!", "Ordering quantity can't be 0 for selecting requisition", function () {  });
+            return;
+        }
+        $(".HasNewItem").each(function () {
+            if ($(".HasNewItem").length > 0) {
+                console.log("eqpId");
+                DetailList.push({
+                EquipmentId:$(this).attr('data-id'),
+                WarehouseQTY: $(this).find('.txtWarehouseQuantity').val(),
+                QTYOnHand:$(this).find('.txtQTYOnHand').val(),
+                    ProductSKU: $(this).find('.txtProductSKU').val(),
+                    ManufacturerName: $(this).find('.txtManufacturerName').val(),
+                    EquipmentName: $(this).find('.txtEquipmentName').val(),
+                    //Quantity: $(this).find('.Quantity').val(),
+                    OrderingQuantity:$(this).find('.txtOrderingQuantity').val()
+                });
+            }
+        });
+        if (DetailList.length == 0) {
+            //console.log("sdf");
+            //    setTimeout(function () {
+            //        ClosePopup();
+            //    }, 50);
+            IsRequestOrderSendClicked = false;
+
+            OpenErrorMessageNew("Error!", "You have to select at least one requisition to proceed", function () {  });
+            return;
+        }
+        if (($("#PickupShipped").find(':selected').val() == null || $("#PickupShipped").find(':selected').val() =="-1") && $("#Vendor").find(':selected').val().toString() == emptyGuid) {
+            // setTimeout(function () {
+            //        ClosePopup();
+            //},50);
+            IsRequestOrderSendClicked = false;
+
+            OpenErrorMessageNew("Error!", "You have to select pickup/shipped and one vendor", function () {  });
+            return;
+        }
+        else if ($("#PickupShipped").find(':selected').val() == null || $("#PickupShipped").find(':selected').val() =="-1") {
+            //setTimeout(function () {
+            //        ClosePopup();
+            //},50);
+            IsRequestOrderSendClicked = false;
+
+            OpenErrorMessageNew("Error!", "You have to select pickup/shipped", function () {  });
+            return;
+        }
+        else if ($("#Vendor").find(':selected').val().toString() == emptyGuid) {
+            // setTimeout(function () {
+            //        ClosePopup();
+            //},50);
+            IsRequestOrderSendClicked = false;
+
+            OpenErrorMessageNew("Error!", "You have to select one vendor", function () {  });
+            return;
+        }
+        else if ($("#User").find(':selected').val().toString() == emptyGuid) {
+            //console.log("TechnicianSelectMsgFired");
+            //setTimeout(function () {
+            //        ClosePopup();
+            //},50);
+            IsRequestOrderSendClicked = false;
+
+            OpenErrorMessageNew("Error!", "You have to select one technician", function () {  });
+            return;
+        }
+        //else if ($("#PickupShipped").find(':selected').val() == "Shipped" && $("#Vendor").find(':selected').val().toString() == emptyGuid) {
+        //    console.log("VendorSelectMsgFired");
+        //    setTimeout(function () {
+        //            ClosePopup();
+        //    },50);
+
+        //    OpenErrorMessageNew("Error!", "You have to select one vendor", function () {  });
+        //    return;
+        //}
+        if (SendEmail == false && IsRequestOrderSendClicked == true) {
+            OpenRequestOrderSend();
+        }
+
+        var url = domainurl + "/PurchaseOrder/AddMailRequestOrderList";
+
+        var param = JSON.stringify({
+            //EmailAddress: $("#Vendor").find(':selected').attr('emailaddress'),
+            CusAppoinmentEquipmentList: DetailList,
+            SendMail: SendEmail,
+            EmailDescription: EmailDescription,
+            EmailSubject: EmailSubject,
+            EmailAddress: SendEmailAddress,
+            FullfillmentDate:$("#FullfillmentDate").val(),
+            PickupShipped: $("#PickupShipped").find(':selected').val(),
+            SupplierId: $("#Vendor").find(':selected').val(),
+            TechnicianId: $("#User").find(':selected').val(),
+            ShippingAddress: $("#ShippingAddress").val(),
+            ccEmail:ccEmail
+            //ShowShippingAddress: $("#User").find(':selected').attr('useraddress'),
+            //CreatePdf: CreatePdf,
+            //EmailDescription: EmailDescription,
+            //EmailSubject: EmailSubject,
+            //ccEmail: ccEmail
+        });
+
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".AddRequestOrderLoader").removeClass('hidden'),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                $(".AddRequestOrderLoader").addClass('hidden');
+                if (data.result && data.EmailSent == true) {
+                OpenSuccessMessageNew("Success!", data.message, function () {OpenPurchaseOrderTab() });
+                CloseTopToBottomModal();
+            }
+                //OpenRequestOrderSend();
+                //if (data.result) {
+                //    OpenRequestOrderSend();
+                //}
+                //else if (!data.result) {
+                //    OpenErrorMessageNew("Error!", data.message);
+                //}
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+                $(".AddRequestOrderLoader").addClass('hidden');
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        var idlist = [{ id: ".RequestOredrInfoPrintAndSend", type: 'iframe', width: 920, height: 600 }
+    ];
+    jQuery.each(idlist, function (i, val) {
+        magnificPopupObj(val);
+    });
+        $("#User").select2();
+        $("#Vendor").select2();
+        if (window.innerWidth < 414) {
+            $(".request_order_inner").height(window.innerHeight - 124);
+        }
+        else {
+            $(".request_order_table_container").height(window.innerHeight - 280);
+        }
+       
+        LoadRequestOrderList();
+        StartDatepicker = new Pikaday({
+            field: $('#RequestOrderDateFrom')[0],
+            trigger: $('#RequestOrderDateFrom_custom')[0],
+            format: 'MM/DD/YYYY'
+        });
+        EndDatepicker = new Pikaday({
+            field: $('#RequestOrderDateTo')[0],
+            trigger: $('#RequestOrderDateTo_custom')[0],
+            format: 'MM/DD/YYYY'
+        });
+        FullfillmentDatepicker = new Pikaday({
+            field: $('#FullfillmentDate')[0],
+            trigger: $('#FullfillmentDate_custom')[0],
+            format: 'MM/DD/YYYY'
+        });
+        if ($("#Shortcut").val() == "ThisWeek") {
+            console.log("test");
+            var Today = new Date();
+            var Week = Today.getWeek();
+            var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+            StartDatepicker.setDate(StartDay);
+            EndDatepicker.setDate(StartDay.addDays(6));
+        }
+
+        $(".RequestOrderFilterBtn").click(function () {
+            var startdate = $("#RequestOrderDateFrom").val();
+            var enddate = $('#RequestOrderDateTo').val();
+            var UserId = $('#User').val();
+            $("#RequestOrderList").load(domainurl + "/PurchaseOrder/RequestOrderListPartial/?startDate=" + startdate + "&endDate=" + enddate + "&userId=" + UserId);
+        });
+
+        $("#User").change(function () {
+            console.log("userFire");
+            $("#ShippingAddress").val($("#User").find(':selected').attr('useraddress'));
+        });
+        $("#PickupShipped").change(function () {
+            console.log("PickupFire");
+            if ($("#PickupShipped").val() == "Shipped") {
+                $(".shipping_address_div").removeClass('hidden');
+            }
+            else {
+                $(".shipping_address_div").addClass('hidden');
+            }
+        });
+
+        $("#RequestOrderDateFrom").click(function () {
+            $("#Shortcut").val('Custom');
+        });
+        $("#RequestOrderDateTo").click(function () {
+            $("#Shortcut").val('Custom');
+        });
+        $(".DateFromCalender").click(function () {
+            $("#Shortcut").val('Custom');
+        });
+        $(".DateToCalender").click(function () {
+            $("#Shortcut").val('Custom');
+        });
+        $("#Shortcut").change(function () {
+            if ($(this).val() == "Today") {
+                var Today = new Date();
+                StartDatepicker.setDate(Today);
+                EndDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "Yesterday") {
+                var Today = new Date();
+                EndDatepicker.setDate(Today.addDays(-1));
+                StartDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "ThisWeek") {
+                console.log("test");
+                var Today = new Date();
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDatepicker.setDate(StartDay);
+                EndDatepicker.setDate(StartDay.addDays(6));
+            }
+                else if ($(this).val() == "NextWeek") {
+                console.log("test");
+                var Today = new Date();
+                Today = Today.addDays(+7);
+
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDatepicker.setDate(StartDay);
+                EndDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "LastWeek") {
+                console.log("test");
+                var Today = new Date();
+                Today = Today.addDays(-7);
+
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDatepicker.setDate(StartDay);
+                EndDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "ThisMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() + 1, 0);
+
+                StartDatepicker.setDate(FirstDayOfMonth);
+                EndDatepicker.setDate(LastDayOfMonth);
+
+            }
+            else if ($(this).val() == "LastMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() - 1, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 0);
+
+                StartDatepicker.setDate(FirstDayOfMonth);
+                EndDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "ThisYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), 11, 31);
+
+                StartDatepicker.setDate(FirstDayOfMonth);
+                EndDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "LastYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear() - 1, 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear() - 1, 11, 31);
+
+                StartDatepicker.setDate(FirstDayOfMonth);
+                EndDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "AllTime") {
+                var Today = new Date();
+                //$("#PayrollFilterStartDate").val("");
+                //$("#PayrollFilterEndDate").val("");
+                var FirstDayOfMonth = FirstDayOfMonthForAll;
+                var LastDayOfMonth = FirstDayOfMonthForAll;
+
+                StartDatepicker.setDate(FirstDayOfMonth);
+                EndDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "Custom") {
+                var Today = new Date();
+                //$("#PayrollFilterStartDate").val("");
+                //$("#PayrollFilterEndDate").val("");
+                var FirstDayOfMonth = FirstDayOfMonthForAll;
+                var LastDayOfMonth = FirstDayOfMonthForAll;
+
+                StartDatepicker.setDate(FirstDayOfMonth);
+                EndDatepicker.setDate(LastDayOfMonth);
+            }
+        });
+    //    $(".CAEAll").change(function () {
+    //    console.log("hlw");
+    //    if ($(this).is(':checked')) {
+    //        $(".HasItem").each(function () {
+    //            $('.CAEId').prop('checked', true);
+    //        });
+    //    }
+    //    else {
+    //        $(".HasItem").each(function () {
+    //            $('.CAEId').prop('checked', false);
+    //        });
+    //    }
+    //});
+    });
+      $(window).resize(function () {
+          if (window.innerWidth < 414) {
+              $(".request_order_inner").height(window.innerHeight - 124);
+          }
+          else {
+              $(".request_order_table_container").height(window.innerHeight - 280);
+               setTimeout(function () {
+              //$(".request_order_table_container").height(window.innerHeight - );
+        }, 1000);
+          }
+    });
+</script>
+
+@*<script src="~/Content/Js/PurchaseOrder/AddPurchaseOrder.js"></script>*@
+<link href="~/Content/Css/PurchaseOrder/AddPurchaseOrder.css" rel="stylesheet" />
+
+<div class="hidden" style="display:none;visibility:hidden;height:0px;">
+    @*@Html.HiddenFor(X => X.PurchaseOrderWarehouse.Id)
+        @Html.HiddenFor(X => X.PurchaseOrderWarehouse.PurchaseOrderId)
+        @Html.HiddenFor(X => X.PurchaseOrderWarehouse.Tax)
+        @Html.HiddenFor(X => X.PurchaseOrderWarehouse.TaxType)
+        @Html.HiddenFor(X => X.PurchaseOrderWarehouse.Deposit)
+        @Html.HiddenFor(X => X.PurchaseOrderWarehouse.BalanceDue)
+        @Html.HiddenFor(X => X.PurchaseOrderWarehouse.Balance)
+        @Html.HiddenFor(X => X.PurchaseOrderWarehouse.ShippingCost)
+        @Html.HiddenFor(X => X.PurchaseOrderWarehouse.ShippingDate)
+        @Html.HiddenFor(X => X.PurchaseOrderWarehouse.TrackingNo)*@
+</div>
+<div class="avb_div_header">
+    <div class="header_title_avb">
+        @Localize.T("Request Order List")
+    </div>
+</div>
+<div class="request_order_inner">
+
+    <div class="avb_invoice_informations">
+        <div class="avp_row po_amount_flex">
+            <div class="width-100p">
+                <div class="avp_row">
+                    <div class="clearfix add_purchase_order_content">
+                        <span class="span-style">@Localize.T("Date From")</span>
+                        <div class="input_group_for_date add-on" id="RequestOrderDateFrom_custom">
+                            <input type="text" value="@ViewBag.DefaultTime.ToString("MM/dd/yy")" id="RequestOrderDateFrom" name="PurchaseOrderWarehouse.OrderDate" class="form-control" />
+                            <div class="input-group-btn">
+                                <btn class="btn">
+                                    <i class="fa fa-calendar DateFromCalender" aria-hidden="true" style="cursor:pointer;"></i>
+                                </btn>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="clearfix add_purchase_order_content">
+                        <span class="span-style">@Localize.T("Date To")</span>
+                        <div class="input_group_for_date add-on" id="RequestOrderDateTo_custom">
+                            <input type="text" value="@ViewBag.DefaultTime.ToString("MM/dd/yy")" id="RequestOrderDateTo" name="PurchaseOrderWarehouse.OrderDate" class="form-control" />
+                            <div class="input-group-btn">
+                                <btn class="btn">
+                                    <i class="fa fa-calendar DateToCalender" aria-hidden="true" style="cursor:pointer;"></i>
+                                </btn>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="clearfix Vendor_name_insert_div add_purchase_order_content">
+                        <span class="span-style">@Localize.T("Shortcut")</span>
+                        @Html.DropDownList("Shortcut", (List<SelectListItem>)ViewBag.Shortcut, new { @class = "form-control" })
+                    </div>
+                    <div class="clearfix Vendor_name_insert_div add_purchase_order_content">
+                        <span class="span-style">@Localize.T("Choose a Technician")</span>
+                        <select class="form-control" id="User" datarequired="true">
+                            <option value="@Guid.Empty.ToString()" useraddress=" ">Select Technician</option>
+                            <option value="22222222-2222-2222-2222-222222222222" useraddress=" ">System User</option>
+                            @if (ViewBag.SupplierList != null)
+                            {
+                                foreach (var TechByItem in (List<HS.Entities.Employee>)ViewBag.AssignedEmployee)
+                                {
+                                    <option value="@TechByItem.UserId" useraddress="@TechByItem.EmployeeAddress">@TechByItem.FirstName @TechByItem.LastName</option>
+                                }
+                            }
+                        </select>
+                        @*@Html.DropDownList("User", (List<SelectListItem>)ViewBag.AssignedEmployee, new { @class = "form-control", datarequired = "true" })*@
+                    </div>
+                   
+                    <div class="clearfix add_purchase_order_content">
+                        <span class="span-style">@Localize.T("Fullfillment Date")</span>
+                        <div class="input_group_for_date add-on" id="FullfillmentDate_custom">
+                            <input type="text" value="@ViewBag.DefaultTime.ToString("MM/dd/yy")" id="FullfillmentDate" name="PurchaseOrderWarehouse.OrderDate" class="form-control" />
+                            <div class="input-group-btn">
+                                <btn class="btn">
+                                    <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                </btn>
+                            </div>
+                        </div>
+
+                    </div>
+                    @*<div class="clearfix Vendor_name_insert_div add_purchase_order_content">
+                        <span class="span-style">@Localize.T("Pickup/Shipped")</span>
+                        @Html.DropDownList("PickupShipped", ViewBag.PickupShipped as List<SelectListItem>, new { @class = "form-control", @datarequired = "true" })
+
+                    </div>*@
+                    <div class="clearfix Vendor_name_insert_div add_purchase_order_content shipping_address_div hidden">
+                        <span class="span-style">@Localize.T("Shipping Address")</span>
+                        <input class="form-control" type="text" id="ShippingAddress" title="@Localize.T("Shipping Address")" />
+                    </div>
+                    <div class="RequestOrderFilterBtn_container">
+                        <button class="btn RequestOrderFilterBtn green_button" title="@Localize.T("Search")">
+                            <i class="glyphicon glyphicon-search"></i> @Localize.T("Search")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="avp_table_info_container request_order_table_container">
+
+        <div id="RequestOrderList">
+
+        </div>
+    </div>
+
+
+</div>
+<div class="request_order_footer">
+  
+    <div class="input-group add-on">
+        @Html.DropDownList("PickupShipped", ViewBag.PickupShipped as List<SelectListItem>, new { @class = "form-control", @datarequired = "true" })
+        <div class="input-group-btn">
+            <button type="button" class="btn green_button" onclick="SendRequisitionList()">
+                @Localize.T("Send")
+            </button>
+        </div>
+        <a href="" id="RequestOredrInfoPrintAndSend" type="button" class="btn green_button hidden RequestOredrInfoPrintAndSend">
+            @Localize.T("Send")
+        </a>
+    </div>
+   
+    <div class="req_order_vendor">
+        <select class="form-control" id="Vendor" datarequired="true">
+            <option value="@Guid.Empty.ToString()" emailaddress=" ">Select Vendor</option>
+            @if (ViewBag.SupplierList != null)
+            {
+            foreach (var SupByItem in (List<HS.Entities.Supplier>)ViewBag.SupplierList)
+            {
+            <option value="@SupByItem.SupplierId" emailaddress="@SupByItem.EmailAddress">@SupByItem.CompanyName</option>
+            }
+            }
+        </select>
+    </div>
+    
+</div>
+
+<div class="AddRequestOrderLoader hidden">
+    <div class='invoice-loader'><div><div class="lds-css ng-scope"><div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div></div></div></div>
+    @*<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>*@
+</div>

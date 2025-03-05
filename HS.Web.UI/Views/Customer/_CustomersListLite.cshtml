@@ -1,0 +1,1142 @@
+﻿@model HS.Web.UI.Models.CustomerHeaderMoneyAndfliterBar
+@using EO.Internal
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Entities = HS.Entities
+
+<link href="~/Content/Css/Customer/CustomerListLite.css" rel="stylesheet" />
+
+<script src="~/Scripts/handlebars.js"></script>
+<script src="~/Scripts/handlebars.min.js"></script>
+<script src="~/Content/Js/CustomerList/CustomerListLite.js"></script>
+@{
+    var currentuser = ((HS.Web.UI.Helper.CustomPrincipal)(User));
+}
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script>
+    var SalesDateFilter;
+    var FollowUpDateFilter;
+    var InstallationDateFilter;
+    var dailyfirstdate = '@Model.Firstdate';
+    var dailylastdate = '@Model.Lastdate';
+    var IsActiveFilter;
+    var SortByCol = "Id";
+    var TotalRMRFilter = false;
+    var TotalOpenInvoice = false;
+    var TotalDueInvoice = false;
+    var SearchKUF = function (searchLength) {
+        var searchtext = encodeURI($("#srch-term").val());
+        if (searchLength != searchtext.length) {
+            return;
+        }
+        var pageNumber = 1;
+        var UserList = $(".UserList").val();
+        var firstdate = $(".min-date").val();;
+        var lastdate = $(".max-date").val();;
+        var TechnicianId = $("#TechUserList").val();
+        var SalesPersonId = $("#SalesUserList").val();
+        var PaymentMethod = encodeURIComponent($("#PaymentMethodLsit").val());
+        var SourceList = $(".SourceList").val();
+        var SalesDate = $("#SalesDateFilter").val();
+        var FollowUpDate = $("#FollowUpDateFilter").val();
+
+
+        var InstallationDate = $("#InstallationDate").val();
+        var FundingCompany = $("#FundingCompanyList").val();
+        var searchtext = encodeURI($("#srch-term").val());
+
+        $('.filter-list-customer').html(LoaderDom);
+        console.log('CustomerListFiltered 1');
+        $('.filter-list-customer').load(domainurl + "/Customer/CustomerListFiltered/?User=" + UserList
+            + "&PageNo=" + pageNumber
+            + "&TechnicianId=" + TechnicianId
+            + "&SalesPersonId=" + SalesPersonId
+            + "&PaymentMethod=" + PaymentMethod
+            + "&Source=" + SourceList
+            + "&SalesDate=" + SalesDate
+            + "&FollowUpDate=" + FollowUpDate
+            + "&InstallationDate=" + InstallationDate
+            + "&MonitoringCompany=" + FundingCompany
+            + "&SortBy=" + SortByCol
+            + "&firstdate=" + firstdate
+            + "&lastdate=" + lastdate
+            + "&IsActive=" + IsActiveFilter
+            + "&SearchText=" + searchtext
+            + "&TotalRMR=" + TotalRMRFilter
+            + "&TotalOpenInvoice=" + TotalOpenInvoice
+            + "&TotalDueInvoice=" + TotalDueInvoice
+            + "&Others=" + $("#OthersCustomerFilter").val()
+            + "&Branch=" + $("#BranchList").val());
+    }
+    var CustomerSearchKeyUp = function (pageNumber, DateFileter) {
+
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var UserList = $(".UserList").val();
+        var SourceList = $(".SourceList").val();
+        var firstdate = $(".min-date").val();
+        var lastdate = $(".max-date").val();
+
+
+        var TechnicianId = $("#TechUserList").val();
+        var SalesPersonId = $("#SalesUserList").val();
+        var PaymentMethod = encodeURIComponent($("#PaymentMethodLsit").val());
+        var SourceList = $(".SourceList").val();
+        var SalesDate = $("#SalesDateFilter").val();
+        var FollowUpDate = $("#FollowUpDateFilter").val();
+        var InstallationDate = $("#InstallationDate").val();
+        var FundingCompany = $("#FundingCompanyList").val();
+        var searchtext = encodeURI($("#srch-term").val());
+
+        $('.filter-list-customer').html(LoaderDom); 
+        var paramlite = {
+            User: UserList,
+            PageNo: pageNumber,
+            TechnicianId: TechnicianId,
+            SalesPersonId: SalesPersonId,
+            PaymentMethod: PaymentMethod,
+            Source: SourceList,
+            SalesDate: SalesDate,
+            FollowUpDate: FollowUpDate,
+            InstallationDate: InstallationDate,
+            MonitoringCompany: FundingCompany,
+            SortBy: SortByCol,
+            firstdate: firstdate,
+            lastdate: lastdate,
+            IsActive: IsActiveFilter,
+            SearchText: searchtext,
+            TotalRMR: TotalRMRFilter,
+            TotalOpenInvoice: TotalOpenInvoice,
+            TotalDueInvoice: TotalDueInvoice,
+            Others: $("#OthersCustomerFilter").val(),
+            Branch: $("#BranchList").val(),
+            Package: encodeURI($("#PackageList").val())
+        };
+        $.ajax({
+            type: "POST",
+            url: '/Customer/CustomerListFilteredLite',
+            data: JSON.stringify(paramlite),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function(data) {
+                console.log(data.CustomerList);
+                var empTemplate = $("#hbCustomerTemplate").html();
+                var sourceHtml = Handlebars.compile(empTemplate);
+                console.log(sourceHtml(data));
+                $(".filter-list-customer").html(sourceHtml(data));
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+        Handlebars.registerHelper("ifBill", function (a) {
+            console.log("ifBill fired");
+            var c;
+            var d = 0;
+
+            if (a.length!==d) {
+                return 'Billing: '+a;
+            } else {
+                c = null;
+            }
+            return c;
+        });
+        Handlebars.registerHelper("date2", function (c) {
+            console.log("date fired");
+            var numb = c.match(/\d/g);
+            var numb1 = numb.join("");
+            var numb2 = numb1.substring(0, 10);
+            //var a =new Date();
+            //var formattedDate  = a.getDate(numb2) +
+            //    "-" +
+            //    (a.getMonth(numb2) + 1) +
+            //    "-" +
+            //    a.getFullYear(numb2);
+            console.log(numb2);
+            return new Date(numb2).toDateString();
+        });
+        Handlebars.registerHelper("signAgreement", function (a) {
+            console.log("signAgreement fired");
+
+            var c;
+            if (a !== true) {
+                return null;
+            } else {
+                c = 'Yes';
+            }
+            return 'Sign Agreement: '+c;
+        });
+    }
+
+    var my_date_format = function (input) {
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    $(document).ready(function () {
+
+
+        $(".DateFilterContents .btn-apply-Datefilter").click(function () {
+            CustomerSearchKeyUp(1, true);
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+            UpdatePtoCookie();
+        });
+
+        if (dailyfirstdate != '') {
+            $(".min-date").val(dailyfirstdate);
+        }
+        if (dailylastdate != '') {
+            $(".max-date").val(dailylastdate);
+        }
+        parent.$('.close').click(function () {
+            parent.$(".modal-body").html('');
+        });
+        //$(".customer_search_text").keyup(function () {
+        //    if ($(".customer_search_text").val().length < 4) {
+        //        return;
+        //    }
+        //    SearchKUF($(".customer_search_text").val().length);
+        //});
+        $("#CustomerSearchButton").click(function () {
+            CustomerSearchKeyUp(1);
+        });
+        $("#srch-term").keydown(function (e) {
+            if (e.which == 13) {
+                console.log("13 pressed");
+                CustomerSearchKeyUp(1);
+            }
+        });
+        $(document).click(function (e) {
+            if ($($(e.target).parent()).hasClass('btn_customerlist_filter')
+                || $(e.target).hasClass('btn_customerlist_filter')
+                || $($(e.target).parent()).hasClass('btn_customerlist_filter')) {
+                return;
+            }
+            else if ($(".customer-fliter-list").is(":visible")) {
+                $(".customer-fliter-list").hide();
+            }
+        });
+        SalesDateFilter = new Pikaday({ format: 'MM/DD/YYYY', field: $("#SalesDateFilter")[0] });
+        FollowUpDateFilter = new Pikaday({ format: 'MM/DD/YYYY', field: $("#FollowUpDateFilter")[0] });
+        InstallationDateFilter = new Pikaday({ format: 'MM/DD/YYYY', field: $("#InstallationDate")[0] });
+        CustomerSearchKeyUp(1, false);
+
+        //$(".btn-apply-filter").click(function () {
+        //    CustomerSearchKeyUp(1, true);
+        //    $(".customer-fliter-list").hide();
+        //})
+
+        $("#Customer-print").click(function () {
+            var UserList3 = $(".UserList").val();
+            var SourceList3 = $(".SourceList").val();
+            var SalesDate = $("#SalesDateFilter").val();
+            var InstallationDate = $("#InstallationDate").val();
+
+            $(".customerlistprint").attr('href', domainurl + "/Customer/GetCustomerListPdfView/?UserList=" + UserList3
+                + "&SourceList=" + SourceList3
+            );
+            $(".customerlistprint").click();
+        })
+        //$(".btn-reset-filter").click(function () {
+        //    $("#SalesUserList").val("-1");
+        //    $("#TechUserList").val("-1");
+        //    $("#PaymentMethodLsit").val("-1");
+        //    $("#SourceList").val("-1");
+        //    $("#SalesDateFilter").val("");
+        //    $("#FollowUpDateFilter").val("");
+        //    $("#InstallationDate").val("");
+        //    $("#FundingCompanyList").val("-1");
+        //    $("#CancelCustomerFilter").val("");
+        //    IsActiveFilter = null;
+        //    $("#min-date").val("");
+        //    $(".max-date").val("");
+        //})
+        $(".btn_customerlist_filter").click(function () {
+
+            if ($(".customer-fliter-list").is(":visible")) {
+                $(".customer-fliter-list").hide();
+
+            } else {
+                $(".customer-fliter-list").show();
+
+            }
+        });
+        $(".customer-fliter-list").click(function (e) {
+            e.stopPropagation();
+        });
+        $(".btn_customerlist_filter").click(function () {
+            $(".customer-fliter-list").load("/Customer/FilterCustomerLeadListGridSettingPartial?key=CustomerGrid");
+        })
+        $(".Customer-grid-col").click(function () {
+            OpenRightToLeftModal(domainurl + "/Setup/GridSettings");
+        });
+        $(".EmailtextforCustomer").click(function () {
+            OpenRightToLeftModal(domainurl + "/Customer/AddCustomerEmailTextTemplate");
+        });
+        $(".Customersystemnum-event").click(function () {
+            LoadCustomerSystemNo();
+        });
+        $(".active_customer_filter").click(function () {
+            IsActiveFilter = true;
+            $("#CancelCustomerFilter").val("Active");
+            TotalRMRFilter = false;
+            TotalOpenInvoice = false;
+            TotalDueInvoice = false;
+            CustomerSearchKeyUp(1);
+        });
+        $(".totalrmr_customer_filter").click(function () {
+            TotalRMRFilter = true;
+            TotalOpenInvoice = false;
+            TotalDueInvoice = false;
+            CustomerSearchKeyUp(1);
+        });
+        $(".openinvoice_customer_filter").click(function () {
+            TotalOpenInvoice = true;
+            IsActiveFilter = true;
+            TotalDueInvoice = false;
+            CustomerSearchKeyUp(1);
+        });
+        $(".dueinvoice_customer_filter").click(function () {
+            TotalDueInvoice = true;
+            IsActiveFilter = true;
+            TotalOpenInvoice = false;
+            CustomerSearchKeyUp(1);
+        });
+        $("#CancelCustomerFilter").change(function () {
+            var statusval = $("#CancelCustomerFilter").val();
+            if (statusval != "") {
+                if (statusval == "Active") {
+                    IsActiveFilter = true;
+                }
+                if (statusval == "Cancel") {
+                    IsActiveFilter = false;
+                }
+            }
+            else {
+                IsActiveFilter = null;
+            }
+        });
+    });
+</script>
+<script>
+    var CustomerFilterQuery = function (pageNumber) {
+        console.log('CustomerFilterQuery');
+        if (typeof (pageNumber) == "undefined" && pageNumber == null && pageNumber == "") {
+            pageNumber = 1;
+        }
+        var displayname = $("#txt_displayname").val();
+        if (typeof (displayname) == "undefined") {
+            displayname = "";
+        }
+        var customerno = $("#txt_customerno").val();
+        if (typeof (customerno) == "undefined") {
+            customerno = "";
+        }
+        var customerintid = $("#txt_id").val();
+        if (typeof (customerintid) == "undefined") {
+            customerintid = "";
+        }
+        var title = $("#txt_title").val();
+        if (typeof (title) == "undefined") {
+            title = "";
+        }
+        var firstname = $("#txt_firstname").val();
+        if (typeof (firstname) == "undefined") {
+            firstname = "";
+        }
+        var lastname = $("#txt_lastname").val();
+        if (typeof (lastname) == "undefined") {
+            lastname = "";
+        }
+        var childof = $("#txt_childof").val();
+        if (typeof (childof) == "undefined") {
+            childof = "";
+        }
+        var passcode = $("#txt_passcode").val();
+        if (typeof (passcode) == "undefined") {
+            passcode = "";
+        }
+        var customertype = $("#txt_customertype").val();
+        if (typeof (customertype) == "undefined") {
+            customertype = "";
+        }
+        var businessname = $("#txt_businessname").val();
+        if (typeof (businessname) == "undefined") {
+            businessname = "";
+        }
+        var dba = $("#txt_dba").val();
+        if (typeof (dba) == "undefined") {
+            dba = "";
+        }
+        var street = $("#txt_street").val();
+        if (typeof (street) == "undefined") {
+            street = "";
+        }
+        var zipcode = $("#txt_zipcode").val();
+        if (typeof (zipcode) == "undefined") {
+            zipcode = "";
+        }
+        var city = $("#txt_city").val();
+        if (typeof (city) == "undefined") {
+            city = "";
+        }
+        var state = $("#txt_state").val();
+        if (typeof (state) == "undefined") {
+            state = "";
+        }
+        var county = $("#txt_county").val();
+        if (typeof (county) == "undefined") {
+            county = "";
+        }
+        var country = $("#txt_country").val();
+        if (typeof (country) == "undefined") {
+            country = "";
+        }
+        var homeowner = $("#txt_homeowner").val();
+        if (typeof (homeowner) == "undefined") {
+            homeowner = "";
+        }
+        var leadsource = $("#txt_leadsource").val();
+        if (typeof (leadsource) == "undefined") {
+            leadsource = "";
+        }
+        var leadsourcetype = $("#txt_leadsourcetype").val();
+        if (typeof (leadsourcetype) == "undefined") {
+            leadsourcetype = "";
+        }
+        var referringcustomer = $("#txt_referringcustomer").val();
+        if (typeof (referringcustomer) == "undefined") {
+            referringcustomer = "";
+        }
+        var emailaddress = $("#txt_emailaddress").val();
+        if (typeof (emailaddress) == "undefined") {
+            emailaddress = "";
+        }
+        var primaryphone = $("#txt_primaryphone").val();
+        if (typeof (primaryphone) == "undefined") {
+            primaryphone = "";
+        }
+        var cellno = $("#txt_cellno").val();
+        if (typeof (cellno) == "undefined") {
+            cellno = "";
+        }
+        var secondaryphone = $("#txt_secondaryphone").val();
+        if (typeof (secondaryphone) == "undefined") {
+            secondaryphone = "";
+        }
+        var carrier = $("#txt_carrier").val();
+        if (typeof (carrier) == "undefined") {
+            carrier = "";
+        }
+        var phonetype = $("#txt_phonetype").val();
+        if (typeof (phonetype) == "undefined") {
+            phonetype = "";
+        }
+        var besttimetocall = $("#txt_besttimetocall").val();
+        if (typeof (besttimetocall) == "undefined") {
+            besttimetocall = "";
+        }
+        var preferredcontactmethod = $("#txt_preferredcontactmethod").val();
+        if (typeof (preferredcontactmethod) == "undefined") {
+            preferredcontactmethod = "";
+        }
+        var dateofbirth = $("#txt_dateofbirth").val();
+        if (typeof (dateofbirth) == "undefined") {
+            dateofbirth = "";
+        }
+        var ssn = $("#txt_ssn").val();
+        if (typeof (ssn) == "undefined") {
+            ssn = "";
+        }
+        var callingtime = $("#txt_callingtime").val();
+        if (typeof (callingtime) == "undefined") {
+            callingtime = "";
+        }
+        var address = $("#txt_address").val();
+        if (typeof (address) == "undefined") {
+            address = "";
+        }
+        var address2 = $("#txt_address2").val();
+        if (typeof (address2) == "undefined") {
+            address2 = "";
+        }
+        var streetprevious = $("#txt_streetprevious").val();
+        if (typeof (streetprevious) == "undefined") {
+            streetprevious = "";
+        }
+        var cityprevious = $("#txt_cityprevious").val();
+        if (typeof (cityprevious) == "undefined") {
+            cityprevious = "";
+        }
+        var stateprevious = $("#txt_stateprevious").val();
+        if (typeof (stateprevious) == "undefined") {
+            stateprevious = "";
+        }
+        var zipcodeprevious = $("#txt_zipcodeprevious").val();
+        if (typeof (zipcodeprevious) == "undefined") {
+            zipcodeprevious = "";
+        }
+        var countryprevious = $("#txt_countryprevious").val();
+        if (typeof (countryprevious) == "undefined") {
+            countryprevious = "";
+        }
+        var accountno = $("#txt_accountno").val();
+        if (typeof (accountno) == "undefined") {
+            accountno = "";
+        }
+        var creditscore = $("#txt_creditscore").val();
+        if (typeof (creditscore) == "undefined") {
+            creditscore = "";
+        }
+        var creditscorevalue = $("#txt_creditscorevalue").val();
+        if (typeof (creditscorevalue) == "undefined") {
+            creditscorevalue = "";
+        }
+        var contractteam = $("#txt_contractteam").val();
+        if (typeof (contractteam) == "undefined") {
+            contractteam = "";
+        }
+        else {
+            if (contractteam != "-1" && contractteam == "Custom") {
+                contractteam = $("#txt_contractteam_custom").val();
+            }
+        }
+        var fundingcompany = $("#txt_fundingcompany").val();
+        if (typeof (fundingcompany) == "undefined") {
+            fundingcompany = "";
+        }
+        var joindate = $("#txt_joindate").val();
+        if (typeof (joindate) == "undefined") {
+            joindate = "";
+        }
+        var note = $("#txt_note").val();
+        if (typeof (note) == "undefined") {
+            note = "";
+        }
+        var salesdate = $("#txt_salesdate").val();
+        if (typeof (salesdate) == "undefined") {
+            salesdate = "";
+        }
+        var installdate = $("#txt_installdate").val();
+        if (typeof (installdate) == "undefined") {
+            installdate = "";
+        }
+        var cutindate = $("#txt_cutindate").val();
+        if (typeof (cutindate) == "undefined") {
+            cutindate = "";
+        }
+        var installer = $("#txt_installer").val();
+        if (typeof (installer) == "undefined") {
+            installer = "";
+        }
+        var fundingdate = $("#txt_fundingdate").val();
+        if (typeof (fundingdate) == "undefined") {
+            fundingdate = "";
+        }
+        var middlename = $("#txt_middlename").val();
+        if (typeof (middlename) == "undefined") {
+            middlename = "";
+        }
+        var reminderdate = $("#txt_reminderdate").val();
+        if (typeof (reminderdate) == "undefined") {
+            reminderdate = "";
+        }
+        var qa1 = $("#txt_qa1").val();
+        if (typeof (qa1) == "undefined") {
+            qa1 = "";
+        }
+        var qa1date = $("#txt_qa1date").val();
+        if (typeof (qa1date) == "undefined") {
+            qa1date = "";
+        }
+        var qa2 = $("#txt_qa2").val();
+        if (typeof (qa2) == "undefined") {
+            qa2 = "";
+        }
+        var qa2date = $("#txt_qa2date").val();
+        if (typeof (qa2date) == "undefined") {
+            qa2date = "";
+        }
+        var billamount = $("#txt_billamount").val();
+        if (typeof (billamount) == "undefined") {
+            billamount = "";
+        }
+        var paymentmethod = $("#txt_paymentmethod").val();
+        if (typeof (paymentmethod) == "undefined") {
+            paymentmethod = "";
+        }
+        var billcycle = $("#txt_billcycle").val();
+        if (typeof (billcycle) == "undefined") {
+            billcycle = "";
+        }
+        var billday = $("#txt_billday").val();
+        if (typeof (billday) == "undefined") {
+            billday = "";
+        }
+        var billnotes = $("#txt_billnotes").val();
+        if (typeof (billnotes) == "undefined") {
+            billnotes = "";
+        }
+        var billtax = $("#txt_billtax").val();
+        if (typeof (billtax) == "undefined") {
+            billtax = "";
+        }
+        var billoutstanding = $("#txt_billoutstanding").val();
+        if (typeof (billoutstanding) == "undefined") {
+            billoutstanding = "";
+        }
+        var servicedate = $("#txt_servicedate").val();
+        if (typeof (servicedate) == "undefined") {
+            servicedate = "";
+        }
+        var area = $("#txt_area").val();
+        if (typeof (area) == "undefined") {
+            area = "";
+        }
+        var streettype = $("#txt_streettype").val();
+        if (typeof (streettype) == "undefined") {
+            streettype = "";
+        }
+        var apartment = $("#txt_apartment").val();
+        if (typeof (apartment) == "undefined") {
+            apartment = "";
+        }
+        var secondcustomerno = $("#txt_secondcustomerno").val();
+        if (typeof (secondcustomerno) == "undefined") {
+            secondcustomerno = "";
+        }
+        var additionalcustomerno = $("#txt_additionalcustomerno").val();
+        if (typeof (additionalcustomerno) == "undefined") {
+            additionalcustomerno = "";
+        }
+        var activationfee = $("#txt_activationfee").val();
+        if (typeof (activationfee) == "undefined") {
+            activationfee = "";
+        }
+        var firstbilling = $("#txt_firstbilling").val();
+        if (typeof (firstbilling) == "undefined") {
+            firstbilling = "";
+        }
+        var isactive = $("#txt_isactive").val();
+        if (typeof (isactive) == "undefined") {
+            isactive = "";
+        }
+        var mmr = $("#txt_monthlymonitoringfee").val();
+        if (typeof (mmr) == "undefined") {
+            mmr = "";
+        }
+        var crossstreet = $("#txt_crossstreet").val();
+        if (typeof (crossstreet) == "undefined") {
+            crossstreet = "";
+        }
+        var businessaccounttype = $("#txt_businessaccounttype").val();
+        if (typeof (businessaccounttype) == "undefined") {
+            businessaccounttype = "";
+        }
+        var esistingpanel = $("#txt_esistingpanel").val();
+        if (typeof (esistingpanel) == "undefined") {
+            esistingpanel = "";
+        }
+        var estclosedate = $("#txt_estclosedate").val();
+        if (typeof (estclosedate) == "undefined") {
+            estclosedate = "";
+        }
+        var projectwalkdate = $("#txt_projectwalkdate").val();
+        if (typeof (projectwalkdate) == "undefined") {
+            projectwalkdate = "";
+        }
+        var annualrevenue = $("#txt_annualrevenue").val();
+        if (typeof (annualrevenue) == "undefined") {
+            annualrevenue = "";
+        }
+        var website = $("#txt_website").val();
+        if (typeof (website) == "undefined") {
+            website = "";
+        }
+        var market = $("#txt_market").val();
+        if (typeof (market) == "undefined") {
+            market = "";
+        }
+        var passengers = $("#txt_passengers").val();
+        if (typeof (passengers) == "undefined") {
+            passengers = "";
+        }
+        var budget = $("#txt_budget").val();
+        if (typeof (budget) == "undefined") {
+            budget = "";
+        }
+        var customeraccounttype = $("#txt_customeraccounttype").val();
+        if (typeof (customeraccounttype) == "undefined") {
+            customeraccounttype = "";
+        }
+        var csprovider = $("#txt_csprovider").val();
+        if (typeof (csprovider) == "undefined") {
+            csprovider = "";
+        }
+        var ownership = $("#txt_ownership").val();
+        if (typeof (ownership) == "undefined") {
+            ownership = "";
+        }
+        var purchaseprice = $("#txt_purchaseprice").val();
+        if (typeof (purchaseprice) == "undefined") {
+            purchaseprice = "";
+        }
+        var contractvalue = $("#txt_contractvalue").val();
+        if (typeof (contractvalue) == "undefined") {
+            contractvalue = "";
+        }
+        var accessgivento = $("#txt_accessgivento").val();
+        if (typeof (accessgivento) == "undefined") {
+            accessgivento = "";
+        }
+        var soldby = $("#txt_soldby").val();
+        if (typeof (soldby) == "undefined") {
+            soldby = "";
+        }
+        var saleslocation = $("#txt_saleslocation").val();
+        if (typeof (saleslocation) == "undefined") {
+            saleslocation = "";
+        }
+        var leadstatus = $("#txt_leadstatus").val();
+        if (typeof (leadstatus) == "undefined") {
+            leadstatus = "";
+        }
+        var donotcall = $("#txt_donotcall").val();
+        if (typeof (donotcall) == "undefined") {
+            donotcall = "";
+        }
+        var customerstatus = $("#txt_customerstatus").val();
+        if (typeof (customerstatus) == "undefined") {
+            customerstatus = "";
+        }
+        var duplicatecustomer = $("#txt_duplicatecustomer").val();
+        if (typeof (duplicatecustomer) == "undefined") {
+            duplicatecustomer = "";
+        }
+        var movingdate = $("#txt_movingdate").val();
+        if (typeof (movingdate) == "undefined") {
+            movingdate = "";
+        }
+        var contractedpreviously = $("#txt_contractedpreviously").val();
+        if (typeof (contractedpreviously) == "undefined") {
+            contractedpreviously = "";
+        }
+        var installedstatus = $("#txt_installedstatus").val();
+        if (typeof (installedstatus) == "undefined") {
+            installedstatus = "";
+        }
+        var acquiredform = $("#txt_acquiredform").val();
+        if (typeof (acquiredform) == "undefined") {
+            acquiredform = "";
+        }
+        var followupdate = $("#txt_followupdate").val();
+        if (typeof (followupdate) == "undefined") {
+            followupdate = "";
+        }
+        var buyoutamountbyads = $("#txt_buyoutamountbyads").val();
+        if (typeof (buyoutamountbyads) == "undefined") {
+            buyoutamountbyads = "";
+        }
+        var buyoutamountbysalesrep = $("#txt_buyoutamountbysalesrep").val();
+        if (typeof (buyoutamountbysalesrep) == "undefined") {
+            buyoutamountbysalesrep = "";
+        }
+        var financedterm = $("#txt_financedterm").val();
+        if (typeof (financedterm) == "undefined") {
+            financedterm = "";
+        }
+        var financedamount = $("#txt_financedamount").val();
+        if (typeof (financedamount) == "undefined") {
+            financedamount = "";
+        }
+        var levels = $("#txt_levels").val();
+        if (typeof (levels) == "undefined") {
+            levels = "";
+        }
+        var soldamount = $("#txt_soldamount").val();
+        if (typeof (soldamount) == "undefined") {
+            soldamount = "";
+        }
+        var taxexemption = $("#txt_taxexemption").val();
+        if (typeof (taxexemption) == "undefined") {
+            taxexemption = "";
+        }
+        var appointmentset = $("#txt_appointmentset").val();
+        if (typeof (appointmentset) == "undefined") {
+            appointmentset = "";
+        }
+        var customerfunded = $("#txt_customerfunded").val();
+        if (typeof (customerfunded) == "undefined") {
+            customerfunded = "";
+        }
+        var maintenance = $("#txt_maintenance").val();
+        if (typeof (maintenance) == "undefined") {
+            maintenance = "";
+        }
+        var isalarmcom = $("#txt_isalarmcom").val();
+        if (typeof (isalarmcom) == "undefined") {
+            isalarmcom = "";
+        }
+        var isagreement = $("#txt_isagreement").val();
+        if (typeof (isagreement) == "undefined") {
+            isagreement = "";
+        }
+        var isfireaccount = $("#txt_isfireaccount").val();
+        if (typeof (isfireaccount) == "undefined") {
+            isfireaccount = "";
+        }
+        var branchid = $("#txt_branchid").val();
+        if (typeof (branchid) == "undefined") {
+            branchid = "";
+        }
+        var PlatformId = $("#txt_platformid").val();
+        if (typeof (PlatformId) == "undefined") {
+            PlatformId = "";
+        }
+        var mapscono = $("#txt_mapscono").val();
+        if (typeof (mapscono) == "undefined") {
+            mapscono = "";
+        }
+
+        $('.filter-list-customer').html(LoaderDom);
+        console.log('CustomerListFiltered 3');
+        $('.filter-list-customer').load(domainurl + "/Customer/CustomerListFiltered/?PageNo=" + pageNumber
+            + "&displayname=" + encodeURI(displayname)
+            + "&customerno=" + encodeURI(customerno)
+            + "&customerintid=" + encodeURI(customerintid)
+            + "&title=" + encodeURI(title)
+            + "&firstname=" + encodeURI(firstname)
+            + "&lastname=" + encodeURI(lastname)
+            + "&childof=" + encodeURI(childof)
+            + "&passcode=" + encodeURI(passcode)
+            + "&customertype=" + encodeURI(customertype)
+            + "&businessname=" + encodeURI(businessname)
+            + "&dba=" + encodeURI(dba)
+            + "&street=" + encodeURI(street)
+            + "&zipcode=" + encodeURI(zipcode)
+            + "&city=" + encodeURI(city)
+            + "&state=" + encodeURI(state)
+            + "&county=" + encodeURI(county)
+            + "&country=" + encodeURI(country)
+            + "&homeowner=" + encodeURI(homeowner)
+            + "&leadsource=" + encodeURI(leadsource)
+            + "&leadsourcetype=" + encodeURI(leadsourcetype)
+            + "&referringcustomer=" + encodeURI(referringcustomer)
+            + "&emailaddress=" + encodeURI(emailaddress)
+            + "&primaryphone=" + encodeURI(primaryphone)
+            + "&cellno=" + encodeURI(cellno)
+            + "&secondaryphone=" + encodeURI(secondaryphone)
+            + "&carrier=" + encodeURI(carrier)
+            + "&phonetype=" + encodeURI(phonetype)
+            + "&besttimetocall=" + encodeURI(besttimetocall)
+            + "&preferredcontactmethod=" + encodeURI(preferredcontactmethod)
+            + "&dateofbirth=" + encodeURI(dateofbirth)
+            + "&ssn=" + encodeURI(ssn)
+            + "&callingtime=" + encodeURI(callingtime)
+            + "&address=" + encodeURI(address)
+            + "&address2=" + encodeURI(address2)
+            + "&streetprevious=" + encodeURI(streetprevious)
+            + "&cityprevious=" + encodeURI(cityprevious)
+            + "&stateprevious=" + encodeURI(stateprevious)
+            + "&zipcodeprevious=" + encodeURI(zipcodeprevious)
+            + "&countryprevious=" + encodeURI(countryprevious)
+            + "&accountno=" + encodeURI(accountno)
+            + "&creditscore=" + encodeURI(creditscore)
+            + "&creditscorevalue=" + encodeURI(creditscorevalue)
+            + "&contractteam=" + encodeURI(contractteam)
+            + "&fundingcompany=" + encodeURI(fundingcompany)
+            + "&joindate=" + encodeURI(joindate)
+            + "&note=" + encodeURI(note)
+            + "&salesdatecus=" + encodeURI(salesdate)
+            + "&installdate=" + encodeURI(installdate)
+            + "&cutindate=" + encodeURI(cutindate)
+            + "&installer=" + encodeURI(installer)
+            + "&fundingdate=" + encodeURI(fundingdate)
+            + "&middlename=" + encodeURI(middlename)
+            + "&reminderdate=" + encodeURI(reminderdate)
+            + "&qa1=" + encodeURI(qa1)
+            + "&qa1date=" + encodeURI(qa1date)
+            + "&qa2=" + encodeURI(qa2)
+            + "&qa2date=" + encodeURI(qa2date)
+            + "&billamount=" + encodeURI(billamount)
+            + "&paymentmethodcus=" + encodeURI(paymentmethod)
+            + "&billcycle=" + encodeURI(billcycle)
+            + "&billday=" + encodeURI(billday)
+            + "&billnotes=" + encodeURI(billnotes)
+            + "&billtax=" + encodeURI(billtax)
+            + "&billoutstanding=" + encodeURI(billoutstanding)
+            + "&servicedate=" + encodeURI(servicedate)
+            + "&area=" + encodeURI(area)
+            + "&streettype=" + encodeURI(streettype)
+            + "&apartment=" + encodeURI(apartment)
+            + "&secondcustomerno=" + encodeURI(secondcustomerno)
+            + "&additionalcustomerno=" + encodeURI(additionalcustomerno)
+            + "&activationfee=" + encodeURI(activationfee)
+            + "&firstbilling=" + encodeURI(firstbilling)
+            + "&isactivestatus=" + encodeURI(isactive)
+            + "&mmr=" + encodeURI(mmr)
+            + "&crossstreet=" + encodeURI(crossstreet)
+            + "&businessaccounttype=" + encodeURI(businessaccounttype)
+            + "&esistingpanel=" + encodeURI(esistingpanel)
+            + "&estclosedate=" + encodeURI(estclosedate)
+            + "&projectwalkdate=" + encodeURI(projectwalkdate)
+            + "&annualrevenue=" + encodeURI(annualrevenue)
+            + "&website=" + encodeURI(website)
+            + "&market=" + encodeURI(market)
+            + "&passengers=" + encodeURI(passengers)
+            + "&budget=" + encodeURI(budget)
+            + "&customeraccounttype=" + encodeURI(customeraccounttype)
+            + "&csprovider=" + encodeURI(csprovider)
+            + "&ownership=" + encodeURI(ownership)
+            + "&purchaseprice=" + encodeURI(purchaseprice)
+            + "&contractvalue=" + encodeURI(contractvalue)
+            + "&accessgivento=" + encodeURI(accessgivento)
+            + "&soldby=" + encodeURI(soldby)
+            + "&saleslocation=" + encodeURI(saleslocation)
+            + "&leadstatus=" + encodeURI(leadstatus)
+            + "&donotcall=" + encodeURI(donotcall)
+            + "&customerstatus=" + encodeURI(customerstatus)
+            + "&duplicatecustomer=" + encodeURI(duplicatecustomer)
+            + "&movingdate=" + encodeURI(movingdate)
+            + "&contractedpreviously=" + encodeURI(contractedpreviously)
+            + "&installedstatus=" + encodeURI(installedstatus)
+            + "&acquiredform=" + encodeURI(acquiredform)
+            + "&followupdatecus=" + encodeURI(followupdate)
+            + "&buyoutamountbyads=" + encodeURI(buyoutamountbyads)
+            + "&buyoutamountbysalesrep=" + encodeURI(buyoutamountbysalesrep)
+            + "&financedterm=" + encodeURI(financedterm)
+            + "&financedamount=" + encodeURI(financedamount)
+            + "&levels=" + encodeURI(levels)
+            + "&soldamount=" + encodeURI(soldamount)
+            + "&taxexemption=" + encodeURI(taxexemption)
+            + "&appointmentset=" + encodeURI(appointmentset)
+            + "&customerfunded=" + encodeURI(customerfunded)
+            + "&maintenance=" + encodeURI(maintenance)
+            + "&isalarmcom=" + encodeURI(isalarmcom)
+            + "&isagreement=" + encodeURI(isagreement)
+            + "&isfireaccount=" + encodeURI(isfireaccount)
+            + "&branchid=" + encodeURI(branchid)
+            + "&PlatformId=" + encodeURI(PlatformId)
+            + "&MapscoNo=" + encodeURI(mapscono)
+        );
+    }
+    function FormatePhoneNumber(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-()  ]/g, '');
+            if (Value.length == 10) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+            }
+            else if (Value.length > 10) {
+                ValueClean = Value;
+            }
+            else {
+                ValueClean = Value;
+            }
+        }
+        return ValueClean;
+    }
+    function FormatCellNumber(cvalue) {
+        var ValueCleanCell = "";
+        if (cvalue != undefined && cvalue != "" && cvalue != null) {
+            cvalue = cvalue.replace(/[-()  ]/g, '');
+            if (cvalue.length == 10) {
+                ValueCleanCell = cvalue.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+            }
+            else if (cvalue.length > 10) {
+                ValueCleanCell = cvalue;
+            }
+            else {
+                ValueCleanCell = cvalue;
+            }
+        }
+        return ValueCleanCell;
+    }
+    function FormatSecondaryNumber(svalue) {
+        var ValueCleanSecondary = "";
+        if (svalue != undefined && svalue != "" && svalue != null) {
+            svalue = svalue.replace(/[-()  ]/g, '');
+            if (svalue.length == 10) {
+                ValueCleanSecondary = svalue.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+            }
+            else if (svalue.length > 10) {
+                ValueCleanSecondary = svalue;
+            }
+            else {
+                ValueCleanSecondary = svalue;
+            }
+        }
+        return ValueCleanSecondary;
+    }
+    function FormateSSNNumber(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-  ]/g, '');
+            if (Value.length == 9) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{2})\-?(\d{4})/, "$1-$2-$3");
+            }
+            else if (Value.length > 9) {
+                ValueClean = Value;
+            }
+            else {
+                ValueClean = Value;
+            }
+        }
+        return ValueClean;
+    }
+</script>
+
+<div class="header-content custom_scroll">
+    <div class="money-bar width-100p List_color_div">
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerSummmery))
+        {
+
+            <div class="money-bar-left-content">
+
+                <div class="estimate active_customer_filter">
+                    @{
+                        int CustomerCount = 0;
+                        int.TryParse(Model.CustomerHeaderMoneyBarModel.CustomerCount, out CustomerCount);
+                    }
+
+                    <span class="cl_amount spnCustomerCount">@HS.Web.UI.Helper.LabelHelper.NumberFormat(CustomerCount)</span>
+                    <div class="sub-content">
+                        <span>@Localize.T("Customer")</span>
+                    </div>
+                </div>
+
+
+            </div>
+
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerBarTotalRMRCount))
+            {
+                <div class="money-bar-right-content">
+                    <div class="activity totalrmr_customer_filter">
+                        <span class="cl_amount spnTotalRMRCount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Double.Parse(Model.CustomerHeaderMoneyBarModel.TotalRMR))</span>
+                        <span class="cl_amount spnDifferentiate">@Localize.T("/")</span>
+                        <span class="cl_amount spnTotalRMRValue">@HS.Web.UI.Helper.LabelHelper.NumberFormat(Int32.Parse(Model.CustomerHeaderMoneyBarModel.TotalRMRCount)) </span>
+                        <div class="sub-content">
+                            <span>@Localize.T("Total RMR")</span>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerBarEstimateAmount))
+            {
+                <div class="money-bar-left-content">
+                    <div class="overdue openinvoice_customer_filter">
+                        <span class="cl_amount spnOpenInvoice">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Double.Parse(Model.CustomerHeaderMoneyBarModel.EstimateAmount))</span>
+                        <div class="sub-content">
+                            <span>@Localize.T("Open Invoices")</span>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerBarDueAmount))
+            {
+                <div class="money-bar-right-content">
+
+                    <div class="invoice dueinvoice_customer_filter">
+                        <span class="cl_amount spnDueInvoice">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Double.Parse(Model.CustomerHeaderMoneyBarModel.DueAmount))</span>
+                        <div class="sub-content">
+                            <span>@Localize.T("Due Amount")</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="clearfix"></div>
+    <div class="scroll-div">
+
+        <div class="customer_list_search">
+            @if (currentuser.UserTags.ToLower().IndexOf("technician") != 0)
+            {
+                <div class="down_arrow_style arrow_hide">
+                    @*<i class="fa fa-arrow-down down_style" aria-hidden="true" ></i>*@
+                    <img src="~/Content/img/down_arrow.png" />
+                </div>
+            }
+
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerSearch))
+            {
+                <div class="searchbardiv cl_search_bar">
+                    <div style="margin-top:-8px;" class="input-group add-on">
+                        <input class="form-control customer_search_text" placeholder="@Localize.T("Search")" name="srch-term" id="srch-term" type="text">
+                        <div class="input-group-btn">
+                            <button class="btn btn-default custom-btn green_button" id="CustomerSearchButton" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+                if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerFilter))
+                {
+                    <div class="customer-list-filter">
+                        <button title="Filter" class="btn btn_customerlist_filter">
+                            <span class="glyphicon glyphicon-filter"></span>
+                        </button>
+                    </div>
+                }
+            }
+            @if (currentuser.UserTags.ToLower().IndexOf("technician") != 0)
+            {
+                <div class="customer-content-list"></div>
+            }
+
+        </div>
+        <div class="customer-fliter-list col-md-12 customer-fliter-list_Toggle">
+
+        </div>
+
+        <div class="custom-top-padding">
+
+        </div>
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerList))
+        {
+            <div class="filter-list-customer">
+
+            </div>
+        }
+    </div>
+    <div class="custom-pager hidden">
+        <ul class="pager">
+            <li><a href="javascript:void(0)">@Localize.T("Previous")</a></li>
+            <li><a href="javascript:void(0)">@Localize.T("Next")</a></li>
+        </ul>
+    </div>
+</div>
+
+<div class="hidden" style="display:none;">
+    <a href="" class="ExportCustomerReport"></a>
+</div>
+<div class="hidden" style="display:none;">
+    <a href="" class="customerlistprint"></a>
+</div>
+<div class="hidden" style="display:none;">
+    <a href="" class="systemnolist"></a>
+</div>
+
+

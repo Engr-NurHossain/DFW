@@ -1,0 +1,155 @@
+﻿@{
+    Layout = null;
+    bool IsAllSelectdShow = ViewBag.isSelectAllpermit;
+}
+@model List<HS.Entities.ScheduleCalendarList>
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/FullCalendar/fullcalendar.css" rel="stylesheet" />
+<link href="~/Content/Css/Scheduler.css" rel="stylesheet" />
+<link href="~/Content/Css/Schedule/ScheduleCalendar.css" rel="stylesheet" />
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<script>
+    var IsPreviousDate = '@PermissionChekcer.IsPermitted(Permissions.SchedulePermission.PreviousDateSchedulePermission)'
+    var defview = '@ViewBag.defaultView';
+    var UserVal = '@Html.Raw(Json.Encode(@ViewBag.UserValValue))';
+    UserVal = JSON.parse(UserVal);
+    var resourceLimit = '@ViewBag.ResourceLimit';
+    var resourceLimit1 = '@ViewBag.ResourceLimit1';
+    var pageno = '@ViewBag.pageno';
+    var pageno1 = '@ViewBag.pageno2';
+    var ReminderResource = '@ViewBag.ReminderResource';
+    var pageval = parseInt(pageno) - 1;
+    var startdate = '@ViewBag.StartDate';
+    var FinalPageno = '@ViewBag.pageno';
+    var typeval = '@Html.Raw(Json.Encode(@ViewBag.typeval))';
+    typeval = JSON.parse(typeval);
+    var mintime = '@ViewBag.ScheduleCalendarMinTimeRange';
+    var maxtime = '@ViewBag.ScheduleCalendarMaxTimeRange';
+    var EventUserId = '@ViewBag.EventUserId';
+    var UserCount = '@ViewBag.UserCount';
+    var ticketId = '@ViewBag.TicketId';
+    var TicketStatusArr = '@Html.Raw(Json.Encode(@ViewBag.ListImage))';
+    TicketStatusArr = JSON.parse(TicketStatusArr);
+    var TechUserId = '@ViewBag.TechUserId';
+    var CalendarUserTag = '@ViewBag.CalendarUserTag';
+    var DateTitle = '@ViewBag.DateTitle';
+    var ispermit = '@ViewBag.ispermit';
+    var IsMobileDevice = '@Request.Browser.IsMobileDevice';
+    var IsAllSelectdShow = '@IsAllSelectdShow';
+</script>
+<script src="~/Content/momentJs/MomentSchedule.js"></script>
+<script src="~/Content/FullCalendar/fullcalendar.js"></script>
+<script src="~/Content/FullCalendar/fullcalendar-resource.js"></script>
+
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<script src="~/Content/Js/Schedule.js"></script>
+<style>
+    #btn_sche_date_header, #btn_close_date_header {
+        margin-left: 0px;
+    }
+</style>
+<script>
+    var HeaderPermission = '@PermissionChekcer.IsPermitted(Permissions.SchedulePermission.ScheduleDateHeaderChange)';
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var dateheadercalendar;
+    var EditDateHeader = function () {
+        var dateheader = "<div class='' style='float:left;'><input class='form-control' id='sche_date_header_calendar' /></div><div style='float:left'><button class='btn' id='btn_close_date_header' onclick='CloseDateHeader()' title='Cancel'><i class='fa fa-close'></i></button></div><div class='' style='float:left;'><button class='btn' id='btn_sche_date_header' onclick='SaveDateHeader()' title='Set Date'><i class='fa fa-save'></i></button></div>";
+        $(".sche_event_header h2").html(dateheader);
+        $("#sche_date_header_calendar").val(startdate);
+        dateheadercalendar = new Pikaday({ format: 'MM/DD/YYYY', field: $('#sche_date_header_calendar')[0], firstDay: 1 });
+    }
+    var CloseDateHeader = function () {
+        console.log("close");
+        $(".sche_event_header h2").html(DateTitle);
+        $(".sche_event_header h2").append("<div style='float:right;margin-left:10px;cursor:pointer;' class='edit_date_header_schedule'><i class = 'fa fa-edit' onclick='EditDateHeader()'></i></div>");
+    }
+    var SaveDateHeader = function () {
+        view = myCalendar.fullCalendar('getView');
+        var formatdate = new Date($("#sche_date_header_calendar").val());
+        formatdate.setMonth(formatdate.getMonth() + 1);
+        formatdate = formatdate.getFullYear() + "-" + formatdate.getMonth() + "-" + formatdate.getDate() + "T";
+        if (view.name == "agendaDay") {
+            viewname = "Daily";
+        }
+        if (view.name == "agendaFourDay") {
+            viewname = "Weekly";
+        }
+        if (view.name == "month") {
+            viewname = "Monthly";
+        }
+        if (view.name == "listWeek") {
+            viewname = "List";
+        }
+        $(".AppointmentScheduleCalendar").html(TabsLoaderText);
+        $(".AppointmentScheduleCalendar").load(domainurl + "/Schedule/ScheduleCalendar?parent=null" + "&UserVal=" + UserVal + "&pageno=" + FinalPageno + "&ReminderResource=" + ReminderResource + "&pageno2=" + pageno1 + "&viewname=" + viewname + "&viewstartdate=" + formatdate.toString() + "&typeval=" + encodeURIComponent(typeval));
+    }
+    var searchButtonClickFunction = function () {
+        var value = $("#ListEmployee").val();
+        var view = myCalendar.fullCalendar('getView');
+        var timestamp = Date.parse($("#ScheduleDateTime").val());
+        if (isNaN(timestamp) == true) { timestamp = Date.parse($("#sche_date_header_calendar").val()); }
+        if (isNaN(timestamp) == true) { timestamp = new Date();}
+        var formatdate = new Date(timestamp);
+        formatdate.setMonth(formatdate.getMonth() + 1);
+        formatdate = formatdate.getFullYear() + "-" + formatdate.getMonth() + "-" + formatdate.getDate() + "T";
+        var typeval = encodeURIComponent($("#ListTicketType").val());
+        if (view.name == "agendaDay") {
+            viewname = "Daily";
+        }
+        if (view.name == "agendaFourDay") {
+            viewname = "Weekly";
+        }
+        if (view.name == "month") {
+            viewname = "Monthly";
+        }
+        if (view.name == "listWeek") {
+            viewname = "List";
+        }
+        var IsSelected = $("#IsAllTechnicianList").val();
+        $(".AppointmentScheduleCalendar").html(TabsLoaderText);
+        $(".AppointmentScheduleCalendar").load(domainurl + "/Schedule/ScheduleCalendar?parent=null" + "&UserVal=" + value + "&pageno=" + 1 + "&ReminderResource=" + ReminderResource + "&pageno2=" + pageno1 + "&viewname=" + viewname + "&viewstartdate=" + formatdate.toString() + "&typeval=" + typeval + "&FilterWithSearch=true&SelectedEmpOnly=" + IsSelected);
+    }
+    $(document).ready(function () {
+        console.log("hi");
+        $(".selectpicker_user").selectpicker('val', UserVal);
+        $(".selectpicker_type").selectpicker('val', typeval);
+        if (pageno != null && pageno != 0) {
+            pageno = parseInt(pageno) + 1;
+        }
+        if (pageno1 != null && pageno1 != 0) {
+            pageno1 = parseInt(pageno1) + 1;
+        }
+        $(".fc-prev-button").click(function () {
+            Calander(null);
+        })
+        $(".fc-next-button").click(function () {
+            Calander(null);
+        })
+        $(".fc-today-button").click(function () {
+            Calander(null);
+        })
+        $(".fc-month-button").click(function () {
+            $('#ScheduleCalender').fullCalendar('removeEvents', function (e) { return !e.isUserCreated });
+            Calander(null);
+        })
+
+        $(".sche_event_header h2 div").remove();
+        $(".sche_event_header h2").html(DateTitle);
+
+        $(".sche_event_header h2").append("<div style='float:right;margin-left:10px;cursor:pointer;' class='edit_date_header_schedule'><i class = 'fa fa-edit' onclick='EditDateHeader()'></i></div>");
+    })
+</script>
+<div class="LoadSchedule">
+    @if(!IsAllSelectdShow){
+    @Html.DropDownList("ListTicketType", ViewBag.TicketType as List<SelectListItem>, new { @class = "form-control selectpicker_type", @multiple = "multiple", title = "Select Ticket Type" })
+
+        <div class="input-group add-on">
+            @Html.DropDownList("ListEmployee", ViewBag.ListEmployee as List<SelectListItem>, new { @class = "form-control selectpicker_user", @multiple = "multiple", title = "Select User", name = "selUser" })
+            <div class="input-group-btn"> <button title="Search" class="btn green_button" id="cal_search_btn"><i class="fa fa-search"></i></button></div>
+        </div>
+    }
+</div>
+<div id='ScheduleCalender' class="ScheduleCalender">
+
+</div>

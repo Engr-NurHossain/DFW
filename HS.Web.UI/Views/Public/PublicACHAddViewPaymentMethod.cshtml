@@ -1,0 +1,310 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.PaymentInfo
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+<style>
+    .alarm_head_text {
+        font-size: 2rem;
+        font-family: 'Play', sans-serif;
+    }
+
+    .alarm_head_container {
+        width: 100%;
+        float:left;
+        background-color: #eceef1;
+        padding: 10px 0px 10px 15px;
+    }
+
+    .footer_section_public {
+        width: 100%;
+        float:left;
+        background-color: #eceef1;
+        padding: 10px 0px 10px 15px;
+    }
+
+  
+
+    #btnsaveACH, #btnsaveACH:hover {
+        margin-right: 10px;
+        float: right;
+        margin-top: 3px !important;
+        color: white;
+        background-color: #2ca01c;
+        border-color: #867e7e;
+    }
+    .pub_ach_add_height {
+        width:100%;
+        float:left;
+        overflow-x:hidden;
+        overflow-y:scroll;
+    }
+        .pub_ach_add_height .red {
+            color:#d71920;
+        }
+         .pub_ach_add_height .absolute {
+            position:absolute;
+        }
+    .pub_ach_add_main_container {
+        width: 100%;
+        float: left;
+        overflow-x: hidden;
+    }
+</style>
+<script>
+    var customerid = '@ViewBag.customerid';
+    var PaymentMethodACH = '@HS.Web.UI.Helper.LabelHelper.PaymentMethod.ACH';
+    var echeckType = '@Model.EcheckType';
+    var TYPE = '@ViewBag.type';
+    var echecktypedefault = '@ViewBag.echeckTypedefault';
+    var comid = '@ViewBag.comid';
+    var ACHMethodFunction = function () {
+        var url = domainurl + "/Public/SavePaymentMethod";
+        var param = {
+            Id: $("#ACH_id").val(),
+            RoutingNo: $("#RoutingNo").val(),
+            AcountNo: $("#AcountNo").val(),
+            BankAccountType: $("#BankAccountType").val(),
+            EcheckType: $("#EcheckType").val(),
+            AccountName: $("#AccountName").val(),
+            BankName: $("#BankName").val(),
+            MethodType: PaymentMethodACH,
+            CustomerId: customerid,
+        }
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: JSON.stringify({ 'PaymentInfo': param, 'companyid': comid }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenRightToLeftModal(false);
+                    OpenSuccessMessageNew("Success", "Payment Method Saved Successfully", function () {
+                        $(".LoadImgDiv").removeClass('hidden');
+                        setTimeout(function () {
+                            $(".LoadImgDiv").addClass('hidden');
+                        }, 5000);
+                        $(".sign-head").removeClass('hidden');
+                        $(".ques-head").addClass('hidden');
+                        $(".answer-content").addClass('hidden');
+                        $(".sign-div").removeClass('hidden');
+                        $(".bodyConentsDiv1").removeClass('hidden');
+                        $(".bodyConentsDiv1_mobile_doc").removeClass('hidden');
+                        if (IsMobile == "False") {
+                            var ifr = $('iframe')[0];
+                            ifr.src = ifr.src
+                        }
+                        $(".footerContents-agreement").removeClass('hidden');
+                        parent.$(".ACH_CC_Div").addClass('hidden');
+                    });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    var GetBankingInformationByRoutingNumber = function (number) {
+        console.log(number);
+        $.ajax({
+            type: "GET",
+            url: "/SmartLeads/GetBankingInformationByRoutingNumber",
+            data: { routingnumber: number },
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    //var resultparse = JSON.parse(data.dataObjects);
+                    var resultparse = data.dataObjects;
+                    if (resultparse.code == 200) {
+                        console.log(resultparse.BankName);
+                        $("#BankName").val(resultparse.BankName);
+                        $("#RoutingNo").removeClass('required');
+                        $(".routing_div label").addClass('hidden');
+                        //if ($("#AcountNo").val().length > 4) {
+                        //    $("#AcountNo").removeClass('required');
+                        //    $(".account_no_div label").addClass('hidden');
+                        //    setTimeout(function () {
+
+                        //    }, 1000);
+                        //}
+                        //else {
+                        //    $("#AcountNo").addClass('required');
+                        //    $(".account_no_div label").removeClass('hidden');
+                        //}
+                    }
+                    else {
+                        $("#BankName").val("");
+                        $("#RoutingNo").addClass('required');
+                        $(".routing_div label").removeClass('hidden');
+                    }
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+
+    function isEmptyOrSpaces(str) {
+        return str === null || str.match(/^ *$/) !== null;
+    }
+
+    function validate_RoutingNo() {
+        var RoutingNo = $("#RoutingNo").val();
+        if (RoutingNo == undefined || RoutingNo == null || isEmptyOrSpaces(RoutingNo) || $(".routing_div label").hasClass('hidden') == false) {
+            $("#RoutingNo").css("border-color", "red");
+            return false;
+        } else {
+            $("#RoutingNo").css("border-color", "#ccc");
+            return true;
+        }
+    }
+    function validate_AcountNo() {
+        var AcountNo = $("#AcountNo").val();
+        if (AcountNo == undefined || AcountNo == null || isEmptyOrSpaces(AcountNo)) {
+            $("#AcountNo").css("border-color", "red");
+            return false;
+        } else {
+            $("#AcountNo").css("border-color", "#ccc");
+            return true;
+        }
+    }
+    function validate_BankAccountType() {
+        var BankAccountType = $("#BankAccountType").val();
+        if (BankAccountType == undefined || BankAccountType == null || isEmptyOrSpaces(BankAccountType) || BankAccountType == '-1') {
+            $("#BankAccountType").css("border-color", "red");
+            return false;
+        } else {
+            $("#BankAccountType").css("border-color", "#ccc");
+            return true;
+        }
+    }
+    function validate_EcheckType() {
+        var EcheckType = $("#EcheckType").val();
+        if (EcheckType == undefined || EcheckType == null || isEmptyOrSpaces(EcheckType) || EcheckType == '-1') {
+            $("#EcheckType").css("border-color", "red");
+            return false;
+        } else {
+            $("#EcheckType").css("border-color", "#ccc");
+            return true;
+        }
+    }
+    function validate_AccountName() {
+        var AccountName = $("#AccountName").val();
+        if (AccountName == undefined || AccountName == null || isEmptyOrSpaces(AccountName)) {
+            $("#AccountName").css("border-color", "red");
+            return false;
+        } else {
+            $("#AccountName").css("border-color", "#ccc");
+            return true;
+        }
+    }
+    function validate_BankName() {
+        var BankName = $("#BankName").val();
+        if (BankName == undefined || BankName == null || isEmptyOrSpaces(BankName)) {
+            $("#BankName").css("border-color", "red");
+            return false;
+        } else {
+            $("#BankName").css("border-color", "#ccc");
+            return true;
+        }
+    }
+    $(document).ready(function () {
+        $(".pub_ach_add_height").height(window.innerHeight - 133);
+       
+       
+        $("#btnsaveACH").click(function () {
+            var validate_BankName1 = validate_BankName();
+            var validate_AccountName1 = validate_AccountName();
+            var validate_EcheckType1 = validate_EcheckType();
+            var validate_BankAccountType1 = validate_BankAccountType();
+            var validate_AcountNo1 = validate_AcountNo();
+            var validate_RoutingNo1 = validate_RoutingNo();
+            var validateaccno = false;
+            if ($("#AcountNo").val().length >= 4) {
+                validateaccno = true
+            }
+            if (validate_RoutingNo1 && validate_AcountNo1 && validate_BankAccountType1 && validate_EcheckType1 && validate_AccountName1 && validate_BankName1 && validateaccno == true) {
+                //var number = $("#RoutingNo").val();
+                //GetBankingInformationByRoutingNumber(number);
+                ACHMethodFunction();
+            }
+        })
+        if (echeckType != '-1' || echeckType != '') {
+            $("#EcheckType").val("WEB");
+        }
+        $("#RoutingNo").change(function () {
+            var number = $("#RoutingNo").val();
+            GetBankingInformationByRoutingNumber(number);
+        })
+        if (echecktypedefault == "true") {
+            $("#EcheckType").find("option[value='WEB']").hide();
+        }
+        $("#AcountNo").keyup(function () {
+            if ($("#AcountNo").val().length >= 4) {
+                            $("#AcountNo").removeClass('required');
+                            $(".account_no_div label").addClass('hidden');
+                            setTimeout(function () {
+                                
+                            }, 1000);
+                        }
+                        else {
+                            $("#AcountNo").addClass('required');
+                            $(".account_no_div label").removeClass('hidden');
+                        }
+        })
+    })
+</script>
+
+@Html.HiddenFor(x => x.Id, new { id = "ACH_id" })
+<div class="pub_ach_add_main_container">
+    <div class="alarm_head_container">
+        <span class="alarm_head_text header_txt_style_ERP">@Localize.T("ACH Payment Method")</span>
+    </div>
+    <div class="pub_ach_add_height">
+        <div class="container-fluid">
+            <div class="form-group clearfix routing_div">
+                <span class="text-custom">@Localize.T("Routing No")</span>
+                @Html.TextBoxFor(x => x.RoutingNo, new { @class = "form-control", id = "RoutingNo", datarequired = "true", placeholder = "Routing No" })
+                <label class="label hidden red absolute" rel="RoutingNo">*@Localize.T("Please enter routing number") </label>
+            </div>
+            <div class="form-group clearfix account_no_div">
+                <span class="text-custom">@Localize.T("Account No")</span>
+                @Html.TextBoxFor(x => x.AcountNo, new { @class = "form-control", id = "AcountNo", datarequired = "true", placeholder = "Account No" })
+                <label class="label hidden red absolute" rel="AcountNo">*@Localize.T("Please enter account number") </label>
+            </div>
+            <div class="form-group clearfix">
+                <span class="text-custom">@Localize.T("Bank Acc Type")</span>
+                @Html.DropDownListFor(x => x.BankAccountType, (List<SelectListItem>)ViewBag.BankAccountType, new { @class = "form-control ACH_PaymentInfo_BankAccountType", id = "BankAccountType", datarequired = "true" })
+                <label class="label hidden red absolute" rel="BankAccountType">*@Localize.T("Please select bank account type") </label>
+            </div>
+            <div class="form-group clearfix">
+                <span class="text-custom">@Localize.T("eCheck Type")</span>
+                @Html.DropDownListFor(x => x.EcheckType, (List<SelectListItem>)ViewBag.ECheckType, new { @class = "form-control ach_e_check_type", id = "EcheckType", datarequired = "true" })
+                <label class="label hidden red absolute" rel="EcheckType">*@Localize.T("Please select echeck type") </label>
+            </div>
+            <div class="form-group clearfix">
+                <span class="text-custom">@Localize.T("Account Holder's Name")</span>
+                @Html.TextBoxFor(x => x.AccountName, new { @class = "form-control", id = "AccountName", datarequired = "true", placeholder = "Account Name" })
+                <label class="label hidden red absolute" rel="AccountName">*@Localize.T("Please enter account name") </label>
+            </div>
+            <div class="form-group clearfix">
+                <span class="text-custom">@Localize.T("Bank Name")</span>
+                @Html.TextBoxFor(x => x.BankName, new { @class = "form-control", id = "BankName", datarequired = "true", placeholder = "Bank Name" })
+                <label class="label hidden red absolute" rel="BankName">*@Localize.T("Please enter bank name") </label>
+            </div>
+        </div>
+    </div>
+    <div class="footer_section_public">
+
+        <button type="button" class="btn" id="btnsaveACH"><i class="fa fa-floppy-o" aria-hidden="true"></i>&nbsp;@Localize.T("Save")</button>
+
+    </div>
+</div>

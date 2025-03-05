@@ -1,0 +1,288 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+    var TotalPercentage = 0.0;
+    if(Model.TotalTotalSales>0 && Model.TotalCustomerFunded>0)
+    {
+        TotalPercentage =(double)Model.TotalCustomerFunded * 100 / Model.TotalTotalSales;
+    }
+}
+@using HS.Framework
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.EmployeeListMatrixWithCount
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
+<style>
+    #btnDownloadsoldtofunded {
+        float: right;
+    }
+</style>
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var DataTablePageSize = 50;
+    var LeadsStartDatepicker;
+    var LeadsEndDatepicker;
+    var ShowFirstCallCustomer = function (EmpId) {
+        OpenTopToBottomModal("/Reports/SalesMatrixCustomerListPertial?EmployeeId=" + EmpId+"&from=SoldFunded");
+    }
+    var ShowFundedCustomer = function (EmpId) {
+        OpenTopToBottomModal("/Reports/SalesMatrixCustomerListPertial?EmployeeId=" + EmpId+"&from=CustomerFunded");
+    }
+    $(document).ready(function () {
+        $(".icon_sort_bi").click(function () {
+            var orderval = $(this).attr('data-val');
+            LoadSoldToFundedNav(pageno, orderval);
+        });
+          $("#btnDownloadsoldtofunded").click(function () {
+       var FirstDayStr = parent.$(".WeeklyStartDate").val();
+        var EndDayStr = parent.$(".WeeklyEndDate").val();
+
+       location.href = (domainurl + "/Reports/SoldToFundedPartial/?Start=" + FirstDayStr + "&End=" + EndDayStr + "&GetReport=true&pageno=" + 1 + "&pagesize=50" );
+
+
+        });
+    })
+</script>
+@if (PermissionChecker.IsPermitted(PermissionList.ReportsPermissions.SalesMatrixDownloadButton))
+{
+    <div>
+        <button title="@Localize.T(" Download")" class="report_btn lrp_float_right btn green_button" id="btnDownloadsoldtofunded"><i class="fa fa-download" aria-hidden="true"></i></button>
+
+    </div>
+}
+    <div class="leads_report_table">
+        <table id="LeadsReportTable" class="can_cue_table">
+            <thead>
+                <tr>
+                    <th>
+                        <div>@Localize.T("Sales Person")</div>
+                        <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/salesperson"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/salesperson"></i></div>
+
+                    </th>
+                    <th>
+                        <div>@Localize.T("Sales")</div>
+                        <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/sales"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/sales"></i></div>
+
+                    </th>
+                    <th>
+                        <div>@Localize.T("Funded")</div>
+                        <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/funded"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/funded"></i></div>
+
+                    </th>
+                    <th>
+                        <div>@Localize.T("Funded %")</div>
+                        <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/percentage"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/percentage"></i></div>
+
+                    </th>
+                    <th>
+                        <div>@Localize.T("UserX")</div>
+                        <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/userx"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/userx"></i></div>
+
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.EmployeeListMatrixList)
+                {
+                    <tr>
+                        <td>
+                            <div>@Localize.T("Sales Person") <span>:</span></div>
+                            <div>
+                                <a class="name_anchor_style" href="/UserInformation?Id=@item.UserLoginId" target="_blank">@item.EmployeeName</a><br />
+                            </div>
+                        </td>
+                        <td>
+                            <div>@Localize.T("No of Customer") <span>:</span></div>
+                            <div>
+                                <a href="javascript:void();" class="cus-anchor" onclick="ShowFirstCallCustomer('@item.EmpId')">@item.NoOfLeads</a>
+
+                            </div>
+                        </td>
+                        <td>
+                            <div>@Localize.T("Sold to Funded") <span>:</span></div>
+                            <div>
+                                <a href="javascript:void();" class="cus-anchor" onclick="ShowFundedCustomer('@item.EmpId')">@item.CustomerFunded</a>
+
+                            </div>
+                        </td>
+                        <td>
+                            <div>@Localize.T("Funded %") <span>:</span></div>
+                            <div>
+                                <span>@LabelHelper.FormatAmount(item.Percentage)%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div>@Localize.T("UserX") <span>:</span></div>
+                            <div>
+                                <span>@LabelHelper.FormatAmount(item.UserX)</span>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                <tr class="table_total_bg">
+                    <td>
+                        <b class="float_right">@Localize.T("Total:")</b>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Total Sales") <span>:</span></div>
+                        <div>
+                            <b title="@Localize.T("Total Sales")">@Model.TotalTotalSales</b>
+                        </div>                   
+                    </td>
+                    <td>
+                        <div>@Localize.T("Total Funded") <span>:</span></div>
+                        <div>
+                            <b title="@Localize.T("Total Funded")">@Model.TotalCustomerFunded</b>
+                        </div>                   
+                    </td>
+                    <td>
+                        <div>@Localize.T("Avg Percentage") <span>:</span></div>
+                        <div>
+                            <b title="@Localize.T("Avg Percentage")">@LabelHelper.FormatAmount(TotalPercentage)%</b>
+                        </div>                    
+                    </td>
+                    <td>
+                        <div>@Localize.T("Avg UserX") <span>:</span></div>
+                        <div>
+                            <b title="@Localize.T("Avg UserX")"></b>
+                        </div>                   
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="AgentListPagination">
+            <div class="paginationContainer">
+                @if (ViewBag.PageCount > 0)
+                {
+                    <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+                }
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber))">1</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?" disabledBtn":"")" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:" "))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?" activeBtn":"")" onclick="LoadSoldToFundedNav(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?" activeBtn":"")" onclick="LoadSoldToFundedNav(2)">2</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==2? " disabledBtn": "" )" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:" "))">
+                            Next
+                        </button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?" disabledBtn":"")" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:" "))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?" activeBtn":"")" onclick="LoadSoldToFundedNav(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?" activeBtn":"")" onclick="LoadSoldToFundedNav(2)">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==3?" activeBtn":"")" onclick="LoadSoldToFundedNav(3)">3</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==3?" disabledBtn":"")" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:" "))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons disabledBtn" onclick="LoadSoldToFundedNav()">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 2)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="LoadSoldToFundedNav(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+
+

@@ -1,0 +1,585 @@
+﻿
+@{
+    Layout = null;
+
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@model HS.Entities.RecurringBillingScheduleReportModel
+
+
+<script>
+      var pageno = '@ViewBag.PageNumber';
+      var dwnorder = '@ViewBag.order';
+    var OpenRecurringBillingById = function (BillingId) {
+        if (typeof (BillingId) != "undefined" && BillingId > 0) {
+            OpenTopToBottomModal(domainurl + "/RecurringBilling/AddRecurringBilling/?Id=" + BillingId);
+        }
+    }
+    var CollectPayment = function () {
+        var collectList = [];
+         
+        $('.rmrinvoiceckeck:checked').each(function () {
+            var scheduleId = $(this).attr("data-id");
+            if (scheduleId) {
+                collectList.push(parseInt(scheduleId));  
+            }
+        }); 
+        if (collectList.length > 0) {
+            var url = '/RecurringBilling/RecurringBillingCollectPayment';
+            var param = JSON.stringify({ scheduleList: collectList });  
+            $('.convert_rmr_cus_div').addClass('hidden');
+            $(".Load_Recurring_Report").html(TabsLoaderText);
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    if (data.result) {
+                        OpenSuccessMessageNew("Success", data.message);
+                    } else {
+                        OpenErrorMessageNew("Error", data.message);
+                    }
+                    window.location.reload();
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error(errorThrown);
+                }
+            });
+        } else {
+            OpenErrorMessageNew("Error", "No items selected to collect payment.");
+        }
+    };
+
+    var ShowInvoicesById = function () {
+            OpenTopToBottomModal(domainurl + "/RecurringBilling/RecurringBillingInvoiceListPartial");
+    }
+    var FilterRecurringBilling = function (pageno, order) {
+        if (typeof (pageno) == "undefined") {
+            return;
+        }
+        var StartDate = '';//$(".min-date").val();
+        var EndDate = '';//$(".max-date").val();
+        var Searchtext = $("#rmr_inv_billing_txt_search").val();
+        var BillDay = $("#BillDay").val();
+        var Interval = $("#Interval").val();
+        var BillingStatus = $("#BillingStatus").val();
+        var BillingMethod = $("#BillingMethod").val();
+        pagesize = 50;
+        $(".Load_Recurring_Report").html(TabsLoaderText);
+        $(".Load_Recurring_Report").load(domainurl + "/RecurringBilling/LoadRecurringReportPartial?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&PageNo=" + pageno + "&Order=" + order + "&PageSize=50" + "&searchtxt=" + encodeURI(Searchtext) + "&BillDay=" + encodeURI(BillDay) + "&Interval=" + encodeURI(Interval) + "&BillingStatus=" + encodeURI(BillingStatus) + "&BillingMethod=" + encodeURI(BillingMethod));
+    }
+    var ResetFilterList = function () {
+
+            var StartDate = '';//$(".min-date").val();
+            var EndDate = '';//$(".max-date").val();
+            var Searchtext = $("#rmr_inv_billing_txt_search").val();
+            var BillDay = $("#BillDay").val();
+            var BillingStatus = $("#BillingStatus").val();
+            var BillingMethod = $("#BillingMethod").val();
+            var Interval = $("#Interval").val();
+            $(".Load_Recurring_Report").html(TabsLoaderText);
+            $(".Load_Recurring_Report").load(domainurl + "/RecurringBilling/LoadRecurringReportPartial?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&pageno=1&pagesize=50");
+        }
+    function toggleCollectPaymentButton() {
+        if ($('.rmrinvoiceckeck:checked').length > 0) {
+            $('.convert_rmr_cus_div').removeClass('hidden');
+        } else {
+            $('.convert_rmr_cus_div').addClass('hidden');
+        }
+    }
+    var OpenInvById = function (invId) {
+        if (typeof (invId) != "undefined" && invId > 0) {
+            OpenTopToBottomModal(domainurl + "/Invoice/AddInvoice/?Id=" + invId);
+        }
+        else if (typeof (invId) != "undefined" && invId.indexOf('INV') > -1) {
+            OpenTopToBottomModal(domainurl + "/Invoice/AddInvoice/?InvoiceId=" + invId);
+        }
+    }
+    $(document).ready(function () {
+        $(".convert_cus_report_filter").hide();
+        $("#convert_cus_filterbtn").click(function () {
+            if ($(".convert_cus_report_filter").is(":visible")) {
+                $(".convert_cus_report_filter").hide();
+
+            } else {
+                $(".convert_cus_report_filter").show();
+
+            }
+        });
+        $("#btnDownloadRecurringReport").click(function () {
+          
+            var StartDate = '';//$(".min-date").val();
+            var EndDate = '';//$(".max-date").val();
+            var Searchtext = $("#rmr_inv_billing_txt_search").val();
+            var BillDay = $("#BillDay").val();
+            var BillingStatus = $("#BillingStatus").val();
+            var BillingMethod = $("#BillingMethod").val();
+            var Interval = $("#Interval").val();
+
+            window.location.href = domainurl + "/RecurringBilling/LoadRecurringReportPartial?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&GetReport=true" + "&pageno=1&pagesize=50" + "&searchtxt=" + Searchtext + "&BillDay=" + encodeURI(BillDay) + "&Interval=" + encodeURI(Interval) + "&BillingStatus=" + encodeURI(BillingStatus) + "&BillingMethod=" + encodeURI(BillingMethod) + "&Order=" + dwnorder;
+        })
+        $("#rmr_inv_billing_txt_search").keyup(function (event) {
+            event.preventDefault();
+            if (event.keyCode == 13) {
+                FilterRecurringBilling(1);
+            }
+        })
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            FilterRecurringBilling(pageno, orderval);
+        });
+        $('.allcheckuncheck').on('change', function () {
+            const isChecked = $(this).is(':checked');
+            $('.rmrinvoiceckeck').prop('checked', isChecked);
+             
+            toggleCollectPaymentButton();
+        });
+         
+        $('.rmrinvoiceckeck').on('change', function () { 
+            const allChecked = $('.rmrinvoiceckeck').length === $('.rmrinvoiceckeck:checked').length;
+            $('.allcheckuncheck').prop('checked', allChecked); 
+            toggleCollectPaymentButton();
+        });
+
+         
+    })
+</script>
+
+@Styles.Render("~/styles/LoadSalesReportPartial")
+@*@Scripts.Render("~/scripts/LoadSalesReportPartial")*@
+<style>
+    .rmrcount {
+        background-color: #21abf6;
+        color: #ffffff;
+        height: 60px;
+        padding: 12px 10px 10px 10px;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .rmrtotalamount {
+        background-color: #0077c5;
+        color: #ffffff;
+        height: 60px;
+        padding: 10px 10px 10px 10px;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .cl_amount {
+        margin-bottom: 1px;
+        text-transform: none;
+        font-weight: 500;
+        line-height: 1.21;
+        font-size: 15px;
+        outline: 0 none;
+        box-sizing: border-box;
+        cursor: pointer;
+        color: #ffffff;
+        width: 100%;
+    }
+
+    .add-invoice-container .width-25p {
+        float: left;
+        width: 25%;
+        padding-right: 10px;
+    }
+
+    .add-invoice-container .width-25p {
+        padding-right: unset !important;
+        margin-left: 15px;
+    }
+</style>
+<div class="load_sales_report_partial_container">
+    <div class="load_sales_report_partial_info_bar">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="col-md-6">
+                    <div class="row">
+                        <div class="rmrcount active_customer_filter">
+
+                            <div class="sub-content">
+                                <span>@Localize.T("Count")</span>
+                            </div>
+                            <span class="cl_amount spnCustomerCount">@HS.Web.UI.Helper.LabelHelper.NumberFormat(Model.TemplateCount)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="row">
+                        <div class="rmrtotalamount active_customer_filter">
+                            <div class="sub-content">
+                                <span>@Localize.T("Total Amount")</span>
+                            </div>
+                            <span class="cl_amount spnCustomerCount">$@string.Format("{0:#,###.00}", Model.TotalAmount)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="load_sales_report_partial_top_bar">
+        <div class="load_sales_report_partial_top_bar_inner">
+            <div class="input-group add-on">
+                <input type="text" class="form-control" id="rmr_inv_billing_txt_search" placeholder="Search By Customer & Template" value="@ViewBag.searchtext" />
+                <div class="input-group-btn"> <button class="btn green_button" id="btn_sales" onclick="FilterRecurringBilling(1)" title="@Localize.T(" Search")"><i class="glyphicon glyphicon-search"></i></button></div>
+            </div>
+        </div>
+        <button class="btn convert_cus_div lilrp_filter_btn" id="convert_cus_filterbtn">
+            <span title="Filter" class="glyphicon glyphicon-filter"></span>
+        </button>
+
+
+
+        <button title="@Localize.T(" Download")" class="report_btn lrp_float_right" id="btnDownloadRecurringReport"><i class="fa fa-download" aria-hidden="true"></i></button>
+        <button class="btn convert_rmr_cus_div lilrp_filter_btn hidden" style="float:right; margin-right:10px;">
+            <span title="Collect Payments" onclick="CollectPayment()"><i class="fa-dollar-sign"></i>Collect Payments</span>
+        </button>
+        <div class="convert_cus_report_filter">
+            <div class="convert_cus_report_filte_innerr convert_cus_div">
+                <div class="form-group clearfix width-25p add_estimate_info_div_device">
+                    <label>@Localize.T("Bill Day")</label>
+                    @Html.DropDownList("BillDay", (List<SelectListItem>)ViewBag.BillingDay, new { @class = "form-control", id = "BillDay" })
+                </div>
+                <div class="form-group clearfix width-25p add_estimate_info_div_device">
+                    <label>@Localize.T("Status")</label>
+                    @Html.DropDownList("Schedule_Status", (List<SelectListItem>)ViewBag.Status, new { @class = "form-control", id = "BillingStatus" })
+                </div>
+                <div class="form-group clearfix width-25p add_estimate_info_div_device">
+                    <label>@Localize.T("Payment Method")</label>
+                    @Html.DropDownList("BillingMethod", (List<SelectListItem>)ViewBag.PayrollBillingMethod, new { @class = "form-control " })
+                </div>
+                <div class="form-group clearfix width-25p add_estimate_info_div_device">
+                    <label>@Localize.T("Interval")</label>
+                    @Html.DropDownList("Interval", ViewBag.Cycle as List<SelectListItem>, new { @class = "form-control", @title = "Interval Status", id = "Interval" })
+                </div>
+            </div>
+            <div class="convert_cus_report_footer convert_cus_div">
+                <button class="btn green_button" id="apply_btn_filter" onclick="FilterRecurringBilling(1)">@Localize.T("Apply")</button>
+                <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilterList()">@Localize.T("Reset")</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="invoice-table">
+        <table class="loadticketreportlist_table load_sales_report_partial_table">
+            <thead class="table-head-border">
+                <tr>
+                    <th class="thead-th-style" title="All" style="width:45px;"><input type="checkbox" class="allcheckuncheck" /></th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Customer")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customer"></i></div>
+                    </th>
+
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Start Date")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/startdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/startdate"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Bill Day")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/billday"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/billday"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Total Amount")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/totalamount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/totalamount"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Interval")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/interval"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/interval"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Status")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Last Invoice")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/lastinvoice"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/lastinvoice"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Logs")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/totalunpaid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/totalunpaid"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Action")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/template"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/template"></i></div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.ScheduleList)
+                {
+                    <tr class="tr-style">
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_info"><input data-id="@item.Id" data-scheduleId="@item.ScheduleId" type="checkbox" class="rmrinvoiceckeck" /></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Customer")</div>
+                            <div class="ticket_list_partial_device_info">
+                                <a href="/Customer/Customerdetail/?id=@item.CustomerIntId" class="cus-anchor" id="@item.CustomerIntId" id-val="@item.CustomerId">
+                                    <span href="/Customer/Customerdetail/?id=@item.CustomerIntId" title="">@item.CustomerName</span>
+                                </a>
+                            </div>
+                        </td>
+
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Start Date")</div>
+                            @if (item.StartDate != new DateTime())
+                            {
+                                <div class="ticket_list_partial_device_info"> @item.StartDate.Value.ToString("M/d/yy") </div>
+                            }
+                            else
+                            {
+                                <div class="ticket_list_partial_device_info"> </div>
+                            }
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Bill Day")</div>
+                            <div class="ticket_list_partial_device_info">
+                                @{
+                                    if (item.BillDay > 0)
+                                    {
+                                        <span>@item.BillDay</span>
+                                    }
+                                    else
+                                    {
+                                        <span></span>
+                                    }
+                                }
+
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Total Amount")</div>
+                            <div class="ticket_list_partial_device_info">
+                                @{
+                                    if (item.TotalBillAmount > 0)
+                                    {
+                                        <span>$@string.Format("{0:#,###.00}", item.TotalBillAmount)</span>
+                                    }
+                                    else
+                                    {
+                                        <span>$0.00</span>
+                                    }
+                                }
+
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Interval")</div>
+                            <div class="ticket_list_partial_device_info">
+                                @{
+                                    if (!string.IsNullOrWhiteSpace(item.Intervals))
+                                    {
+                                        <span>@item.Intervals</span>
+                                    }
+                                }
+
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Status")</div>
+                            <div class="ticket_list_partial_device_info">
+                                @{
+                                    if (!string.IsNullOrWhiteSpace(item.Status))
+                                    {
+                                        <span>@item.Status</span><br />
+                                        <span>@item.PaymentMethod</span>
+                                    }
+                                }
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Last Invoice")</div>
+                            @if (!string.IsNullOrWhiteSpace(item.LastInvoice))
+                            {
+                                <a class="cus-anchor" href="javascript:void(0)" onclick="OpenInvById('@item.LastInvoice')">@item.LastInvoice</a><br />
+                                if (item.InvoiceDate != new DateTime())
+                                {
+                                    <div class="ticket_list_partial_device_info"> @item.InvoiceDate.ToString("M/d/yy") </div>
+                                }
+
+                            }
+                            else
+                            {
+                                <div class="ticket_list_partial_device_info"> </div>
+                            }
+                        </td>
+                        @*@if (item.UnpaidCount > 0)
+        {
+            <td class="table-body-td-style" valign="top">
+                <div class="ticket_list_partial_device_header">@Localize.T("Logs")</div>
+                <a class="cus-anchor" datainv-Id="@item.Id" datainv-scheduleId="@item.ScheduleId" onclick="ShowInvoicesById()">Show Invoices(!)</a><br />
+            </td>
+        }
+        else
+        {
+            if (!string.IsNullOrWhiteSpace(item.LastInvoice))
+            {
+                <td class="table-body-td-style" valign="top">
+                    <div class="ticket_list_partial_device_header">@Localize.T("Logs")</div>
+                    <a class="cus-anchor" datainv-Id="@item.Id" datainv-scheduleId="@item.ScheduleId" onclick="ShowInvoicesById()">Show Invoices</a><br />
+                </td>
+            }
+            else
+            {*@
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Logs")</div><span></span>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Action")</div>
+                            <div class="ticket_list_partial_device_info">
+                                <a class="cus-anchor" onclick="OpenRecurringBillingById(@item.Id)" href="javascript:void(0)" title="Edit">
+                                    <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </td>
+
+                        @*}
+        }*@
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<button class="btn convert_rmr_cus_div lilrp_filter_btn hidden"  style="float: right; margin: 10px 0px 0px 10px;">
+    <span title="Collect Payments" onclick="CollectPayment()" ><i class="fa-dollar-sign"></i>Collect Payments</span>
+</button>
+
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="FilterRecurringBilling(@(ViewBag.PageNumber), @(ViewBag.order))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FilterRecurringBilling(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FilterRecurringBilling(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FilterRecurringBilling(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="FilterRecurringBilling(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FilterRecurringBilling(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FilterRecurringBilling(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FilterRecurringBilling(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="FilterRecurringBilling(3, @(ViewBag.order))">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="FilterRecurringBilling(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterRecurringBilling(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterRecurringBilling(@(ViewBag.PageNumber-2), @(ViewBag.order))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterRecurringBilling(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="FilterRecurringBilling(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="FilterRecurringBilling()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterRecurringBilling(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterRecurringBilling(@(ViewBag.PageNumber+1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterRecurringBilling(@(ViewBag.PageNumber + 2), @(ViewBag.order))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="FilterRecurringBilling(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterRecurringBilling(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterRecurringBilling(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterRecurringBilling(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="FilterRecurringBilling(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FilterRecurringBilling(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterRecurringBilling(@(ViewBag.PageNumber - 1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="FilterRecurringBilling(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FilterRecurringBilling(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="FilterRecurringBilling(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+

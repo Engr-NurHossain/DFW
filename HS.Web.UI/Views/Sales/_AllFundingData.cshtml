@@ -1,0 +1,469 @@
+﻿
+@model HS.Entities.AllSalesInfoModel
+@{
+    Layout = null;
+}
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script>
+    var ColumnName;
+    var AscOrDescVal = '@ViewBag.AscOrDescVal';
+    var pageno = @ViewBag.PageNumber;
+    var AscOrDescVal1;
+    //$(".ColumnName").click(function(){
+    //    ColumnName = encodeURIComponent($(this).attr('data-id'));
+    //    if (AscOrDescVal == 'asc') {
+    //        AscOrDescVal1 = "desc";
+    //        $("#AllFundings").load("/Sales/AllFundingData/?PageNo=" + pageno + "&SearchText=" + $(".all_sales_search_text").val() + "&SearchBy=" + $("#SearchBy").val() + "&AscOrDescVal=" + AscOrDescVal1 + "&ColumnName=" + ColumnName);
+    //    }
+    //    else{
+    //        AscOrDescVal1 = "asc";
+    //        $("#AllFundings").load("/Sales/AllFundingData/?PageNo=" + pageno + "&SearchText=" + $(".all_sales_search_text").val() + "&SearchBy=" + $("#SearchBy").val() + "&AscOrDescVal=" + AscOrDescVal1 + "&ColumnName=" + ColumnName);
+    //    }
+    //})
+    var frmDate = new Pikaday({ format: 'MM/DD/YYYY', field: $('#sfrmdate')[0] });
+    var toDate = new Pikaday({ format: 'MM/DD/YYYY', field: $('#stodate')[0] });
+    var AllSalesNavigation = function (pageNo,order) {
+        if (typeof (pageNo) == "undefined") {
+            return;
+        }
+        var SearchBy = $("#SearchBy").val();
+        var SearchText = $(".all_sales_search_text").val();
+     
+        console.log(SearchText);
+        console.log("ascsdcdc");
+       $("#AllFundings").html(TabsLoaderText);
+
+        if($('#sfrmdate').val() != "" && $('#stodate').val() != ""){
+            $("#AllFundings").load(domainurl + "/Sales/AllFundingData?FromDate=" + $('#sfrmdate').val()
+                + "&ToDate=" + $('#stodate').val()
+                + "&PageNo=" + pageNo
+                + "&SearchText=" + SearchText
+                + "&SearchBy=" + SearchBy
+                + "&order=" + order
+                + "&InvoiceStatus=" +$("#InvoiceStatus").val()
+            );
+        }
+        else if($('#sfrmdate').val() == "" && $('#stodate').val() == ""){
+            OpenErrorMessageNew("Error!", "Date field couldn't be empty", "");
+        }
+        else if($('#sfrmdate').val() == ""){
+            OpenErrorMessageNew("Error!", "From Date field couldn't be empty", "");
+        }
+        else if($('#stodate').val() == ""){
+            OpenErrorMessageNew("Error!", "To Date field couldn't be empty", "");
+        }
+     
+    }
+    var DownloadSalesReport = function () {
+        var SearchBy = $("#SearchBy").val();
+        var StartDate = $(".min-date").val();
+        var EndDate =  $(".max-date").val();
+        var SearchText = $(".all_sales_search_text").val();
+        var pageNo = 1;
+        window.open(domainurl + "/Sales/DownLoadAllFundingData?FromDate=" + StartDate + "&ToDate=" + EndDate +"&PageNo=" + pageNo + "&SearchText=" + SearchText + "&SearchBy=" + SearchBy);
+
+       // $("#AllFundings").load(domainurl + "/Sales/AllFundingData?FromDate=" + $('#sfrmdate').val() + "&ToDate=" + $('#stodate').val()+"&PageNo=" + pageNo + "&SearchText=" + SearchText + "&SearchBy=" + SearchBy);
+
+    }
+    $(document).ready(function () {
+        
+        var Popupwidth = 920;
+        if (window.innerWidth < 920) {
+            Popupwidth = window.innerWidth;
+        }
+        var idlist = [{ id: ".InvEstPreview", type: 'iframe', width: Popupwidth, height: 600 }
+        ];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+        $("#all_sales_search_button").click(function () {
+            var SearchBy = $("#SearchBy").val();
+            var SearchText = $(".all_sales_search_text").val();
+            var pageNo = 1;
+            console.log(SearchText);
+            if($('#sfrmdate').val() != "" && $('#stodate').val() != ""){
+                $("#AllFundings").load(domainurl + "/Sales/AllFundingData?FromDate=" + $('#sfrmdate').val()
+                    + "&ToDate=" + $('#stodate').val()
+                    + "&PageNo=" + pageNo
+                    + "&SearchText=" + SearchText
+                    + "&SearchBy=" + SearchBy
+                    + "&InvoiceStatus=" +$("#InvoiceStatus").val()
+                );
+            }
+            else if($('#sfrmdate').val() == "" && $('#stodate').val() == ""){
+                OpenErrorMessageNew("Error!", "Date field couldn't be empty", "");
+            }
+            else if($('#sfrmdate').val() == ""){
+                OpenErrorMessageNew("Error!", "From Date field couldn't be empty", "");
+            }
+            else if($('#stodate').val() == ""){
+                OpenErrorMessageNew("Error!", "To Date field couldn't be empty", "");
+            }
+        });
+        //$("#SearchBy").change(function () {
+        //    if ($(this).val() == "Invoice") {
+        //        $(".invoiceTypeList").removeClass("hidden");
+        //    } else {
+        //        $(".invoiceTypeList").addClass("hidden");
+        //    }
+        //});
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            AllSalesNavigation(pageno, orderval);
+        })
+        $(".all_sales_search_text").keydown(function (e) {
+
+                if (e.which == 13) {
+                    AllSalesNavigation(pageno);
+                }
+            });
+    })
+
+ 
+</script>
+<style>
+
+</style>
+
+
+<script src="~/Content/Js/Transactions/Transactions.js"></script>
+
+<link href="~/Content/Css/Sales/AllFundingData.css" rel="stylesheet" />
+<div class="page-content-wrap cus-padding-top10p afd_container_custom">
+    <div class="header-section header-section-new">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="width-50p afd_balance_preview all_funding_data_balance_preview">
+                    @if (PermissionChekcer.IsPermitted(Permissions.SalesPermissions.AllSalesSummery))
+                    {
+                    <div class="afd_amount_info">
+                        <div class="afd_total_amount afd_estimate">
+                            <div class="ta_div">@Localize.T("Total Open Estimates/ Amount")</div>
+                            <div class="ta_amount">@string.Format("{0:n0}", Model.TotalOpenEstimates)/@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.TotalOpenEstimatesAmount)</div>
+                        </div>
+                        <div class="afd_balance_due afd_reveneu">
+                            <div class="ta_div">@Localize.T("Total Revenue")</div>
+                            <div class="ta_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.TotalRevenue)</div>
+                        </div>
+                        <div class="afd_total_amount afd_receivable">
+                            <div class="ta_div">@Localize.T("Accounts Receivable")</div>
+                            <div class="ta_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.AccountsReceivable)</div>
+                        </div>
+                    </div>
+                    }
+                    else
+                    {
+                    <span>&nbsp;</span>
+                    }
+
+                </div>
+                <div class="sales_search_by">
+                    <div class="drop_search_afd">
+                        @Html.DropDownListFor(x => x.SearchBy, (List<SelectListItem>)ViewBag.SearchByList, new { @class = "form-control SearchByList" })
+                    </div>
+                    @*<div class="drop_search_afd invoiceTypeList">
+                        @Html.DropDownListFor(x => x.InvoiceStatus, (List<SelectListItem>)ViewBag.InvoiceTypeList, new { @class = "form-control SearchByList" })
+                    </div>*@
+                    <div class="middle_search">
+                        <input type="text" class="form-control all_sales_search_text" placeholder="@Localize.T("Search by invoice,estimate or type")"  value="@Model.SearchText" @*id="all_sales_search_text"*@ />
+                        <span class="input-group-btn">
+                            <button class="btn afd_custom_search_btn afd_search_btn_custom green_button" id="all_sales_search_button" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+                        </span>
+                    </div>
+                </div>
+                <button onclick="DownloadSalesReport()" class="btn sales_report_down" title="@Localize.T("Download")"><i class="glyphicon glyphicon-download-alt"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="invoice-table-sales">
+        <table class="display sales_invoice_table" id="tblTransactions">
+            <thead class="table-head-border">
+                <tr>
+                    <th class="thead-th-style ColumnName" style="cursor:pointer;" data-id="CustomerName">
+                        <div>@Localize.T("Customer Name")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customername"></i></div>
+                    </th>
+                    <th class="thead-th-style ColumnName" style="cursor:pointer;" data-id="Type">
+                        <div>@Localize.T("Type")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/type"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/type"></i></div>
+                    </th>
+                    <th class="thead-th-style ColumnName" style="cursor:pointer;" data-id="InvoiceIdStr">
+                        <div>@Localize.T("Estimate / Invoice No")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/invoiceno"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/invoiceno"></i></div>
+                    </th>
+                    <th class="thead-th-style ColumnName" style="cursor:pointer;" data-id="InvoiceDueDate">
+                        <div>@Localize.T("Due Date")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/duedate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/duedate"></i></div>
+                    </th>
+                    <th class="thead-th-style ColumnName" style="cursor:pointer;" data-id="Balance">
+                        <div>@Localize.T("Balance")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/balance"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/balance"></i></div>
+                    </th>
+                    <th class="thead-th-style ColumnName" style="cursor:pointer;" data-id="Amount">
+                        <div>@Localize.T("Total")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/total"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/total"></i></div>
+                    </th>
+                    <th class="thead-th-style ColumnName" style="cursor:pointer;" data-id="Status">
+                        <div>@Localize.T("Status")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Actions")
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.TransactionList)
+                {
+                    DateTime DueDate = new DateTime(item.InvoiceDueDate.Year, item.InvoiceDueDate.Month, item.InvoiceDueDate.Day);
+
+                    <tr class="tr-style @((item.Type=="Invoice" && item.Balance>0 && DueDate < DateTime.Now.AddDays(-1))?"red":"")">
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Customer Name") <span>:</span> </div>
+                            <div>
+                                @{
+                                    if (!string.IsNullOrWhiteSpace(item.CustomerBussinessName))
+                                    {
+                                        <span>@item.CustomerBussinessName</span><br />
+                                    }
+                                    else
+                                    {
+                                        <span>@item.CustomerName</span><br />
+                                    }
+                                }
+
+                                <span>@item.AuthRefId</span>
+                            </div>
+                        </td>
+                        <td @(item.Type == "Invoice" ? "onclick=OpenInvById(" + @item.InvoiceId + ")" : "") @(item.Type == "Payment" ? "onclick=OpenPaymentByTrId(" + @item.Id + ")" : "") class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Type") <span>:</span></div>
+                            <div>@item.Type</div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Esti. / Inv. No") <span>:</span></div>
+                            <div><span>@item.InvoiceIdStr</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Due Date") <span>:</span></div>
+                            <div><span>@item.InvoiceDueDate.ToString("M/d/yy")</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div> @Localize.T("Balance") <span>:</span></div>
+                            <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Balance)</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Total") <span>:</span></div>
+                            <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Status") <span>:</span></div>
+                            <div>
+                                @{
+                                    if (item.Status == "Open")
+                                    {
+                                        string status = item.Status;
+                                        status = item.InvoiceDueDate < DateTime.Today ? "Due" : status;
+                                        <span class="vbl_device_info" style="color:red">@status</span>
+                                    }
+                                    else if (item.Status == "Cancel")
+                                    {
+                                        <span class="vbl_device_info" style="color:red">@item.Status</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="vbl_device_info">@item.Status</span>
+                                    }
+                                }
+                            </div>
+                        </td>
+                        <td class="table-body-td-style">
+                            <div>@Localize.T("Actions") <span>:</span></div>
+                            <div>
+                                @if (item.Balance > 0 && item.Type == "Invoice" && item.Status != "Cancel")
+                                {
+                                    if (PermissionChekcer.IsPermitted(Permissions.SalesPermissions.AllSalesReceivePayment))
+                                    {
+                                        <a class="cus-anchor" onclick="ReceivePaymentByInvAndCus(@item.InvoiceId,'@item.CustomerId')" href="javascript:void(0)">@Localize.T("Receive Payment")</a>
+                                    }
+                                }
+                                else if (item.Type == "Invoice")
+                                {
+                                    if (PermissionChekcer.IsPermitted(Permissions.SalesPermissions.AllSalesPrint))
+                                    {
+                                        <a class="InvEstPreview cus-anchor" href="@(AppConfig.DomainSitePath)/Sales/GetAllInvoiceData/@item.InvoiceId">@Localize.T("Print")</a>
+                                    }
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            <tr class="tr-style table_total_bg">
+                <td class="table-body-td-style" colspan="4">
+                    <b class="float_right">Total:</b>
+
+                </td>
+                <td class="table-body-td-style">
+                    <b title="Total Balance"> $@Model.TotalBalanceByPage.ToString("#,##0.00")</b>
+                </td>
+                <td class="table-body-td-style" colspan="3">
+                    <b title="Subtotal Amount"> $@Model.TotalAmountByPage.ToString("#,##0.00")</b>
+
+                </td>
+            </tr>
+
+            @*<tr>
+                <td colspan="3">
+                    <b class="float_right">
+                        @Localize.T("Total Balance:")
+                    </b>
+                </td>
+                <td colspan="2">
+                  <b> $@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.TotalBalanceByPage)</b>
+                </td>
+
+
+                <td colspan="3">
+                    <b class="float_right">
+                        @Localize.T("Total Amount:")
+                    </b>
+                </td>
+                <td colspan="2">
+                    <b>$@Model.TotalAmountByPage.ToString("#,##0.00")</b>
+                </td>
+            </tr>*@
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="AgentListPagination">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="AllSalesNavigation(@(ViewBag.PageNumber),'@ViewBag.order')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="AllSalesNavigation(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="AllSalesNavigation(1,'@ViewBag.order')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="AllSalesNavigation(2,'@ViewBag.order')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="AllSalesNavigation(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="AllSalesNavigation(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="AllSalesNavigation(1,'@ViewBag.order')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="AllSalesNavigation(2,'@ViewBag.order')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="AllSalesNavigation(3,'@ViewBag.order')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="AllSalesNavigation(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="AllSalesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="AllSalesNavigation(@(ViewBag.PageNumber-2),'@ViewBag.order')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="AllSalesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="AllSalesNavigation(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="AllSalesNavigation()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="AllSalesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="AllSalesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="AllSalesNavigation(@(ViewBag.PageNumber + 2),'@ViewBag.order')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="AllSalesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="AllSalesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="AllSalesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="AllSalesNavigation(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="AllSalesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="AllSalesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="AllSalesNavigation(@(ViewBag.PageNumber - 1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="AllSalesNavigation(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="AllSalesNavigation(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="AllSalesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>

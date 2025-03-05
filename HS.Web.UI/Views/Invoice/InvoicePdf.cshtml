@@ -1,0 +1,562 @@
+﻿@{
+    Layout = null;
+    double DiscountValueCount = 0;
+    double SubTotalValue = 0;
+}
+@model  List<HS.Entities.CreateInvoice>
+@using System.Collections;
+
+<html>
+<head>
+    <STYLE TYPE="text/css">
+        .breakhere {
+            page-break-after: always;
+        }
+    </STYLE>
+</head>
+<body style="font-family:sans-serif;">
+    @{
+        int total = Model.Count();
+    }
+    @if (total == 0)
+    {
+        <h2>No invoice found</h2>
+    }
+
+    @foreach (var Invitem in Model)
+    {
+        string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(Invitem.Invoice.CompanyId);
+        string CurrencyVal = "Dollars";
+        if (Currency.ToLower() == "tk")
+        {
+            CurrencyVal = "Taka";
+        }
+        SubTotalValue = Invitem.SubTotal;
+        Hashtable datatemplate = new Hashtable();
+        datatemplate.Add("ComapnyName", Invitem.CompanyName);
+        datatemplate.Add("Address", Invitem.CompanyAddress);
+        if (Invitem.ShowInvoiceCompanyAddress)
+        {
+            datatemplate.Add("Street", "280 Northwood Ave");
+            datatemplate.Add("City", "Waco");
+            datatemplate.Add("State", "TX");
+            datatemplate.Add("Zip", "76705");
+        }
+        else
+        {
+            datatemplate.Add("Street", Invitem.CompanyStreet);
+            datatemplate.Add("City", Invitem.CompanyCity);
+            datatemplate.Add("State", Invitem.CompanyState);
+            datatemplate.Add("Zip", Invitem.CompanyZip);
+        }
+        datatemplate.Add("CompanyPhone", Invitem.CompanyPhone);
+        datatemplate.Add("EmailAddress", Invitem.CompanyEmail);
+        datatemplate.Add("WebAddress", Invitem.CompanyWebsite);
+        datatemplate.Add("CustomerName", Invitem.CustomerName);
+        datatemplate.Add("CustomerStreet", Invitem.CustomerStreet);
+        datatemplate.Add("CustomerCity", Invitem.CustomerCity);
+        datatemplate.Add("CustomerState", Invitem.CustomerState);
+        datatemplate.Add("CustomerZip", Invitem.CustomerZipCode);
+        datatemplate.Add("CustomerAccountNo", Invitem.CustomerNo);
+        string CompanyInfo = HS.Web.UI.Helper.LabelHelper.ParserHelper(Invitem.Invoice.CompanyInfo, datatemplate);
+        string CustomerInfo = HS.Web.UI.Helper.LabelHelper.ParserHelper(Invitem.CustomerInfo, datatemplate);
+        if (ViewBag.PaymentStubs == "true")
+        {
+            <div class="breakhere"></div>
+
+            <table style="width:100%">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><br /></td></tr>
+                    <tr>
+                        <td style="padding-left:30px;width:60%">
+                            @Html.Raw(CompanyInfo)
+                        </td>
+                        <td style="padding-left:30px;width:60%">
+                            <div>
+                                <label>Invoice#: </label><span>@Invitem.Invoice.InvoiceId</span>
+                            </div>
+                            <div>
+                                <label>Due Date: </label><span>@Invitem.Invoice.DueDate</span>
+                            </div>
+                            <div>
+                                <label style="font-weight:bold">Total Due: </label><span>@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Invitem.Invoice.BalanceDue.Value)</span>
+                            </div>
+
+                        </td>
+                    </tr>
+                    <tr style="height:40px;"></tr>
+                    <tr style="margin-top:30px;">
+                        <td style="padding-left:30px;width:60%">
+                            @Html.Raw(CustomerInfo)
+                        </td>
+                        <td style="padding-left:30px;width:60%">
+                            <div>
+                                <label>Enter Amount Enclosed:@Currency </label><div style="width:20%;height:20%;border-bottom:1px solid black;position:relative;margin-left:180px;"></div>
+                            </div>
+                            <div>
+                                <label>Make Check Payable To: </label><span></span>
+                            </div>
+                            <div>
+                                <label style="font-weight:bold">@Invitem.CompanyName</label>
+                            </div>
+                        </td>
+
+                    </tr>
+                </tbody>
+            </table>
+            <div style="width:100%; float:left; font-style:italic;text-align:center;padding-bottom:5px; padding-top:20px;">Detach here and return top portion with your payment.</div>
+            <div style="width:100%;float:left;border-top:1px solid #4f90bb;position:relative;"></div>
+        }
+        <div class="container">
+            <div class="tblCompanyInfo">
+                <table style="width:100%">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><br /></td></tr>
+                        <tr>
+                            <td style="width:150px;vertical-align:top;background-color:white;">
+                                @if (!string.IsNullOrWhiteSpace(Invitem.CompanyLogo))
+                                {
+                                    <img src="@Invitem.CompanyLogo" style="width:200px; padding-left:30px;background-color:white;" />
+                                    @*<img src="https://app.rmrcloud.com/Files/Kazar-Security/CompanyBranchFile/2-24/1602851461-___kazar_security_qolsys%20logo%20(1).png" style="width:200px; padding-left:40px;background-color:white;" />*@
+
+                                }
+                            </td>
+
+                            @if (Invitem.Invoice.Status == "Paid")
+                            {
+                                <td>
+                                    <div style="width:100%; float:left; text-align:right; font-size:50px;font-weight:600;color:darkgray;">@Invitem.Invoice.Status.ToUpper()</div>
+                                </td>
+                            }
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <table style="width:100%; float:left;">
+                                    <tr>
+                                        <td style="padding-left:30px; width:50%;">
+                                            @Html.Raw(CompanyInfo)
+                                        </td>
+
+                                        <td style="float:right; vertical-align:top; width:50%; padding-left:120px;">
+
+                                            @if (!string.IsNullOrWhiteSpace(Invitem.Invoice.EstimateTerm) && Invitem.Invoice.EstimateTerm != "-1" && Invitem.Invoice.EstimateTerm != "Please Select One")
+                                            {
+                                                <div style="text-align:right;box-sizing:border-box; width:100%; float:left"><b>PAYMENT TERMS:</b> @Invitem.Invoice.EstimateTerm</div>
+                                            }
+
+                                            <!--Static block for EV Security-->
+                                            @if (Invitem.ShowInvoiceStaticBox)
+                                            {
+                                                <div style="width:350px; float:right; text-align:center; border:1px solid #000; padding:10px; box-sizing:border-box; margin-top:10px; font-size:18px;">
+                                                    TDPS Security Contractor #B07741 <br />
+                                                    TDL&R Electrical Contractor #18615 <br />
+                                                    TRCC Registered Builder #14853 <br />
+                                                    Fire Contractor #ACR-3430 <br />
+                                                    OK Alarm/Locksmith #1845
+                                                </div>
+                                            }
+                                            @if (Invitem.ShowCode3InvoiceStaticBox)
+                                            {
+                                                <div style="width:350px; float:right; text-align:right; padding:10px; box-sizing:border-box; margin-top:10px; font-size:18px;">
+                                                    TXECR#1824144 <br />
+                                                    TXACR#2088870 <br />
+                                                    Burg License: B10531001
+                                                </div>
+                                            }
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+
+                        </tr>
+                        <tr>
+                            <td>
+                                @if (string.IsNullOrWhiteSpace(Invitem.CompanyStreet))
+                                {
+                                    <br />
+                                }
+                                <br />
+                                <br />
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="tblInvoiceInfo">
+                <table style="width:100%">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="width:35%; padding-left:30px;">
+                                @if (string.IsNullOrWhiteSpace(Invitem.Invoice.BillingAddress))
+                                {
+                                    <b>BILL TO</b>
+                                    @Html.Raw(CustomerInfo)
+                                }
+                                else
+                                {
+                                    <b>BILL TO</b>
+                                    @Html.Raw(Invitem.Invoice.BillingAddress)
+                                }
+                            </td>
+                            <td style="width:35%">
+                                @if (Invitem.ShowInvoiceShippingAddress
+                                    && !string.IsNullOrWhiteSpace(Invitem.Invoice.ShippingAddress))
+                                {
+                                    <b>SHIP TO</b>
+                                    @Html.Raw(Invitem.Invoice.ShippingAddress)
+                                }
+                            </td>
+                            <td style="width:30%">
+                                <p style="background-color:#4f90bb;height:30px;padding-top:10px;padding-left:10px; color:white"><b>INVOICE</b> @Invitem.Invoice.InvoiceId</p>
+                                @if (Invitem.Invoice.InvoiceDate.HasValue)
+                                {
+                                    <p style="background-color:#4f90bb;height:30px;padding-top:10px;padding-left:10px;color:white"><b>DATE</b> @Invitem.Invoice.InvoiceDate.Value.ToString("M/d/yy")</p>
+                                }
+                                @if (Invitem.Invoice.DueDate.HasValue)
+                                {
+                                    <p style="background-color:#4f90bb;height:30px;padding-top:10px;padding-left:10px;color:white"><b>DUE DATE</b> @(Invitem.Invoice.DueDate.HasValue ? Invitem.Invoice.DueDate.Value.ToString("M/d/yy") : "-")</p>
+                                }
+                                @if (Invitem.Invoice.TransacationDate != new DateTime())
+                                {
+                                    <p style="background-color:#4f90bb;height:30px;padding-top:10px;padding-left:10px;color:white"><b>COLLECTION DATE</b> @Invitem.Invoice.TransacationDate.ToString("M/d/yy")</p>
+                                }
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <br />
+            <div style="margin-top:20px;width:100%;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        @if (ViewBag.DiscountShow == true)
+                        {
+                            <tr style="background-color:#4f90bb; color:white;width:100%; border:1px solid #4f90bb;">
+                                <th style="width:48.555%;text-align:left;padding:5px 0px 5px 40px; border-right:1px solid #fff;">
+                                    ACTIVITY
+                                </th>
+                                <th style="width:10.111%; padding:5px 0px; border-right:1px solid #fff;">QTY</th>
+                                <th style="width:13.111%; padding:5px 0px; border-right:1px solid #fff;">RATE</th>
+                                <th style="width:13.111%; padding:5px 0px; border-right:1px solid #fff;">DISCOUNT</th>
+                                <th style="width:15.111%; padding:5px 0px;">AMOUNT</th>
+                            </tr>
+                        }
+                        else
+                        {
+                            <tr style="background-color:#4f90bb; color:white;width:100%; border:1px solid #4f90bb;">
+                                <th style="width:60.666%;text-align:left;padding:5px 0px 5px 40px; border-right:1px solid #fff;">
+                                    ACTIVITY
+                                </th>
+                                <th style="width:11.111%; padding:5px 0px; border-right:1px solid #fff;">QTY</th>
+                                <th style="width:13.111%; padding:5px 0px; border-right:1px solid #fff;">RATE</th>
+                                <th style="width:15.111%; padding:5px 0px;">AMOUNT</th>
+                            </tr>
+                        }
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Invitem.InvoiceDetailList)
+                        {
+                            <tr style="border-bottom:1px solid #ccc;">
+                                <td style="padding:5px 0px 5px 40px;">
+
+                                    @if (!string.IsNullOrWhiteSpace(item.EquipName))
+                                    {
+                                        if (item.EquipmentFile != null && !string.IsNullOrEmpty(item.EquipmentFile.Filename))
+                                        {
+                                            <img src="@item.EquipmentFile.Filename" alt="Alternate Text" style="width:25px;height:25px" /> <b>@item.EquipName</b><br />
+                                        }
+                                        else
+                                        {
+                                            <b>@item.EquipName</b><br />
+                                        }
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.EquipDetail))
+                                    {
+                                        <span>@item.EquipDetail</span>
+                                    }
+                                </td>
+                                <td style="text-align:center; padding:5px 0px;">@item.Quantity</td>
+                                <td style="text-align:center; padding:5px 0px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.UnitPrice != null ? item.UnitPrice.Value : 0)</td>
+                                @if (ViewBag.DiscountShow == true)
+                                {
+                                    <td style="text-align:center; padding:5px 0px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.DiscountAmount != null ? item.DiscountAmount.Value : 0)</td>
+                                    DiscountValueCount += item.DiscountAmount != null ? item.DiscountAmount.Value : 0;
+
+                                }
+                                <td style="text-align:center; padding:5px 0px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalPrice != null ? item.TotalPrice.Value : 0)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div style="width:100%;height:50px;border-bottom:1px solid #4f90bb;position:relative;">
+            </div>
+
+            <div style="width:100%; float:left;">
+                <div style="width:50%;float:left">
+                    @if (!string.IsNullOrWhiteSpace(Invitem.Invoice.Message))
+                    {
+                        <p style="padding-left:40px;white-space: pre-line">@Invitem.Invoice.Message</p>
+                    }
+                    <p style="padding-left:40px;white-space: pre-line">@Invitem.Invoice.Memo</p>
+                </div>
+
+                <div style="width:50%;float:left;padding-top:10px;">
+                    <div style="width:100%">
+                        <div style="width:70%;float:left;text-align:right">
+                            <span>Sub Total</span>
+                        </div>
+                        <div style="width:30%;float:left;text-align:right;">
+                            @{
+
+                            // :: mayur 26/march/2024 this is SubTotal equipment total cant add discount value here 
+
+                            //if (Invitem.InvoiceSetting.DiscountSetting && DiscountValueCount > 0) { SubTotalValue += DiscountValueCount; }
+
+                                <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(SubTotalValue)</h3>
+                            }
+                        </div>
+                    </div>
+                    @if (Invitem.InvoiceSetting.DiscountSetting && (Invitem.Invoice.Discountpercent != 0 || Invitem.Invoice.DiscountAmount != 0))
+                    {
+                        if (Invitem.Invoice.DiscountType == "percent")
+                        {
+                            double discountParcent = Invitem.Invoice.Discountpercent != 0 && Invitem.Invoice.Discountpercent != null ? Invitem.Invoice.Discountpercent.Value : 0;
+                            <div style="width:100%; float:left;">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Invoice Discount Percent (@Invitem.Invoice.Discountpercent%)</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Invitem.Discount)</h3>
+                                </div>
+                            </div>
+                            <div style="width:100%; float:left;">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Subtotal</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+
+                                    <h3 style="margin: 0px;padding-right: 10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount((SubTotalValue - Invitem.Discount))</h3>
+                                </div>
+                            </div>
+                        }
+
+                        if (Invitem.Invoice.DiscountType == "amount")
+                        {
+                            double discountamount = Invitem.Invoice.DiscountAmount != 0 && Invitem.Invoice.DiscountAmount != null ? Invitem.Invoice.DiscountAmount.Value : 0;
+                            <div style="width: 100%; float: left;">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Invoice Discount Amount</span>
+                                </div>
+
+                                <div style="width:30%;float:left;text-align:right;">
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(discountamount)</h3>
+                                </div>
+                            </div>
+                            <div style="width:100%; float:left;">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Subtotal</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+
+                                    <h3 style="margin: 0px;padding-right: 10px;">
+                                        @Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount((SubTotalValue - discountamount))
+                                    </h3>
+                                </div>
+                            </div>
+                        }
+                    }
+                    @if (Invitem.Invoice.Tax.HasValue && Invitem.Invoice.Tax > 0)
+                    {
+                        <div style="width:100%; float:left;">
+                            <div style="width:70%;float:left;text-align:right">
+                                <span>@Invitem.Invoice.TaxType</span>
+                            </div>
+
+                            <div style="width:30%;float:left;text-align:right;">
+                                <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Invitem.Invoice.Tax.Value)</h3>
+                            </div>
+                        </div>
+
+
+                    }
+
+                    @if ((Invitem.InvoiceSetting.ShippingSetting && (Invitem.Invoice.ShippingCost.HasValue && Invitem.Invoice.ShippingCost > 0))
+                        || (Invitem.InvoiceSetting.DepositSetting && (Invitem.Invoice.Deposit.HasValue && Invitem.Invoice.Deposit > 0)))
+                    {
+                        <div style="width:100%; float:left;">
+                            <div style="width:70%;float:left;text-align:right">
+                                <span>SubTotal </span>
+                            </div>
+                            <div style="width:30%;float:left;text-align:right;">
+                                @if (Invitem.Invoice.TotalAmount != null)
+                                {
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Invitem.Invoice.TotalAmount.Value)</h3>
+                                }
+                                else
+                                {
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(SubTotalValue)</h3>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (@*Invitem.InvoiceSetting.ShippingSetting ||*@ /**/
+                                                                                                                                                                      /**/
+                                                                                                                                                                      /**/
+                                                                                                                                                                      /**/
+                                                                                                                                                                      /**/
+                                                                                                                                                                      /**/
+                                                                                                                                                                      (Invitem.Invoice.ShippingCost.HasValue && Invitem.Invoice.ShippingCost > 0))
+                                    {
+                                        double shippingcost = Invitem.Invoice.ShippingCost.HasValue ? Invitem.Invoice.ShippingCost.Value : 0.0;
+                                        <div style="width:100%; float:left;">
+                                            <div style="width:70%;float:left;text-align:right">
+                                                <span>Shipping</span>
+                                            </div>
+                                            <div style="width:30%;float:left;text-align:right;">
+                                                <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(shippingcost)</h3>
+                                            </div>
+                                        </div>
+
+                                    }
+
+
+                    @if (Invitem.InvoiceSetting.DepositSetting || (Invitem.Invoice.Deposit != null && Invitem.Invoice.Deposit != 0))
+                    {
+                        double depositAmount = Invitem.Invoice.Deposit.HasValue ? Invitem.Invoice.Deposit.Value : 0.0;
+
+                        <div style="width:100%; float:left;">
+                            <div style="width:70%;float:left;text-align:right">
+                                <span>Invoice Deposit</span>
+                            </div>
+                            <div style="width:30%;float:left;text-align:right;">
+                                <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(depositAmount)</h3>
+                            </div>
+                        </div>
+                        if (Invitem.Invoice.BalanceDue < (Invitem.Invoice.TotalAmount - depositAmount))
+                        {
+                            <div style="width:100%; float:left;">
+                                <div style="width:70%;float:left;text-align:right">
+                                    <span>Amount Received</span>
+                                </div>
+                                <div style="width:30%;float:left;text-align:right;">
+                                    <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Invitem.Invoice.TotalAmount.Value - (depositAmount + Invitem.Invoice.BalanceDue).Value)</h3>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else if (Invitem.Invoice.TotalAmount.HasValue
+                        && Invitem.Invoice.BalanceDue <= Math.Round(Invitem.Invoice.TotalAmount.Value, 2))
+                    {
+                        <div style="width:100%; float:left;">
+                            <div style="width:70%;float:left;text-align:right">
+                                <span>Total</span>
+                            </div>
+                            <div style="width:30%;float:left;text-align:right;">
+                                <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount((Invitem.Invoice.TotalAmount).Value)</h3>
+                            </div>
+                        </div>
+
+                        <div style="width:100%; float:left;">
+                            <div style="width:70%;float:left;text-align:right">
+                                <span>Amount Received</span>
+                            </div>
+                            <div style="width:30%;float:left;text-align:right;">
+                                <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount((Invitem.Invoice.TotalAmount - Invitem.Invoice.BalanceDue).Value)</h3>
+                            </div>
+                        </div>
+                    }
+
+                    <div style="width:100%; float:left;">
+                        <div style="width:70%;float:left;text-align:right">
+                            <span>Unpaid Amount</span>
+                        </div>
+                        <div style="width:30%;float:left;text-align:right;">
+                            @if (Invitem.Invoice.BalanceDue != null)
+                            {
+                                <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Invitem.Invoice.BalanceDue.Value)</h3>
+                            }
+                            else
+                            {
+                                <h3 style="margin:0px;padding-right:10px;">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(SubTotalValue)</h3>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+
+                @*@if (!string.IsNullOrWhiteSpace(Invitem.AmountInWord))
+                {
+                    <div style="width:100%; float:left; margin-left:40px; padding-top:20px;">
+                        <span style="text-transform: capitalize;"><b>Amount in Words (@CurrencyVal):</b> @Invitem.AmountInWord Only</span>
+                    </div>
+                }*@
+                @*@if (!string.IsNullOrWhiteSpace(Invitem.Invoice.Message))
+                    {
+                        <div style="width:100%; float:left; margin-left:40px; padding-top:20px;">
+                            <span>@Invitem.Invoice.Message</span>
+                        </div>
+                    }*@
+                @if (Invitem.ShowPaymentAddressForSendInvoice)
+                {
+                    <div style="width:100%; float:left; margin-left:40px; padding-top:20px;">
+                        <span>Send payments to @Invitem.PaymentAddress</span>
+                    </div>
+                }
+
+                <div style="width:100%;float:left; margin-left:40px; padding-top:30px;">
+                    @foreach (var item in Model)
+                    {
+                        if (item.InvoiceNotes != null && item.InvoiceNotes.Count > 0)
+                        {
+                            <span style="font-weight:bold">Notes</span>
+                            foreach (var itemInv in item.InvoiceNotes)
+                            {
+                                <p style="padding-left:40px;white-space: pre-line">@itemInv.Note</p>
+                            }
+
+                        }
+                    }
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Invitem.CompanyName))
+                {
+                    <div style="width:100%; float:left; margin-top:50px; text-align:center; box-sizing:border-box;">
+                        <div style="width:100%; float:left;text-align:center; box-sizing:border-box; font-size:18px;"> Thanks for your business!</div>
+                        <div style="width:100%; float:left;text-align:center; box-sizing:border-box;">@Invitem.CompanyName</div>
+                    </div>
+                }
+            </div>
+
+
+
+        </div>
+
+        total = total - 1;
+        if (total > 0)
+        {
+            <div class="breakhere"></div>
+        }
+
+    }
+</body>
+</html>

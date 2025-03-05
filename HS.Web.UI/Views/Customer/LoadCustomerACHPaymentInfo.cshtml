@@ -1,0 +1,293 @@
+﻿@model IEnumerable<HS.Entities.PaymentInfo>
+@{
+    Layout = null;
+    var count = 0;
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using HS.Framework
+<link href="~/Content/Css/CustomerDetails/CustomerAccountActivityDetails.css" rel="stylesheet" />
+@*<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>*@
+<script>
+        var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+    @*var PaymentOfCustomerId = '@ViewBag.customerid';*@
+    var DeletePaymentInfo = function (paymentinfoID) {
+        $.ajax({
+        type: "POST",
+        url: domainurl + "/SmartLeads/DeletePaymentInfo",
+        data: JSON.stringify({ PaymentInfoId: paymentinfoID }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+        success: function (data) {
+             if (data == true) {
+                    OpenSuccessMessageNew("", "Payment info deleted successfully.", function () {
+                         $(LoadCustomerDiv + ".CustomerCCTab").load(domainurl + "/Customer/LoadCustomerCCPaymentInfo?customerid=" + CustomerLoadGuid);
+                        $(LoadCustomerDiv +".CustomerACHTab").load(domainurl + "/Customer/LoadCustomerACHPaymentInfo?customerid=" + CustomerLoadGuid);
+                        $(LoadCustomerDiv +"#CustomerACHQATab").load(domainurl + "/Customer/LoadCustomerACHPaymentInfo?customerid=" + CustomerLoadGuid);
+                       
+                        $(LoadCustomerDiv +"#CustomerCCQATab").load(domainurl + "/Customer/LoadCustomerCCPaymentInfo?customerid=" + CustomerLoadGuid);
+                        $(LoadCustomerDiv +"#ACHTab").load(domainurl + "/Customer/LoadCustomerACHPaymentInfo?customerid=" + CustomerLoadGuid);
+                        $(LoadCustomerDiv +"#CCTab").load(domainurl + "/Customer/LoadCustomerCCPaymentInfo?customerid=" + CustomerLoadGuid);
+                    })
+                }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            $(".loader-div").hide();
+            console.log(errorThrown);
+        }
+    });
+
+    }
+
+    var CopyTitelInCopyBord = function (text) {
+
+        var dummy = document.createElement("textarea");
+        // to avoid breaking orgain page when copying more words
+        // cant copy when adding below this code
+        // dummy.style.display = 'none'
+        document.body.appendChild(dummy);
+        //Be careful if you use texarea. setAttribute('value', value), which works with "input" does not work with "textarea". – Eduard
+        dummy.value = text;
+        dummy.select();
+        document.execCommand("copy");
+        document.body.removeChild(dummy);
+        $("#SuccessMessaegeForCopy" + text).removeClass('hidden');
+
+        setTimeout(function () {
+            $("#SuccessMessaegeForCopy" + text).addClass('hidden');
+        }, 2000);
+
+
+    }
+      var editach = function (Id) {
+     //   console.log(CardNumber);
+          OpenRightToLeftModal("/SmartLeads/CCEditViewPaymentMethod?customerid=" + CustomerLoadGuid + "&type=Customer"+"&Id="+Id);
+      }
+    var EditACHPaymentInfo = function (id) {
+        OpenRightToLeftModal("/SmartLeads/ACHAddViewPaymentMethod?id="+id +"&customerid=" + CustomerLoadGuid + "&type=Customer");
+    }
+
+    $(document).ready(function () {
+     
+        $(".p_info_delete_btn").click(function () {
+            var PaymentInfoId = $(this).attr('id-val');
+
+            OpenConfirmationMessageNew("Confirmation", "Are you sure you want to delete this item?", function () {
+                DeletePaymentInfo(PaymentInfoId);
+            });
+        });
+
+
+
+    });
+
+</script>
+
+<div class="payment_container">
+    <div class="ci_info_payment">
+        @{
+            if (Model != null && Model.Count() > 0)
+            {
+                foreach (var item in Model)
+                {
+                    if (item != null)
+                    {
+                        if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowPaymentProfileInformation))
+                        {
+                            if (count % 2 == 0)
+                            {
+                                <div class="payment_info_overview_container">
+                                    @*@if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowLeadDetailsACHDeleteButton))
+                                        {*@
+                                    <button id-val="@item.Id" class="btn p_info_delete_btn" title="@Localize.T("Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i></button>
+                                    @*}*@
+                                    <div class="width-100p">
+                                        <div class="payment_info_overview_header">@Localize.T("Routing Number")<span>:</span></div>
+                                        <div class="payment_info_overview_info">
+                                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaymentOptionACHEdit))
+                                            {
+                                                <a href="javascript:void(0)" class="item-edit name-anchor-style" onclick="EditACHPaymentInfo(@item.Id)">
+                                                    @item.RoutingNo
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <label>
+                                                    @item.RoutingNo
+                                                </label>
+                                            }
+
+                                        </div>
+                                    </div>
+                                    <div class="width-100p">
+                                        <div class="payment_info_overview_header">@Localize.T("Account Number")<span>:</span></div>
+                                        <div class="payment_info_overview_info">
+                                            @(item.AcountNo.Length >= 5 ? string.Concat("".PadLeft(7, '*'), item.AcountNo.Substring(item.AcountNo.Length - 4)) : item.AcountNo)
+                                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowPaymentMathodInformation))
+                                            {
+                                                <span class="successmessaegeforcopy_cont">
+                                                    <i class="fa fa-bank hover_details_icon" onclick=CopyTitelInCopyBord(@item.AcountNo) title="@item.AcountNo"></i>
+                                                    <span id="@(" SuccessMessaegeForCopy"+item.AcountNo)" class="alert alert-success hidden">
+                                                        @Localize.T("Copied.")
+                                                    </span>
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Bank Account Type")<span>:</span></div><div class="payment_info_overview_info"> @item.BankAccountType</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Account Name")<span>:</span></div> <div class="payment_info_overview_info">@item.AccountName</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Echeck Type")<span>:</span></div> <div class="payment_info_overview_info">@item.EcheckType</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Bank Name")<span>:</span></div> <div class="payment_info_overview_info">@item.BankName</div></div>
+                                    @if (item.IsForBrinks == true)
+                                    {
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is For Brinks")<span>:</span></div> <div class="payment_info_overview_info">@item.IsForBrinks</div></div>
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Partial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsPartialPayment</div></div>
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Initial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsInitialPayment</div></div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="payment_info_overview_container left_narginstyle">
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowLeadDetailsACHDeleteButton))
+                                    {
+                                        <button id-val="@item.Id" class="btn p_info_delete_btn" title="@Localize.T(" Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i></button>
+
+                                    }
+                                    <div class="width-100p">
+                                        <div class="payment_info_overview_header">@Localize.T("Routing Number")<span>:</span></div>
+                                        <div class="payment_info_overview_info">
+                                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaymentOptionACHEdit))
+                                            {
+                                                <a href="javascript:void(0)" class="item-edit name-anchor-style" onclick="EditACHPaymentInfo(@item.Id)">
+                                                    @item.RoutingNo
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <label>
+                                                    @item.RoutingNo
+                                                </label>
+                                            }
+
+                                        </div>
+                                    </div>
+                                    <div class="width-100p">
+                                        <div class="payment_info_overview_header">@Localize.T("Account Number")<span>:</span></div>
+                                        <div class="payment_info_overview_info">
+                                            @(item.AcountNo.Length >= 5 ? string.Concat("".PadLeft(7, '*'), item.AcountNo.Substring(item.AcountNo.Length - 4)) : item.AcountNo)
+                                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowPaymentMathodInformation))
+                                            {
+                                                <span class="successmessaegeforcopy_cont">
+                                                    <i class="fa fa-bank hover_details_icon" onclick=CopyTitelInCopyBord(@item.AcountNo) title="@item.AcountNo"></i>
+                                                    <span id="@(" SuccessMessaegeForCopy"+item.AcountNo)" class="alert alert-success hidden">
+                                                        @Localize.T("Copied.")
+                                                    </span>
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Bank Account Type")<span>:</span></div> <div class="payment_info_overview_info">@item.BankAccountType</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Account Name")<span>:</span></div> <div class="payment_info_overview_info">@item.AccountName</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Echeck Type")<span>:</span></div> <div class="payment_info_overview_info">@item.EcheckType</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Bank Name")<span>:</span></div> <div class="payment_info_overview_info">@item.BankName</div></div>
+                                    @if (item.IsForBrinks == true)
+                                    {
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is For Brinks")<span>:</span></div> <div class="payment_info_overview_info">@item.IsForBrinks</div></div>
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Partial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsPartialPayment</div></div>
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Initial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsInitialPayment</div></div>
+                                    }
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            if (count % 2 == 0)
+                            {
+                                <div class="payment_info_overview_container">
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowLeadDetailsACHDeleteButton))
+                                    {
+                                        <button id-val="@item.Id" class="btn p_info_delete_btn" title="@Localize.T(" Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i></button>
+                                    }
+                                    <div class="width-100p">
+                                        <div class="payment_info_overview_header" @*onclick="editach('@item.Id')" *@>@Localize.T("Routing Number")<span>:</span></div>
+                                        <div class="payment_info_overview_info">
+                                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaymentOptionACHEdit))
+                                            {
+                                                <a href="javascript:void(0)" class="item-edit name-anchor-style" onclick="EditACHPaymentInfo(@item.Id)">
+                                                    @item.RoutingNo
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <label>
+                                                    @item.RoutingNo
+                                                </label>
+                                            }
+
+                                        </div>
+                                    </div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Account Number")<span>:</span></div> <div class="payment_info_overview_info">@(item.AcountNo.Length >= 5 ? string.Concat("".PadLeft(7, '*'), item.AcountNo.Substring(item.AcountNo.Length - 4)) : item.AcountNo)</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Bank Account Type")<span>:</span></div><div class="payment_info_overview_info"> @item.BankAccountType</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Account Name")<span>:</span></div> <div class="payment_info_overview_info">@item.AccountName</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Echeck Type")<span>:</span></div> <div class="payment_info_overview_info">@item.EcheckType</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Bank Name")<span>:</span></div> <div class="payment_info_overview_info">@item.BankName</div></div>
+                                    @if (item.IsForBrinks == true)
+                                    {
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is For Brinks")<span>:</span></div> <div class="payment_info_overview_info">@item.IsForBrinks</div></div>
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Partial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsPartialPayment</div></div>
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Initial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsInitialPayment</div></div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="payment_info_overview_container left_narginstyle">
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowLeadDetailsACHDeleteButton))
+                                    {
+                                        <button id-val="@item.Id" class="btn p_info_delete_btn" title="@Localize.T(" Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i></button>
+                                    }
+                                    <div class="width-100p">
+                                        <div class="payment_info_overview_header">@Localize.T("Routing Number")<span>:</span></div>
+                                        <div class="payment_info_overview_info">
+                                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaymentOptionACHEdit))
+                                            {
+                                                <a href="javascript:void(0)" class="item-edit name-anchor-style" onclick="EditACHPaymentInfo(@item.Id)">
+                                                    @item.RoutingNo
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <label>
+                                                    @item.RoutingNo
+                                                </label>
+                                            }
+
+                                        </div>
+                                    </div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Account Number")<span>:</span></div> <div class="payment_info_overview_info">@(item.AcountNo.Length >= 5 ? string.Concat("".PadLeft(7, '*'), item.AcountNo.Substring(item.AcountNo.Length - 4)) : item.AcountNo)</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Bank Account Type")<span>:</span></div> <div class="payment_info_overview_info">@item.BankAccountType</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Account Name")<span>:</span></div> <div class="payment_info_overview_info">@item.AccountName</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Echeck Type")<span>:</span></div> <div class="payment_info_overview_info">@item.EcheckType</div></div>
+                                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Bank Name")<span>:</span></div> <div class="payment_info_overview_info">@item.BankName</div></div>
+                                    @if (item.IsForBrinks == true)
+                                    {
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is For Brinks")<span>:</span></div> <div class="payment_info_overview_info">@item.IsForBrinks</div></div>
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Partial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsPartialPayment</div></div>
+                                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Initial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsInitialPayment</div></div>
+                                    }
+                                </div>
+                            }
+                        }
+                        count = count + 1;
+
+                    }
+
+                }
+            }
+        }
+            </div>
+        </div>
+

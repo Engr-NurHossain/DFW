@@ -1,0 +1,247 @@
+
+@model HS.Entities.AddSmartLeadEquipment
+@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+    double TotalPrice = 0;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+
+
+@Styles.Render("~/styles/SmartLeadSmartServiceNew")
+
+<script>
+    var NonCommissionableServiceList = [];
+    var DeleteNonCommissionableServiceList = [];
+    var EquipmentPartialLeadId = @ViewBag.EquipmentPartialLeadId;
+    var EquipmentPartialLeadGuId = '@ViewBag.EquipmentPartialLeadGuId';
+    var Currency = '@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency()';
+    var ChargeForFirstEquipment = false;
+    var SaveNonCommissionableServiceList = function (NonCommissionableServiceList, DeleteNonCommissionableServiceList) {
+        var url = "/SmartLeads/SaveNonCommissionableServiceList";
+        var param = JSON.stringify({
+            NonCommissionableServiceList: NonCommissionableServiceList,
+            EquipmentPartialLeadGuId: EquipmentPartialLeadGuId,
+            DeleteNonCommissionableServiceList: DeleteNonCommissionableServiceList
+        });
+        $.ajax({
+        type: "POST",
+        ajaxStart: $(".loader-div").show(),
+        url: url,
+        data: param,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+        success: function (data) {
+
+        }
+    });
+    }
+    $(document).ready(function () {
+        $(".chk_non_commission").click(function () {
+            var id = $(this).attr('data-id');
+            if ($(this).prop("checked")) {
+                OpenConfirmationMessageNew("Confirmation", "Do you want to make non commissionable service?", function () {
+                    NonCommissionableServiceList.push(id);
+                    SaveNonCommissionableServiceList(NonCommissionableServiceList, null);
+                    $("#chk_non_commission_" + id).prop("checked", true);
+                }, function () {
+                    $("#chk_non_commission_" + id).prop("checked", false);
+                });
+            }
+            else {
+                DeleteNonCommissionableServiceList.push(id);
+                SaveNonCommissionableServiceList(null, DeleteNonCommissionableServiceList);
+            }
+        })
+        $(".chk_non_commission").each(function () {
+            console.log("service")
+            var id = $(this).attr('data-id');
+                if ($("#chk_non_commission_" + id).prop("checked")) {
+                    NonCommissionableServiceList.push(id);
+                }
+        })
+    })
+</script>
+
+@Scripts.Render("~/scripts/SmartLeadSmartServiceNew")
+
+<div class="ServiceAddDiv">
+    <input id="step" type="hidden" value="2" />
+    <div class="ServiceInfo">
+        <div class="service_info_list">
+            <div class="service_info_list_label">@Localize.T("Service Name")</div>
+            <div class="service_info_list_field">
+
+                <select class="ProductName form-control">
+                    <option value="-1" dataprice="0">Select One</option>
+                    @if (ViewBag.ServiceList != null)
+                    {
+                        foreach (var item in ViewBag.ServiceList as List<HS.Entities.SystemTypeServiceMap>)
+                        {
+                            <option value="@item.EquipmentId" dataprice="@item.Retail">@item.ServiceName</option>
+                        }
+                    }
+                </select>
+                @*<input type="text" class="ProductName form-control" value="" onkeydown="SearchKeyDown(this,event)" placeholder="@Localize.T("Service Name")" onkeyup="SearchKeyUp(this,event)" />
+                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>*@
+            </div>
+        </div>
+        <div class="service_info_list">
+            <div class="service_info_list_label">@Localize.T("Product Rate")</div>
+            <div class="service_info_list_field currency_style">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">
+                            @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)
+                        </span>
+                    </div>
+                    <input type="text" @(PermissionChecker.IsPermitted(PermissionList.LeadPermissions.SmartSetupEditServiceProductRate) ? "" : "disabled") class="txtProductRate form-control" placeholder="@Localize.T("Product Rate")" value="" />
+                </div>
+
+            </div>
+        </div>
+        <div class="service_info_list">
+            <div class="service_info_list_label">@Localize.T("Discount Rate")</div>
+            <div class="service_info_list_field currency_style">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">
+                            @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)
+                        </span>
+                    </div>
+                    <input type="text" @(PermissionChecker.IsPermitted(PermissionList.LeadPermissions.SmartSetupEditServiceDiscountRate) ? "" : "disabled") class="txtProductDiscountRate form-control" placeholder="@Localize.T("Discount Rate")" value="" />
+                </div>
+                @*<input type="text" class="txtProductDiscountRate form-control" placeholder="@Localize.T("Discount Rate")" value="" />*@
+            </div>
+        </div>
+        <div class="service_info_list">
+            <div class="service_info_list_label">@Localize.T("Total Amount")</div>
+            <div class="service_info_list_field currency_style">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">
+                            @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)
+                        </span>
+                    </div>
+                    <input type="text" class="txtTotalAmount form-control" placeholder="@Localize.T("Total Amount")" value="" />
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="serviceOptionsDiv">
+        &nbsp;
+    </div>
+</div>
+<div>
+    <button class="btn hidden" id="AddServiceWithOptions"><i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T("Add Service")</button>
+</div>
+
+<div class="existing-equipments">
+    @if (Model.PackageServiceList != null && Model.PackageServiceList.Count > 0)
+    {
+        <div class="leadsetup_equip_header head_space">
+            @Localize.T("Services Purchase")
+        </div>
+        <div class="SSPN_table_container">
+            <table class="Setup-Equipments-Table SmartSetUpServiceList">
+                <thead>
+                    <tr>
+                        @if (PermissionChecker.IsPermitted(PermissionList.MenuPermissions.ShowNonCommission))
+                        {
+                            <th>
+                                @Localize.T("Non Commission")
+                            </th>
+                        }
+                        <th>
+                            @Localize.T("Smart Service")
+                        </th>
+                        <th>
+                            @Localize.T("Monthly Rate")
+                        </th>
+                        <th>
+                            @Localize.T("Discounted Rate")
+                        </th>
+                        <th>
+                            @Localize.T("One Time Pay")
+                        </th>
+                        <th>
+                            @Localize.T("Total Rate")
+                        </th>
+                        <th style="width:5%;">
+
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (HS.Entities.CustomerPackageService item in Model.PackageServiceList)
+                    {
+                        <tr class="Equipment_@item.Id serviceRows" serviceId="@item.EquipmentId">
+                            <td class="hidden"></td>
+                            @if (PermissionChecker.IsPermitted(PermissionList.MenuPermissions.ShowNonCommission))
+                            {
+                                <td style="text-align:center;"><input type="checkbox" @(item.IsNonCommissionable.HasValue && item.IsNonCommissionable.Value == true ? "checked" : "") class="chk_non_commission" id="chk_non_commission_@item.Id" data-guidid="@item.EquipmentId" data-id="@item.Id" /></td>
+                            }
+                            <td style="text-align:center;">
+                                @item.EquipmentServiceName
+                                @*@(string.IsNullOrWhiteSpace(item.Manufacturer) ? "":string.Format("[{0}]",item.Manufacturer))
+                                    @(string.IsNullOrWhiteSpace(item.Location) ? "" : string.Format("[{0}]", item.Location))
+                                    @(string.IsNullOrWhiteSpace(item.Type) ? "" : string.Format("[{0}]", item.Type))
+                                    @(string.IsNullOrWhiteSpace(item.Model) ? "" : string.Format("[{0}]", item.Model))
+                                    @(string.IsNullOrWhiteSpace(item.Finish) ? "" : string.Format("[{0}]", item.Finish))
+                                    @(string.IsNullOrWhiteSpace(item.Capacity) ? "" : string.Format("[{0}]", item.Capacity))
+                                    @(string.IsNullOrWhiteSpace(item.SKU) ? "" : string.Format("[{0}]", item.SKU))*@
+                            </td>
+                            <td>
+                                @Currency<span>@LabelHelper.FormatAmount(item.UnitPrice)</span>
+                            </td>
+                            <td>
+                                @Currency<span>@LabelHelper.FormatAmount(item.DiscountUnitPricce)</span>
+                            </td>
+                            <td>
+                                @if (item.IsARBEnabled)
+                                {
+                                    @Currency<span class="total_price">@LabelHelper.FormatAmount(0)</span>
+                                }
+                                else
+                                {
+                                    @Currency<span class="total_price">@LabelHelper.FormatAmount(item.Total)</span>
+                                }
+                            </td>
+                            <td>
+                                @if (item.IsARBEnabled)
+                                {
+                                    @Currency<span class="total_price">@LabelHelper.FormatAmount(item.Total)</span>
+                                }
+                                else
+                                {
+                                    @Currency<span class="total_price">@LabelHelper.FormatAmount(0)</span>
+                                }
+                            </td>
+                            <td valign="top" class="tableActions">
+                                <i class="fa fa-trash-o cursor-pointer" dataid="@item.Id" aria-hidden="true"></i>
+                            </td>
+                        </tr>
+                    }
+                    <tr class="BottomTotalTr">
+                        @if (PermissionChecker.IsPermitted(PermissionList.MenuPermissions.ShowNonCommission))
+                        {
+                            <td></td>
+                        }
+                        <td></td>
+                        <td>@Localize.T("Total")</td>
+                        <td class="retail-total">@Currency@LabelHelper.FormatAmount(Model.PackageServiceList.Sum(x => x.DiscountUnitPricce))</td>
+                        <td class="sub-total">@Currency@LabelHelper.FormatAmount(Model.PackageServiceList.Where(m => m.IsARBEnabled == false).Sum(x => x.Total))</td>
+                        <td class="sub-total">@Currency@LabelHelper.FormatAmount(Model.PackageServiceList.Where(m => m.IsARBEnabled == true).Sum(x => x.Total))</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

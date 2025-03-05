@@ -1,0 +1,468 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using cs = HS.Entities.Customer
+@model HS.Entities.CreateVendorBill
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+
+<script>
+    var UserFileUploadjqXHRData;
+    var Bill_Id = '@Model.Bill.Id';
+    var BillNo = '@Model.Bill.BillNo';
+    var PaymentStatus = '@Model.Bill.PaymentStatus';
+    var BillType = '@Model.Bill.Type';
+    var BillBalanceDue = '@Model.Bill.PaymentDue';
+    var Currency = '@Currency';
+    var PaymentDate;
+    var PaymentDueDate;
+    var AccountId;
+    var itemName;
+    var TotalAmount = 0;
+    var FinalTotal = 0;
+    var BalanceDue = 0;
+    var DueDatepicker;
+    var PaymentDate;
+    var PaymentMethodClick = false;
+
+    var PropertyUserSuggestiontemplate =
+                    '<div class="tt-suggestion tt-selectable" data-name = "{0}" data-type = "{1}" data-id = "{2}" data-select = "{0}">'
+                       + "<p class='tt-sug-text'>"
+                           + "<em class='tt-eq-name'>{0}</em>"
+                       + "</p> "
+                    + "</div>";
+    var NewEquipmentRow = "<tr>"
+                            + "<td valign='top' class='rowindex'></td>"
+                            + "<td valign='top'>"
+                                + "<input type='hidden'   class='hdnaccounttypeId' />"
+                            + "<input type='text'class='ProductName' onkeydown='SearchKeyDown(this,event)' onkeyup='SearchKeyUp(this,event)' />"
+                                + "<div class='tt-menu'>"
+                                    + "<div class='tt-dataset tt-dataset-autocomplete'> </div> "
+                                + "</div>"
+                                + "<span class='spnProductName'></span>"
+                            + "</td>"
+                            + "<td valign='top'>"
+
+                                + "<input type='text' onkeydown='OthersKeyDown(this,event)' class='txtProductDesc' />"
+                                + "<span class='spnProductDesc'></span>"
+                            + "</td>"
+                            + "<td valign='top'>"
+                                + "<div class='C_S I_G'>"
+                                    + "<div class='input-group-prepend'>"
+                                        + "<div class='input-group-text'>" + Currency + "</div>"
+                                    + "</div>"
+                                    + "<input type='text' onkeydown='OthersKeyDown(this,event)' class='txtProductAmount' />"
+                                + "</div>"
+                                + "<span class='spnProductAmount'></span>"
+                            + "</td>"
+                            + "<td valign='top' class='tableActions'>"
+                                + "<i class='fa fa-trash-o' aria-hidden='true'></i>"
+                            + "</td>"
+                        + "</tr>";
+
+    var vendorid;
+    var VendorAddress;
+    var VendorSuggestiontemplate =
+               "<div class='tt-suggestion tt-selectable' data-street = '{0}' data-city = '{1}' data-state = '{2}' data-zip = '{3}' data-name = '{4}' data-vendorid = '{5}' data-companyname = '{6}' >"
+                  + "<p class='tt-sug-text'>"
+                      + "{6}"
+                  + "</p> "
+               + "</div>";
+
+    jQuery(document).ready(function () {
+
+        div1 = jQuery('.invoice-info-left-70p');
+        div2 = jQuery('.balance-info');
+
+        tdiv1 = div1.clone();
+        tdiv2 = div2.clone();
+
+        if (screen.width < 414) {
+            div1.replaceWith(tdiv2);
+            div2.replaceWith(tdiv1);
+        }
+
+    });
+</script>
+
+
+
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+@Scripts.Render("~/scripts/AddVendorBillJS")
+@Styles.Render("~/styles/AddVendorBillCSS")
+
+@*<link href="~/Content/Css/Expense/AddVendorBill.css" rel="stylesheet" />
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Js/TinyInvoice.js"></script>*@
+
+<button class="settings-invoice" data-toggle="dropdown"><i class="fa fa-cog" aria-hidden="true"></i></button>
+
+<div class="avb_div_header">
+    <div class="header_title_avb">
+        Bill: @Model.Bill.BillNo
+    </div>
+</div> 
+<div class="add_vendor_bill_container add-invoice-container">
+    <div class="avb_invoice_informations">
+        <div class="avp_row">
+            <div class="invoice-info-left-70p">
+                <div class="add_vendor_bill_row">
+                    <div class="form-group clearfix width-25p billfor_dropdown">
+                        <span class="span-style">@Localize.T("Job Name")</span>
+                        @Html.TextBoxFor(x => x.Bill.JobName, new { @class = "form-control" })
+                    </div>
+                    <div class="form-group clearfix width-25p Emplopyee_dropdown">
+                        <span class="span-style">@Localize.T("Choose an Employee")</span>
+                        @Html.DropDownListFor(x => x.Bill.EmployeeId, ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control" })
+                    </div>
+                    <div class="form-group clearfix width-25p Vendor_name_insert_div">
+                        <span class="span-style">@Localize.T("Choose a vendor")</span> 
+                        <input type="hidden" id="SupplierId" value="@Model.Bill.SupplierId" />
+                        <input type="text" class="form-control" onkeydown="VendorSearchKeyDown(this, event)" onkeyup="VendorSearchKeyUp(this, event)" value="@Model.Bill.SupplierName" id="VendorList" />
+                        <div class='tt-menu' style="margin-left: 340px;">
+                            <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                        </div>
+                    </div> 
+                    <div class="form-group clearfix width-25p">
+                        <span class="span-style">@Localize.T("PO No.")</span>
+                        @Html.TextBoxFor(x => x.Bill.PurchaseOrderId, new { @class = "form-control" })
+                    </div>
+                </div>
+                <div class="add_vendor_bill_row">
+                    <div class="invoice-info-left-100p"> 
+                        <div class="form-group clearfix width-25p hidden">
+                            <span class="span-style">@Localize.T("Mailing Address")</span>
+                            @Html.TextAreaFor(mm => mm.Bill.SupplierAddress, new { @class = "form-control", id = "SupplierAddress" })
+                        </div> 
+                        <div class="form-group clearfix width-25p">
+                            <span class="span-style">@Localize.T("Invoice No.")</span>
+                            @Html.TextBoxFor(x => x.Bill.InvoiceId, new { @class = "form-control" })
+                        </div>
+                        <div class="form-group clearfix width-25p">
+                            <span class="span-style">@Localize.T("Terms")</span>
+                            @Html.DropDownListFor(x => x.Bill.PaymentTerm, (List<SelectListItem>)ViewBag.Term , new { @class = "form-control" })
+                             
+                        </div> 
+                        <div class="form-group clearfix width-25p">
+                            <span class="span-style">@Localize.T("Order Date")</span>
+                            <div class="input_group_for_date add-on" id="Bill_PaymentDateCustom">
+                                <input type="text" class="form-control" id="Bill_PaymentDate" value="@HS.Framework.DateTimeExtension.UTCToClientTime(Model.Bill.PaymentDate).ToString("MM/dd/yy")" /> 
+                                <div class="input-group-btn">
+                                    <btn class="btn">
+                                        <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                    </btn>
+                                </div>
+                            </div> 
+                        </div> 
+                        <div class="form-group clearfix width-25p">
+                            <span class="span-style">@Localize.T("Due Date")</span>
+                            <div class="input_group_for_date add-on" id="Bill_PaymentDueDateCustom">
+                                <input type="text" class="form-control PaymentDueDate" id="Bill_PaymentDueDate" value="@HS.Framework.DateTimeExtension.UTCToClientTime(Model.Bill.PaymentDueDate).ToString("MM/dd/yy")" />  
+                                <div class="input-group-btn">
+                                    <btn class="btn">
+                                        <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                    </btn>
+                                </div>
+                            </div>
+                            
+                        </div> 
+                    </div>
+                </div>
+            </div>
+            <div class="balance-info">
+                <div>
+                    <span class="span-style balance-info-due">@Localize.T("Balance Due")</span>
+                    <span class="span-style balance-info-paid">@Localize.T("Balance Paid")</span>
+                </div>
+                <span class="amount amount-span-style big-amount-top" style="color:#333">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+
+                <div class="balance-info-paid PaidDivClass">
+                    <span>PAID</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="avp_table_info_container">
+       <div class="width-100p margin-top-15 add_invoice_table_style">
+            <table class="CustomerInvoiceTab SupplierBillTab" id="SupplierBillTab">
+                <thead>
+                    <tr>
+                        <th class="thead-th-style1 tab-index">
+                            <span> 
+                            </span>
+                        </th>
+                        <th class="thead-th-style1 tab-Product">
+                            <span>
+                                @Localize.T("Category")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Desc">
+                            <span>
+                                @Localize.T("Description")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Amount">
+                            <span>
+                                @Localize.T("Amount")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Action"> 
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    @if (Model.BillDetailList.Count() > 0)
+                    {
+                        foreach (var item in Model.BillDetailList)
+                        {
+                            <tr data-id="@item.AccoutTypeId" class="HasItem">
+                                <td valign="top"></td>
+                                <td valign="top">
+                                    <input type="hidden" value="@item.AccoutTypeId" class="hdnaccounttypeId" />
+                                    <input type="text" class="ProductName" value="@(string.IsNullOrWhiteSpace(item.ItemName)?item.EquipmentName:item.ItemName)" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                    <span class="spnProductName">@(string.IsNullOrWhiteSpace(item.ItemName)?item.EquipmentName:item.ItemName)</span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" value="@item.Dscription" class="txtProductDesc" />
+                                    <span class="spnProductDesc">@item.Dscription</span>
+                                </td>
+                                <td valign="top">
+                                    <div class="C_S I_G">
+                                        <div class="input-group-prepend">
+                                            <div class="input-group-text">@Currency</div>
+                                        </div>
+                                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" value="@item.Amount" />
+                                    </div> 
+                                    <span class="spnProductAmount avb_invoice_allign">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)</span>
+                                </td>
+                                <td valign="top" class="tableActions">
+                                    <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td valign="top"></td>
+                            <td valign="top">
+                                <input type="hidden" value="" class="hdnaccounttypeId" />
+                                <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                <span class="spnProductName"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDesc" />
+                                <span class="spnProductDesc"></span>
+                            </td>
+                            <td valign="top">
+                                <div class="C_S I_G">
+                                    <div class="input-group-prepend">
+                                        <div class="input-group-text">@Currency</div>
+                                    </div>
+                                    <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" />
+                                </div>
+                                <span class="spnProductAmount avb_invoice_allign"></span>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top"></td>
+                            <td valign="top">
+                                <input type="hidden" value="" class="hdnaccounttypeId" />
+                                <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                <span class="spnProductName"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDesc" />
+                                <span class="spnProductDesc"></span>
+                            </td>
+                            <td valign="top">
+                                <div class="C_S I_G">
+                                    <div class="input-group-prepend">
+                                        <div class="input-group-text">@Currency</div>
+                                    </div>
+                                    <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" />
+                                </div> 
+                                
+                                <span class="spnProductAmount avb_invoice_allign"></span>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+
+        <div class="OtherInfos">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="avp_invoice_padd_top">
+                        <div class="InvoiceMgmtDiv">
+                            <button class="btnAddLines">@Localize.T("Add Lines")</button>
+                            <button class="btnClearLines">@Localize.T("Clear Lines")</button>
+                            <button class="btnAddSubtotal hidden">@Localize.T("Add Subtotal")</button>
+                        </div>
+                        <div class="col-md-12">
+                            &nbsp;
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div>
+                                    <span>@Localize.T("Message displayed on bill")</span>
+                                </div>
+                                <textarea id="InvoiceMessage" maxlength="1000" rows="4" class="InvoiceMessage">@Model.Bill.Notes</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="avp_amount_calc_pad">
+                        <div class="InvoiceCalculationsDiv">
+                            <div class="subtotal-amount-div margin-TB-5p">
+                                <div class="col-xs-7 avp_invoice_text_style">
+                                    <label class="float-right">@Localize.T("Subtotal"):</label>
+                                </div>
+                                <div class="col-xs-5 avb_subt_text">
+                                    <span class="amount avp_amount_subtotal">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                                </div>
+                            </div> 
+                            <div class="balance-due-amount-div margin-TB-5p">
+                                <div class="col-xs-7 avp_invoice_text_style">
+                                    <label class="float-right">@Localize.T("Balance Due"):</label>
+                                </div>
+                                <div class="col-xs-5 avb_subt_text">
+                                    <span class="balanceDueAmount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                  
+                </div>
+
+            </div>
+
+        </div>
+       
+    </div> 
+    <div id="FileUpload">
+        <div class="width-100p">
+            <span class="">@Localize.T("Allowed file types: doc, docx, xls, xlsx, jpg, jpeg, gif, png, rtf, pdf, txt") </span><br />
+            <span class="">@Localize.T("(max file size: 20 mb)")</span>
+        </div>
+        <div class="FileUpload_left_info">
+            <div class="txt-form Upload_Doc">
+                <div class="col-md-12 padding-left-0">
+                    <div class="add_vendor_bill_image_add">
+                        <div class="fileborder border_none">
+                            <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="~/Content/Icons/blank_thumb_file.png" />
+                        </div>
+                        @*<input class="deleteDoc" type="image" src="~/Content/Icons/cross_update.png" />*@
+                        <div class="deleteDoc cursor-pointer hidden">
+                            <img src="~/Content/Icons/cross-image-delete.png" />
+                        </div>
+                        <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                            @*<span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>*@
+                            <button class="btn changeFilebtn hidden chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</button>
+                        </div>
+
+                        <div class="LoadPreviewDocument hidden">
+                            <div class="show-image PropertyLogoPreviewPic">
+                                <div class="image-delete" data-id="">
+                                    <img src="~/Content/Icons/cross-image-delete.png" />
+                                </div>
+                                <img class="Preview_Doc T360image-photo T360image" src="" />
+                            </div>
+                            <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                                <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px; position:absolute; bottom:0px;">
+                    <div class="progress progress-striped active">
+                        <div class="progress-bar progress-bar-success" style="width:0%">
+                            <span> 0%</span>
+                        </div>
+                    </div>
+                </div>
+                <label class="label red position-relative hidden" id="uploadfileerror">*@Localize.T("File required")</label>
+
+            </div>
+            <div class="LoadPreviewDocument hidden">
+                <div class="show-image">
+                    <img id="Preview_Doc" src="" />
+                    <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                </div>
+                <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                    <span><img src="~/Content/Icons/edit-icon.png" /></span>
+                </div>
+            </div>
+            <div class="LoadPreviewDocument1 hidden">
+                <div class="show-image">
+                    <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+                    <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                </div>
+            </div>
+            <div class="UploadedVideo hidden">
+                <div class="show-image">
+                    <span>Click save button for add this video</span>
+                </div>
+            </div>
+        </div>
+        <div class="FileUpload_right_info">
+            <div class="form-group clearfix">
+                <div>@Localize.T("File name and description :")</div>
+                <textarea rows="4" id="Bill_file_description"></textarea>
+            </div>
+        </div>
+        <div class="width-100p">
+            <button class="btn btn-snote" id="SaveBillFile"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")</button>
+        </div>
+       
+    </div>
+    
+   
+    <div class="LoadBillFiles">
+
+    </div>
+</div>
+
+<div class="invoice-footer col-md-12">
+    <div class="cancelbtnDiv">
+        <button class="btnInv InvoiceCancelButton" onclick="CloseTopToBottomModal()">@Localize.T("Cancel")</button>
+    </div>
+    <div class="InnerOptionsDiv">
+        <a id="PrintOrPreview" onclick="PrintOrPreview()" class="InvEstPreview">@Localize.T("Print Preview")</a>
+    </div>
+    <div class="SaveaButtonsDiv">
+        <button onclick="SaveOnly()" class="btnInv InvoiceSaveButton">@Localize.T("Save")</button>
+        <div class="btn-group dropup">
+            <a onclick="SaveAndClose()" href="javascript:void(0)" type="button" class="InvEstPreview btn btn-default SaveAndSendBtn">@Localize.T("Save and Close")</a>
+            <ul class="dropdown-menu">
+                <li><a onclick="SaveAndNew();">@Localize.T("Save and new")</a></li>
+            </ul>
+        </div>
+    </div>
+</div> 
+<div style="display:none;visibility:hidden;height:0px;">
+    <a href="/Expense/ExpensePreview" class="BillPreviewPopup"></a>
+</div>
+<div class="">
+    <input type="hidden" id="UploadedPath" value="" />
+    <input type="file" name="BillFiles" class="hidden" id="UploadedFile" />
+
+</div>
+

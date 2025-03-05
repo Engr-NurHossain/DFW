@@ -1,0 +1,353 @@
+﻿@model List<HS.Entities.Transaction>
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var Funding = '@Localize.T("Funding")'
+    var CustomerGuidId = '@ViewBag.CustomerGuidId';
+    var DeleteFundingConfirm = function(Id)
+    {
+        OpenConfirmationMessageNew("", "Are you sure to delete this "+Funding+"?", function ()
+        {
+            DeleteTransactionbyId(Id);
+        })
+    }
+    var DeleteTransactionbyId = function (TransDeleteId) {
+        $.ajax({
+            url: "/Transaction/DeleteTransaction",
+            data: { Id: TransDeleteId ,CustomerId : '@ViewBag.CustomerGuidId'},
+            type: "Post",
+            dataType: "Json",
+            success: function () {
+                OpenSuccessMessageNew("", Funding+" deleted successfully.", function ()
+                {
+                    OpenTransactionTab();
+                })
+              
+            }
+        });
+    }
+    //var OpenPaymentByTrId = function (trId) {
+    //    if (typeof (trId) != "undefined" && trId > 0) {
+    //        if (typeof (CustomerLoadId) == "undefined") {
+    //            return;
+    //        }
+    //        OpenTopToBottomModal(domainurl + "/Transaction/ReceivePayment/?CustomerId=" + CustomerLoadId + "&TransactionId=" + trId);
+    //    }
+    //}
+    $(document).ready(function () {
+        $(".more_info").click(function () {
+    var $title = $(this).find(".title_funding");
+    if (!$title.length) {
+        $(this).append('<span class="title_funding" id="title_fu">' + $(this).attr("title") + '</span>');
+    } else {
+        $title.remove();
+    }
+        });
+
+
+
+        $(document).click(function () {
+ if(!$(event.target).is('.more_info'))
+{
+    $(".title_funding").hide();
+}
+});
+        var Popupwidth = 920;
+        if (window.innerWidth < 920) {
+            Popupwidth = window.innerWidth;
+        }
+        var idlist = [{ id: ".PrintTransaction", type: 'iframe', width: Popupwidth, height: 600 }
+        ];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            FundPaging(pageno, orderval);
+        })
+
+        $("#IsCheckValtt").change(function () {
+            console.log("hlw");
+            if ($(this).is(':checked')) {
+                $(".CheckItems").each(function () {
+                    $(this).prop('checked', true);
+                });
+            }
+            else {
+                $(".CheckItems").each(function () {
+                    $(this).prop('checked', false);
+                });
+            }
+        })
+        
+    });
+</script>
+<div class="invoice-table funding_table">
+    <table class="display funding_list_table" id="tblTransactions">
+        <thead class="table-head-border funding_hide_for_device">
+            <tr>
+                @*<th>
+        </th>*@
+                <th class="thead-th-style date_head">
+                    <div>
+                        <label for="IsCheckValtt" class="label-cbx">
+                            <input id="IsCheckValtt" type="checkbox" style="position:relative;" class="cus-checkBox invisible " autocomplete="off">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                        @Localize.T("Date")
+                    </div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/fundingdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/fundingdate"></i></div>
+                </th>
+                <th class="thead-th-style recv_by_head">
+                    <div>@Localize.T("Received By")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/receivedby"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/receivedby"></i></div>
+                </th>
+                <th class="thead-th-style inv_no_head">
+                    <div>@Localize.T("Invoice NO")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/invoiceno"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/invoiceno"></i></div>
+                </th>
+                <th class="thead-th-style desc_head">
+                    <div>@Localize.T("Description")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/description"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/description"></i></div>
+                </th>
+                <th class="thead-th-style note_head">
+                    <div>@Localize.T("Note")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/note"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/note"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("PMT Method")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/paymethod"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/paymethod"></i></div>
+                </th>
+               
+                <th class="thead-th-style">
+                    <div> @Localize.T("Amount")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/amount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/amount"></i></div>
+                </th>
+                <th class="thead-th-style act_head">
+                    @Localize.T("Actions")
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+            <tr class="tr-style">
+                <td @(item.Type == "Invoice" ? "onclick=OpenInvById(" + @item.InvoiceId + ")" : "") @(item.Type == "Payment" ? "onclick=OpenPaymentByTrId(" + @item.Id + ")" : "") class="table-body-td-style funding_device_row" valign="top">
+                    <div class="funding_device_header">@Localize.T("Date") <span>:</span></div>
+                    <div class="funding_device_info">
+                        <label for="IsCheckValuu_@item.InvoiceId" class="label-cbx">
+                            <input id="IsCheckValuu_@item.InvoiceId" data-id="@item.Id" data-inv="@item.invId" type="checkbox" style="position:relative;" class="cus-checkBox invisible CheckItems" autocomplete="off">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                        <a class="cus-anchor" href="javascript:void(0)" onclick="OpenPaymentByTrId(@item.Id)" title="@(String.Format(item.TransacationDate.UTCToClientTime().ToString("MM/dd/yy")))">@(String.Format(item.TransacationDate.UTCToClientTime().ToString("MM/dd/yy")))</a>
+                    </div>
+                </td>
+                <td class="table-body-td-style funding_device_row" valign="top">
+                    <div class="funding_device_header">@Localize.T("Received By") <span>:</span></div>
+                    <div class="funding_device_info" title="@item.TransactionUserName">
+                        @item.TransactionUserName
+                    </div>
+                </td>
+                <td class="table-body-td-style funding_device_row" valign="top">
+                    <div class="funding_device_header">@Localize.T("Invoice No") <span>:</span></div>
+                    <div class="funding_device_info">
+                        <a class="cus-anchor" href="javascript:void(0)" onclick="OpenInvByInvId('@item.InvoiceNo')" title="@item.InvoiceNo">@item.InvoiceNo</a>
+                    </div>
+                </td>
+                <td class="table-body-td-style funding_device_row" valign="top">
+                    <div class="funding_device_header">@Localize.T("Description") <span>:</span></div>
+                    <div class="funding_device_info" title="@Html.Raw(item.Description)">
+                        <span>@Html.Raw(item.Description)</span>
+                    </div>
+                </td>
+                <td class="table-body-td-style funding_device_row" valign="top">
+                    <div class="funding_device_header">@Localize.T("Note") <span>:</span></div>
+                    <div class="funding_device_info" title="@Html.Raw(item.Note)">
+                        <span>@Html.Raw(item.Note)</span>
+                    </div>
+                </td>
+                <td class="table-body-td-style funding_device_row" valign="top">
+                    <div class="funding_device_header">@Localize.T("PMT Method") <span>:</span></div>
+                    <div class="funding_device_info">
+                        <span>@item.PaymentMethod</span>
+                    </div>
+                    <div class="funding_device_header">@Localize.T("Check No") <span>:</span></div>
+                    <div class="funding_device_info">
+                        <span title="@item.CheckNo">@item.CheckNo</span>
+                    </div>
+                </td>
+
+                <td class="table-body-td-style funding_device_row" valign="top">
+                    <div class="funding_device_header">@Localize.T("Amount") <span>:</span></div>
+                    <div class="funding_device_info">
+                        <span>
+                        <span title="@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)</span> 
+                        <i class="fa fa-eye" title="@Localize.T("Refund") @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.RefundAmount).ToString().Replace("-", "")"></i>
+                        </span>
+                        @if (!string.IsNullOrWhiteSpace(item.TransactionId))
+                        {
+                            <i title="@item.TransactionId" class="fa fa-random more_info"></i>
+
+                        }
+                    </div>
+                </td>
+                <td class="table-body-td-style funding_device_row" valign="top">
+                    <div class="funding_device_header">@Localize.T("Actions") <span>:</span></div>
+                    <div class="funding_device_info">
+                        <a href="@(AppConfig.DomainSitePath)/Transaction/PrintTransaction/?TransactionId=@item.Id&ToEmailAddress=@ViewBag.CustomerEmailAddress" class="PrintTransaction" title="@Localize.T("Send email")"><i class="fa fa-envelope" aria-hidden="true"></i></a>
+                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerFundingDelete))
+                        {
+                            <a href="Javascript:void(0)" data-id="@item.Id" onclick="DeleteFundingConfirm('@item.Id')" title="@Localize.T("Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i></a>
+                        }
+                    </div>
+                </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="FundPaging(@(ViewBag.PageNumber),'@ViewBag.order')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FundPaging(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FundPaging(1,'@ViewBag.order')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FundPaging(2,'@ViewBag.order')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="FundPaging(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FundPaging(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FundPaging(1,'@ViewBag.order')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FundPaging(2,'@ViewBag.order')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="FundPaging(3,'@ViewBag.order')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="FundPaging(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FundPaging(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FundPaging(@(ViewBag.PageNumber-2),'@ViewBag.order')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FundPaging(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="FundPaging(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="FundPaging()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FundPaging(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FundPaging(@(ViewBag.PageNumber+1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FundPaging(@(ViewBag.PageNumber + 2),'@ViewBag.order')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="FundPaging(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FundPaging(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FundPaging(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FundPaging(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="FundPaging(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="FundPaging(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FundPaging(@(ViewBag.PageNumber - 1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="FundPaging(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="FundPaging(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="FundPaging(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>

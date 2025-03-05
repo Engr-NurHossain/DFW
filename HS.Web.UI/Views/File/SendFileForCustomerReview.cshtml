@@ -1,0 +1,141 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.Customer
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Tiny/tiny.js"></script>
+@using System.Collections;
+@{ 
+    var Customername = Model.FirstName + " " + Model.LastName;
+    Hashtable datatemplate = new Hashtable();
+    datatemplate.Add("CustomerName", Customername);
+    string emailtemplate = HS.Web.UI.Helper.LabelHelper.ParserHelper(ViewBag.BodyContent, datatemplate);
+}
+<style>
+    .email_body {
+        width: 100%;
+        float: left;
+        overflow-y: scroll;
+        height: 72vh;
+        border: 1px solid #ccc;
+        padding: 8px;
+    }
+
+        .email_body table {
+            width: 100%;
+            float: left;
+            min-width: unset !important;
+        }
+
+            .email_body table tbody tr:nth-child(2) td:nth-child(1),
+            .email_body table tbody tr:nth-child(2) td:nth-child(3) {
+                width: 0px !important;
+            }
+
+            .email_body table tbody tr:nth-child(1),
+            .email_body table tbody tr:nth-child(2),
+            .email_body table tbody tr:nth-child(3) {
+                height: 0 !important;
+            }
+
+    .correspondence-header {
+        width: 100%;
+        background-color: #f4f5f8;
+    }
+
+    .heder-txt {
+        font-size: 2rem;
+        font-weight: 400;
+        color: #393a3d;
+        padding: 12px 10px;
+    }
+
+    .footer-section {
+        background: #eceef1;
+        height: 50px;
+        position: fixed;
+        width: 100%;
+        bottom: 0%;
+    }
+
+    .SaveCancelDiv {
+        width: 95%;
+        padding-top: 8px;
+    }
+
+    .btn-mail {
+        float: right;
+        background-color: green;
+        color: white;
+    }
+
+        .btn-mail:hover {
+            color: white;
+        }
+</style>
+<script>
+    var FileAttachment = function () {
+        var url = "@(AppConfig.DomainSitePath)/File/SendFileForCustomerReview";
+        var param = JSON.stringify({
+            EmailAddress: $("#EmailAddress").val(),
+            ccMail: $("#ccMail").val(),
+            SubjectList: $("#SubjectList").val(),
+            FileBody: tinyMCE.get('body-content-file').getContent(),
+            fileid: $("#fileid").val()
+        })
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                if (data == true) {
+                    $('.close').trigger('click');
+                    OpenSuccessMessageNew("Success!", "Successfully file attachment sent.", "");
+                }
+            }
+        });
+    }
+    $(document).ready(function () {
+        $("#FileSend").click(function () {
+            FileAttachment();
+        })
+    })
+</script>
+<input type="hidden" id="fileid" value="@ViewBag.fileid" />
+<div class="form-group correspondence-header">
+    <div class="heder-txt">@Localize.T("Send Email")</div>
+</div>
+<div class="container-fluid" style="padding-left:15px;padding-right:15px;">
+    <div class="slaesPersonContainer">
+        <span class="span-style">@Localize.T("Email")</span>
+        @Html.TextBoxFor(x => x.EmailAddress, new { @class = "form-control", @readonly = "readonly" })
+    </div>
+    <div class="form-group clearfix" style="margin-top: 15px;">
+        <span class="span-style">@Localize.T("CC")</span>
+        <input type="text" class="form-control" id="ccMail" />
+    </div>
+    <div class="margin-top-15p">
+        <div class="txtsubject">@Localize.T("Subject")</div>
+        <input type="text" class="form-control" id="SubjectList" value="@ViewBag.Subject" />
+    </div>
+    <div class="form-group clearfix" style="margin-top: 15px;">
+        <div class="txtsubject">@Localize.T("Email Body")</div>
+        <textarea class="body-content-file tinymce" id="body-content-file">@emailtemplate</textarea>
+    </div>
+</div>
+<section class="footer-section">
+    <footer class="footer">
+        <div class="SaveCancelDiv">
+            <button type="button" id="FileSend" class="btn btn-mail">
+                <i class="fa fa-send-o" aria-hidden="true"></i> @Localize.T("Send Email")
+            </button>
+        </div>
+    </footer>
+</section>
+

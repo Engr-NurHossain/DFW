@@ -1,0 +1,178 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Css/Inventory/PurchaseOrderPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Inventory/BadInventoryPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+<link href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet" />
+<script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+<script>
+    var listSelet = '@Html.Raw(Json.Encode(@ViewBag.selectsts))';
+    var EstimatorId = '@ViewBag.EstimatorId';
+    listSelet = JSON.parse(listSelet);
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var OpenPOById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId + "&OpenTab=Ware");
+    }
+    var ReceivePOById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId + "&Receive=true&OpenTab=Ware");
+    }
+    var DeletePOById = function (POId) {
+        OpenConfirmationMessageNew("", "Are you sure you want to delete?", function () {
+            DeletePurchaseOrderbyId(POId);
+        });
+    }
+    var ReceivePOHistoryById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/ReceivePOHistory/?Id=" + POId);
+    }
+    var ApprovePOById = function (POId, apStatus) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId + "&Approve=" + apStatus);
+    }
+    var DeletePurchaseOrderbyId = function (PODeleteId) {
+        $.ajax({
+            url: domainurl + "/PurchaseOrder/DeletePurchaseOrder",
+            data: { Id: PODeleteId },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", "Purchase Order deleted successfully!");
+                    CloseTopToBottomModal();
+                    OpenPurchaseOrderTab();
+                } else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            }
+        });
+    }
+    var TrfListLoad = function (pageNoTrf, pageNoRcv, order, techTrf, techRCV) {
+        if (typeof (pageNoTrf) != "undefined") {
+            var setectSts = encodeURI($("#poStatus").val());
+            //if (EstimatorId == null || EstimatorId == "undefined" || EstimatorId =="") {
+            //    EstimatorId = $("#EstimatorId").val();
+            //}
+            EstimatorId = $("#EstimatorId").val();
+            //var LoadUrl = domainurl + "/Inventory/TechTransferListPartial/?SearchText=" + encodeURI($(".PoSearchText").val()) + "&selectsts=" + setectSts
+            var LoadUrl = domainurl + "/Inventory/TechTransferListPartial/?SearchText=" + encodeURI($(".PoSearchText").val()) + "&selectsts=" + setectSts
+                + "&PageNoTrf=" + pageNoTrf + "&PageNoRcv=" + pageNoRcv + "&order=" + order + "&TTEmployeeIds=" + techTrf + "&RTEmployeeIds=" + techRCV + "&EstimatorId=" + EstimatorId;
+            $(".PurchaseOrderTable").html(TabsLoaderText);
+            $(".PurchaseOrderTable").load(LoadUrl);
+        }
+    }
+
+    //var TrfListLoad_v2 = function (pageNoTrf, pageNoRcv, order, techTrf, techRCV) {
+    //    if (typeof (pageNoTrf) != "undefined") {
+    //        var setectSts = encodeURI($("#poStatus").val());
+    //        //if (EstimatorId == null || EstimatorId == "undefined" || EstimatorId =="") {
+    //        //    EstimatorId = $("#EstimatorId").val();
+    //        //}
+    //        EstimatorId = $("#EstimatorId").val();
+    //        //var LoadUrl = domainurl + "/Inventory/TechTransferListPartial/?SearchText=" + encodeURI($(".PoSearchText").val()) + "&selectsts=" + setectSts
+    //        $(".PurchaseOrderTable").html(TabsLoaderText);
+    //        $.ajax({
+    //            url: domainurl + "/Inventory/TechTransferListPartial2",
+    //            data: {SearchText: encodeURI($(".PoSearchText").val()), PageNoTrf: pageNoTrf, PageNoRcv: pageNoRcv, order: order, TTEmployeeIds: techTrf, RTEmployeeIds: techRCV },
+    //            type: "Post",
+    //            dataType: "Json",
+    //            success: function (data) {
+    //                $(".PurchaseOrderTable").load(data);
+    //            }
+    //        });
+    //    }
+    //}
+
+    var ResetFilter = function () {
+        $("#poStatus").selectpicker("val", "");
+        $(".PoSearchText").val("");
+        $("#EstimatorId").val("-1");
+        TrfListLoad(1,1,null);
+    }
+
+    var DataListDownload = function (pageNoTrf, pageNoRcv, order, techTrf, techRCV, getReport) {
+
+        if (typeof (pageNoTrf) != "undefined") {
+            var setectSts = encodeURI($("#poStatus").val());
+            EstimatorId = $("#EstimatorId").val();
+            window.location.href = domainurl + "/Inventory/TechTransferListPartial/?SearchText=" + encodeURI($(".PoSearchText").val()) + "&selectsts=" + setectSts
+                + "&PageNoTrf=" + pageNoTrf + "&PageNoRcv=" + pageNoRcv + "&order=" + order + "&GetReport=" + getReport + "&TEmployeeIds=" + techTrf + "&REmployeeIds=" + techRCV + "&EstimatorId=" + EstimatorId;
+        }
+    }
+
+    $(document).ready(function () {
+        if (listSelet.length != 0) {
+            $("#poStatus").selectpicker('val', listSelet);
+        }
+        else {
+            $("#poStatus").selectpicker('val', '');
+        }
+        $("#AddNewPO").click(function () {
+            OpenTopToBottomModal(domainurl + "/Inventory/AddTechTransfer?id=0&OpenTab=Ware");
+        });
+        
+        $(".PoSearchText").keydown(function (e) {
+            if (e.which == 13) {
+                TrfListLoad(1, 1, null);
+            }
+        });
+
+        //$(".bi_single_filte_info_container").hide();
+        //$(".btn-filter").click(function () {
+
+        //    if ($(".bi_single_filte_info_container").is(":visible")) {
+        //        $(".bi_single_filte_info_container").hide();
+
+        //    } else {
+        //        $(".bi_single_filte_info_container").show();
+
+        //    }
+        //});
+
+        //$("#EqList").attr("data-live-search", "true");
+        //$("#EqList").attr("data-selected-text-format", "count");
+        //if (selectedTechsList.length != 0) {
+        //    $("#EqList").selectpicker('val', selectedTechsList);
+        //}
+        //else {
+        //    $("#EqList").selectpicker('val', '');
+        //}
+        //$('.selectpicker').selectpicker('refresh');
+
+        TrfListLoad(1, 1, null);
+
+        $('.selectpicker').selectpicker('refresh');
+    });
+</script>
+
+<div class="purchase_order_partial_container">
+    <div class="purchase_order_partial_search_add">
+
+        <div class="input-group add-on" style="margin-right:10px; width:auto; float:left;">
+            <!--<input class="form-control PoSearchText"--> @*id="PoSearchText"*@
+            <!--type="text" placeholder="Search" />
+
+        <div class="input-group-btn"><button class="btn search_PO_btn green_button" id="btnsearchtext" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button></div>-->
+        </div>
+        <div class="bi_single_filter_div_style filter_fill" style="width: auto; float: left;">
+            @*<button class="btn btn-filter green_button" title="Filter">
+                <i class="glyphicon glyphicon-filter"></i>
+            </button>*@
+        </div>
+        <button class="btn btnPO" id="AddNewPO"><i class="fa fa-plus"></i> @Localize.T("New")</button>
+        <button title="@Localize.T(" Download")" class="report_btn lrp_float_right" id="btnDownloadTTReport"><i class="fa fa-download" aria-hidden="true"></i></button>
+
+    </div>
+    <div class="PurchaseOrderTable">
+
+    </div>
+</div>
+
+

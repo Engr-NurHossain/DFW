@@ -1,0 +1,674 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.CreateTicketModel
+@Styles.Render("~/styles/AddLeadBooking")
+
+<script>
+
+    var BookingId = '@Model.Ticket.BookingId';
+    var Currency = '@Currency';
+
+    $(document).ready(function () {
+        InitRowIndex(); 
+    });
+</script>
+
+@Scripts.Render("~/scripts/TicketBooking")
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+@*<script src="~/Content/Js/TIcket/TicketBooking.js"></script>
+<script src="~/Content/Js/LeadBooking/BookingCommons.js"></script>*@
+
+<input type="hidden" value="@Model.Ticket.CustomerId" id="BookingCustomerId" />
+ 
+<style>
+    /**These css needs to be here, please don't move. Inan-9/24/19*/
+    #CustomerBkTab td:nth-child(1),#CustomerBkTab th:nth-child(1)
+    ,.BookingExtraItems th:nth-child(1),.BookingExtraItems td:nth-child(1)
+    {
+        display:none;
+    } 
+    /*#CustomerBkTab td:nth-child(6),#CustomerBkTab th:nth-child(6)
+    {
+        display:none;
+    }*/
+    .tab-Desc-box{
+        width:16%!important;
+    }
+    .tab-Product-rug{
+        width:6%!important;
+    }
+    .rug_icon {
+        width:2% !important;
+    }
+    .ticketbookingbuttons{
+        width:100%;
+        float:left;
+        text-align:right;
+    }
+    .tab-Package {
+        width: 8%;
+    }
+</style>
+
+
+<div class="add_booking_table_info">
+    <h3>@Localize.T("Booking Items")</h3>
+    <table class="CustomerBookingTab CustomerBkTab" id="CustomerBkTab">
+        <thead>
+            <tr>
+                <th class="thead-th-style1 tab-index">
+                    <span>
+
+                    </span>
+                </th>
+                <th class="thead-th-style1 tab-Product-rug rug_icon">
+                    <span>
+                        
+                    </span>
+                </th>
+                <th class="thead-th-style1 tab-Product-rug">
+                    <span>
+                        @Localize.T("Shape")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Desc-box">
+                    <span>
+                        @Localize.T("Size")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Area">
+                    <span>
+                        @Localize.T("Area")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Package">
+                    <span>
+                        @Localize.T("Pkg")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Include">
+                    <span>
+                        @Localize.T("Incl.")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Quantity">
+                    <span>
+                        @Localize.T("QTY")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Rate">
+                    <span>
+                        @Localize.T("Rate")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Rate">
+                    <span>
+                        @Localize.T("Disc")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Amount">
+                    <span>
+                        @Localize.T("Amt.")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Action">
+
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.TicketBookingDetails != null && Model.TicketBookingDetails.Count() > 0)
+            {
+                foreach (var item in Model.TicketBookingDetails)
+                {
+                    <tr class="HasItem" data-id="@item.Id">
+                        <td valign="top"></td>
+                        <td valign="top" class="badinventory_move_" data-id="" data-name="" data-cusid="" data-qty="@item.Quantity" data-ticketid="@Model.Ticket.TicketId" data-dohand="" data-doqty="@item.Quantity" data-dodetail="" data-tikintid="@Model.Ticket.Id">
+                            <i class="fa fa-cogs" onclick="OpenRugCondtionPopup('@item.Id')"></i>
+                        </td>
+                        <td valign="top" class="rug-type-suggestion rug-type-select">
+                            <input type="text" class="RugShape" value="@item.RugType" onkeydown="SearchKeyDown(this,event)" onclick="SearchKeyUp(this, event)" readonly />
+                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div></div>
+                            <span class="spnRugShape">@(item.RugType=="Rectangle/Square"? "Rectangle / Square": item.RugType)</span>
+                        </td>
+                        <td valign="top">
+                            @if (item.Radius != 0)
+                            {
+                                <input type="text" placeholder="ft" class="txtRugRadius bkHalf" onchange="CircleAreaCal(this)" value="@(string.Format("{0}", Math.Round(item.Radius.Value, 2)))" />
+                                <span class="spnRugRadius">@(string.Format("{0}'", Math.Round(item.Radius.Value, 2)))</span>
+                                <input type="text" placeholder="ft" class="txtRugRadiusInch bkHalf" onchange="CircleAreaCal(this)" value="@(string.Format("{0}",Math.Round(item.RadiusInch.Value,2)))" />
+                                <span class="spnRugRadiusInch">@(string.Format("{0}\"", Math.Round(item.RadiusInch.Value, 2)))</span>
+
+                                <input type="text" placeholder="ft" class="txtRugLength hidden bkQuarter" onchange="RectangleAreaCal(this)" value="@(string.Format("{0}", Math.Round(item.Length.Value, 2)))" />
+                                <span class="spnRugLength hidden">@(string.Format("{0}'", Math.Round(item.Length.Value, 2)))</span>
+                                <input type="text" placeholder="ft" class="txtRugLengthInch hidden bkQuarter" onchange="RectangleAreaCal(this)" value="@(string.Format("{0}", Math.Round(item.LengthInch.Value, 2)))" />
+                                <span class="spnRugLengthInch hidden">@(string.Format("{0}\"", Math.Round(item.LengthInch.Value, 2)))</span>
+                                <p class="bkQuarterX hidden">X</p>
+                                <input type="text" onchange="RectangleAreaCal(this)" class="txtRugWidth hidden bkQuarter" value="@(string.Format("{0}", Math.Round(item.Width.Value, 2)))" />
+                                <span class="spnRugWidth hidden">@(string.Format("{0}'", Math.Round(item.Width.Value, 2)))</span>
+                                <input type="text" onchange="RectangleAreaCal(this)" class="txtRugWidthInch hidden bkQuarter" value="@(string.Format("{0}", Math.Round(item.WidthInch.Value, 2)))" />
+                                <span class="spnRugWidthInch hidden">@(string.Format("{0}\"", Math.Round(item.WidthInch.Value, 2)))</span>
+                            }
+                            else
+                            {
+                                <input type="text" placeholder="ft" class="txtRugRadius hidden bkHalf" onchange="CircleAreaCal(this)" value="@(string.Format("{0}", Math.Round(item.Radius.Value, 2)))" />
+                                <span class="spnRugRadius hidden">@(string.Format("{0}'", Math.Round(item.Radius.Value, 2)))</span>
+                                <input type="text" placeholder="ft" class="txtRugRadiusInch hidden bkHalf" onchange="CircleAreaCal(this)" value="@(string.Format("{0}", Math.Round(item.RadiusInch.Value, 2)))" />
+                                <span class="spnRugRadiusInch hidden">@(string.Format("{0}\"", Math.Round(item.RadiusInch.Value, 2)))</span>
+
+                                <input type="text" placeholder="ft" class="txtRugLength bkQuarter" onchange="RectangleAreaCal(this)" value="@(string.Format("{0}", Math.Round(item.Length.Value, 2)))" />
+                                <span class="spnRugLength ">@(string.Format("{0}'", Math.Round(item.Length.Value, 2)))</span>
+                                <input type="text" placeholder="ft" class="txtRugLengthInch bkQuarter" onchange="RectangleAreaCal(this)" value="@(string.Format("{0}", Math.Round(item.LengthInch.Value, 2)))" />
+                                <span class="spnRugLengthInch ">@(string.Format("{0}\"", Math.Round(item.LengthInch.Value, 2)))</span>
+                                <p class="bkQuarterX">X</p>
+                                <input type="text" placeholder="ft" class="txtRugWidth bkQuarter" onchange="RectangleAreaCal(this)" value="@(string.Format("{0}", Math.Round(item.Width.Value, 2)))" />
+                                <span class="spnRugWidth ">@(string.Format("{0}'", Math.Round(item.Width.Value, 2)))</span>
+                                <input type="text" placeholder="ft" class="txtRugWidthInch bkQuarter" onchange="RectangleAreaCal(this)" value="@(string.Format("{0}", Math.Round(item.WidthInch.Value, 2)))" />
+                                <span class="spnRugWidthInch ">@(string.Format("{0}\"", Math.Round(item.WidthInch.Value, 2)))</span>
+                            }
+                        </td>
+                        <td valign="top">
+                            <input type="text" placeholder="ft" value="@item.TotalSize" class="txtRugArea" />
+                            <span class="spnrugarea">@item.TotalSize sf</span>
+                        </td>
+                        <td valign="top" class="rug-package-suggestion">
+                            <input type="text" class="txtProductPackage" value="@item.Package" onkeydown="SearchKeyDown(this,event)" onclick="PackageSearchKeyUp(this, event)" readonly />
+                            <div class='tt-menu tt-package'><div class='tt-dataset tt-dataset-autocomplete'> </div></div>
+                            <span class="spnProductPackage">@item.Package</span>
+                        </td>
+                        <td valign="top">
+                            <input type="text" value="@item.Included" class="txtProductInclude" readonly />
+                            <span class="spnProductInclude">@item.Included</span>
+                        </td>
+                        <td valign="top">
+                            <input type="text" value="@item.Quantity" class="txtProductQuantity" />
+                            <span class="spnProductQuantity">@item.Quantity</span>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtProductRate" value="@item.UnitPrice" />
+                            </div>
+                            @*<input type="text" class="txtProductRate" value="@item.UnitPrice" />*@
+                            <span class="spnProductRate">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.UnitPrice)</span>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtProductDiscount" value="@item.Discount" />
+                            </div>
+                            @*<input type="text" class="txtProductDiscount" value="@item.Discount" />*@
+                            <span class="spnProductDiscount">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Discount)</span>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtProductAmount" value="@item.TotalPrice" />
+                            </div>
+                            @*<input type="text" class="txtProductAmount" value="@item.TotalPrice" />*@
+                            <span class="spnProductAmount">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalPrice)</span>
+                        </td>
+                        <td valign="top" class="tableActions">
+                            <i class="fa fa-trash-o" aria-hidden="true" onclick="DeleteBookingItems('@item.Id','@Model.Ticket.Id')" title="@Localize.T("Delete")"></i>
+                        </td>
+                    </tr>
+                }
+
+                <tr>
+                    <td valign="top"></td>
+                    <td></td>
+                    <td valign="top" class="rug-type-suggestion">
+                        <input type="text" class="RugShape" onkeydown="SearchKeyDown(this,event)" onclick="SearchKeyUp(this, event)" readonly />
+                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                        <span class="spnRugShape"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" placeholder="ft" onchange="CircleAreaCal(this)" class="txtRugRadius bkHalf" />
+                        <span class="spnRugRadius"></span>
+                        <input type="text" placeholder="in" onchange="CircleAreaCal(this)" class="txtRugRadiusInch bkHalf" />
+                        <span class="spnRugRadiusInch"></span>
+
+                        <input type="text" placeholder="ft" onchange="RectangleAreaCal(this)" class="txtRugLength hidden bkQuarter" />
+                        <span class="spnRugLength hidden "></span>
+                        <input type="text" placeholder="in" onchange="RectangleAreaCal(this)" class="txtRugLengthInch hidden bkQuarter" />
+                        <span class="spnRugLengthInch hidden "></span>
+                        <p class="bkQuarterX hidden">X</p>
+                        <input type="text" placeholder="ft" onchange="RectangleAreaCal(this)" class="txtRugWidth hidden bkQuarter" />
+                        <span class="spnRugWidth hidden "></span>
+                        <input type="text" placeholder="in" onchange="RectangleAreaCal(this)" class="txtRugWidthInch hidden bkQuarter" />
+                        <span class="spnRugWidthInch hidden "></span>
+                    </td>
+
+                    <td valign="top">
+                        <input type="text" class="txtRugArea" />
+                        <span class="spnrugarea"></span>
+
+                    </td>
+                    <td valign="top" class="rug-package-suggestion">
+                        <input type="text" class="txtProductPackage" onkeydown="SearchKeyDown(this,event)" onclick="PackageSearchKeyUp(this, event)" readonly />
+                        <div class='tt-menu tt-package'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                        <span class="spnProductPackage"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" value="" class="txtProductInclude" readonly />
+                        <span class="spnProductInclude"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductQuantity" />
+                        <span class="spnProductQuantity"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" class="txtProductRate" />
+                        </div>
+                        @*<input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductRate" />*@
+                        <span class="spnProductRate"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" class="txtProductDiscount" />
+                        </div>
+                        @*<input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDiscount" />*@
+                        <span class="spnProductDiscount"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" class="txtProductAmount" />
+                        </div>
+                        @*<input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" />*@
+                        <span class="spnProductAmount"></span>
+                    </td>
+                    <td valign="top" class="tableActions">
+                        <i class="fa fa-trash-o" aria-hidden="true"  title="@Localize.T("Delete")"></i>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td valign="top"></td>
+                    <td></td>
+                    <td valign="top" class="rug-type-suggestion">
+                        <input type="text" class="RugShape" onkeydown="SearchKeyDown(this,event)" onclick="SearchKeyUp(this, event)" readonly />
+                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                        <span class="spnRugShape"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" placeholder="ft" onchange="CircleAreaCal(this)" class="txtRugRadius bkHalf" />
+                        <span class="spnRugRadius"></span>
+                        <input type="text" placeholder="in" onchange="CircleAreaCal(this)" class="txtRugRadiusInch bkHalf" />
+                        <span class="spnRugRadiusInch"></span>
+
+                        <input type="text" placeholder="ft" onchange="RectangleAreaCal(this)" class="txtRugLength hidden bkQuarter" />
+                        <span class="spnRugLength hidden "></span>
+                        <input type="text" placeholder="in" onchange="RectangleAreaCal(this)" class="txtRugLengthInch hidden bkQuarter" />
+                        <span class="spnRugLengthInch hidden "></span>
+                        <p class="bkQuarterX hidden">X</p>
+                        <input type="text" placeholder="ft" onchange="RectangleAreaCal(this)" class="txtRugWidth hidden bkQuarter" />
+                        <span class="spnRugWidth hidden "></span>
+                        <input type="text" placeholder="in" onchange="RectangleAreaCal(this)" class="txtRugWidthInch hidden bkQuarter" />
+                        <span class="spnRugWidthInch hidden "></span>
+                    </td>
+
+                    <td valign="top">
+                        <input type="text" class="txtRugArea" />
+                        <span class="spnrugarea"></span>
+                    </td>
+                    <td valign="top" class="rug-package-suggestion">
+                        <input type="text" class="txtProductPackage" onkeydown="SearchKeyDown(this,event)" onclick="PackageSearchKeyUp(this, event)" readonly />
+                        <div class='tt-menu tt-package'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                        <span class="spnProductPackage"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" value="" class="txtProductInclude" readonly />
+                        <span class="spnProductInclude"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductQuantity" />
+                        <span class="spnProductQuantity"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" class="txtProductRate" />
+                        </div>
+                        @*<input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductRate" />*@
+                        <span class="spnProductRate"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" class="txtProductDiscount" />
+                        </div>
+                        @*<input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDiscount" />*@
+                        <span class="spnProductDiscount"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" class="txtProductAmount" />
+                        </div>
+                        @*<input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" />*@
+                        <span class="spnProductAmount"></span>
+                    </td>
+                    <td valign="top" class="tableActions">
+                        <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td valign="top"></td>
+                    <td></td>
+                    <td valign="top" class="rug-type-suggestion">
+                        <input type="text" class="RugShape" onkeydown="SearchKeyDown(this,event)" onclick="SearchKeyUp(this, event)" readonly />
+                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                        <span class="spnRugShape"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" placeholder="ft" onchange="CircleAreaCal(this)" class="txtRugRadius bkHalf" />
+                        <span class="spnRugRadius"></span>
+                        <input type="text" placeholder="in" onchange="CircleAreaCal(this)" class="txtRugRadiusInch bkHalf" />
+                        <span class="spnRugRadiusInch hidden"></span>
+
+                        <input type="text" placeholder="ft" onchange="RectangleAreaCal(this)" class="txtRugLength hidden bkQuarter" />
+                        <span class="spnRugLength hidden "></span>
+                        <input type="text" placeholder="in" onchange="RectangleAreaCal(this)" class="txtRugLengthInch hidden bkQuarter" />
+                        <span class="spnRugLengthInch hidden "></span>
+                        <p class="bkQuarterX hidden">X</p>
+                        <input type="text" placeholder="ft" onchange="RectangleAreaCal(this)" class="txtRugWidth hidden bkQuarter" />
+                        <span class="spnRugWidth hidden "></span>
+                        <input type="text" placeholder="in" onchange="RectangleAreaCal(this)" class="txtRugWidthInch hidden bkQuarter" />
+                        <span class="spnRugWidthInch hidden "></span>
+                    </td>
+
+                    <td valign="top">
+                        <input type="text" class="txtRugArea" />
+                        <span class="spnrugarea"></span>
+                    </td>
+                    <td valign="top" class="rug-package-suggestion">
+                        <input type="text" class="txtProductPackage" onkeydown="SearchKeyDown(this,event)" onclick="PackageSearchKeyUp(this, event)" readonly />
+                        <div class='tt-menu tt-package'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                        <span class="spnProductPackage"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" value="" class="txtProductInclude" readonly />
+                        <span class="spnProductInclude"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductQuantity" />
+                        <span class="spnProductQuantity"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" class="txtProductRate" />
+                        </div>
+                        @*<input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductRate" />*@
+                        <span class="spnProductRate"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" class="txtProductDiscount" />
+                        </div>
+                        @*<input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDiscount" />*@
+                        <span class="spnProductDiscount"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" class="txtProductAmount" />
+                        </div>
+                        @*<input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" />*@
+                        <span class="spnProductAmount"></span>
+                    </td>
+                    <td valign="top" class="tableActions">
+                        <i class="fa fa-trash-o" aria-hidden="true"  title="@Localize.T("Delete")"></i>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="add_booking_table_info booking_device_margin">
+    <h3>@Localize.T("Extra Items")</h3>
+    <table class="CustomerEstimateTab BookingExtraItems" id="CustomerEstimateTab">
+        <thead>
+            <tr>
+                <th class="thead-th-style1 tab-index">
+                    <span>
+
+                    </span>
+                </th>
+                <th class="thead-th-style1 tab-Product">
+                    <span>
+                        @Localize.T("Product/Service")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Desc">
+                    <span>
+                        @Localize.T("Description")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Quantity">
+                    <span>
+                        @Localize.T("QTY")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Rate">
+                    <span>
+                        @Localize.T("Rate")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Amount">
+                    <span>
+                        @Localize.T("Amount")
+                    </span>
+                </th>
+                <th class="thead-th-style2 tab-Action">
+
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.TicketBookingExtraItem != null && Model.TicketBookingExtraItem.Count() > 0)
+            {
+                foreach (var item in Model.TicketBookingExtraItem)
+                {
+                    <tr data-Eq-id="@item.EquipmentId" data-id="@item.Id" class="HasItem">
+                        <td valign="top"></td>
+                        <td valign="top">
+                            <input type="text" class="ProductName" value="@item.EquipName" onkeydown="ExtraSearchKeyDown(this,event)" onkeyup="ExtraSearchKeyUp(this,event)" />
+                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                            <span class="spnProductName">@item.EquipName</span>
+                        </td>
+                        <td valign="top">
+                            <input type="text" value="@item.EquipDetail" class="txtProductDesc" />
+                            <span class="spnProductDesc">@item.EquipDetail</span>
+                        </td>
+                        <td valign="top">
+                            <input type="text" value="@item.Quantity" class="txtProductQuantity" />
+                            <span class="spnProductQuantity">@item.Quantity</span>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtProductRate" value="@item.UnitPrice.Value" />
+                            </div>
+                            <span class="spnProductRate">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.UnitPrice.Value)</span>
+                        </td>
+                        <td valign="top">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" class="txtProductAmount" value="@item.TotalPrice.Value" />
+                            </div>
+                            <span class="spnProductAmount">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalPrice.Value)</span>
+                        </td>
+                        <td valign="top" class="tableActions">
+                            <i class="fa fa-trash-o" aria-hidden="true" onclick="DeleteBookingExtraItems('@item.Id','@Model.Ticket.Id')" title="@Localize.T("Delete")"></i>
+                        </td>
+                    </tr>
+                }
+                <tr>
+                    <td valign="top"></td>
+                    <td valign="top">
+                        <input type="text" class="ProductName" onkeydown="ExtraSearchKeyDown(this,event)" onkeyup="ExtraSearchKeyUp(this,event)" />
+                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                        <span class="spnProductName"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='ExtraOthersKeyDown(this,event)' class="txtProductDesc" />
+                        <span class="spnProductDesc"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='ExtraOthersKeyDown(this, event)' class="txtProductQuantity" />
+                        <span class="spnProductQuantity"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" onkeydown='ExtraOthersKeyDown(this, event)' class="txtProductRate" />
+                        </div>
+                        <span class="spnProductRate"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" onkeydown='ExtraOthersKeyDown(this, event)' class="txtProductAmount" />
+                        </div>
+                        <span class="spnProductAmount"></span>
+                    </td>
+                    <td valign="top" class="tableActions">
+                        <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td valign="top"></td>
+                    <td valign="top">
+                        <input type="text" class="ProductName" onkeydown="ExtraSearchKeyDown(this,event)" onkeyup="ExtraSearchKeyUp(this,event)" />
+                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                        <span class="spnProductName"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='ExtraOthersKeyDown(this, event)' class="txtProductDesc" />
+                        <span class="spnProductDesc"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='ExtraOthersKeyDown(this, event)' class="txtProductQuantity" />
+                        <span class="spnProductQuantity"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" onkeydown='ExtraOthersKeyDown(this, event)' class="txtProductRate" />
+                        </div>
+                        <span class="spnProductRate"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" onkeydown='ExtraOthersKeyDown(this, event)' class="txtProductAmount" />
+                        </div>
+                        <span class="spnProductAmount"></span>
+                    </td>
+                    <td valign="top" class="tableActions">
+                        <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                    </td>
+                </tr>
+                <tr>
+                    <td valign="top"></td>
+                    <td valign="top">
+                        <input type="text" class="ProductName" onkeydown="ExtraSearchKeyDown(this,event)" onkeyup="ExtraSearchKeyUp(this,event)" />
+                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                        <span class="spnProductName"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='ExtraOthersKeyDown(this, event)' class="txtProductDesc" />
+                        <span class="spnProductDesc"></span>
+                    </td>
+                    <td valign="top">
+                        <input type="text" onkeydown='ExtraOthersKeyDown(this, event)' class="txtProductQuantity" />
+                        <span class="spnProductQuantity"></span>
+                    </td>
+                    <td valign="top">
+                        <div class="C_S I_G">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">@Currency</div>
+                            </div>
+                            <input type="text" onkeydown='ExtraOthersKeyDown(this, event)' class="txtProductRate" />
+                        </div>
+                        <span class="spnProductRate"></span>
+                    </td>
+                    <td valign="top">
+                        <div class='C_S I_G'>
+                            <div class='input-group-prepend'>
+                                <div class='input-group-text'>@Currency</div>
+                            </div>
+                            <input type='text' onkeydown='ExtraOthersKeyDown(this, event)' class='txtProductAmount' />
+                        </div>
+                        <span class="spnProductAmount"></span>
+                    </td>
+                    <td valign="top" class="tableActions">
+                        <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="ticketbookingbuttons">
+    <button class="btn" onclick="SaveTicketBookingItems(false)">@Localize.T("Update")</button>
+    <button class="btn hidden" onclick="RecreateConfirmation()">@Localize.T("Recreate Invoice")</button>
+</div>
+
+<div class="hidden" style="display:none;visibility:hidden;">
+    <input type="hidden" value="@ViewBag.SalesTax" id="Booking_TaxType" />
+</div>

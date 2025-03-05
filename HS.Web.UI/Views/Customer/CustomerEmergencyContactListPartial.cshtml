@@ -1,0 +1,201 @@
+﻿@model List<HS.Entities.EmergencyContact>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@Styles.Render("~/styles/UserList")
+<link href="~/Content/Css/Lead/EmergencyContactListPartial.css" rel="stylesheet" />
+
+<script>
+    var HasKeyValue = '@ViewBag.HasKeyValue';
+    var DeleteEmconById = function(EmConId){
+
+        $("#EcFirstName").val("")
+        $("#EcLastName").val("")
+        $("#EcRelationShip").val("")
+        $("#EcPhone").val("")
+        $("#PhoneType").val("")
+        $("#EmergencyContactId").val("")
+        $.ajax({
+            url: domainurl + "/Customer/DeleteEmergencyContact",
+            data: { Id: EmConId },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew ("Success!", data.message, function () {
+                        LoadEmergencyContactList();
+                    })
+                } else {
+                    OpenErrorMessageNew("Error!", data.message)
+                }
+            }
+        });
+    }
+    var UpdateContactGrid = function () {
+        var url = domainurl + "/Customer/UpdateContactList";
+
+        var ContactList = [];
+        $("tbody tr").each(function () {
+            var id = $(this).attr('data-id');
+            console.log(id);
+            if (id != undefined)
+            {
+                ContactList.push({
+                    Id: $(this).attr('data-id'),
+                    OrderBy: $(this).find(".DataOrder").val(),
+
+                });
+            }
+        
+        });
+        var param = JSON.stringify({ ContactList: ContactList });
+        console.log(param);
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+
+    var ApplySort = function () {
+        $("#TblEmergencyContactList tbody").sortable({
+            update: function () {
+                var i = 0;
+                $(".DataOrder").each(function () {
+                    $(this).val(i);
+                    i += 1;
+                });
+                console.log("sort");
+                UpdateContactGrid();
+            }
+        }).disableSelection();
+    };
+
+    var DeleteEmCon = function(DeleteId){
+        OpenConfirmationMessageNew("Confirm?","Do you want to delete this contact from the list?",function(){
+            DeleteEmconById(DeleteId);
+        })
+    }
+    $(document).ready(function () {
+        ApplySort();
+        $(".edit-Emg-Contact").click(function () {
+            var emgId = $(this).attr('id-val');
+            EditEmergencyContactDiv(emgId);
+        });
+    });
+</script>
+
+
+        <div class="customer-emergency-list-container">
+            <table id="TblEmergencyContactList">
+                <thead class="table-head-border eg_contact_hide">
+                    <tr>
+                        <th class="CE-thead-th-style">
+                            @Localize.T("Name")
+                        </th>
+                        <th class="CE-thead-th-style">
+                            @Localize.T("Relationship")
+                        </th>
+                        <th class="CE-thead-th-style">
+                            @Localize.T("Phone Type")
+                        </th>
+                        <th class="CE-thead-th-style">
+                            @Localize.T("Phone No")
+                        </th>
+                        @if (ViewBag.HasKeyValue == "true")
+                        {
+                            <th class="CE-thead-th-style">
+                                @Localize.T("Has Key")
+                            </th>
+                        }
+
+                        @*<th class="CE-thead-th-style">
+                            @Localize.T("Priority Order")
+                        </th>*@
+                        <th class="CE-thead-th-style">
+                            @Localize.T("Action")
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    @if (Model != null)
+                    {
+                        foreach (var EmgContactList in Model)
+                        {
+                    <tr class="tr-style" data-id="@EmgContactList.Id">
+                        <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                            <label class="eg_contact_device_header"   data-key="@EmgContactList.CustomerId">@Localize.T("Name") <span>:</span></label>
+                            <a class="edit-Emg-Contact" id-val="@EmgContactList.Id">@EmgContactList.FirstName @EmgContactList.LastName</a>
+                            <input type="hidden" class="DataOrder" value="@EmgContactList.EmergencyNewId" />
+                        </td>
+                        <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                            <label class="eg_contact_device_header">@Localize.T("Relationship") <span>:</span></label>
+                            @if (EmgContactList.RelationShip != "")
+                            {
+                            <span> @EmgContactList.RelationShip </span>
+                            }
+                            else
+                            {
+                            <span>-</span>
+                            }
+                        </td>
+                        <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                            <label class="eg_contact_device_header">@Localize.T("Phone Type") <span>:</span></label>
+                            @if (EmgContactList.PhoneType != "" && EmgContactList.PhoneType != "-1")
+                            {
+                            <span> @EmgContactList.PhoneType </span>
+                            }
+                            else
+                            {
+                            <span>-</span>
+                            }
+                        </td>
+                        <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                            <label class="eg_contact_device_header">@Localize.T("Phone No") <span>:</span></label>
+                            @if (EmgContactList.Phone != "")
+                            {
+                                <span> @EmgContactList.Phone</span>
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                            @if (ViewBag.HasKeyValue == "true")
+                            {
+                            <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                                <label class="eg_contact_device_header">@Localize.T("Has Key") <span>:</span></label>
+                                @if (EmgContactList.HasKey != "")
+                                {
+                                <span> @EmgContactList.HasKey</span>
+                                }
+                                else
+                                {
+                                <span>-</span>
+                                }
+                            </td>
+                            }
+                        @*<td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                            <label class="eg_contact_device_header">@Localize.T("Priority Order")</label>
+                            <span> @EmgContactList.OrderBy </span>
+                        </td>*@
+                        <td  class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                            <label class="eg_contact_device_header">@Localize.T("Action") <span>:</span></label>
+                            <a class="contact_delete" data-toggle="tooltip" title="" onclick="DeleteEmCon(@EmgContactList.Id)" data-original-title="Delete"><i class="fa fa-trash-o"></i></a>
+                        </td>
+                    </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    
+

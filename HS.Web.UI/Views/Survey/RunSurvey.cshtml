@@ -1,0 +1,258 @@
+﻿@{
+    Layout = "~/Views/Shared/_PublicLayout.cshtml";
+    int Counter = 1;
+
+}
+@using QuestionTypes = HS.Web.UI.Helper.LabelHelper.CustomSurveyQuestionTypes
+
+@model HS.Entities.CustomSurveyViewModel
+@using AppConfig = HS.Framework.Utils.AppConfig;
+<link href="~/Content/Css/Survey/RunSurvey.css" rel="stylesheet" />
+
+<script>
+    var SurveyId = '@Model.CustomSurvey.SurveyId';
+    var SurveyUserId = '@Model.CustomSurveyUser.SurveyUserId';
+    var comid = '@ViewBag.companyid';
+    var drawingPaddr = '';
+    var datadr = '';
+    var SaveSurveyAnswers = function () {
+        console.log("savesurvey");
+        if (drawingPaddr != '') {
+            datadr = drawingPaddr.toDataURL('image/png');
+        }
+        var url = domainurl + '/Survey/SaveSurvey';
+        var SurvAnswers = [];
+        console.log(2*$('.AnswerItem:radio:checked').length);
+        console.log($('.AnswerItem:radio').length );
+        if (2*$('.AnswerItem:radio:checked').length != $('.AnswerItem:radio').length ) {
+            console.log("not all checked");
+            OpenErrorMessageNew("Error!", "Please answers all the questions");
+        }
+        else if ($("#drawing-pad").is(":visible") && drawingPaddr.isEmpty() ) {
+            console.log("no signature");
+            OpenErrorMessageNew("Error!", "Please provide signature");
+        }
+        else {
+            $('.AnswerItem:radio:checked').each(function (e) {
+                console.log("aise;")
+                var AnsId = $(this).val();
+                console.log("aise22;")
+                SurvAnswers.push({
+                    SurveyId: SurveyId,
+                    QuestionId: $(this).attr('questionId'),
+                    AnswerId: AnsId,
+                    UserId: '00000000-0000-0000-0000-000000000000',
+                    Answer: $(".ans_text_" + AnsId).text(),
+                    CreatedDate: '1-1-2017',
+                    SurveyUserId: SurveyUserId
+                });
+            });
+
+            $('.AnswerItem:checkbox:checked').each(function (e) {
+                var AnsId = $(this).val();
+                SurvAnswers.push({
+                    SurveyId: SurveyId,
+                    QuestionId: $(this).attr('questionId'),
+                    AnswerId: AnsId,
+                    UserId: '00000000-0000-0000-0000-000000000000',
+                    Answer: $(".ans_text_" + AnsId).text(),
+                    CreatedDate: '1-1-2017',
+                    SurveyUserId: SurveyUserId
+                });
+            });
+            $('.AnswerItem:text').each(function (e) {
+                SurvAnswers.push({
+                    SurveyId: SurveyId,
+                    QuestionId: $(this).attr('questionId'),
+                    AnswerId: '00000000-0000-0000-0000-000000000000',
+                    UserId: '00000000-0000-0000-0000-000000000000',
+                    Answer: $(this).val(),
+                    CreatedDate: '1-1-2017',
+                    SurveyUserId: SurveyUserId
+                });
+            });
+            $('select.AnswerItem').each(function (e) {
+                var AnsId = $(this).val();
+                var QuestionId = $(this).attr('questionId');
+
+                SurvAnswers.push({
+                    SurveyId: SurveyId,
+                    QuestionId: $(this).attr('questionId'),
+                    AnswerId: AnsId,
+                    UserId: '00000000-0000-0000-0000-000000000000',
+                    Answer: $('.ans_text_' + QuestionId + ' option:selected').text(),
+                    CreatedDate: '1-1-2017',
+                    SurveyUserId: SurveyUserId
+                });
+            });
+
+            $('textarea.AnswerItem').each(function (e) {
+                SurvAnswers.push({
+                    SurveyId: SurveyId,
+                    QuestionId: $(this).attr('questionId'),
+                    AnswerId: '00000000-0000-0000-0000-000000000000',
+                    UserId: '00000000-0000-0000-0000-000000000000',
+                    Answer: $(this).val(),
+                    CreatedDate: '1-1-2017',
+                    SurveyUserId: SurveyUserId
+                });
+            });
+
+            $('canvas.AnswerItem').each(function (e) {
+                SurvAnswers.push({
+                    SurveyId: SurveyId,
+                    QuestionId: $(this).attr('questionId'),
+                    AnswerId: '00000000-0000-0000-0000-000000000000',
+                    UserId: '00000000-0000-0000-0000-000000000000',
+                    Answer: datadr,
+                    SignPath: 'true',
+                    CreatedDate: '1-1-2017',
+                    SurveyUserId: SurveyUserId
+                });
+            });
+
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".AddInvoiceLoader").removeClass('hidden'),
+                url: url,
+                data: JSON.stringify({ 'AnswerList': SurvAnswers, 'companyid': comid }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    OpenSuccessMessageNew("", data.message, function () {
+                        window.location.reload();
+                    });
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+
+                }
+            });
+        }
+    }
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide()
+        $(".CustomSurveyMainDiv").height(window.innerHeight - 107);
+        var canvasdr = $('#drawing-pad');
+        var ctxdr = $('#drawing-pad')[0].getContext('2d');
+        drawingPaddr = new SignaturePad($('#drawing-pad')[0]);
+
+        function resizeCanvasdr() {
+        var ratio = Math.max(1, 1);
+        canvasdr.width = canvasdr.offsetWidth * ratio;
+        canvasdr.height = canvasdr.offsetHeight * ratio;
+        canvasdr[0].getContext("2d").scale(ratio, ratio);
+    }
+        resizeCanvasdr();
+
+        var imgdr = new Image();
+        imgdr.onload = function () {
+        ctxdr.drawImage(imghw, 0, 0);
+        };
+
+        imgdr.crossOrigin = 'anonymous';
+        $('#clear-dr').click(function () {
+        drawingPaddr.clear();
+        });
+
+    });
+    $(window).resize(function () {
+       $(".CustomSurveyMainDiv").height(window.innerHeight - 107);
+    });
+</script>
+<div class="run_survey_container">
+    <div class="CustomSurveyMainDiv">
+        <div class="CustomSurveyMainDiv_header">
+            @Model.CustomSurvey.SurveyName
+        </div>
+        <div class="Question_div">
+            @foreach (var item in Model.SurveyQuestions)
+            {
+                if (item.QuestionType != QuestionTypes.CustomerName && item.QuestionType != QuestionTypes.CustomerNumber && item.QuestionType != QuestionTypes.Signature && item.QuestionType != QuestionTypes.AlarmComFooter)
+                {
+                    <div class="Question_div_separate">
+                        <label><span>@Counter</span><span>. @item.Question</span></label>
+                        @if (item.QuestionType == QuestionTypes.CheckBox
+                        || item.QuestionType == QuestionTypes.DropDown
+                        || item.QuestionType == QuestionTypes.Radio)
+                        {
+                            List<HS.Entities.CustomSurveyAnswer> ansList = Model.SurveyAnswers.Where(x => x.QuestionId == item.QuestionId).ToList();
+                            <div>
+                                @if (ansList != null && ansList.Count() > 0)
+                                {
+                                    if (item.QuestionType == QuestionTypes.CheckBox)
+                                    {
+                                        foreach (var ans in ansList)
+                                        {
+                                            <label><input class="AnswerItem" questionId="@item.QuestionId" ansId="@ans.AnswerId" value="@ans.AnswerId" type="checkbox" name="ans_@item.Id" /><span title="@ans.Answer" class="ans_text_@ans.AnswerId">@ans.Answer</span></label>
+                                        }
+
+                                    }
+                                    else if (item.QuestionType == QuestionTypes.Radio)
+                                    {
+                                        foreach (var ans in ansList)
+                                        {
+                                            <label><input class="AnswerItem" questionId="@item.QuestionId" ansId="@ans.AnswerId" value="@ans.AnswerId" type="radio" name="ans_@item.Id" /><span title="@ans.Answer" class="ans_text_@ans.AnswerId">@ans.Answer</span></label>
+                                        }
+                                    }
+                                    if (item.QuestionType == QuestionTypes.DropDown)
+                                    {
+                                        <select questionId="@item.QuestionId" class="AnswerItem ans_text_@item.QuestionId">
+                                            @foreach (var ans in ansList)
+                                            {
+                                                <option class="AnswerItem" questionId="@item.QuestionId" ansId="@ans.AnswerId" value="@ans.AnswerId">@ans.Answer</option>
+                                            }
+                                        </select>
+                                    }
+                                }
+                            </div>
+                        }
+                        else if (item.QuestionType == QuestionTypes.Text)
+                        {
+                            <input class="AnswerItem form-control" questionId="@item.QuestionId" type="text" />
+                        }
+                        else if (item.QuestionType == QuestionTypes.TextArea)
+                        {
+                            <textarea class="AnswerItem form-control" questionId="@item.QuestionId"></textarea>
+                        }
+                    </div>
+                    Counter++;
+                }
+                else if (item.QuestionType == QuestionTypes.AlarmComFooter)
+                {
+                    <div class="Question_div_separate">
+                        <label><span>@Html.Raw(item.Question)</span></label>
+                    </div>
+                }
+                else if (item.QuestionType == QuestionTypes.CustomerNumber)
+                {
+                    <div class="Question_div_separate">
+                        <b><u>@item.Question: </u> </b> <span class="normal_text">@Model._customer.CustomerNo</span>
+                    </div>
+                }
+                else if (item.QuestionType == QuestionTypes.CustomerName)
+                {
+                    <div class="Question_div_separate">
+                        <b><u>@item.Question: </u> </b> <span class="normal_text">@Model._customer.FirstName @Model._customer.LastName</span>
+                    </div>
+                }
+                else if (item.QuestionType == QuestionTypes.Signature)
+                {
+                    <div class="Question_div_separate">
+                        <div class="survey_signature_text"><b>@item.Question:</b></div>
+                    </div>
+                    <div class="Question_div_separate srvey_sign">
+                        <div class="sign-document">
+                            <div class="wrapper">
+                                <canvas id="drawing-pad" class="drawing-pad form-control AnswerItem" questionId="@item.QuestionId" style="width:300px;height:155px;"></canvas>
+                            </div>
+                            <button class="btn all_button" title="Clear" id="clear-dr"><i class="fa fa-trash-o" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+    </div>
+    <div class="Save_div"><button onclick="SaveSurveyAnswers()" class="btn"><i class="fa fa-floppy-o" aria-hidden="true"></i> Save</button></div>
+</div>

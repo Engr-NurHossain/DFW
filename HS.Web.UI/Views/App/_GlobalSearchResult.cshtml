@@ -1,0 +1,1068 @@
+﻿@{
+    Layout = null;
+    string addressdata1stLine = "";
+    string addressdata2ndLine = "";
+    string addressdata1stLinePre = "";
+    string addressdata2ndLinePre = "";
+
+    var currentuser = ((HS.Web.UI.Helper.CustomPrincipal)(User));
+
+    var dataFile = Server.MapPath(string.Format(AppConfig.CustomerTemplateFile, currentuser.CompanyId.ToString()));
+    var customertemplate = "";
+    using (StreamReader streamReader = File.OpenText(dataFile))
+    {
+        var ListFromFile = File.ReadAllLines(dataFile);
+        customertemplate = String.Join("\n", ListFromFile.ToArray());
+    }
+
+    var leaddataFile = Server.MapPath(string.Format(AppConfig.LeadTemplateFile, currentuser.CompanyId.ToString()));
+    var leadtemplate = "";
+    using (StreamReader streamReader = File.OpenText(leaddataFile))
+    {
+        var ListFromFile = File.ReadAllLines(leaddataFile);
+        leadtemplate = String.Join("\n", ListFromFile.ToArray());
+    }
+}
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@model HS.Entities.GlobalSearchViewModel
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+<script src="~/Scripts/handlebars.min.js"></script>
+<script src="~/Scripts/handlebars-helper-x.js"></script>
+<script>
+
+    var LoadRequestTechnician = function (id) {
+        OpenRightToLeftModal(domainurl + "/Leads/LeadRequestTechnician?LeadId=" + id);
+    }
+    var LoadLeadDocumentCenter = function (id) {
+        LoadDocumentCenter(id, true);
+    }
+    var LeadVerify = function (id) {
+        LoadVerifyLeads(id, true);
+    }
+
+    $(document).ready(function () {
+        $(".btnLeadSetup").click(function () {
+            var valid = $(this).attr('data-id');
+            LoadLeadSetup(valid, true)
+        })
+        $(".LoaderWorkingDiv").hide();
+    });
+</script>
+<script src="~/Content/Js/Invoice/Invoice.js"></script>
+<script src="~/Content/Js/Invoice/AddInvoice.js"></script>
+<link href="~/Content/Css/Invoice/Invoice.css" rel="stylesheet" />
+<link href="~/Content/Css/Estimate/Estimate.css" rel="stylesheet" />
+<link href="~/Content/Css/Customer/CustomerList.css" rel="stylesheet" />
+<script src="~/Content/Js/Estimate/Estimate.js"></script>
+<script src="~/Content/Js/CustomerList/CustomerList.js"></script>
+<link href="~/Content/Css/Customer/customer.css" rel="stylesheet" />
+<link href="~/Content/Css/App/GlobalSearchResult.css" rel="stylesheet" />
+<script>
+    var searchtext = '@ViewBag.SearchText';
+    var searchfor = '@ViewBag.SearchFor';
+    var type = '@ViewBag.Type';
+    var DataTablePageSize = 50;
+    var PageLoadValue = 1;
+    var ClosePopup = function () {
+        $.magnificPopup.close();
+    }
+    var ClosePopupGiveError = function () {
+        $.magnificPopup.close();
+        $("#OpenError").click();
+    }
+    var ClosePopupGiveSuccess = function () {
+        $.magnificPopup.close();
+        $("#OpenSuccess").click();
+    }
+    var GlobalConvertEstimeToInvoiceById = function () {
+        $.ajax({
+            url: domainurl + "/Invoice/ConvertEstimateToInvoice",
+            data: { Id: EstimateConvertId },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result == true) {
+                    LoadCustomerDetail(data.cusid, true);
+                    OpenEstimateTab();
+                    OpenInvoiceTab();
+                    OpenInvById(EstimateConvertId);
+                }
+            }
+        });
+    }
+    var insdate;
+    var customerid;
+    var detailId;
+    var GlobalConvertEstimateToOrder = function () {
+        var url = "/Estimate/ConvertEstimateToWorkOrServiceOrder";
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: JSON.stringify({ customerid: customerid, InstallDate: insdate, detailId: detailId }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result == true) {
+                    //$("#ConvertEstimatetoWorkOrService").addClass('disabled');
+                    if (data.ServiceAppointID != "00000000-0000-0000-0000-000000000000") {
+                        LoadCustomerDetail(data.idcus, true);
+                        OpenTopToBottomModal(domainurl + "/ServiceOrder/TopToBottomModalServiceOrder/?AppointmentId=" + data.ServiceAppointID + "&CustomerId=" + data.cusid);
+                    }
+                    else {
+                        LoadCustomerDetail(data.idcus, true);
+                        OpenTopToBottomModal(domainurl + "/WorkOrder/TopToBottomWorkOrder?AppointmentId=" + data.WorkAppointID + "&CustomerId=" + data.cusid);
+                    }
+                    //OpenEstimateTab();
+                    //parent.CloseTopToBottomModal();
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var ShowContactDetails = function (item, e) {
+        //e.preventDefault();
+        if (cntrlIsPressed) {
+            var href = $(item).attr('href');
+            window.open(href, '_blank');
+        } else {
+            var id = $(item).attr('id');
+            var ContactId = $(item).attr('id-val');
+            LoadContactDetail(item);
+            $(".GlobalSearchInp").val("");
+        }
+    }
+
+    var LoadRestAllGlobalSearchResult = function () {
+        $(".filter-global-All-List").html(LoaderDom);
+        $(".filter-global-All-List").load(domainurl + "/App/GetGlobalSearchResultAll?key=" + encodeURI(searchtext) + "&SearchFor=" + encodeURI(searchfor) + "&type=" + encodeURI(type));
+        PageLoadValue = 2;
+    }
+
+    var LeadSearchKeyUp = function (pageNumber, DateFileter, OrderValue = '') {
+        $('#lead-paging').html('');
+        $('#boxshiner').show();
+        $(".filter-global-Lead-List").hide();
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+
+        var searchtextval = encodeURI(searchtext).replace(/'/g, '%60');//encodeURI(searchtext);
+        $('#boxshiner').show();
+        $('#dvHeaderContent').hide();
+        //LoaderDom.show();
+        $('.filter-global-Lead-List').html(LoaderDom);
+        var paramlite = {
+            PageNo: pageNumber,
+            isLead: 1, SearchText: searchtextval,
+            SettingOrderBy: OrderValue.trim() != '' && OrderValue != null ? OrderValue : ''
+        };
+
+        console.log('LeadFilter')
+        $.ajax({
+            type: "POST",
+            url: '/Customer/CustomerListFilteredLite',
+            data: JSON.stringify(paramlite),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                data.result.CustomerList = JSON.parse(data.result.CustomerListString);
+                console.log(data);
+                //Load Lead List
+                var empTemplate = $("#hbLeadTemplate").html();
+                if (Device.All())
+                    empTemplate = empTemplate.replace(/style=/g, "data-style=");
+                var sourceHtml = Handlebars.compile(empTemplate);
+                $("#lead-paging").html(data.paged);
+                $(".filter-global-Lead-List").html(sourceHtml(data.result));
+                $(".filter-global-Lead-List").show();
+                $('#boxshiner').hide();
+                if (PageLoadValue < 2) {
+                    LoadRestAllGlobalSearchResult();
+                }
+
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+                OpenErrorMessageNew("Error!", "Sorry, but this page didn't load properly. Please try again.");
+                if (PageLoadValue < 2) {
+                    LoadRestAllGlobalSearchResult();
+                }
+            }
+        });
+        Handlebars.registerHelper("ifBill", function (a) {
+            console.log("ifBill fired");
+            var c;
+            var d = 0;
+
+            if (a.length !== d) {
+                return 'Billing: ' + a;
+            } else {
+                c = null;
+            }
+            return c;
+        });
+        Handlebars.registerHelper("date2", function (c) {
+            console.log("date fired");
+            var numb = c.match(/\d/g);
+            var numb1 = numb.join("");
+            var numb2 = numb1.substring(0, 10);
+            console.log(numb2);
+            return new Date(numb2).toDateString();
+        });
+        Handlebars.registerHelper("signAgreement", function (a) {
+            console.log("signAgreement fired");
+
+            var c;
+            if (a !== true) {
+                return null;
+            } else {
+                c = 'Yes';
+            }
+            return 'Sign Agreement: ' + c;
+        });
+    }
+
+        var CustomerSearchKeyUp = function (pageNumber, DateFileter, OrderValue = '') {
+
+            if (typeof (pageNumber) == "undefined") {
+                return;
+            }
+
+            var searchtextval = encodeURI(searchtext);
+            $('#boxshiner').show();
+            $('#dvHeaderContent').hide();
+            $('.filter-global-list-customer').html(LoaderDom);
+
+            var paramlite = {
+                PageNo: pageNumber,
+                isLead: 0, SearchText: searchtextval,
+                SettingOrderBy: OrderValue.trim() != '' && OrderValue != null ? OrderValue : ''
+            };
+            $.ajax({
+                type: "POST",
+                url: '/Customer/CustomerListFilteredLite',
+                data: JSON.stringify(paramlite),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function(data) {
+
+                    data.result.CustomerList = JSON.parse(data.result.CustomerListString);
+                    console.log(data);
+                    //Load Customer List
+                    var empTemplate = $("#hbCustomerTemplate").html();
+                    if (Device.All())
+                        empTemplate = empTemplate.replace(/style=/g, "data-style=");
+                    var sourceHtml = Handlebars.compile(empTemplate);
+                    $("#customer-paging").html(data.paged);
+                    $(".filter-global-list-customer").html(sourceHtml(data.result));
+                    $(".filter-global-list-customer").show();
+                    $('#boxshiner').hide();
+                    if (PageLoadValue < 2) {
+                        LeadSearchKeyUp(1);
+                    }
+
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                    if (PageLoadValue < 2) {
+                        LeadSearchKeyUp(1);
+                    }
+                }
+            });
+            Handlebars.registerHelper("ifBill", function (a) {
+                console.log("ifBill fired");
+                var c;
+                var d = 0;
+
+                if (a.length!==d) {
+                    return 'Billing: '+a;
+                } else {
+                    c = null;
+                }
+                return c;
+            });
+            Handlebars.registerHelper("date2", function (c) {
+                console.log("date fired");
+                var numb = c.match(/\d/g);
+                var numb1 = numb.join("");
+                var numb2 = numb1.substring(0, 10);
+
+                console.log(numb2);
+                return new Date(numb2).toDateString();
+            });
+            Handlebars.registerHelper("signAgreement", function (a) {
+                console.log("signAgreement fired");
+
+                var c;
+                if (a !== true) {
+                    return null;
+                } else {
+                    c = 'Yes';
+                }
+                return 'Sign Agreement: '+c;
+            });
+        }
+           
+
+            $(document).ready(function () {
+
+                var Popupwidth = 920;
+                if (window.innerWidth < 920) {
+                    Popupwidth = window.innerWidth;
+                }
+                var idlist = [{ id: ".InvEstPreviewPartial", type: 'iframe', width: Popupwidth, height: 600 }
+                ];
+                jQuery.each(idlist, function (i, val) {
+                    magnificPopupObj(val);
+                });
+                CustomerSearchKeyUp(1);
+
+                $(".GlobalConvertEstimateToOrder").click(function () {
+                    insdate = $(this).attr('idval');
+                    alert(insdate);
+                    customerid = $(this).attr('data-id');
+                    detailId = $(this).attr('idval1')
+                    if (insdate != "1/1/0001 12:00:00 AM") {
+                        OpenSuccessMessageNew("Success!", "Are you want to convert estimate to work or service order", GlobalConvertEstimateToOrder);
+                    }
+                    else {
+                        OpenErrorMessageNew("Error!", "Please check new estimate install date", "");
+                    }
+                });
+                //setTimeout(function () {
+
+                //    $(".dataTables_scrollBody").height(331);
+                //}, 500);
+                /*$(window).resize(function () {
+                    $('.dataTables_scrollBody').height($(window).height() - 332);
+                });*/
+                $(".GlobalConvert-EstimeteToInvoice").click(function () {
+                    EstimateConvertId = $(this).attr("data-id");
+                    OpenConfirmationMessageNew("Confirm?", "Are you sure you want to Convert this Estimate to Invoice?", GlobalConvertEstimeToInvoiceById);
+                })
+                $(window).trigger('resize');
+                var selectedID = [];
+                $(".ListViewLoader").hide();
+                $("#successmessageClose").click(function () {
+                    setTimeout(function () {
+                        $(".ListContents").load(domainurl + "/Leads/LeadsListPartial");
+                    }, 200);
+                });
+                var table = $('#tblLeads').DataTable({
+                    "pageLength": DataTablePageSize,
+                    "destroy": true,
+                    "scrollY": "400px",
+                    "scrollCollapse": true,
+                    "language": {
+                        "emptyTable": "No data available"
+                    }
+                });
+                $('#tblLeads tbody').on('click', 'tr', function () {
+
+                    if ($(this).hasClass('selected')) {
+                        $(this).removeClass('selected');
+                    }
+                    else {
+                        table.$('tr.selected').removeClass('selected');
+                        $(this).addClass('selected');
+                    }
+                });
+                $("#srch-term").keyup(function () {
+                    $("#tblLeads_filter input").val($("#srch-term").val());
+                    $("#tblLeads_filter input").trigger('keyup');
+                });
+                $("#AddNewCustomer").click(function () {
+                    $(".addManufacturerMagnific").attr('href', domainurl + '/Leads/AddLeads/');
+                    $(".addManufacturerMagnific").click();
+                });
+
+                setTimeout(function () {
+                    $(".ListContents").slideDown();
+                }, 500);
+
+                $('.leads-name-anchor-style').click(function (e) {
+                    e.preventDefault();
+                    var id = $(this).attr('id');
+                    LoadLeadsDetail(id);
+                });
+
+            });
+
+</script>
+
+<div class="GlobalSearchResults" id="SearchResults">
+    @*@if ((Model.Customers == null || Model.Customers.Count == 0)
+            && (Model.Leads == null || Model.Leads.Count == 0)
+            && (Model.Invoices == null || Model.Invoices.Count == 0)
+            && (Model.Estimates == null || Model.Estimates.Count == 0)
+            && (Model.Opportunities == null || Model.Opportunities.Count == 0)
+            && (Model.Contacts == null || Model.Contacts.Count == 0)
+            && (Model.Tickets == null || Model.Tickets.Count == 0))
+        {
+            <h3>@Localize.T("No Data Found")</h3>
+        }*@
+    <div class="gsr_header">@Localize.T("Customer result")</div>
+    <div class="filter-global-list-customer">
+
+    </div>
+    <div id="customer-paging" class="AgentListPagination">
+
+    </div>
+
+    <div class="gsr_header gsr_lead_device_top">@Localize.T("Lead result")</div>
+    <div class="filter-global-Lead-List">
+
+    </div>
+    <div id="lead-paging" class="AgentListPagination">
+
+    </div>
+    <div class="gsr_header gsr_lead_device_top"></div>
+    <div class="filter-global-All-List">
+
+    </div>
+
+    @*@if (Model.Invoices != null && Model.Invoices.Count > 0)
+        {
+            <div class="gsr_header">Invoice result</div>
+
+            <div class="invoice-table">
+                <table class="display invoice_result" id="tblInvoice">
+                    <thead class="table-head-border">
+                        <tr>
+                            <th class="thead-th-style">
+                                @Localize.T("Created On")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Invoice No")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Customer Name")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Description")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Due Date")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Total")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Balance")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Status")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Actions")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Print/Email")
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Invoices)
+                        {
+                            <tr class="tr-style">
+                                <td class="table-body-td-style invoice_device_row" valign="top">
+
+                                    @{
+                                        if (item.Status == "Open")
+                                        {
+                                            <div class="invoice_device_header">@Localize.T("Created On")</div>
+                                            <div class="invoice_device_info">
+                                                <span style="color:red">@item.CreatedDate.ToString("MM/dd/yy") at @item.CreatedDate.ToString("hh:mm tt")</span>
+                                            </div>
+
+                                        }
+                                        else
+                                        {
+                                            <div class="invoice_device_header">@Localize.T("Created On")</div>
+                                            <div class="invoice_device_info">
+                                                <span>@item.CreatedDate.ToString("MM/dd/yy") at @item.CreatedDate.ToString("hh:mm tt")</span>
+                                            </div>
+                                        }
+                                    }
+                                </td>
+
+                                <td class="table-body-td-style invoice_device_row" valign="top">
+                                    <div class="invoice_device_header">@Localize.T("Invoice No")</div>
+                                    <div class="invoice_device_info">
+                                        <a class="cus-anchor" href="javascript:void(0)" onclick="OpenInvById(@item.Id)">@item.InvoiceId</a>
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style invoice_device_row" valign="top">
+                                    <div class="invoice_device_header">@Localize.T("Customer Name")</div>
+                                    <div class="invoice_device_info">
+                                        <a class="cus-anchor" href="@(AppConfig.DomainSitePath)/Customer/Customerdetail/?id=@item.CustomerIntId">@item.CustomerName</a>
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style invoice_device_row" valign="top">
+                                    <div class="invoice_device_header">@Localize.T("Description")</div>
+                                    <div class="invoice_device_info">
+                                        @item.Description
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style invoice_device_row" valign="top">
+                                    @if (item.DueDate.HasValue)
+                                    {
+                                        if (item.Status == "Open")
+                                        {
+                                            <div class="invoice_device_header">@Localize.T("Due Date")</div>
+                                            <div class="invoice_device_info">
+                                                <span class="color_red_style">@item.DueDate.Value.ToString("MM/dd/yy")</span>
+                                            </div>
+
+                                        }
+                                        else
+                                        {
+                                            <div class="invoice_device_header">@Localize.T("Due Date")</div>
+                                            <div class="invoice_device_info">
+                                                <span>@item.DueDate.Value.ToString("MM/dd/yy")</span>
+                                            </div>
+                                        }
+
+                                    }
+                                </td>
+                                <td class="table-body-td-style invoice_device_row" valign="top">
+                                    @{
+                                        if (item.Status == "Open")
+                                        {
+                                            <div class="invoice_device_header">@Localize.T("Total")</div>
+                                            <div class="invoice_device_info">
+                                                <span class="color_red_style">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.TotalAmount.Value.ToString("#,##0.00")</span>
+                                            </div>
+
+                                        }
+                                        else
+                                        {
+                                            <div class="invoice_device_header">@Localize.T("Total")</div>
+                                            <div class="invoice_device_info">
+                                                <span class="color_red_style">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.TotalAmount.Value.ToString("#,##0.00")</span>
+                                            </div>
+
+                                        }
+                                    }
+                                </td>
+                                <td class="table-body-td-style invoice_device_row" valign="top">
+                                    @{
+                                        if (item.Status == "Open")
+                                        {
+                                            <div class="invoice_device_header">@Localize.T("Balance")</div>
+                                            <div class="invoice_device_info">
+                                                <span class="color_red_style">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.BalanceDue.Value.ToString("#,##0.00")</span>
+                                            </div>
+
+                                        }
+                                        else
+                                        {
+                                            <div class="invoice_device_header">@Localize.T("Balance")</div>
+                                            <div class="invoice_device_info">
+                                                <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.BalanceDue.Value.ToString("#,##0.00")</span>
+                                            </div>
+
+                                        }
+                                    }
+
+                                </td>
+                                <td class="table-body-td-style invoice_device_row" valign="top">
+                                    <div class="invoice_device_header">@Localize.T("Status")</div>
+                                    <div class="invoice_device_info">
+                                        @{
+                                            string status = item.Status;
+                                            if (status != "Cancel" && status != "Paid" && status != "Partial" && item.DueDate.HasValue)
+                                            {
+                                                status = item.DueDate.Value < DateTime.Today ? "Due" : status;
+                                            }
+
+                                            if (status == "Open")
+                                            {
+                                                <span class="color_red_style_bold">@status</span>
+                                            }
+                                            else if (status == "Partial")
+                                            {
+                                                <span class="color_red_style_bold">@status</span>
+                                            }
+                                            else if (status == "Paid")
+                                            {
+                                                <span class="color_red_style_bold">@status</span>
+                                            }
+                                            else if (status == "Cancel")
+                                            {
+                                                <span class="color_red_style_bold">@status</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="color_red_style_bold">@status</span>
+                                            }
+                                        }
+                                    </div>
+
+                                </td>
+                                <td class="table-body-td-style invoice_device_row" valign="top">
+                                    <div class="invoice_device_header">@Localize.T("Actions")</div>
+                                    <div class="invoice_device_info">
+                                        <a class="cus-anchor" onclick="ReceivePaymentByInv(@item.Id)" href="javascript:void(0)">@Localize.T("Receive Payment")</a>
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style invoice_device_row" valign="top">
+                                    <div class="invoice_device_header">@Localize.T("Print / Email")</div>
+                                    <div class="invoice_device_info">
+                                        <a class="InvEstPreviewPartial" href="@(AppConfig.DomainSitePath)/Invoice/GetInvoicePartial?Id=@item.Id" style=""><i class="fa fa-print" aria-hidden="true"></i></a>
+                                        @Localize.T(" / ")
+                                        <a href="@(AppConfig.DomainSitePath)/Invoice/SendEmailInvoicePartial?id=@item.Id" id="InvoicePrintAndSend" class="InvEstPreviewPartial" style=""><i class="fa fa-envelope" aria-hidden="true"></i></a>
+                                    </div>
+                                </td>
+
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        @if (Model.Estimates != null && Model.Estimates.Count > 0)
+        {
+            <div class="gsr_header">Estimate result</div>
+            <div class="Estimate-table">
+                <table class="display estimate_result" id="tblEstimate">
+                    <thead class="table-head-border">
+                        <tr>
+                            <th class="thead-th-style">
+                                @Localize.T("Estimate")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Created By")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Creation Date")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Last Note Added")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Actions")
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Estimates)
+                        {
+                            <tr class="tr-style">
+                                <td class="table-body-td-style" valign="top">
+                                    <a href="javascript:void(0)" onclick="OpenEstById(@item.Id)">@item.InvoiceId</a>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <span>@item.UserNum</span>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <span>@item.LastUpdatedDate.ToString("MM/dd/yy")</span>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    @if (item.NoteAddedDate != null)
+                                    {
+                                        if (item.NoteAddedDate == Convert.ToDateTime("01/01/0001"))
+                                        {
+                                            <div class="ep_device_header">@Localize.T("Last Note Added")</div>
+                                            <div class="ep_device_info">
+                                                <span>@Localize.T("-")</span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="ep_device_header">@Localize.T("Last Note Added")</div>
+                                            <div class="ep_device_info">
+                                                <span>@item.NoteAddedDate.ToString("MM/dd/yy") @Localize.T("at") @item.NoteAddedDate.ToString("HH:mm tt")</span>
+                                            </div>
+                                        }
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn GlobalConvert-EstimeteToInvoice" data-id="@item.Id" id="@item.CreatedBy" type="button"> @Localize.T("Convert To Invoice")</button>
+                                        <button data-toggle="dropdown" class="btn dropdown-toggle Estimate-btn-dropdown" type="button">
+                                            <span class="caret caret-style"></span>
+                                        </button>
+                                        <ul class="dropdown-menu cus-dropdown-ul ep_action_dropdown">
+                                            <li><button class="btn GlobalConvertEstimateToOrder" type="button" data-id="@item.CustomerId" idval="@item.InstallDate" idval1="@item.InvoiceId" id="ConvertEstimateToOrder">@Localize.T("Convert to work or service order")</button></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        @if (Model.Opportunities != null && Model.Opportunities.Count > 0)
+        {
+            <div class="gsr_header">Opportunities result</div>
+            <table class="opportunities_table">
+                <thead>
+                    <tr>
+                        <th>
+                            <div>@Localize.T("Opportunity")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/opportunityname"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/opportunityname"></i></div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Revenue")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/revenue"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/revenue"></i></div>
+                        </th>
+
+                        <th>
+                            <div>@Localize.T("Status")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Campaign")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/competitors"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/competitors"></i></div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Close Date")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/closedate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/closedate"></i></div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Opportunities)
+                    {
+
+                        <tr class="PrintItem" data-id="@item.Id">
+
+                            <td>
+                                <div class="opp_header">@Localize.T("Name") <span>:</span></div>
+                                <div class="opp_info">
+
+                                    <div> <a class="cus-anchor" onclick="ShowOpportunityDetails(@item.Id,this)" id="@(item.Id)" id-val="@item.OpportunityId">@item.OpportunityName</a></div>
+                                    @if (item.TypeVal != "-" && !string.IsNullOrEmpty(item.TypeVal))
+                                    {
+                                        <br /> @Localize.T("Type: ")
+                                        <span>@item.TypeVal</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.CustomerName))
+                                    {
+                                        <br /> @Localize.T("Account Name: ")
+                                        <span>@item.CustomerName</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.Competitors))
+                                    {
+                                        <div>
+                                            @Localize.T("Competitors: ")
+                                            <span>@item.Competitors</span>
+                                        </div>
+                                    }
+                                </div>
+
+                            </td>
+                            <td>
+                                <div class="opp_header">@Localize.T("Revenue") <span>:</span></div>
+                                <div class="opp_info">
+                                    @if (!string.IsNullOrEmpty(item.Revenue))
+                                    {
+                                        double Revenue = 0;
+                                        double.TryParse(item.Revenue, out Revenue);
+                                        <div>
+                                            @Localize.T("Revenue: ")
+                                            <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Revenue)</span>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.ProjectedGP))
+                                    {
+                                        double ProjectedGP = 0;
+                                        double.TryParse(item.ProjectedGP, out ProjectedGP);
+                                        <div>
+                                            @Localize.T("Projected GP: ")
+                                            <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ProjectedGP)</span>
+                                        </div>
+
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.Points))
+                                    {
+                                        double Points = 0;
+                                        double.TryParse(item.Points, out Points);
+                                        <div>
+                                            @Localize.T("Points: ")
+                                            <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Points)</span>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.TotalProjectedGP))
+                                    {
+                                        <div>
+                                            @Localize.T("Total Projected GP: ")
+                                            <span>@item.TotalProjectedGP</span>
+                                        </div>
+                                    }
+                                </div>
+                            </td>
+
+
+                            <td>
+                                <div class="opp_header">@Localize.T("Status") <span>:</span></div>
+                                <div class="opp_info">
+                                    @if (item.StatusVal != "-")
+                                    {
+                                        @Localize.T("Status: ")
+                                        <span>@item.StatusVal</span>
+                                    }
+                                    @if (item.ProbabilityVal != "-")
+                                    {
+                                        <div>
+                                            @Localize.T("Probability: ")
+                                            <span>@item.ProbabilityVal</span>
+                                        </div>
+                                    }
+                                    @if (item.DealReasonVal != "-")
+                                    {
+                                        <div>
+                                            @Localize.T("Deal Reason: ")
+                                            <span>@item.DealReasonVal</span>
+                                        </div>
+                                    }
+                                    @if (item.DeliveryDaysVal != "-")
+                                    {
+                                        <div>
+                                            @Localize.T("Delivery Days: ")
+                                            <span>@item.DeliveryDaysVal</span>
+                                        </div>
+
+                                    }
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="opp_header">@Localize.T("Campaign") <span>:</span></div>
+                                <div class="opp_info">
+
+                                    @if (item.CampaignSourceVal != "-")
+                                    {
+                                        <div>
+                                            @Localize.T("Campaign Source: ")
+                                            <span>@item.CampaignSourceVal</span>
+                                        </div>
+                                    }
+                                    @if (item.LeadSourceVal != "-" && !string.IsNullOrEmpty(item.LeadSourceVal))
+                                    {
+                                        <div>
+                                            @Localize.T("Lead Source: ")
+                                            <span>@item.LeadSourceVal</span>
+                                        </div>
+                                    }
+
+                                </div>
+
+                            </td>
+
+                            @if (item.CloseDate.HasValue && item.CloseDate != new DateTime())
+                            {
+                                <td>
+                                    <div class="opp_header">@Localize.T("Close Date") <span>:</span></div>
+                                    <div class="opp_info">@item.CloseDate.Value.ToString("MM/dd/yy")</div>
+                                    @if (!string.IsNullOrEmpty(item.AccountOwnerName))
+                                    {
+                                        <div>
+                                            @Localize.T("Account Owner: ")
+                                            <span>@item.AccountOwnerName</span>
+                                        </div>
+
+                                    }
+                                </td>
+                            }
+
+
+                        </tr>
+
+                    }
+                </tbody>
+            </table>
+        }
+        @if (Model.Contacts != null && Model.Contacts.Count > 0)
+        {
+            <div class="gsr_header">Contacts result</div>
+            <table class="Contacts_table">
+                <thead>
+                    <tr>
+                        <th>
+                            <div>@Localize.T("Name")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/name"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/name"></i></div>
+                        </th>
+
+                        <th>
+                            <div>@Localize.T("Work")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/work"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/work"></i></div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Mobile")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/mobile"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/mobile"></i></div>
+                        </th>
+
+                        <th>
+                            <div>@Localize.T("Email")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/email"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/email"></i></div>
+                        </th>
+
+                        <th>
+                            <div>@Localize.T("Created By")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/createdby"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/createdby"></i></div>
+                        </th>
+
+                        <th>
+                            <div>@Localize.T("Created Date")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/createddate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/createddate"></i></div>
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in Model.Contacts)
+                    {
+                        <tr class="PrintItem" data-id="@item.Id">
+                            <td>
+                                <div>@Localize.T("Name") <span>:</span></div>
+                                <div> <a class="cus-anchor name-anchor-style" onclick="ShowContactDetails(@item.Id,this)" id="@(item.Id)" id-val="@item.ContactId">@item.Name</a></div>
+
+                            </td>
+
+                            <td>
+                                <div>@Localize.T("Work") <span>:</span></div>
+                                <div>@item.Work</div>
+                            </td>
+                            <td>
+                                <div>@Localize.T("Mobile") <span>:</span></div>
+                                <div>@item.Mobile</div>
+                            </td>
+                            <td>
+                                <div>@Localize.T("Email") <span>:</span></div>
+                                <div title="@item.Email">@item.Email</div>
+                            </td>
+                            <td>
+                                <div>@Localize.T("Created By") <span>:</span></div>
+                                <div>@item.CreatedByName</div>
+                            </td>
+                            <td>
+                                <div>@Localize.T("Created Date") <span>:</span></div>
+                                <div>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate)</div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+
+            </table>
+        }
+        @if (Model.Tickets != null && Model.Tickets.Count > 0)
+        {
+            <div class="gsr_header">Ticket result</div>
+
+            <div class="TicketTable">
+                <table class="display Ticket_result" id="tblTicket">
+                    <thead class="table-head-border">
+                        <tr>
+                            <th class="thead-th-style">
+                                @Localize.T("Ticket Id")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Customer Name")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Phone")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Ticket Status")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Ticket Type")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Created Date")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Completion Date")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Assigned To")
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Tickets)
+                        {
+                            <tr class="tr-style">
+
+
+                                <td class="table-body-td-style Ticket_device_row" valign="top">
+                                    <div class="Ticket_device_info">
+                                        <a class="cus-anchor" href="javascript:void(0)" onclick="OpenTicketById(@item.Id)">@item.Id</a>
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style Ticket_device_row" valign="top">
+                                    @if (string.IsNullOrWhiteSpace(item.BusinessName))
+                                    {
+                                        <div class="Ticket_device_info">
+                                            <a class="cus-anchor" href="@(AppConfig.DomainSitePath)/Customer/Customerdetail/?id=@item.CusIdInt">@item.CustomerName</a>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="Ticket_device_info">
+                                            <a class="cus-anchor" href="@(AppConfig.DomainSitePath)/Customer/Customerdetail/?id=@item.CusIdInt">@item.BusinessName</a>
+                                        </div>
+                                    }
+
+                                </td>
+                                <td class="table-body-td-style Ticket_device_row" valign="top">
+                                    <div class="Ticket_device_info">
+                                        @item.PrimaryPhone
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style Ticket_device_row" valign="top">
+                                    <div class="Ticket_device_info">
+                                        @item.Status
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style Ticket_device_row" valign="top">
+                                    <div class="Ticket_device_info">
+                                        @item.TicketType
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style Ticket_device_row" valign="top">
+                                    <div class="Ticket_device_info">
+                                        @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy") @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("hh:mm tt")
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style Ticket_device_row" valign="top">
+                                    <div class="Ticket_device_info">
+                                        @HS.Framework.DateTimeExtension.UTCToClientTime(item.CompletionDate).ToString("MM/dd/yy") @HS.Framework.DateTimeExtension.UTCToClientTime(item.CompletionDate).ToString("hh:mm tt")
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style Ticket_device_row" valign="top">
+
+
+                                    @if (item.AssignedTo != "System UserM")
+                                    {
+                                        <div class="Ticket_device_info">
+                                            @item.AssignedTo
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="Ticket_device_info">-</div>
+                                    }
+
+
+
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }*@
+</div>
+@Html.Raw(leadtemplate)
+@Html.Raw(customertemplate)

@@ -1,0 +1,147 @@
+﻿@{ 
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<script src="~/Content/Js/Login/domainurl.js"></script>
+<script src="~/Content/Jquery-ui/jquery.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=@ViewBag.MapAPIKey"></script>
+<style>
+    .btn{
+        display: inline-block;
+        padding: 6px 12px;
+        margin-bottom: 0;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.42857143;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: middle;
+        -ms-touch-action: manipulation;
+        touch-action: manipulation;
+        cursor: pointer;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        background-image: none;
+        border: 1px solid transparent;
+        border-radius: 4px;
+    }
+    .clock_in{
+        background-color: #2ca01c;
+        color:white;
+        float:right;
+    }
+    .ClockInOutDiv{
+        margin-top:50px;
+        
+    }
+    .ClockInOutDiv textarea{
+        width:100%;
+        margin-bottom:15px;
+    }
+    .CancelBtn{
+        float:right;
+        margin-right:10px;
+    }
+</style>
+<script>
+    var ClockInLabel = "@HS.Web.UI.Helper.LabelHelper.TimeClockType.ClockIn";
+    var ClockOutLabel = "@HS.Web.UI.Helper.LabelHelper.TimeClockType.ClockOut";
+    var ClockInOutType = "";
+    var pos = {
+        lat: 0,
+        lng: 0
+    };
+    var ErrorCallBack = function () {
+        SaveClockInOut(ClockInOutType, pos);
+    }
+    var ClockInOut = function (Type) {
+        ClockInOutType = Type;
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                pos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                SaveClockInOut(Type, pos);
+            }, ErrorCallBack);
+        } else {
+            SaveClockInOut(Type, pos);
+        }
+    }
+
+    var SaveClockInOut = function (Type, POS) {
+        var Param = {
+            Note: $("#ClockInOutNote").val(),
+            Time: '1-1-2018',
+            Lat: POS.lat,
+            Lng: POS.lng,
+            Type: Type
+        };
+        var url = domainurl + "/TimeClockPto/ClockInOut";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+             
+                if (data.result) {
+                    setTimeout(function () {
+                        parent.ClosePopup();
+                    },150);
+                    parent.OpenSuccessMessageNew("Success!", data.message, function () {
+                    });
+                    console.log(data.Type);
+                    if (data.Type == ClockInLabel) {
+                 
+                        parent.$(".clock_in_button").addClass("clocked_in");
+                        parent.$("#clock_in").text("Clock Out");
+                        parent.$(".clock_in_button").text("Clock Out");
+                        /*For Layout*/
+                      
+                         parent.$(".ClockInOutIconLi").removeClass("clock_out_color");
+                        parent.$(".tooltip_time_val").text(data.Time);
+                    } else {
+                        console.log("out");
+                        parent.$(".clock_in_button").removeClass("clocked_in");
+                        parent.$("#clock_in").text("Clock In");
+                        parent.$(".clock_in_button").text("Clock In");
+                        /*For Layout*/
+                        parent.$(".ClockInOutIconLi").addClass("clock_out_color");
+                    }
+                    parent.$(".ClockInOutIconLi").click();
+                    parent.$(".ClockInOutIconLi").click();
+                }
+                else {
+                    setTimeout(function () {
+                        parent.ClosePopup();
+                    }, 150);
+                    parent.OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+
+
+</script>
+ 
+<img onclick="parent.ClosePopup()" style="cursor:pointer;width:20px;height:20px;position:absolute;right:10px;top:10px;" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+ <div class="ClockInOutDiv">
+     <div>
+         <textarea rows="4" id="ClockInOutNote" placeholder="@Localize.T("Note")"></textarea>
+     </div> 
+     <button class="btn clock_in" id="clock_in" onclick="ClockInOut('Clock In')">
+        <span>@Localize.T(ViewBag.IsClockedIn ? "Clock Out" : "Clock In")</span>
+     </button>
+     <button class="btn CancelBtn" onclick="parent.ClosePopup()">
+         @Localize.T("Cancel")
+     </button>
+ </div>

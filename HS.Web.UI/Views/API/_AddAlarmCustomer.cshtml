@@ -1,0 +1,883 @@
+﻿@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.SetupAlarm
+@using Actions = HS.Web.UI.Helper.LabelHelper.AlarmCustomerActions
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>
+<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+<link href="~/Content/Css/API/AddAlarmCustomer.css" rel="stylesheet" />
+
+<script>
+    var Actions = "@Model.Action";
+    var CustomerType = '@Model.CustomerType';
+    var IsContractSigned = '@Model.IsContractSigned';
+    var CreateAccountIfContractSigned = '@ViewBag.CreateAccountIfContractSigned';
+    var OwnerShip = '@ViewBag.OwnerShip';
+    var SubscribeToAlarm = function () {
+        var selectedEvents = [];
+        var AddonList = [];
+        $('#Events_To_Forward input:checked').each(function () {
+            selectedEvents.push($(this).attr('name'));
+        });
+
+           $(".addonitem").each(function () {
+
+                if ($(this).is(':checked') == true) {
+
+                    AddonList.push($(this).val())
+                }
+           });
+
+        var url = "/API/IntegrateToAlarm/";
+        var param = {
+            CustomerId: '@Model.CustomerId',
+            Action: Actions,
+            CompanyName: $("Alarm_CompanyName").val(),
+            FirstName: $("#FirstName").val(),
+            Lastname: $("#LastName").val(),
+            Street: $("#Alarm_Street").val(),
+            City: $("#CityPrevious").val(),
+            Zip: $("#ZipCodePrevious").val(),
+            State: $("#StatePrevious").val(),
+            PropertyType: $("#Alarm_PropertyType").val(),
+            EmailAddress: $("#Alarm_EmailAddress").val(),
+            Phone: $("#Alarm_Phone").val(),
+            DealerCustomer: $("#Alarm_DealerCustomer").val(),
+            LoginName: $("#Alarm_LoginName").val(),
+            LoginPassword: $("#Alarm_LoginPassword").val(),
+            SameInsAddress: $("input[name='SameInstallationAddress']:checked").val(),
+            InsStreet: $("#Alarm_InsStreet").val(),
+            InsCity: $("#Alarm_InsCity").val(),
+            InsState: $("#Alarm_InsState").val(),
+            InsZip: $("#Alarm_InsZip").val(),
+            Culture: $("#Alarm_Culture").val(),
+            PanelType: $("#Alarm_PanelType").val(),
+            PanelVersion: $("#Alarm_PanelVersion").val(),
+            ModelSerialNumber: $("#Alarm_ModelSerialNumber").val(),
+            PhoneLinePresent: $("#Alarm_PhoneLinePresent").is(":checked"),
+            IgnoreLowCoverageError: $("#Alarm_IgnoreLowCoverageError").is(":checked"),
+            ForwardedEvents: selectedEvents,
+            CentralStationAccountNo: $("#Alarm_CentralStationAccountNo").val(),
+            CentralStationForwardingOption: $("#Alarm_CentrastationForwardingOption").val(),
+            CentralStationRecieverNumber: $("#Alarm_CentralStationRecieverNumber").val(),
+            CentralStationName: $("#CentralStationName").val(),
+            PackageId: $("#Alarm_PackageId").val(),
+            adonitem : AddonList
+        };
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: JSON.stringify(param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (typeof (data) != 'undefined') {
+                    if (data) {
+                        if (data.result) {
+                            OpenSuccessMessageNew("Success!", data.message, function () {
+                                /*Hide add button*/
+                                $("#SubscribeToAlarm").addClass("hidden");
+                                CloseTopToBottomModal();
+                                console.log("dfsdf");
+                                OpenThirdPartyApiTab();
+                                //$(".AlarmComTab_Load").load("/API/AlarmCustomerDetails/?CustomerId="+data.CustomerId);
+                            });
+                        } else {
+                            OpenErrorMessageNew("Error!", data.message, function () { });
+                        }
+                    } else {
+                        OpenErrorMessageNew("Error!", data.message, function () {
+
+                        });
+                    }
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+
+    var LoadFeatures = function (item,adonitem,from) {
+        console.log(item);
+        var url = "/API/GetFeatures/";
+        var param = {
+            featureList: item,
+            adonitem:adonitem
+        };
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: JSON.stringify(param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                console.log(data.result);
+                var feature = "";
+                var adonfeature = "";
+                if (from == 'Video') {
+                    $("#videofeatureTitle").show();
+                    $(".video_included_features").show();
+                    $("#videoaddonTitle").show();
+                    $(".video_add_on_feature").show();
+                }
+                else if (from == 'Automation')
+                {
+                    $("#automationfeatureTitle").show();
+                    $(".automation_included_features").show();
+                    $("#automationaddonTitle").show();
+                    $(".automation_add_on_feature").show();
+                }
+                else {
+                    $("#featureTitle").show();
+                    $(".Included_features").show();
+                }
+
+                if (data.result.length > 1)
+                {
+
+                    $.each(data.result, function (key, value) {
+                        if (value != null) {
+                            feature += "<div class='Included_features_item'>"+ value + "</div>"
+                        }
+
+
+                    });
+                    if (from == 'Video') {
+                        $.each(data.addonfeatures, function (key, value) {
+                            if (value != null) {
+                                adonfeature += value + "</br>"
+                            }
+                        });
+
+                        $(".video_included_feature").html(feature+"</div>");
+                        $(".video_add_on_feature").html(adonfeature);
+                    }
+                    else if (from == 'Automation')
+                    {
+                        $.each(data.addonfeatures, function (key, value) {
+                            if (value != null) {
+                            adonfeature += value + "</br>"
+                            }
+                        });
+
+                        $(".automation_included_feature").html(feature);
+                        $(".automation_add_on_feature").html(adonfeature);
+                    }
+                    else {
+                         $(".Included_features").html(feature);
+                    }
+
+
+                }
+                else {
+                    $(".Included_features").html("No included feature available.");
+                }
+
+            }
+
+        });
+    }
+
+    var GetCsAccountNumber = function () {
+        var Platform = $("#CentralStationName").val();
+
+        var url = "/API/GetCsNumberForAlarm/";
+        var param = {
+            CustomerId: CustomerLoadGuid,
+            Platform:Platform
+        };
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: JSON.stringify(param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                console.log(data.ReceiverNumber);
+                $("#Alarm_CentralStationAccountNo").val(data.CsNumber);
+                $("#Alarm_CentralStationRecieverNumber").val(data.ReceiverNumber);
+            }
+
+        });
+    }
+
+
+
+
+    var LoadVideoPackageInfo = function () {
+             console.log("dddd");
+        if ($("#Alarm_Video_PackageId").val() != -1)
+        {
+            var url = "/API/VideoPackageInfo/";
+            var param = {
+                PackageId: $("#Alarm_Video_PackageId").val()
+
+            };
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: JSON.stringify(param),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    var features = [100];
+                    var addonfeatures = [100];
+                    $.each(data.result[0].IncludedFeatures, function (key, value) {
+                        features.push(value.Feature)
+
+                    });
+
+                    $.each(data.result[0].OtherAddOns, function (key, value) {
+                        addonfeatures.push(value.Feature)
+
+                    });
+                    LoadFeatures(features,addonfeatures,'Video');
+
+                }
+
+            });
+        }
+        else {
+            $("#videofeatureTitle").hide();
+            $(".video_included_feature").hide();
+            $(".video_add_on_feature").hide();
+            $("#videoaddonTitle").hide();
+        }
+
+    }
+
+
+    var LoadAutomationPackageInfo = function () {
+         console.log("ddd");
+        if ($("#Alarm_Automation_PackageId").val() != -1)
+        {
+            var url = "/API/AutomationPackageInfo/";
+            var param = {
+                PackageId: $("#Alarm_Automation_PackageId").val()
+
+            };
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: JSON.stringify(param),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    var features = [100];
+                    var addonfeatures = [100];
+                    $.each(data.result[0].IncludedFeatures, function (key, value) {
+                        features.push(value.Feature)
+
+                    });
+                   $.each(data.result[0].OtherAddOns, function (key, value) {
+                        addonfeatures.push(value.Feature)
+
+                    });
+                    LoadFeatures(features,addonfeatures,'Automation');
+
+                }
+
+            });
+        }
+        else {
+            $("#automationfeatureTitle").hide();
+            $(".automation_included_feature").hide();
+            $(".automation_add_on_feature").hide();
+            $("#automationaddonTitle").hide();
+        }
+
+    }
+
+
+
+        var LoadPackageInfo = function () {
+        if ($("#Alarm_PackageId").val() != -1)
+        {
+            var url = "/API/PackageInfo/";
+            var param = {
+                PackageId: $("#Alarm_PackageId").val()
+
+            };
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: JSON.stringify(param),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    var features = [100];
+                    $.each(data.result[0].IncludedFeatures, function (key, value) {
+                        features.push(value.Feature)
+
+                    });
+
+                    $.each(data.result[0].FreeAddOns, function (key, value) {
+                        features.push(value.Feature)
+
+                    });
+
+                    LoadFeatures(features);
+
+                }
+
+            });
+        }
+        else {
+            $("#featureTitle").hide();
+            $(".Included_features").hide();
+        }
+
+    }
+    var ClosePage = function () {
+         var url = "/API/FreeAllUnassignedCsNumber/";
+            var param = {
+                 CustomerId: CustomerLoadGuid
+            };
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: JSON.stringify(param),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    CloseTopToBottomModal()
+                }
+
+            });
+    }
+
+    $(document).ready(function () {
+
+        if (OwnerShip != "") {
+            if (OwnerShip == "Brinks") {
+                $("#CentralStationName").val("Brinks");
+                GetCsAccountNumber();
+            }
+            else if (OwnerShip == "In-House") {
+                $("#CentralStationName").val("UCC");
+                GetCsAccountNumber();
+            }
+            else {
+                 $("#CentralStationName").val("-1");
+            }
+        }
+
+        $("#Alarm_PackageId").change(function () {
+            LoadPackageInfo();
+        })
+
+        $("#Alarm_Video_PackageId").change(function () {
+        LoadVideoPackageInfo();
+        })
+
+        $("#Alarm_Automation_PackageId").change(function () {
+        LoadAutomationPackageInfo();
+        })
+        if (CustomerType == "Residential") {
+            $("#Alarm_PropertyType").val("SingleFamilyHouse");
+        }
+        else {
+              $("#Alarm_PropertyType").val("Business");
+        }
+
+        $(".CheckItem").each(function () {
+            $(this).prop('checked', true);
+        });
+
+        $("#CentralStationName").change(function () {
+        GetCsAccountNumber();
+        })
+
+        $(".customer_alarm_tab").height(window.innerHeight-104);
+        //if ($("#Alarm_CentrastationForwardingOption").val() == "Always" || $("#Alarm_CentrastationForwardingOption").val() == "OnlyIfPhoneFails") {
+        //    $(".central_station_forwarding").removeClass("hidden");
+        //}
+
+        $(".all_add_on_feature").load("/Api/GetAllAddonsList");
+
+        $('input[type=radio][name=SameInstallationAddress]').change(function () {
+            if ($("#SameAddressYes").is(":checked")) {
+                $(".installation_address_div").addClass("hidden");
+            }
+            if ($("#SameAddressNo").is(":checked")) {
+                $(".installation_address_div").removeClass("hidden");
+            }
+        });
+
+        //$("#Alarm_CentrastationForwardingOption").change(function (e) {
+        //    if ($(e.target).val() == "Always" || $(e.target).val() == "OnlyIfPhoneFails") {
+        //        $(".central_station_forwarding").removeClass("hidden");
+        //    } else {
+        //        $(".central_station_forwarding").addClass("hidden");
+        //    }
+        //});
+
+        $("#SowCoverageSummary").click(function () {
+            $("#HideCoverageSummary").removeClass("hidden");
+            $("#SowCoverageSummary").addClass("hidden");
+            $(".CoverageSummary").removeClass("hidden");
+        });
+        $("#HideCoverageSummary").click(function () {
+            $("#HideCoverageSummary").addClass("hidden");
+            $("#SowCoverageSummary").removeClass("hidden");
+            $(".CoverageSummary").addClass("hidden");
+        });
+        $("#SubscribeToAlarm").click(function () {
+            if (CreateAccountIfContractSigned == "true") {
+                if (IsContractSigned == "False" || IsContractSigned == '') {
+                    OpenErrorMessageNew("Error!", "You have to sign contract for create an alarm.com account.", function () {
+
+                    });
+                }
+                else {
+                    SubscribeToAlarm();
+                }
+            }
+            else {
+                    SubscribeToAlarm();
+            }
+
+
+        });
+
+        $("#Alarm_PropertyType").change(function () {
+            if (this.value == "Business") {
+                $(".company_name_div").removeClass("hidden");
+            } else {
+                $(".company_name_div").addClass("hidden");
+            }
+        });
+    });
+    $(window).resize(function () {
+        $(".customer_alarm_tab").height(window.innerHeight - 104);
+    });
+</script>
+<div class="width-100p create_customer_header">
+    @if (Model.Action == Actions.CreateCustomer)
+    {
+        <span>@Localize.T("Create Customer")</span>
+    }
+    else if (Model.Action == Actions.ActiveateCommitment)
+    {
+        <span>@Localize.T("Activate Commitment")</span>
+    }
+    else if (Model.Action == Actions.CreateCommiment)
+    {
+        <span>@Localize.T("Create Commitment")</span>
+    }
+    <div onclick="ClosePage()" class="close_div_custom">
+        <img title="@Localize.T("Close")" class="close_btn_size" src="~/Content/Icons/cross_update.png">
+    </div>
+</div>
+
+<div id="alarmdotcom" class="customer_alarm_tab">
+
+    <div class="setup_customer_alarm">
+        <span class="width-100p sub-header">
+            @Localize.T("Customer Information")
+        </span>
+        <div class="customer_info_container width-100p add_alarm_customer_info">
+            <div class="width-100p">
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Property Type:")<span class="red">*</span></span>
+                    @Html.DropDownList("Alarm_PropertyType", (List<SelectListItem>)ViewBag.PropertyTypeEnum, new { @class = "form-control", id = "Alarm_PropertyType", })
+                </div>
+            </div>
+            <div class="width-100p">
+                <div class="form-group clearfix hidden company_name_div">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Company Name:")<span class="red">*</span></span>
+                    <input type="text" id="Alarm_CompanyName" value="@Model.CompanyName" placeholder="Company Name" />
+                </div>
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("First Name:")<span class="red">*</span></span>
+                    @Html.TextBoxFor(x => x.FirstName, new { @class = "", Placeholder = "First Name", style = "width:100%" })
+                </div>
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Last Name:")<span class="red">*</span></span>
+                    @Html.TextBoxFor(x => x.LastName, new { @class = "", Placeholder = "Last Name" })
+                </div>
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Email Address:")<span class="red">*</span></span>
+                    <input type="text" id="Alarm_EmailAddress" value="@Model.EmailAddress" placeholder="Email Address" />
+                </div>
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Phone:")<span class="red">*</span></span>
+                    <input type="text" id="Alarm_Phone" value="@Model.Phone" placeholder="Phone" />
+                </div>
+            </div>
+            <div class="width-100p">
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Street:")<span class="red">*</span></span>
+                    <input type="text" id="Alarm_Street" value="@Model.Street" placeholder="Street" />
+                </div>
+                <div class="form-group clearfix CityState_insert_div_previous">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Zip Code:")<span class="red">*</span></span>
+
+                    <input type="text" class="" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" value="@Model.Zip" id="ZipCodePrevious" placeholder="Zip Code" />
+                    <div class='tt-menu'>
+                        <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                    </div>
+                </div>
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("City:")<span class="red">*</span></span>
+                    <input type="text" id="CityPrevious" value="@Model.City" placeholder="City" />
+                </div>
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("State:")<span class="red">*</span></span>
+                    @Html.DropDownListFor(x => x.State, (List<SelectListItem>)ViewBag.StateList, new { @class = "", id = "StatePrevious", style = "width:100%;height:34px;" })
+                </div>
+            </div>
+            <div class="width-100p">
+                <div>
+                    <span>@Localize.T("Will the system be installed at the address of the primary contact above?")</span>
+                </div>
+                <div>
+                    <span><input type="radio" id="SameAddressYes" checked name="SameInstallationAddress" value="true" /> Yes</span>
+                    <span><input type="radio" id="SameAddressNo" name="SameInstallationAddress" value="false" /> No</span>
+                </div>
+            </div>
+            <div class="width-100p hidden installation_address_div">
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Installation Street:")<span class="red">*</span></span>
+                    <input type="text" id="Alarm_InsStreet" value="@Model.InsStreet" placeholder="Street" />
+                </div>
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Installation City:")<span class="red">*</span></span>
+                    <input type="text" id="Alarm_InsCity" value="@Model.InsCity" placeholder="City" />
+
+                </div>
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Installation State:")<span class="red">*</span></span>
+                    @Html.DropDownList("Alarm_InsState", (List<SelectListItem>)ViewBag.StateList, new { @class = "form-control", id = "Alarm_InsState", style = "width:100%;height:34px;" })
+                </div>
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Installation Zip Code:")<span class="red">*</span></span>
+                    <input type="text" id="Alarm_InsZip" value="@Model.InsZip" placeholder="Zip Code" />
+                </div>
+            </div>
+        </div>
+        <span class="width-100p sub-header">
+            @Localize.T("Create Login")
+        </span>
+        <div class="login_info_container width-100p">
+            <div class="width-100p">
+                <label>@Localize.T("Please enter the desired login name for your customer below.")</label>
+            </div>
+            <div class="width-100p">
+                <span>
+                    @Localize.T("This login name will be used to access the customer's Alarm.com account through the web and mobile apps. You can change your customer's login name through the Dealer Site at any time.")
+                </span>
+            </div>
+            <div class="width-100p login_name_div">
+                <table>
+                    <tr>
+                        <td><span class="add_alarm_customer_content_label">@Localize.T("Desired Login Name:")<span class="red">*</span></span></td>
+                        <td><input type="text" id="Alarm_LoginName" value="@Model.LoginName" placeholder="Login Name" /></td>
+                    </tr>
+                    <tr>
+                        <td><span class="add_alarm_customer_content_label">@Localize.T("Password:")<span class="red">*</span></span></td>
+                        <td><input type="text" id="Alarm_LoginPassword" value="@Model.LoginPassword" placeholder="Password" /></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="width-100p">
+                <span>
+                    Note: Login names must be less than 100 alphanumeric characters, and cannot already be taken by another Alarm.com user. If either of these requirements are not met, you will be prompted to choose a new login name.
+                </span>
+            </div>
+        </div>
+        <span class="width-100p sub-header">
+            @Localize.T("System Information")
+        </span>
+        <div class="system_info_continer width-100p">
+            <div class="System_info width-100p">
+                <div class="width-100p">
+                    <label>@Localize.T("Coverage Summary (Based on Installation Address)")</label>
+                    <a id="SowCoverageSummary" href="javascript:void(0)">(@Localize.T("show"))</a>
+                    <a id="HideCoverageSummary" class="hidden" href="javascript:void(0)">@Localize.T("hide")</a>
+                    <div class="CoverageSummary hidden">
+                        <br />
+                        <div>
+                            <label>@Localize.T("Check Coverage Location")</label>
+                        </div>
+                        <div>
+                            <table class="CoverageSummaryTable" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>Recommended</th>
+                                        <th>Network</th>
+                                        <th>Coverage</th>
+                                        <th>Provider Map</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>yes</td>
+                                        <td>AT&T</td>
+                                        <td><label>FULL</label></td>
+                                        <td><a href="https://www.att.com/maps/wireless-coverage.html" target="_blank"><i class="fa fa-globe" aria-hidden="true"></i></a></td>
+                                    </tr>
+                                    <tr>
+                                        <td>yes</td>
+                                        <td>Verizon 4G</td>
+                                        <td><label>FULL</label></td>
+                                        <td><a href="https://www.verizonwireless.com/featured/better-matters/?intmcp=INT-SEA-NON-SE-coverage-051614-DE-SR-LP-T#maps" target="_blank"><i class="fa fa-globe" aria-hidden="true"></i></a></td>
+                                    </tr>
+                                    <tr>
+                                        <td>yes</td>
+                                        <td>Verizon 3G</td>
+                                        <td><label>FULL</label></td>
+                                        <td><a href="https://www.verizonwireless.com/featured/better-matters/?intmcp=INT-SEA-NON-SE-coverage-051614-DE-SR-LP-T#maps" target="_blank"><i class="fa fa-globe" aria-hidden="true"></i></a></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <label>
+                            @Localize.T("Please verify coverage above, then enter Control Panel and Alarm.com module information into the fields below.")
+                        </label>
+                    </div>
+                </div>
+
+                @if (Model.Action == Actions.CreateCommiment)
+                {
+                    <div class="width-100p aac_sys_info">
+                        <div class="form-group clearfix">
+                            <span class="add_alarm_customer_content_label">@Localize.T("Expected Install Date:")</span>
+                            <input type="text" id="Alarm_InstallDate" value="@(Model.InstallationDate.HasValue?Model.InstallationDate.Value.ToString("MM/dd/yy"):"")" placeholder="MM/DD/YYYY" />
+                            <span class="italic_comment">
+                                Commitments will expire 15 days after the expected
+                                install date if the customer is not activated.
+                                You can manage the Commitment Auto-Deletion
+                                timeframe on the Dealer Parameters page.
+                            </span>
+                        </div>
+                        <div class="form-group clearfix">
+                            <span class="add_alarm_customer_content_label">@Localize.T("Expected Control Panel Type:")</span>
+                            @Html.DropDownListFor(x => x.PanelType, (List<SelectListItem>)ViewBag.PanelTypeEnum, new { @class = "form-control", id = "Alarm_PanelType", style = "width:100%;height:34px;" })
+
+                        </div>
+                        <div class="form-group clearfix">
+                            <span class="add_alarm_customer_content_label">@Localize.T("Expected Network:")</span>
+                            @Html.DropDownListFor(x => x.Network, (List<SelectListItem>)ViewBag.ExpectedNetwork, new { @class = "form-control", id = "Alarm_ExpectedNetwork", style = "width:100%;height:34px;" })
+                            @*<input type="text" value="@Alarm.PanelVersion" placeholder="Panel Version" />*@
+                        </div>
+                    </div>
+                }
+                else if (Model.Action == Actions.CreateCustomer)
+                {
+                    <div class="width-100p">
+                        Please verify coverage above, then enter Control Panel and Alarm.com module information into the fields below.
+                    </div>
+                    <div class="form-group clearfix">
+                        <span class="add_alarm_customer_content_label">@Localize.T("Control Panel Type:")</span>
+                        @Html.DropDownListFor(x => x.PanelType, (List<SelectListItem>)ViewBag.PanelTypeEnum, new { @class = "form-control", id = "Alarm_PanelType", style = "width:100%;height:34px;" })
+                    </div>
+                    <div class="form-group clearfix">
+                        <span class="add_alarm_customer_content_label">@Localize.T("Module Serial #:")</span>
+                        <input type="text" id="Alarm_ModelSerialNumber" value="@Model.ModelSerialNumber" placeholder="Module Serial Number" />
+                    </div>
+                }
+            </div>
+        </div>
+        <span class="width-100p sub-header">
+            @Localize.T("Service Plan")
+        </span>
+        <div class="Service_Plan_Container width-100p">
+            <div class="width-100p form-group">
+                <div class="width-33p">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Base Package:")</span>
+                    @Html.DropDownListFor(x => x.PackageId, (List<SelectListItem>)ViewBag.SelectPackageData, new { @class = "form-control", id = "Alarm_PackageId", style = "width:100%;height:34px;" })
+                </div>
+                @*<div class="width-33p">
+                        <span class="add_alarm_customer_content_label">@Localize.T("Video Package:")</span>
+                        @Html.DropDownListFor(x => x.PackageId, (List<SelectListItem>)ViewBag.VideoPackageDataList, new { @class = "form-control", id = "Alarm_Video_PackageId", style = "width:100%;height:34px;" })
+                    </div>
+                    <div class="width-33p">
+                        <span class="add_alarm_customer_content_label">@Localize.T("Energy Automation Package:")</span>
+                        @Html.DropDownListFor(x => x.PackageId, (List<SelectListItem>)ViewBag.AutomationPackageDataList, new { @class = "form-control", id = "Alarm_Automation_PackageId", style = "width:100%;height:34px;" })
+                    </div>*@
+            </div>
+        </div>
+        <span class="width-100p sub-header" id="featureTitle" style="display:none;">
+            @Localize.T("Included Feature")
+        </span>
+        <div class="Included_features">
+
+        </div>
+        @*<span class="width-100p sub-header" id="videofeatureTitle" style="display:none;">
+                @Localize.T("Video Included Feature")
+            </span>
+            <div class="video_included_feature">
+
+            </div>
+            <span class="width-100p sub-header" id="videoaddonTitle" style="display:none;">
+                @Localize.T("Add-Ons")
+            </span>
+            <div class="video_add_on_feature">
+
+            </div>
+
+            <span class="width-100p sub-header" id="automationfeatureTitle" style="display:none;">
+                @Localize.T("Energy Automation Included Feature")
+            </span>
+            <div class="automation_included_feature">
+
+            </div>
+            <span class="width-100p sub-header" id="automationaddonTitle" style="display:none;">
+                @Localize.T("Add-Ons")
+            </span>
+            <div class="automation_add_on_feature">
+
+            </div>*@
+        <span class="width-100p sub-header" id="allAddons">
+            @Localize.T("All Add-Ons")
+        </span>
+        <div class="all_add_on_feature">
+
+        </div>
+
+
+        <span class="width-100p sub-header">
+            @Localize.T("Monitoring Station Forwarding")
+        </span>
+        <div class="width-100p Monitoring_Station_Forwarding">
+
+            <div class="form-group clearfix">
+                <span class="add_alarm_customer_content_label">@Localize.T("Central Station Forwarding Option")</span>
+                @Html.DropDownListFor(x => x.CentrastationForwardingOption, (List<SelectListItem>)ViewBag.CentralStationForwardingOption, new { @class = "form-control", id = "Alarm_CentrastationForwardingOption", style = "width:100%;height:34px;" })
+                @*<input type="text" value="@Alarm.CentrastationForwardingOption" placeholder="Centrastation Forwarding Option" />*@
+            </div>
+            <div class="phone_line_present_div form-group">
+                <input type="checkbox" id="Alarm_PhoneLinePresent" @((Model.PhoneLinePresent.HasValue && Model.PhoneLinePresent.Value) ? "checked" : "") />
+                <span class="add_alarm_customer_content_label">@Localize.T("Phone Line Present")</span>
+            </div>
+        </div>
+
+        <div class="width-100p central_station_forwarding">
+            <div class="width-100p Receiver_Information">
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Central Station Name")<span class="red">*</span></span>
+                    <div class="txt-form">
+                        @Html.DropDownList("CentralStationName", ViewBag.CentralStationName as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                    </div>
+                </div>
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Central Station Account No")</span>
+                    <input type="text" id="Alarm_CentralStationAccountNo" value="@Model.CentralStationAccountNo" placeholder="Central Station Account No" />
+                </div>
+                <div class="form-group clearfix">
+                    <span class="add_alarm_customer_content_label">@Localize.T("Central Station Receiver No")</span>
+
+                    @Html.DropDownListFor(x => x.CentralStationRecieverNumber, (List<SelectListItem>)ViewBag.CentralStationRecieverNumber, new { @class = "form-control", id = "Alarm_CentralStationRecieverNumber", style = "width:100%;height:34px;" })
+                </div>
+            </div>
+            <div class="width-100p Events_To_Forward" id="Events_To_Forward">
+                <table class="width-50p">
+                        @if (PermissionChekcer.IsPermitted(Permissions.MyCompanyPermissions.AddArmingOption))
+                        {
+                            <tr>
+                                <td><input type="checkbox" class="CheckItem" name="Alarms" /> Alarms</td>
+                                <td><input type="checkbox" name="Armings" /> Armings (Openings/Closings)‎</td>
+                            </tr>
+                        }
+                        <tr>
+                            <td><input type="checkbox" name="Bypass" /> Bypass</td>
+                            <td><input type="checkbox" class="CheckItem" name="Cancels" /> Cancels‎</td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" class="CheckItem" name="CrashAndSmash" /> Crash & Smash</td>
+                            <td><input type="checkbox" class="CheckItem" name="PanelNotResponding" /> Panel Not Responding</td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" class="CheckItem" name="Panics" /> Panics</td>
+                            <td><input type="checkbox" class="CheckItem" name="PhoneCommFailure" /> Phone Communication Failures‎</td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" class="CheckItem" name="PhoneTests" /> Phone Tests</td>
+                            <td><input type="checkbox" class="CheckItem" name="SensorTampers" /> Sensor Tampers‎</td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" class="CheckItem" name="TroubleRestorals" /> Trouble Restorals</td>
+                            <td><input type="checkbox" class="CheckItem" name="Troubles" /> Troubles‎</td>
+                        </tr>
+                    </table>
+            </div>
+        </div>
+
+        <div class="not_required_right_now">
+            <div class="form-group clearfix width-33p hidden">
+                <span class="add_alarm_customer_content_label">@Localize.T("Dealer Customer")</span>
+                <input type="text" id="Alarm_DealerCustomer" value="@Model.DealerCustomer" placeholder="Dealer Customer" />
+            </div>
+            <div class="form-group clearfix width-33p">
+                <span>@Localize.T("Login Name")</span>
+
+            </div>
+            <div class="form-group clearfix width-33p hidden">
+                <span class="add_alarm_customer_content_label">@Localize.T("Installation Password")</span>
+                <input type="text" id="Alarm_Password" value="@Model.Password" placeholder="Password" />
+            </div>
+
+            @*<div class="form-group clearfix width-33p">
+                    <span>@Localize.T("Time Zone")</span>
+                    <input type="text" value="@Alarm.InsTimeZone" placeholder="Time Zone" />
+                </div>*@
+            @*<div class="form-group clearfix width-33p">
+                    <span>@Localize.T("Culture")</span>
+                    @Html.DropDownList("Alarm_Culture", (List<SelectListItem>)ViewBag.CultureEnum, new { @class = "form-control", id = "Alarm_Culture", style = "width:100%;height:34px;" })
+
+                </div>*@
+            <div class="width-100p">
+                <table class="width-50p">
+                    <tr>
+                        <td>
+                            <input type="checkbox" id="Alarm_IgnoreLowCoverageError" @((Model.IgnoreLowCoverageError.HasValue && Model.IgnoreLowCoverageError.Value) ? "checked" : "") />
+                            <span>@Localize.T("Ignore Low Coverage Error")</span>
+                            ‎
+                        </td>
+                    </tr>
+
+                </table>
+            </div>
+
+
+        </div>
+
+    </div>
+</div>
+
+<div class="add_alarm_customer_footer">
+    @if (PermissionChekcer.IsPermitted(Permissions.MyCompanyPermissions.AddAlarmAccBasedOnContract))
+    {
+        if (ViewBag.AbleToCreateAccount == true)
+        {
+            <button class="btn btnAddToAlarm" id="SubscribeToAlarm">Add to alarm.com</button>
+        }
+        else
+        {
+            <button class="btn btnAddToAlarm" id="SubscribeToAlarm" disabled>Add to alarm.com</button>
+        }
+    }
+    else
+    {
+        <button class="btn btnAddToAlarm" id="SubscribeToAlarm">Add to alarm.com</button>
+    }
+
+    @*<button>Remove from alarm.com</button>*@
+</div>

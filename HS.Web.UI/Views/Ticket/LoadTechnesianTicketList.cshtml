@@ -1,0 +1,289 @@
+﻿@model HS.Entities.TicketListModel
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Css/Ticket/LoadTechnesianTicketList.css" rel="stylesheet" />
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var Fdate = '@Model.StartDate';
+    var Ldate = '@Model.EndDate';
+    var TicketStatus = '@Model.TicketStatus';
+    var OpenTicketById = function(ticketId){
+        OpenTopToBottomModal(domainurl + "/Ticket/AddTicket/?Id=" + ticketId);
+    }
+    var TicketListLoad = function(pageNo,order){
+        if (typeof (pageNo) != "undefined") {
+            console.log('@Model.StartDate');
+            console.log('@Model.EndDate');
+            console.log(Fdate);
+            console.log(Ldate);
+
+            var LoadUrl = domainurl + "/Ticket/LoadTechnesianTicketList/?&PageNo=" + pageNo + "&order=" + order + "&StartDate=" + encodeURI(Fdate) + "&EndDate=" + encodeURI(Ldate) + "&TicketStatus="+ TicketStatus;
+
+            $("#LoadTicketList").load(LoadUrl);
+        }
+    }
+    $(document).ready(function () {
+
+        //$('[data-toggle="tooltip"]').tooltip();
+
+        $(".search_ticket_btn").click(function(){
+            TicketListLoad(1);
+        });
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            TicketListLoad(pageno, orderval);
+        })
+
+    });
+</script>
+
+<div class="page-content-wrap cus-padding-top10p invoicelist">
+    <div class="ticket_export hidden" data-info="TicketId"></div>
+    <div class="ticket_export hidden" data-info="CustomerName"></div>
+    <div class="ticket_export hidden" data-info="TicketType"></div>
+    <div class="ticket_export hidden" data-info="Description"></div>
+    <div class="ticket_export hidden" data-info="CreatedBy"></div>
+    <div class="ticket_export hidden" data-info="CreatedDate"></div>
+    <div class="ticket_export hidden" data-info="Assigned"></div>
+    <div class="ticket_export hidden" data-info="ScheduleOn"></div>
+    <div class="ticket_export hidden" data-info="Status"></div>
+    <div class="invoice-table">
+        <table class="tch_ticket_list_table">
+            <thead class="table-head-border">
+                <tr>
+                    <th class="thead-th-style"> <div>@Localize.T("Ticket ID")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ticketid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ticketid"></i></div></th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Ticket Type")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/tickettype"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/tickettype"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Description")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/description"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/description"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Created By")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/createdby"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/createdby"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Assigned To")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/assignto"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/assignto"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Scheduled On")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/scheduledon"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/scheduledon"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Status")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+                    </th>
+                    @*<th class="thead-th-style">
+                            @Localize.T("Priority")
+                        </th>*@
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Tickets)
+                {
+                    <tr class="tr-style CheckItems" idval="@item.Id" data-customerid="@item.CustomerId">
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Ticket ID")<span>:</span></div>
+
+
+                            <div>
+                                @if (item.IsClosed == true)
+                                {
+                                    <span><i style="color:#2ca01c; cursor:pointer;" class="fa fa-lock" title="Ticket Close"></i></span>
+                                }
+                                <a class="cus-anchor" onclick="OpenTicketById(@item.Id)" href="javascript:void(0)">@item.Id</a>
+                                @Html.Raw(item.AttachmentsCount > 0 ? "<i class='fa fa-paperclip'></i>" : "")
+                                @Html.Raw(item.RepliesCount > 0 ? string.Format("({0} {1})", item.RepliesCount, (item.RepliesCount == 1 ? Localize.T("Reply") : Localize.T("Replies"))) : "")
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Ticket Type")<span>:</span></div>
+                            <div> <span class=@(item.ExceedQuantity>0?"exceed-warning":"")>@item.TicketType</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Description")<span>:</span></div>
+                            <div><span>@Html.Raw(item.Message)</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Created By")<span>:</span></div>
+                            <div><span class="green-tooltip" data-toggle="tooltip" data-placement="top" title="" data-original-title="@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("hh:mm tt")">@item.CreatedByVal on @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy")</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Assigned To")<span>:</span></div>
+                            <div><span class="green-tooltip" data-toggle="tooltip" data-placement="top" title="" data-original-title="@item.AdditionalMembers">@item.AssignedTo</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Scheduled On")<span>:</span></div>
+                            <div>
+                                @if (item.CompletionDate != new DateTime())
+                                {
+                                    if (item.AppointmentStartTime == "-1" && item.AppointmentEndTime == "-1")
+                                    {
+                                        <span class="green-tooltip" data-toggle="tooltip" data-placement="top" title="" data-original-title="All Day">@item.CompletionDate.ToString("MM/dd/yy")</span>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(item.AppointmentStartTimeVal) && !string.IsNullOrWhiteSpace(item.AppointmentEndTimeVal)
+                                        && item.AppointmentStartTime != "-1" && item.AppointmentEndTime != "-1")
+                                    {
+                                        <span class="green-tooltip" data-toggle="tooltip" data-placement="top" title="" data-original-title="@item.AppointmentStartTimeVal to @item.AppointmentEndTimeVal">@item.CompletionDate.ToString("MM/dd/yy")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@item.CompletionDate.ToString("MM/dd/yy")</span>
+                                    }
+
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div>@Localize.T("Status")<span>:</span></div>
+                            <div> @item.StatusVal</div>
+                        </td>
+                        @*<td class="table-body-td-style invoice_device_row" valign="top">
+                                @(item.Priority == "-1"?"-": item.Priority)
+                            </td>*@
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="TicketListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="TicketListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="TicketListLoad(1, '@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="TicketListLoad(2,'@(ViewBag.order)')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="TicketListLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="TicketListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="TicketListLoad(1,'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="TicketListLoad(2,'@(ViewBag.order)''@(ViewBag.order)')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="TicketListLoad(3,'@(ViewBag.order)')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="TicketListLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber-2),'@(ViewBag.order)')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="TicketListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="TicketListLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber + 2),'@(ViewBag.order)')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber - 1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="TicketListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+<div class="ticket_export_confirm"></div>

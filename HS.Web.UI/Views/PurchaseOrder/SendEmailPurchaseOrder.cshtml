@@ -1,0 +1,204 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.CreatePurchaseOrder
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using System.Collections;
+<html>
+<head>
+    @Styles.Render("~/styles/GetEstimate")
+    <script src="~/Content/Js/Login/domainurl.js"></script>
+    <script src="~/Content/Jquery-ui/jquery.js"></script>
+    <link href="~/Content/Css/Layout/Loader.css" rel="stylesheet" />
+    <script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+    <script src="~/Content/Tiny/tinymce.min.js"></script>
+    <script src="~/Content/Tiny/tiny.js"></script>
+    <script src="~/Content/Js/Site/Validation.js"></script>
+    <link href="~/Content/Css/Inventory/SendEmailPurchaseOrder.css" rel="stylesheet" />
+    <script>
+        var PurchaseOrderId = '@Model.PurchaseOrderWarehouse.PurchaseOrderId';
+        var PurchaseOrderIntId = '@Model.PurchaseOrderWarehouse.Id';
+
+        var sendSMSfunction = function (SendBoth) { 
+            if (SendBoth) {
+                if (!Validation.IsEmail($(".TOEmail")) || Validation.IsEmpty($(".ContactNumber"))) {
+                    return false;
+                }
+            } else {
+                if (Validation.IsEmpty($(".ContactNumber"))) {
+                    return false;
+                }
+            }
+            var url = domainurl + "/SMS/SendPurchaseOrderText";
+            var param = JSON.stringify({
+                POId: PurchaseOrderIntId,
+                ContactNumber: $(".ContactNumber").val(),
+                Message: $("#SMSDescription").val()
+            });
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".AddInvoiceLoader").removeClass("hidden"),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    if (SendBoth) {
+                        sendEmailfunction(SendBoth);
+                    } else {
+                        $(".AddInvoiceLoader").addClass('hidden');
+                        if (data.result) {
+                            parent.OpenSuccessMessageNew("Success!", data.message, function () {
+                                parent.ClosePopup();
+                            });
+                        } else {
+                            parent.OpenErrorMessageNew("Error!", data.message, function () {
+
+                            });
+                        }
+                    }
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                    $(".AddInvoiceLoader").addClass('hidden');
+                }
+            });
+        }
+
+        var sendEmailfunction = function (SendBoth) {
+            if (!Validation.IsEmail($(".TOEmail"))) {
+                return false;
+            }
+            var url = domainurl + "/PurchaseOrder/SendPurchaseOrderEmail";
+            var param = JSON.stringify({
+                POId: PurchaseOrderIntId,
+                EmailSubject: $(".EmailSubject").val(),
+                EmailBody: tinyMCE.get('Description').getContent(),
+                ToEmail: $(".TOEmail").val(),
+                CcEmail:$("#CCEmail").val()
+            });
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".AddInvoiceLoader").removeClass("hidden"),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    $(".AddInvoiceLoader").addClass('hidden');
+                    if (data.result) {
+                        if (SendBoth) {
+                            parent.CloseTopToBottomModal();
+                            parent.OpenSuccessMessageNew("Success!", "Text msg and email send successfully.", function () {
+                                parent.ClosePopup();
+                            });
+                        } else {
+                            parent.CloseTopToBottomModal();
+                            parent.OpenSuccessMessageNew("Success!", data.message, function () {
+                                parent.ClosePopup();
+                            });
+                        }
+
+                    } else {
+                        parent.OpenErrorMessageNew("Error!", data.message, function () {
+
+                        });
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                    $(".AddInvoiceLoader").addClass('hidden');
+                }
+            });
+        }
+        function FormatPhoneNumber(svalue) {
+            var ValueCleanSecondary = "";
+            if (svalue != undefined && svalue != "" && svalue != null) {
+                svalue = svalue.replace(/[-  ]/g, '');
+                if (svalue.length == 10) {
+                    ValueCleanSecondary = svalue.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3"); 
+                }
+                else if (svalue.length > 10) {
+                    ValueCleanSecondary = svalue; 
+                }
+                else {
+                    ValueCleanSecondary = svalue;
+                }
+            }
+            return ValueCleanSecondary;
+        }
+        $(document).ready(function () {
+            $(".ContactNumber").keyup(function () {
+                var sPhoneNumber = $(this).val();
+                if (typeof (sPhoneNumber) != "undefined" && sPhoneNumber != null && sPhoneNumber != "") {
+                    var scleanPhoneNumber = FormatPhoneNumber(sPhoneNumber);
+                    $(this).val(scleanPhoneNumber);
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="SendEmailPurchaseOrder_container">
+        <div class="SendEmailPurchaseOrder_header">
+            @Localize.T("Send email")
+            <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+                <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+            </div>
+        </div>
+        <div class="width_50p_firstdiv">
+            <div>
+                <span style="font-weight:600;">@Localize.T("Email")</span>
+                <input type="text" class="form-control TOEmail" datarequired="true" dataformat="email" value="@Model.Supplier.EmailAddress" />
+            </div>
+            <div>
+                <span style="font-weight:600;">@Localize.T("Cc")</span>
+                <input type="text" class="form-control" placeholder="Add cc email by ';' separator" id="CCEmail" value="" />
+            </div>
+            <div>
+                <span style="font-weight:600;">
+                    @Localize.T("Subject")
+                </span>
+                <input type="text" value="New Purchase Order from @Model.Company.CompanyName: @Model.PurchaseOrderWarehouse.PurchaseOrderId" class="EmailSubject" placeholder="Subject" id="EmailSubject">
+            </div>
+            <div>
+                <span style="font-weight:600;">@Localize.T("Body")</span>
+                <textarea class="txtEmailbody tinymce" id="Description" name="Description">@ViewBag.EmailBody</textarea>
+            </div>
+
+            <div class="SendEmailPurchaseOrder_header">
+                @Localize.T("Send TEXT MSG")
+            </div>
+            <div>
+                <span style="font-weight:600;">
+                    @Localize.T("Contact Number")
+                </span>
+                <input class="ContactNumber" datarequired="true" dataformat="phone" type="text" value="@Model.Supplier.Phone" placeholder="Contact Number" />
+
+            </div>
+            <div>
+                <span style="font-weight:600;">@Localize.T("TEXT MSG Body")</span>
+
+                <textarea rows="3" id="SMSDescription" name="SMSDescription">@ViewBag.SMSBody</textarea>
+                <label class="label black">*@Localize.T("'##url##' will be replaced by actual url.")</label>
+
+            </div>
+        </div>
+
+        <div class="width_50p_pdf">
+            <iframe class="pdf-styles" id="iframePdf" src="data:application/pdf;base64,@ViewBag.PDFData"></iframe>
+        </div>
+
+        <div class="AddInvoiceLoader hidden">
+            <div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>
+        </div>
+        <div class="SendEmailPurchaseOrder_footerContents">
+            <button onclick="parent.ClosePopup()" class="btnCancel">@Localize.T("Cancel")</button>
+            <button class="btn btnSaveAndClose" onclick="sendEmailfunction(false)">@Localize.T("Send Email")</button>
+            <button class="btn btnSendEmailAndClose" onclick="sendSMSfunction(false)">@Localize.T("Send TEXT MSG")</button>
+            <button class="btn btnSendToBoth" onclick="sendSMSfunction(true)">@Localize.T("Send To Both")</button>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,452 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.TimeClockFilterModel
+@using HS.Framework
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var userid = '@ViewBag.UserId';
+    var empid = '@ViewBag.empid';
+</script>
+@Styles.Render("~/styles/EmployeeTimeClockList")
+<script>
+    var LastUpdatedTimeClock = function (item, Name, date) {
+        console.log(Name);
+        if (Name.length > 0) {
+            var MessageUser = Name + " Updated on" + date;
+            $("#tooltipmsgUser_" + item).html("");
+            $("#tooltipmsgUser_" + item).html(MessageUser);
+            $(".tooltipareaUser").addClass("payable_info_hover");
+            // $(".payable_tooltip_div").css("right", "-100px");
+            $(".payable_tooltip_div").css("background-color", "green");
+        }
+        else {
+            $(".tooltipareaUser").removeClass("payable_info_hover");
+        }
+    }
+    var DeleteEmployeeTimeClock = function (id) {
+        OpenConfirmationMessageNew("Confirmation", "Are you sure, you want to delete this item?", function () {
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: "/TimeClockPto/DeleteEmployeeTimeClock",
+                data: JSON.stringify({ id: id }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        $(".employeetimeclock-load").load(domainurl + String.format("/TimeClockPto/EmployeeTimeClock/?UserId={0}", data.empid));
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+        })
+    }
+    $(document).ready(function () {
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            LoadUserTimeClock(pageno, orderval, empid, userid);
+        });
+        var idlist = [{ id: ".ClockMapPopUp", type: 'iframe', width: 500, height: 500 }];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+        $(".OpenMapPopup").click(function () {
+            var latval = $(this).attr('data-lat');
+            var lngval = $(this).attr('data-lng');
+            var mapLoadUrl = domainurl + "/App/OpenPosition/?lat=" + latval + "&lng=" + lngval;
+            $(".ClockMapPopUp").attr("href", mapLoadUrl);
+            $(".ClockMapPopUp").click();
+        });
+
+    })
+</script>
+<script src="~/Content/Js/Login/domainurl.js"></script>
+<div class="employee_time_clock_container">
+    <table class="employee_time_clock">
+        <thead>
+            <tr>
+                @if (!string.IsNullOrWhiteSpace(ViewBag.order))
+                {
+                    if (ViewBag.order == "ascending/clockintime" || ViewBag.order == "descending/clockintime")
+                    {
+                        <th class="th_timeclock"><div>@Localize.T("Name")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockintime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockintime"></i></div></th>
+                    }
+                    else
+                    {
+                        <th class="th_timeclock_pre"><div>@Localize.T("Name")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockintime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockintime"></i></div></th>
+                    }
+                    if (ViewBag.order == "ascending/clockintime" || ViewBag.order == "descending/clockintime")
+                    {
+                        <th class="th_timeclock"><div>@Localize.T("Clock In Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockintime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockintime"></i></div></th>
+                    }
+                    else
+                    {
+                        <th class="th_timeclock_pre"><div>@Localize.T("Clock In Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockintime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockintime"></i></div></th>
+                    }
+                    if (ViewBag.order == "ascending/clockinnote" || ViewBag.order == "descending/clockinnote")
+                    {
+                        <th class="th_timeclock"><div>@Localize.T("Clock In Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockinnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockinnote"></i></div></th>
+                    }
+                    else
+                    {
+                        <th class="th_timeclock_pre"><div>@Localize.T("Clock In Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockinnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockinnote"></i></div></th>
+                    }
+                    <th class="th_timeclock_pre">@Localize.T("Clock In Position")</th>
+
+                    if (ViewBag.order == "ascending/clockouttime" || ViewBag.order == "descending/clockouttime")
+                    {
+                        <th class="th_timeclock"><div>@Localize.T("Clock Out Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockouttime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockouttime"></i></div></th>
+                    }
+                    else
+                    {
+                        <th class="th_timeclock_pre"><div>@Localize.T("Clock Out Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockouttime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockouttime"></i></div></th>
+                    }
+                    if (ViewBag.order == "ascending/clockoutnote" || ViewBag.order == "descending/clockoutnote")
+                    {
+                        <th class="th_timeclock"><div>@Localize.T("Clock Out Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockoutnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockoutnote"></i></div></th>
+                    }
+                    else
+                    {
+                        <th class="th_timeclock_pre"><div>@Localize.T("Clock Out Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockoutnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockoutnote"></i></div></th>
+                    }
+                    <th class="th_timeclock_pre">@Localize.T("Clock Out Position")</th>
+
+                    if (ViewBag.order == "ascending/timespent" || ViewBag.order == "descending/timespent")
+                    {
+                        <th class="th_timeclock"><div>@Localize.T("Time Spent")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timespent"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timespent"></i></div></th>
+                    }
+                    else
+                    {
+                        <th class="th_timeclock_pre"><div>@Localize.T("Time Spent")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timespent"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timespent"></i></div></th>
+                    }
+                    <th class="th_timeclock_pre"><div>@Localize.T("Total Hours")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timespent"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timespent"></i></div></th>
+                }
+                else
+                {
+                    @*<th class="th_timeclock_pre"><div>@Localize.T("Date")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timeclockdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timeclockdate"></i></div></th>*@
+                    <th class="th_timeclock_pre"><div>@Localize.T("Name")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockintime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockintime"></i></div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock In Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockintime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockintime"></i></div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock In Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockinnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockinnote"></i></div></th>
+                    <th class="th_timeclock_pre">@Localize.T("Clock In Position")</th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock Out Time")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockouttime"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockouttime"></i></div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Clock Out Note")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/clockoutnote"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/clockoutnote"></i></div></th>
+                    <th class="th_timeclock_pre">@Localize.T("Clock Out Position")</th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Time Spent")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timespent"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timespent"></i></div></th>
+                    <th class="th_timeclock_pre"><div>@Localize.T("Total Hours")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timespent"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/timespent"></i></div></th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.ListTimeClock != null && Model.ListTimeClock.Count() > 0)
+            {
+                DateTime Today = new DateTime();
+                foreach (var item in Model.ListTimeClock)
+                {
+                    <tr>
+                        <td>
+                            <div>@Localize.T("Name")<span>:</span></div>
+                            <span>
+                                @item.LastUpdatedName
+                                @if (PermissionChekcer.IsPermitted(Permissions.MenuPermissions.DeleteEmpTimeClock))
+                                {
+                                    <a class="del_emp_time_clock" onclick="DeleteEmployeeTimeClock(@item.Id)"><i class="fa fa-trash"></i></a>
+                                }
+                            </span>
+                        </td>
+                        <td>
+                            @if (item.ClockInTime != new DateTime())
+                            {
+                                <div>@Localize.T("Clock In Time")<span>:</span></div>
+                                <span class="cus-anchor" onclick="OpenRightToLeftModal(domainurl + '/TimeClockPto/AddClock/?UserId=00000000-0000-0000-0000-000000000000&TimeClockId=@item.Id')"> @item.ClockInTime.UTCToClientTime().ToString("MM/dd/yy hh:mm:ss tt")</span>
+                            }
+                        </td>
+                        <td @*onmouseover="LastUpdatedClockInTimeClock('@item.Id','@item.LastUpdatedName','@item.LastUpdatedDate.UTCToClientTime()')"*@ class="tooltipareaUser">
+                            <div>@Localize.T("Clock In Note")<span>:</span></div>
+                            <div>@item.ClockInNote</div>
+                            <div class="payable_tooltip_div">
+                                <span id="tooltipmsgUserClockIn_@item.Id"></span>
+                            </div>
+                        </td>
+                        <td>
+                            <div>@Localize.T("Clock In Position")<span>:</span></div>
+                            <div>
+                                @if (!string.IsNullOrWhiteSpace(item.ClockInLat) && !string.IsNullOrWhiteSpace(item.ClockInLng) && item.ClockInLat != "0" && item.ClockInLng != "0")
+                                {
+                                    <img class="OpenMapPopup" style="max-width:20px;" data-lat="@item.ClockInLat" data-lng="@item.ClockInLng" src="~/Content/Icons/rmr_map_marker.png" />
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            @if (item.ClockOutTime.HasValue && item.ClockOutTime != new DateTime())
+                            {
+                                <div>@Localize.T("Clock Out Time")<span>:</span></div>
+                                <div> @item.ClockOutTime.Value.UTCToClientTime().ToString("MM/dd/yy hh:mm:ss tt")</div>
+                            }
+                        </td>
+                        <td @*onmouseover="LastUpdatedClockOutTimeClock('@item.Id','@item.LastUpdatedName','@item.LastUpdatedDate.UTCToClientTime()')"*@ class="tooltipareaUser">
+                            <div>@Localize.T("Clock Out Note")<span>:</span></div>
+                            <div>@item.ClockOutNote</div>
+                            <div class="payable_tooltip_div">
+                                <span id="tooltipmsgUserClockOut_@item.Id"></span>
+                            </div>
+                        </td>
+                        <td>
+                            <div>@Localize.T("Clock Out Position")<span>:</span></div>
+                            <div>
+                                @if (!string.IsNullOrWhiteSpace(item.ClockOutLat) && !string.IsNullOrWhiteSpace(item.ClockOutLng) && item.ClockOutLat != "0" && item.ClockOutLng != "0")
+                                {
+                                    <img class="OpenMapPopup" style="max-width:20px;" data-lat="@item.ClockOutLat" data-lng="@item.ClockOutLng" src="~/Content/Icons/rmr_map_marker.png" />
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            @if (item.ClockOutTime.HasValue && item.ClockOutTime != new DateTime())
+                            {
+                                <div>@Localize.T("Time Spent")<span>:</span></div>
+                                <div>
+                                    @if (item.ClockedInSeconds > 0)
+                                    {
+                                        TimeSpan t = TimeSpan.FromSeconds(Convert.ToDouble(item.ClockedInSeconds));
+
+                                        string answer = string.Format("{0:D2}:{1:D2}:{2:D2}",
+                                        ((t.Days * 24) + t.Hours),
+                                        t.Minutes,
+                                        t.Seconds);
+                                        <span>@answer</span>
+
+                                    }
+                                    else
+                                    {
+                                        <span>00:00:00</span>
+
+                                    }
+                                </div>
+                            }
+                        </td>
+                        <td>
+                            @if (item.ClockOutTime.HasValue && item.ClockOutTime != new DateTime())
+                            {
+                                <div>@Localize.T("Total Hours")<span>:</span></div>
+                                <div>
+                                    @if (item.ClockedInSeconds > 0)
+                                    {
+                                        TimeSpan t = TimeSpan.FromSeconds(Convert.ToDouble(item.ClockedInSeconds));
+
+                                        string answer = string.Format("{0:D2}:{1:D2}:{2:D2}",
+                                        t.Hours,
+                                        t.Minutes,
+                                        t.Seconds);
+                                        <span>@string.Format("{0:00.00}", (t.TotalHours + (t.Minutes > 0 ? t.Minutes / 60 : 0))) hrs</span>
+
+                                    }
+                                    else
+                                    {
+                                        <span>00.00 hrs</span>
+
+                                    }
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+
+</div>
+<div class="emp_time_clock_total_info">
+    <span class="emp_time_clock_total_info_left">
+        @if (Model.AllTotalClockedInSeconds != null && Model.AllTotalClockedInSeconds.CountTotal > 0)
+            {
+                TimeSpan t = TimeSpan.FromSeconds(Convert.ToDouble(Model.AllTotalClockedInSeconds.CountTotal));
+                string answer = "";
+                if (t.Days > 0)
+                {
+                    answer = string.Format("{0:D2}:{1:D2}:{2:D2}:{3:D2}",
+                    t.Days,
+                    t.Hours,
+                    t.Minutes,
+                    t.Seconds);
+                }
+                else
+                {
+                    answer = string.Format("{0:D2}:{1:D2}:{2:D2}",
+                    t.Hours,
+                    t.Minutes,
+                    t.Seconds);
+                }
+
+                <span> <b>@Localize.T("Total Time Spent"):</b> @answer</span>
+
+        }
+        else if (Model.AllTotalClockedInSeconds != null)
+        {
+            <span><b>@Localize.T("Total Time Spent"):</b> 00:00:00</span>
+
+        }
+    </span>
+    <span class="emp_time_clock_total_info_right">
+        @if (Model.AllTotalClockedInSeconds != null && Model.AllTotalClockedInSeconds.CountTotal > 0)
+            {
+                TimeSpan t = TimeSpan.FromSeconds(Convert.ToDouble(Model.AllTotalClockedInSeconds.CountTotal));
+
+            <span><b>@Localize.T("Total Hours"):</b> @string.Format("{0:00.00}", (t.TotalHours + (t.Minutes > 0 ? t.Minutes / 60 : 0))) hrs</span>
+
+        }
+        else if (Model.AllTotalClockedInSeconds != null)
+        {
+            <span> <b>@Localize.T("Total Hours"):</b> 00.00 hrs</span>
+        }
+    </span>
+</div>
+
+<div class="AgentListPagination">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount == 1)
+            {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">@Localize.T("Previous")</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="LoadUserTimeClock(@(ViewBag.PageNumber), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">1</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationrightButtons disabledBtn">@Localize.T("Next")</button>
+                </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadUserTimeClock(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@Localize.T("Previous")</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadUserTimeClock(1, '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadUserTimeClock(2, '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationrightButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="LoadUserTimeClock(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@Localize.T("Next")</button>
+                </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadUserTimeClock(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@Localize.T("Previous")</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadUserTimeClock(1, '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadUserTimeClock(2, '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="LoadUserTimeClock(3, '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationrightButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="LoadUserTimeClock(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@Localize.T("Next")</button>
+                </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadUserTimeClock(@(ViewBag.PageNumber-1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@Localize.T("Previous")</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadUserTimeClock(@(ViewBag.PageNumber-2), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@(ViewBag.PageNumber - 2)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadUserTimeClock(@(ViewBag.PageNumber-1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="LoadUserTimeClock(@(ViewBag.PageNumber), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationrightButtons disabledBtn" onclick="LoadUserTimeClock()">@Localize.T("Next")</button>
+                    </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadUserTimeClock(@(ViewBag.PageNumber-1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@Localize.T("Previous")</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadUserTimeClock(@(ViewBag.PageNumber+1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadUserTimeClock(@(ViewBag.PageNumber + 2), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationrightButtons" onclick="LoadUserTimeClock(@(ViewBag.PageNumber+1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@Localize.T("Next")</button>
+                    </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadUserTimeClock(@(ViewBag.PageNumber-1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@Localize.T("Previous")</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadUserTimeClock(@(ViewBag.PageNumber-1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadUserTimeClock(@(ViewBag.PageNumber + 1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationrightButtons" onclick="LoadUserTimeClock(@(ViewBag.PageNumber+1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@Localize.T("Next")</button>
+                    </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadUserTimeClock(@(ViewBag.PageNumber-1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@Localize.T("Previous")</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadUserTimeClock(@(ViewBag.PageNumber - 1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="LoadUserTimeClock(@(ViewBag.PageNumber), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="LoadUserTimeClock(@(ViewBag.PageNumber + 1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationrightButtons" onclick="LoadUserTimeClock(@(ViewBag.PageNumber+1), '@(ViewBag.order)', @ViewBag.empid, '@ViewBag.UserId')">@Localize.T("Next")</button>
+                    </div>
+            }
+        }
+    </div>
+    @if (ViewBag.PageCount > 0)
+            {
+        <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+    }
+</div>
+
+
+<div class="displayNone">
+    <a href="" class="ClockMapPopUp"></a>
+</div>

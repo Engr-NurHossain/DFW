@@ -1,0 +1,317 @@
+﻿@model HS.Entities.KnowledgebaseListModel
+@{
+    Layout = null;
+}
+@using HS.Framework;
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+<link href="/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet">
+
+<script>
+    var pagenumber = '@ViewBag.PageNumber';
+    var SearchText = '@ViewBag.SearchText';
+    var IsAdmin = '@ViewBag.IsAdmin';
+    var Flagged = '@ViewBag.Flagged';
+    var CheckContact = '@ViewBag.CheckContact';
+    var TagList = '@Html.Raw(Json.Encode(@ViewBag.TagList))';
+    TagList = JSON.parse(TagList);
+    var CheckNavList = '@Html.Raw(Json.Encode(@ViewBag.CheckNav))';
+    CheckNavList = JSON.parse(CheckNavList);
+    var Deleted = '@ViewBag.IsDeleted';
+    var totalflagcount = '@Model.TotalKnFlagCount';
+    var count = @Model.KnowledgebaseList.Count;
+</script>
+<script src="~/Content/Js/KnowledgeBase/ClassroomList.js"></script>
+<input type="hidden" id="OrderId" value="@ViewBag.Order" />
+<input type="hidden" id="page" value="@ViewBag.PageNumber" />
+
+
+
+<table class="loadticketreportlist_table app_date_report_list_table know_base_table" id="know_base_table">
+    <thead class="table-head-border">
+        <tr>
+
+            <th class="thead-th-style">
+                <div>@Localize.T("Title")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock3" data-val="ascending/title"></i> <i class="fa fa-angle-down icon_sort_timeclock3" data-val="descending/title"></i></div>
+            </th>
+            <th class="thead-th-style last_col">
+                <div>@Localize.T("Tags")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock3" data-val="ascending/tag"></i> <i class="fa fa-angle-down icon_sort_timeclock3" data-val="descending/tag"></i></div>
+            </th>
+            <th class="thead-th-style last_col">
+                <div>@Localize.T("Assigned To")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock3" data-val="ascending/assignto"></i> <i class="fa fa-angle-down icon_sort_timeclock3" data-val="descending/assignto"></i></div>
+            </th>
+            <th class="thead-th-style last_col">
+                <div>@Localize.T("Assigned By")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock3" data-val="ascending/assignedby"></i> <i class="fa fa-angle-down icon_sort_timeclock3" data-val="descending/assignedby"></i></div>
+            </th>
+            <th class="thead-th-style last_col">
+                <div>@Localize.T("Completed Date")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock3" data-val="ascending/completedate"></i> <i class="fa fa-angle-down icon_sort_timeclock3" data-val="descending/completedate"></i></div>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+
+
+        @foreach (var item in Model.KnowledgebaseList)
+        {
+            string fullurl = string.Empty;
+            if (item.IsDocumentLibrary)
+            {
+                fullurl = string.Concat(AppConfig.SiteDomain, "/documentlibrary/Id=" + item.Id);
+            }
+            else
+            {
+                fullurl = string.Concat(AppConfig.SiteDomain, "/knowledgebase/Id=" + item.Id);
+            }
+
+
+            <tr class="tr-style">
+                <td class="table-body-td-style" valign="top">
+                    <div class="ticket_list_partial_device_header">@Localize.T("Title")<span>:</span></div>
+                    <div class="ticket_list_partial_device_info kn_details">
+                        @if (item.AttachmentCount > 0)
+                        {
+                            <span title="Has @item.AttachmentCount attachment(s)" class="hasattach"><i class="fa fa-paperclip" aria-hidden="true"></i></span>
+                        }
+                        <a class="cus-anchor kn_ques" onclick="ShowFullMessage('@fullurl')">@item.Title</a> <a class="cus-anchor kn_ques" style="position:relative;" data-url="@fullurl" onclick="CopyLink(this)"><i class="fa fa-copy" aria-hidden="true" title="Click To Copy Link"></i><span style="display:none;" class="lblcomment">Link Copied</span></a>
+                        @if (item.IsFavourite)
+                        {
+                            <i class="fa fa-heart red" aria-hidden="true"></i> <br />
+                        }
+                        <br />
+
+                        @if (item.KnowledgeWeblinkList != null && item.KnowledgeWeblinkList.Count > 0)
+                        {
+                            if (item.KnowledgeWeblinkList.Where(x => x.IsRelated == false).Count() > 0)
+                            {
+                                <div class="rect_outer">
+                                    <span>Hyperlinks: </span>
+                                    @foreach (var data in item.KnowledgeWeblinkList.Where(x => x.IsRelated == false))
+                                    {
+                                        <a class="rect_block_green" href="@data.Link" target="_blank"><span>@data.Title</span></a>
+                                    }
+                                </div>
+                            }
+                            if (item.KnowledgeWeblinkList.Where(x => x.IsRelated).Count() > 0)
+                            {
+                                <div class="rect_outer">
+                                    @if (item.KnowledgeWeblinkList.Where(x => x.IsRelated).Count() > 0)
+                                    {
+
+                                        <span>Related Articles: </span>
+                                        foreach (var data in item.KnowledgeWeblinkList.Where(x => x.IsRelated))
+                                        {
+                                            <a class="rect_block_green" href="@data.Link" target="_blank">
+                                                <span>
+                                                    @if (!string.IsNullOrWhiteSpace(data.RelatedArticalTitle))
+                                                    {
+                                                        @data.RelatedArticalTitle
+                                                    }
+                                                    else
+                                                    {
+                                                        @data.Link
+                                                    }
+                                                </span>
+                                            </a>
+                                        }
+                                    }
+                                </div>
+                            }
+                        }
+
+                    </div>
+                </td>
+                <td class="table-body-td-style" valign="top">
+                    <div class="ticket_list_partial_device_header">@Localize.T("Tags")<span>:</span></div>
+                    <div class="ticket_list_partial_device_info knowledge_react">
+                        @*<span>@item.Tags</span>*@
+                        @{
+                            if (!string.IsNullOrWhiteSpace(item.Tags))
+                            {
+                                var NameFile = item.Tags.Split(',');
+                                foreach (var tag in NameFile)
+                                {
+                                    <span class="rect_block">@tag.Replace("&amp;", "&")</span>
+                                }
+                            }
+                        }
+                    </div>
+                </td>
+                <td class="table-body-td-style" valign="top">
+                    <div class="ticket_list_partial_device_header">@Localize.T("Assigned To")<span>:</span></div>
+                    <div class="ticket_list_partial_device_info">
+                        @if (item.IsDefault)
+                        {
+                            <i class="fa fa-check-circle-o" style="color: #2ca01c; font-size: 17px;" aria-hidden="true" title="Completed"></i>
+                        }
+                        else
+                        {
+                            <i class="fa fa-circle-o" style="font-size: 17px;" aria-hidden="true" title="Not Completed"></i>
+                        }
+                        <span>@item.AssignTo</span>
+                    </div>
+                </td>
+                <td class="table-body-td-style" valign="top">
+                    <div class="ticket_list_partial_device_header">@Localize.T("Assigned By")<span>:</span></div>
+                    <div class="ticket_list_partial_device_info">
+                        <span>
+                            @item.UpadtedBy
+                            <br />
+                            <span class="kn_updated">on @item.LastUpdatedDate.ToString("M/dd/yy")</span>
+                        </span>
+                    </div>
+                </td>
+
+                <td class="table-body-td-style" valign="top">
+                    <div class="ticket_list_partial_device_header">@Localize.T("Completed Date")<span>:</span></div>
+                    <div class="ticket_list_partial_device_info">
+                        <span>@item.EndDate.ToString("M/dd/yy")</span>
+                    </div>
+                </td>
+
+            </tr>
+
+        }
+    </tbody>
+</table>
+
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="loadcompletedclassroom(@(ViewBag.PageNumber),'@(ViewBag.order)','','',IsAdmin)">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="loadcompletedclassroom(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)','','',IsAdmin)">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton  @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="loadcompletedclassroom(1, '@(ViewBag.order)','','',IsAdmin)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="loadcompletedclassroom(2,'@(ViewBag.order)','','',IsAdmin)">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="loadcompletedclassroom(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@(ViewBag.order)','','',IsAdmin)">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="loadcompletedclassroom(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)','','',IsAdmin)">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="loadcompletedclassroom(1,'@(ViewBag.order)','','',IsAdmin)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="loadcompletedclassroom(2,'@(ViewBag.order)','','',IsAdmin)">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="loadcompletedclassroom(3,'@(ViewBag.order)','','',IsAdmin)">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="loadcompletedclassroom(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@(ViewBag.order)','','',IsAdmin)">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="loadcompletedclassroom(@(ViewBag.PageNumber-1),'@(ViewBag.order)','','',IsAdmin)">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="loadcompletedclassroom(@(ViewBag.PageNumber-2),'@(ViewBag.order)','','',IsAdmin)">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="loadcompletedclassroom(@(ViewBag.PageNumber-1),'@(ViewBag.order)','','',IsAdmin)">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="loadcompletedclassroom(@(ViewBag.PageNumber),'@(ViewBag.order)','','',IsAdmin)">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="loadcompletedclassroom()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="loadcompletedclassroom(@(ViewBag.PageNumber-1),'@(ViewBag.order)','','',IsAdmin)">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="loadcompletedclassroom(@(ViewBag.PageNumber+1),'@(ViewBag.order)','','',IsAdmin)">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="loadcompletedclassroom(@(ViewBag.PageNumber + 2),'@(ViewBag.order)','','',IsAdmin)">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="loadcompletedclassroom(@(ViewBag.PageNumber+1),'@(ViewBag.order)','','',IsAdmin)">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="loadcompletedclassroom(@(ViewBag.PageNumber-1),'@(ViewBag.order)','','',IsAdmin)">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="loadcompletedclassroom(@(ViewBag.PageNumber-1),'@(ViewBag.order)','','',IsAdmin)">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="loadcompletedclassroom(@(ViewBag.PageNumber + 1),'@(ViewBag.order)','','',IsAdmin)">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="loadcompletedclassroom(@(ViewBag.PageNumber+1),'@(ViewBag.order)','','',IsAdmin)">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="loadcompletedclassroom(@(ViewBag.PageNumber-1),'@(ViewBag.order)','','',IsAdmin)">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="loadcompletedclassroom(@(ViewBag.PageNumber - 1),'@(ViewBag.order)','','',IsAdmin)">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="loadcompletedclassroom(@(ViewBag.PageNumber),'@(ViewBag.order)','','',IsAdmin)">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="loadcompletedclassroom(@(ViewBag.PageNumber + 1),'@(ViewBag.order)','','',IsAdmin)">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="loadcompletedclassroom(@(ViewBag.PageNumber+1),'@(ViewBag.order)','','',IsAdmin)">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+<div style="display:none">
+    <a href="" class="KnowledgeBaseMessage">@Localize.T("KnowledgeBase Message")</a>
+</div>

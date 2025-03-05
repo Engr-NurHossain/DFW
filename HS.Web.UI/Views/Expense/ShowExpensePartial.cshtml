@@ -1,0 +1,114 @@
+﻿@{
+    Layout = null;
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+<link href="~/Content/Css/Expense/ShowExpensePartial.css" rel="stylesheet" />
+<script>
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+
+    var MakePaymentByBillId = function (BillId) {
+
+    }
+    var MakePayment = function () {
+        OpenTopToBottomModal("@(AppConfig.DomainSitePath)/Expense/MakePayment/");
+    }
+
+    var my_date_format = function (input) {
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var NavigatePageListing = function (pagenumber, order) {
+      
+        var filterText = $("#BillingType").val();
+        var searchText = $(".SearchExp").val();
+        $(".vendor-bill-list").load(domainurl + "/Expense/VendorBillList", { PageNumber: pagenumber, SearchText: searchText, Order: order, filterText: filterText });
+    }
+    var pageno = '@ViewBag.PageNumber';
+    var ExpPaging = function (pageNumber, order) {
+        var searchText = $(".SearchExp").val();
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+       $(".Expense-list").html(TabsLoaderText);
+        $(".Expense-list").load(domainurl + "/Expense/ExpenseListPartial/?&PageNumber=" + pageNumber + "&order=" + order + "&SearchText" + searchText);
+      
+    }
+    var Search = function()
+    {
+        console.log("dfs");
+        var searchText = $(".SearchExp").val();
+        var pagenumber = 1;
+        var ExpensedBy = $("#ExpensedBy").val();
+        var ExpenseType = $("#ExpenseType").val();
+        $(".Expense-list").html(TabsLoaderText);
+
+        $(".Expense-list").load(domainurl + "/Expense/ExpenseListPartial/", { PageNumber: pagenumber, SearchText: searchText, ExpensedBy: ExpensedBy, ExpenseType: ExpenseType });
+    }
+    $(document).ready(function () {
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+        $(".Expense-list").html(TabsLoaderText);
+
+        $(".Expense-list").load(domainurl + "/Expense/ExpenseListPartial/", {StartDate: StartDateVal,EndDate:EndDateVal });
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            var searchText = $(".SearchExp").val();
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+            UpdatePtoCookie();
+            $(".Expense-list").html(TabsLoaderText);
+
+            $(".Expense-list").load(domainurl + "/Expense/ExpenseListPartial/", { SearchText: searchText, StartDate: StartDateVal,EndDate:EndDateVal });
+        });
+ 
+    })
+</script>
+
+<div class="show_expense_partial_container">
+    <div class="show_expense_partial_searchbar_container">
+           
+            @*<span>@Localize.T("Sales")</span>*@
+            @*@Html.DropDownList("UserList", (List<SelectListItem>)ViewBag.LeadUserList, new { @class = "form-control select_leaduser UserList", id = "UserList" })*@
+            
+                <input class="form-control SearchExp" placeholder="Search" type="text">
+               
+                    @Html.DropDownList("ExpensedType", ViewBag.ExpenseCategory as List<SelectListItem>, new { @class = "form-control", Id = "ExpenseType" })
+              
+        <div class="input-group add-on">
+            @Html.DropDownList("ExpensedBy", ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control", Id = "ExpensedBy" })
+
+            <div class="input-group-btn">
+                <button class="btn search_bill_btn green_button" id="btnsearchtext" onclick="Search()" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+            </div>
+        </div>
+
+         
+            
+       
+            <button class="btn AddExpenseButton" title="@Localize.T("Add Expense")"><i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" Expense")</button>
+       
+    </div>
+    <div class="expense_billing_searchbar_container vbp_top_margin">
+        <div class="Expense-list">
+
+        </div>
+    </div>
+</div>
+
+

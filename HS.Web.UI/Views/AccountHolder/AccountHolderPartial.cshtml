@@ -1,0 +1,153 @@
+﻿@{
+    Layout = null;
+}
+@model List<HS.Entities.AccountHolder>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+
+@Styles.Render("~/styles/Mmrs")
+@*@Scripts.Render("~/scripts/Mmrs")*@
+<link href="~/Content/Css/AccountHolder/AccountHolderPartial.css" rel="stylesheet" />
+<script>
+    var DataTablePageSize = 50;
+    var selectedDeleteId = 0;
+    var AccHolderDelete = function () {
+        var delitem = selectedDeleteId;
+        $.ajax({
+            url: "@(AppConfig.DomainSitePath)/AccountHolder/DeleteAccHolder",
+            data: { id: delitem },
+            type: "Post",
+            dataType: "Json",
+            success: function (result) {
+                if (result) {
+                    parent.LoadAccountHolder(true);
+                }
+            },
+
+            error: function () {
+            }
+
+        });
+
+    }
+    $(document).ready(function () {
+        parent.$('.close').click(function () {
+            parent.$(".modal-body").html('');
+        })
+        var table = $('#tblAccHolder').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        $(".LoaderWorkingDiv").hide();
+        $(".AddAccHolder").click(function () {
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/AccountHolder/AddAccountHolder");
+        })
+
+        $('#tblAccHolder tbody').on('click', 'tr', function () {
+
+            if ($(this).hasClass('selected')) {
+                $(this).removeClass('selected');
+            }
+            else {
+                table.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+            }
+        });
+
+        $(".item-edit").click(function () {
+            var itemId = $(this).attr('data-id');
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/AccountHolder/AddAccountHolder?id=" + itemId);
+
+        });
+
+        $(".item-delete-panel").click(function () {
+            selectedDeleteId = $(this).attr("data-id");
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this item?", AccHolderDelete);
+        });
+
+        $(".srch-term-acc").keyup(function () {
+            $("#tblAccHolder_filter input").val($(".srch-term-acc").val());
+            $("#tblAccHolder_filter input").trigger('keyup');
+        });
+    })
+</script>
+
+
+
+<div class="page-wrap ahp_container">
+    <div class="container-fluid">
+        <div class="txt-style">
+            <span class="ahp_header">@Localize.T("Account Holder Information")</span>
+            @if (PermissionChekcer.IsPermitted(Permissions.ToolsPermissions.AccountHolderAdd))
+            {
+                <button class="AddAccHolder">
+                    <i class="fa fa-plus-circle" aria-hidden="true"></i>&nbsp;@Localize.T("New")
+                </button>
+            } 
+        </div>
+        <div class="AccHPsearchbardiv">
+            <div class="input-group add-on">
+                <input class="form-control srch-term-acc" placeholder="Find a Account Holder" name="srch-term-acc" @*id="srch-term-acc"*@ type="text">
+                <div class="input-group-btn">
+                    <button class="btn custom-btn green_button" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+                </div>
+            </div>
+        </div>
+        <div class="custom-table">
+            <table class="display" id="tblAccHolder">
+                <thead class="table-head-border ahp_header_hide">
+                    <tr>
+                        <th class="thead-th-style sorting">
+                            @Localize.T("Name")
+                        </th>
+                        <th class="thead-th-style sorting">
+                            @Localize.T("In House")
+                        </th>
+                        <th class="thead-th-style sorting text-right">
+                            @Localize.T("Actions")
+                        </th>
+                    </tr>
+                </thead>
+                @foreach (var item in Model)
+                {
+                    <tr class="tr-style">
+
+                        <td class="table-body-td-style ahp_header_row" valign="top">
+                            <label class="ahp_device_header">@Localize.T("Name")</label>
+                            <span class="ahp_device_info">
+                                <a href="javascript:void(0)" class="item-edit name-anchor-style" data-id="@item.Id">
+                                    @item.Name
+                                </a>
+                            </span>
+                        </td>
+                        <td class="table-body-td-style ahp_header_row" valign="top">
+                            <label class="ahp_device_header">@Localize.T("In House")</label>
+                            @if (item.InHouse == true)
+                            {
+                                <span class="ahp_device_info">@Localize.T("Yes")</span>
+                            }
+                            else
+                            {
+                                <span class="ahp_device_info">@Localize.T("No")</span>
+                            }
+                        </td>
+                        <td class="table-body-td ahp_header_row" valign="top">
+                            <label class="ahp_device_header">@Localize.T("Actions")</label>
+                            @if (PermissionChekcer.IsPermitted(Permissions.ToolsPermissions.AccountHolderDelete))
+                            {
+                                <a href="javascript:void(0)" class="item-delete-panel ahp_device_info" data-id="@item.Id" title="@Localize.T("Delete")">
+                                    <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                </a>
+                            } 
+                        </td>
+                    </tr>
+                }
+            </table>
+        </div>
+    </div>
+</div>

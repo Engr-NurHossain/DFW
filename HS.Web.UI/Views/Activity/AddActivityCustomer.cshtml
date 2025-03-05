@@ -1,0 +1,178 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@model HS.Entities.Activity
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/PikDay/js/Anotherpikaday.js"></script>
+<script src="~/Content/PikDay/js/bootstrap-timepicker.js"></script>
+<link href="~/Content/PikDay/css/bootstrap-timepicker.min.css" rel="stylesheet" />
+<script src="~/Content/Js/Activity/AddActivityCustomer.js"></script>
+<link href="~/Content/Activity/AddActivity.css" rel="stylesheet" />
+
+
+
+<script>
+    var InitializeOpportunityDropdown = function (dropdownitem) {
+        $(dropdownitem).select2({
+            placeholder: 'Opportunity',
+            allowClear: true,
+            minimumInputLength: 1,
+            ajax: {
+                url: domainurl + "/Ticket/GetOpportunityList",
+                dataType: 'json',
+                type: "GET",
+                quietMillis: 50,
+                data: function (term) {
+                    return {
+                        q: term
+                    };
+                },
+                processResults: function (data, params) {
+                    return {
+                        results: $.map(data, function (item) {
+
+                            return {
+                                text: item.OpportunityName,
+                                id: item.OpportunityId
+                            }
+                        })
+                    };
+                }
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $(".add_activity_inner").height(window.innerHeight - $(".add_activity_header").height() - $(".add_activity_footer").height() - 48);
+
+        $("#SaveActivity").click(function () {
+            console.log("hlw");
+            if (CommonUiValidation()) {
+                if ($("#Type").val() != "-1")
+                {
+                    SaveActivity();
+                }
+                else {
+
+                    $("#TypeLabel").removeClass("hidden")
+                }
+
+            }
+        });
+
+        InitializeOpportunityDropdown($('.dropdown_opportunity'), "opportunity");
+        InitializeCustomerDropdown($('.dropdown_customar'), "customer");
+        InitializeCustomerDropdown($('.dropdown_lead'), "lead");
+        $("#Type").change(function ()
+        {
+            if ($("#Type").val() != "-1")
+            {
+                $("#TypeLabel").addClass("hidden")
+            }
+            else {
+                $("#TypeLabel").removeClass("hidden")
+            }
+        })
+
+
+        $("#AssociatedType").change(function () {
+            if ($("#AssociatedType").val() == "Account") {
+                $(".OpportunityDiv").addClass("hidden");
+                $(".AccountDiv").removeClass("hidden");
+                $(".LeadDiv").addClass("hidden");
+            } else if ($("#AssociatedType").val() == "Lead") {
+                $(".OpportunityDiv").addClass("hidden");
+                $(".AccountDiv").addClass("hidden");
+                $(".LeadDiv").removeClass("hidden");
+            } else if ($("#AssociatedType").val() == "Opportunity") {
+                $(".OpportunityDiv").removeClass("hidden");
+                $(".AccountDiv").addClass("hidden");
+                $(".LeadDiv").addClass("hidden");
+            } else {
+                $(".OpportunityDiv").addClass("hidden");
+                $(".AccountDiv").addClass("hidden");
+                $(".LeadDiv").addClass("hidden");
+            }
+        });
+
+
+    });
+    $(window).resize(function () {
+        $(".add_activity_inner").height(window.innerHeight - $(".add_activity_header").height() - $(".add_activity_footer").height() - 79);
+    });
+</script>
+
+<div class="hidden">
+    <input type="hidden" id="ActivityId" value="@Model.Id" />
+    <input type="hidden" id="ActivityGuid" value="@Model.ActivityId" />
+</div>
+
+<div class="AddActivityContainer">
+    <div class="add_activity_header">@Localize.T("Add Activity")</div>
+    <div class="add_activity_inner">
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Activity Type")</span>
+            @Html.DropDownListFor(x => x.ActivityType, ViewBag.ActivityTypeList as List<SelectListItem>, new { @class = "form-control", id = "Type" })
+            <label rel="Type" id="TypeLabel" class="label hidden red position-absolute">*@Localize.T("Activity Type Required")</label>
+        </div>
+
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Assigned To")</span>
+            @Html.DropDownListFor(x => x.AssignedTo, ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control" })
+        </div>
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Due Date")</span>
+            <div class="input_group_for_date add-on" id="DueDateCustom">
+                <input type="text" id="DueDate" placeholder="MM/DD/YY" class="form-control" value="@((Model.DueDate.HasValue && Model.DueDate.Value != new DateTime())? Model.DueDate.Value.ToString("MM/dd/yy"):"")" />
+
+                <div class="input-group-btn">
+                    <btn class="btn">
+                        <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                    </btn>
+                </div>
+            </div>
+
+        </div>
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Status")</span>
+            @Html.DropDownListFor(x => x.Status, ViewBag.ActivityStatusList as List<SelectListItem>, new { @class = "form-control" })
+        </div>
+        <div class="form-group clearfix">
+            <span class="span_style">@Localize.T("Associated With")</span>
+            @Html.DropDownListFor(x => x.AssociatedType, ViewBag.AssociatedWithList as List<SelectListItem>, new { @class = "form-control" })
+        </div>
+        <div class="form-group OpportunityDiv @(Model.AssociatedType != "Opportunity" ? "hidden" : "")">
+            <span class="span_style">@Localize.T("Opportunity")</span>
+            @Html.DropDownListFor(x => x.AssociatedWith, (List<SelectListItem>)ViewBag.OpportunityList, new { @class = "form-control dropdown_opportunity", id = "OpportunityId" })
+        </div>
+        <div class="form-group LeadDiv @(Model.AssociatedType != "Lead" ? "hidden" : "")">
+            <span class="span_style">@Localize.T("Lead")</span>
+            @Html.DropDownListFor(x => x.AssociatedWith, (List<SelectListItem>)ViewBag.LeadList, new { @class = "form-control dropdown_lead", id = "LeadId" })
+        </div>
+        <div class="form-group AccountDiv @(Model.AssociatedType != "Account" ? "hidden" : "")">
+            <span class="span_style">@Localize.T("Account")</span>
+            @Html.DropDownListFor(x => x.AssociatedWith, (List<SelectListItem>)ViewBag.CustomerList, new { @class = "form-control dropdown_customar", id = "AccountId" })
+        </div>
+        <div class="form-group clearfix other_field">
+            <span class="span_style">@Localize.T("Note")</span>
+            @Html.TextAreaFor(x => x.Note, new { @class = "form-control", placeholder = "Note" })
+        </div>
+    </div>
+    <div class="add_activity_footer">
+        <div class="delete_footer">
+            @if (Model.Id > 0)
+            {
+                <input type="button" value="Delete" id="btnDeleteActivity" onclick="DeleteActivity('@Model.Id','true')" />
+            }
+        </div>
+        <div class="save_footer">
+
+            <input type="button" value="Save" id="SaveActivity" />
+
+        </div>
+
+    </div>
+</div>

@@ -1,0 +1,147 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.EmployeeOperations
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@Styles.Render("~/styles/AddCustomer")
+<script src="~/Content/Js/Site/Validation.js"></script>
+<style>
+    .add_site_location_inner .form-group {
+        width: 100%;
+        float: left;
+        padding: 0px 15px;
+        margin-top: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 5px !important;
+    }
+
+    .m-l-70 {
+        margin-left: 70px;
+    }
+
+
+    element.style {
+    }
+
+    .add_site_location_footer #SaveHoliday {
+        background-color: #2ca01c !important;
+        color: #fff !important;
+        border-color: #2ca01c !important;
+        float: right !important;
+    }
+</style>
+<script>
+    var Datepicker;
+    var isflag = true;
+    var SaveAvailability = function () {
+        if (isflag == false) {
+            OpenErrorMessageNew("Warning!", "Please enter end time bigger then start time.", function () { });
+            return false;
+        }
+        if (CommonUiValidation()) {
+            var url = domainurl + "/Hr/SaveEmployeeOperationTime";
+            var param = JSON.stringify({
+                SelectedDate: $("#SelectedDate").val(),
+                OperationStartTime: $("#OperationStartTime").val(),
+                OperationEndTime: $("#OperationEndTime").val(),
+                EmployeeId: $("#EmployeeId").val(),
+                Notes: $("#Notes").val(),
+                IsDayOff: $("#DayOffVal").is(":checked")
+            });
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        OpenRightToLeftModal(false);
+                        parent.LoadHrTab();
+                    }
+                    else {
+                        OpenErrorMessageNew("Error", "Sorry! Date already exist.");
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+        }
+    }
+    var changeavailibilitytime = function () {
+        var st = $("#OperationStartTime").val();
+        var et = $("#OperationEndTime").val();
+        if (st.indexOf(':') > -1) {
+            st = parseInt(st.split(':')[0]);
+        }
+        else {
+            st = 0;
+        }
+        if (et.indexOf(':') > -1) {
+            et = parseInt(et.split(':')[0]);
+        }
+        else {
+            et = 0;
+        }
+        if (st >= et) {
+            isflag = false;
+        }
+        else {
+            isflag = true;
+        }
+    }
+
+    $(document).ready(function () {
+        Datepicker = new Pikaday({
+            format: 'MM/DD/YYYY',
+            field: $('.availability')[0],
+            firstDay: 1
+        });
+        $(".add_site_location_inner_height").height(window.innerHeight - 94);
+    });
+    $(window).resize(function () {
+        $(".add_site_location_inner_height").height(window.innerHeight - 94);
+    });
+</script>
+<div class="add_site_location_container">
+    <div class="add_site_location_header">
+        @Localize.T("Update Availability")
+    </div>
+
+    @Html.HiddenFor(x => x.EmployeeId)
+    <div class="add_site_location_inner_height">
+        <div class="add_site_location_inner">
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Date")</span>
+                @Html.TextBoxFor(x => x.SelectedDate, "{0:MM/dd/yyyy}", new { @class = "form-control availability", datarequired = "true", @disabled = "disabled", @readonly = "readonly" })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Start Time")</span>
+                @Html.DropDownListFor(x => x.OperationStartTime, ViewBag.SchedularTime as List<SelectListItem>, new { @class = "form-control", onchange = "changeavailibilitytime()", datarequired = "true" })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("End Time")</span>
+                @Html.DropDownListFor(x => x.OperationEndTime, ViewBag.SchedularTime as List<SelectListItem>, new { @class = "form-control", onchange = "changeavailibilitytime()", datarequired = "true" })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Notes")</span>
+                @Html.TextBoxFor(x => x.Notes, new { @class = "form-control" })
+            </div>
+            <div class="form-group clearfix">
+                <b>
+                    <input type="checkbox" id="DayOffVal" @(Model.IsDayOff.HasValue && Model.IsDayOff.Value ? "checked" : "") />
+                    <span>@Localize.T("Day Off")</span>
+                </b>
+            </div>
+        </div>
+    </div>
+    <div class="add_site_location_footer">
+        <button class="btn btn-success" id="SaveAvailability" onclick="SaveAvailability()"><i class="fa fa-save" aria-hidden="true"></i> @Localize.T("Save")</button>
+    </div>
+</div>

@@ -1,0 +1,664 @@
+﻿@model HS.Entities.ResturantOrderCustomModel
+@{
+    Layout = null;
+    var currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+    var subtotal = 0.0;
+    var taxtotal = 0.0;
+    var total = 0.0;
+    var stockchange = false;
+    var disval = 0.0;
+    var totalsub = 0.0;
+}
+<link href="~/Content/Css/Order/OrderDetailPartial.css" rel="stylesheet" />
+<style>
+    .order_detail_anchor {
+        cursor: pointer;
+        color: #2ca01c;
+    }
+
+        .order_detail_anchor:hover {
+            color: #2ca01c;
+            text-decoration: underline;
+        }
+</style>
+<script>
+    var ordstatus = '@Model.ResturantOrder.Status';
+    var accepttime = '@Model.ResturantOrder.AcceptTime';
+    var stockItem = [];
+    var HasstockItem = [];
+    var orderid = '@Model.ResturantOrder.Id';
+    var SubmitResturantCustomerOrder = function (orderid) {
+        $(".chk_stock_item").each(function () {
+            if ($(this).prop("checked") == false) {
+                stockItem.push($(this).attr('data-id'));
+            }
+            else {
+                HasstockItem.push($(this).attr('data-id'));
+            }
+        })
+        var url = "/Order/SubmitResturantCustomerOrder";
+        var param = JSON.stringify({ orderid: orderid, orderstatus: $("#ResturantOrder_OrderType").val(), reason: $("#text_reject_note").val(), accepttime: $("#accept_time").val(), stockItem: stockItem, HasstockItem: HasstockItem });
+        $.ajax({
+        type: "POST",
+            url: url,
+            data: param,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+            success: function (data) {
+                CloseTopToBottomModal();
+                LoadOrdersTab();
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            $(".loader-div").hide();
+            console.log(errorThrown);
+        }
+    });
+    }
+    function GetCardType(number) {
+        console.log(number)
+        // visa
+        var re = new RegExp("^4");
+        if (number.match(re) != null) {
+            //$(".card_number_addon").attr("style", "display:block;");
+            $("#card_type_img").attr('src', '/Content/img/visa.png');
+            $("#card_type_img_" + number).attr('src', '/Content/img/visa.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Visa";
+        }
+        // Mastercard
+        // Updated for Mastercard 2017 BINs expansion
+        if (/^(5[1-5][0-9]{14}|2(22[1-9][0-9]{12}|2[3-9][0-9]{13}|[3-6][0-9]{14}|7[0-1][0-9]{13}|720[0-9]{12}))$/.test(number)) {
+            //$(".card_number_addon").attr("style", "display:block;");
+            $("#card_type_img").attr('src', '/Content/img/mastercard.png');
+            $("#card_type_img_" + number).attr('src', '/Content/img/mastercard.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Mastercard";
+        }
+        //Previous one
+        if (/^5[1-5][0-9]{14}$/.test(number)) {
+            //$(".card_number_addon").attr("style", "display:block;");
+            $("#card_type_img").attr('src', '/Content/img/mastercard.png');
+            $("#card_type_img_" + number).attr('src', '/Content/img/mastercard.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Mastercard";
+        }
+        // AMEX
+        re = new RegExp("^3[47]");
+        if (number.match(re) != null) {
+            //$(".card_number_addon").attr("style", "display:block;");
+            $("#card_type_img").attr('src', '/Content/img/AmericanExpress.png');
+            $("#card_type_img_" + number).attr('src', '/Content/img/AmericanExpress.png');
+            $("#CardNumber").attr('maxlength', '18');
+            $("#card_type_img").addClass('AMEX');
+            return "AMEX";
+        }
+        // Discover
+        re = new RegExp("^(6011|622(12[6-9]|1[3-9][0-9]|[2-8][0-9]{2}|9[0-1][0-9]|92[0-5]|64[4-9])|65)");
+        if (number.match(re) != null) {
+            //$(".card_number_addon").attr("style", "display:block;");
+            $("#card_type_img").attr('src', '/Content/img/discover.png');
+            $("#card_type_img_" + number).attr('src', '/Content/img/discover.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Discover";
+        }
+        // Diners
+        re = new RegExp("^36");
+        if (number.match(re) != null) {
+            //$(".card_number_addon").attr("style", "display:block;");
+            $("#card_type_img").attr('src', '/Content/img/diners.png');
+            $("#card_type_img_" + number).attr('src', '/Content/img/diners.png');
+            $("#CardNumber").attr('maxlength', '17');
+            return "Diners";
+        }
+        // Diners - Carte Blanche
+        re = new RegExp("^30[0-5]");
+        if (number.match(re) != null) {
+            //$(".card_number_addon").attr("style", "display:block;");
+            $("#card_type_img").attr('src', '/Content/img/diners.png');
+            $("#card_type_img_" + number).attr('src', '/Content/img/diners.png');
+            $("#CardNumber").attr('maxlength', '17');
+            return "Diners - Carte Blanche";
+        }
+        // JCB
+        re = new RegExp("^35(2[89]|[3-8][0-9])");
+        if (number.match(re) != null) {
+            //$(".card_number_addon").attr("style", "display:block;");
+            $("#card_type_img").attr('src', '/Content/img/jcb.png');
+            $("#card_type_img_" + number).attr('src', '/Content/img/jcb.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "JCB";
+        }
+        // Visa Electron
+        re = new RegExp("^(4026|417500|4508|4844|491(3|7))");
+        if (number.match(re) != null) {
+            //$(".card_number_addon").attr("style", "display:block;");
+            $("#card_type_img").attr('src', '/Content/img/visa.png');
+            $("#card_type_img_" + number).attr('src', '/Content/img/visa.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Visa Electron";
+        }
+        re = new RegExp("^5");
+        if (number.match(re) != null) {
+            //$(".card_number_addon").attr("style", "display:block;");
+            $("#card_type_img").attr('src', '/Content/img/mastercard.png');
+            $("#card_type_img_" + number).attr('src', '/Content/img/mastercard.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Mastercard";
+        }
+        return "";
+    }
+    $(document).ready(function () {
+        $(".order_detail_height").height(window.innerHeight - 95);
+        if (ordstatus.toLowerCase() == "received" || ordstatus == "") {
+            $("#ResturantOrder_OrderType").val("Pending");
+        }
+        else {
+            $("#ResturantOrder_OrderType").val(ordstatus);
+        }
+        if (typeof ($("#ResturantOrder_OrderType").val()) != "undefined" && $("#ResturantOrder_OrderType").val() != null && $("#ResturantOrder_OrderType").val().toLowerCase() == "rejected") {
+            $(".reject_note_div").removeClass("hidden");
+        }
+        else {
+                $(".reject_note_div").addClass("hidden");
+        }
+        if (typeof ($("#ResturantOrder_OrderType").val()) != "undefined" && $("#ResturantOrder_OrderType").val() != null && $("#ResturantOrder_OrderType").val().toLowerCase() == "accepted") {
+            $(".accept_time_div").removeClass("hidden");
+            $("#accept_time").val(accepttime);
+        }
+        else {
+                $(".accept_time_div").addClass("hidden");
+            }
+        $("#ResturantOrder_OrderType").change(function () {
+            if ($(this).val().toLowerCase() == "rejected") {
+                $(".reject_note_div").removeClass("hidden");
+            }
+            else {
+                $(".reject_note_div").addClass("hidden");
+            }
+            if ($(this).val().toLowerCase() == "accepted") {
+                $(".accept_time_div").removeClass("hidden");
+            }
+            else {
+                $(".accept_time_div").addClass("hidden");
+            }
+        })
+        $(".card_img_load").each(function () {
+            GetCardType($(this).attr("data-card"));
+        })
+        $(".map_deliveryLocation").load("/Order/GetDeliveryRouteByOrderId?id=" + orderid);
+    })
+</script>
+<div class="order_detail_header">Order #@ViewBag.orderid</div>
+<div class="order_detail_height">
+    <div class="order_detail_container">
+        <div class="left_order_detail_customer_block">
+            <div class="order_detail_customer_header">Order Detail</div>
+            <div class="order_detail_customer_content">
+                <table>
+                    @if (!string.IsNullOrWhiteSpace(Model.ResturantOrder.RestaurantLocation))
+                    {
+                        var sploc = Model.ResturantOrder.RestaurantLocation.Split('~');
+                        if (sploc.Length == 4)
+                        {
+                            <tr>
+                                <td>
+                                    Location <span>: </span>
+                                </td>
+                                <td>
+                                    <span>@sploc[1], @sploc[2]</span>
+                                    <a style="float:right;" href="/Order/GetRestaurantMapUrl?loc=@Model.ResturantOrder.RestaurantLocation" target="_blank"><img src="~/Content/img/location.png" /></a>
+                                </td>
+                            </tr>
+                        }
+                        else if (sploc.Length == 3)
+                        {
+                            <tr>
+                                <td>
+                                    Location <span>: </span>
+                                </td>
+                                <td>
+                                    <span>@sploc[1], @sploc[2]</span>
+                                    <a style="float:right;" href="https://www.google.com/maps?q=@Model.ResturantOrder.RestaurantLocation.Replace("~", "+").Replace(" ", "+")" target="_blank"><img src="~/Content/img/location.png" /></a>
+                                </td>
+                            </tr>
+                        }
+                        else if (sploc.Length > 1)
+                        {
+                            <tr>
+                                <td>
+                                    Location <span>: </span>
+                                </td>
+                                <td>
+                                    <span>@Model.ResturantOrder.RestaurantLocation</span>
+                                    <a style="float:right;" href="https://www.google.com/maps?q=@Model.ResturantOrder.RestaurantLocation.Replace("~", "+").Replace(" ", "+")" target="_blank"><img src="~/Content/img/location.png" /></a>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            <tr>
+                                <td>
+                                    Location <span>: </span>
+                                </td>
+                                <td>
+                                    <span>@Model.WebsiteLocation.City, @Model.WebsiteLocation.State</span>
+                                    <a style="float:right;" href="https://www.google.com/maps?q=@Model.ResturantOrder.RestaurantLocation.Replace("~", "+").Replace(" ", "+")" target="_blank"><img src="~/Content/img/location.png" /></a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td>
+                                Location <span>: </span>
+                            </td>
+                            <td>
+                                <span>@Model.WebsiteLocation.City, @Model.WebsiteLocation.State</span>
+                                <a style="float:right;" href="https://www.google.com/maps?q=@Model.ResturantOrder.RestaurantLocation.Replace("~", "+").Replace(" ", "+")" target="_blank"><img src="~/Content/img/location.png" /></a>
+                            </td>
+                        </tr>
+                    }
+
+
+                    <tr>
+                        <td>
+                            Order Date <span> : </span>
+                        </td>
+                        <td>
+                            @HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.CreatedDate).ToString("MM/dd/yyyy") @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.CreatedDate).ToString("hh:mm tt"))
+                        </td>
+                    </tr>
+                    @if (Model.ResturantOrder.Status.ToLower() == "accepted" && Model.ResturantOrder.AcceptDate.HasValue && Model.ResturantOrder.AcceptDate.Value != new DateTime())
+                    {
+                        <tr>
+                            <td>
+                                Original @Model.ResturantOrder.OrderType Date <span>: </span>
+                            </td>
+                            <td>
+                                @HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.OrderDate.Value).ToString("MM/dd/yyyy") @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.OrderDate.Value).ToString("hh:mm tt"))
+                            </td>
+                        </tr>
+                    }
+                    <tr>
+                        <td>
+                            @Model.ResturantOrder.OrderType Date <span>: </span>
+                        </td>
+                        @if (Model.ResturantOrder.Status.ToLower() != "pending" && Model.ResturantOrder.AcceptDate.HasValue && Model.ResturantOrder.AcceptDate.Value != new DateTime())
+                        {
+                            <td>
+                                @HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.AcceptDate.Value).ToString("MM/dd/yyyy") @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.AcceptDate.Value).ToString("hh:mm tt"))
+                            </td>
+                        }
+                        else
+                        {
+                            <td>
+                                @HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.OrderDate.Value).ToString("MM/dd/yyyy") @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.OrderDate.Value).ToString("hh:mm tt"))
+                            </td>
+                        }
+                    </tr>
+
+                    <tr>
+                        <td>
+                            Order Type <span>: </span>
+                        </td>
+                        <td>
+                            @Model.ResturantOrder.OrderType
+                        </td>
+                    </tr>
+                    @{
+                        if (!string.IsNullOrWhiteSpace(Model.ResturantOrder.PaymentMethod))
+                        {
+                            <tr>
+                                <td>
+                                    Payment Method <span>: </span>
+                                </td>
+                                <td>
+                                    @Model.ResturantOrder.PaymentMethod
+                                </td>
+                            </tr>
+                        }
+                    }
+                    @{
+                        if (!string.IsNullOrWhiteSpace(Model.ResturantOrder.PaymentMethod) && Model.ResturantOrder.PaymentMethod.ToLower() == "credit card" && !string.IsNullOrWhiteSpace(Model.ResturantOrder.CardProfile))
+                        {
+                            <tr>
+                                <td>
+                                    Payment Profile <span>: </span>
+                                </td>
+                                <td>
+                                    @Model.ResturantOrder.CardProfile <span><img src="~/Content/Images/no_card_image.jpg" class="card_img_load" id="card_type_img_@Model.ResturantOrder.CardNumber" data-card="@Model.ResturantOrder.CardNumber" style="height:20px;" /></span>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    @{
+                        if (!string.IsNullOrWhiteSpace(Model.ResturantOrder.Notes))
+                        {
+                            <tr>
+                                <td>
+                                    Note for Restaurant <span>: </span>
+                                </td>
+                                <td>
+                                    @Model.ResturantOrder.Notes
+                                </td>
+                            </tr>
+                        }
+                    }
+                    <tr>
+                        <td>
+                            Order Status <span>: </span>
+                        </td>
+                        <td>
+                            @if (Model.ResturantOrder.IsDeleted == true)
+                            {
+                                <span>Cancelled</span>
+                            }
+                            else
+                            {
+                                @Html.DropDownListFor(x => x.ResturantOrder.OrderType, ViewBag.OrderStatus as List<SelectListItem>, new { @class = "form-control" })
+                            }
+                        </td>
+                    </tr>
+                    <tr class="reject_note_div hidden">
+                        <td>
+                            Rejected Note <span>: </span>
+                        </td>
+                        <td>
+                            <textarea class="form-control" id="text_reject_note">@Model.ResturantOrder.RejectedReason</textarea>
+                        </td>
+                    </tr>
+                    <tr class="accept_time_div hidden">
+                        <td>
+                            Accepted Time <span>: </span>
+                        </td>
+                        <td>
+                            @Html.DropDownList("accept_time", ViewBag.timelist as List<SelectListItem>, new { @class = "form-control" })
+                        </td>
+                    </tr>
+                    @{
+                        if (Model.ResturantOrder.LastUpdatedBy.ToLower() == "app" || Model.ResturantOrder.LastUpdatedBy.ToLower() == "admin" || Model.ResturantOrder.LastUpdatedBy.ToLower() == "system")
+                        {
+                            if (Model.ResturantOrder.Status.ToLower() == "rejected" && Model.ResturantOrder.RejectedDate.HasValue)
+                            {
+                                <tr>
+                                    <td>
+                                        Rejected On <span>: </span>
+                                    </td>
+                                    <td>
+                                        @HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.RejectedDate.Value).ToString("MM/dd/yyyy") @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.For12Hours(HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.RejectedDate.Value))
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td>
+                                        Status Updated On <span>: </span>
+                                    </td>
+                                    <td>
+                                        @HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.LastUpdatedDate).ToString("MM/dd/yyyy") @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.For12Hours(HS.Framework.DateTimeExtension.UTCToClientTime(Model.ResturantOrder.LastUpdatedDate))
+                                    </td>
+                                </tr>
+                            }
+                            <tr>
+                                <td>
+                                    Status Updated By <span>: </span>
+                                </td>
+                                <td>
+                                    @Model.ResturantOrder.LastUpdatedBy
+                                </td>
+                            </tr>
+                        }
+                    }
+                </table>
+            </div>
+        </div>
+        <div class="right_order_detail_customer_block">
+            <div class="order_detail_customer_header">Customer Detail</div>
+            <div class="order_detail_customer_content">
+                <table>
+                    <tr>
+                        <td>
+                            Customer <span>: </span>
+                        </td>
+                        <td>
+                            <span><a class="order_detail_anchor" href="/Customer/CustomerDetail?id=@Model.Customer.Id">@Model.Customer.FirstName @Model.Customer.LastName</a></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Email <span>: </span>
+                        </td>
+                        <td>
+                            <a class="order_detail_anchor" href="mailto:@Model.Customer.EmailAddress">@Model.Customer.EmailAddress</a>
+                        </td>
+                    </tr>
+                    @if (!string.IsNullOrWhiteSpace(Model.Customer.CellNo))
+                    {
+                        <tr>
+                            <td>
+                                Phone <span>: </span>
+                            </td>
+                            <td>
+                                <a class="order_detail_anchor" href="tel:@Model.Customer.CellNo">@Model.Customer.CellNo</a>
+                            </td>
+                        </tr>
+                    }
+
+                    <tr>
+                        @if (!string.IsNullOrWhiteSpace(Model.ResturantOrder.Location))
+                        {
+                        <tr>
+                            <td>
+                                Delivery Address <span>: </span>
+                            </td>
+                            <td>
+                                @Html.Raw(HttpUtility.HtmlDecode(Model.ResturantOrder.Location))
+                                <a style="float:right;" href="https://www.google.com/maps?saddr=@Model.ResturantOrder.Location.Replace(" ", "+")&daddr=@Model.ResturantOrder.RestaurantLocation.Replace("~", "+").Replace(" ", "+")" target="_blank"><img src="~/Content/img/location.png" /></a>
+                            </td>
+                        </tr>
+                    }
+                        @if (!string.IsNullOrWhiteSpace(Model.ResturantOrder.ContactNo) && Model.ResturantOrder.OrderType.ToLower() == "delivery")
+                        {
+                            <tr>
+                                <td>
+                                    Delivery Contact No.<span>: </span>
+                                </td>
+                                <td>
+                                    @Model.ResturantOrder.ContactNo
+                                </td>
+                            </tr>
+                        }
+                        @{
+                            if (Model.ResturantOrder.OrderType.ToLower() == "delivery" && !string.IsNullOrWhiteSpace(Model.ResturantOrder.DeliveryNotes))
+                            {
+                                <tr>
+                                    <td>
+                                        Delivery Note <span>: </span>
+                                    </td>
+                                    <td>
+                                        @Model.ResturantOrder.DeliveryNotes
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </table>
+                </div>
+            </div>
+        </div>
+        @if (Model.ResturantOrder.OrderType.ToLower() == "delivery")
+        {
+            <div class="order_detail_container">
+                <div class="map_order_detail_customer_block">
+                    <div class="order_detail_customer_header">Delivery Location Map</div>
+                    <div class="order_detail_customer_content">
+                        <div class="map_deliveryLocation"></div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="order_detail_container">
+            <table class="table order_details_table">
+                <thead>
+                    <tr class="order_details_table_thead">
+                        <th>Stock</th>
+                        <th>Qty</th>
+                        <th>Item</th>
+                        <th>Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        foreach (var item in Model.ListOrderDetail)
+                        {
+                            <tr>
+                                <td><input type="checkbox" class="chk_stock_item" @(item.IsStock.Value == true ? "checked" : "") data-id="@item.Id" /></td>
+                                <td>@item.ItemQty</td>
+                                <td>
+                                    @item.ItemName
+                                    <h5>@Html.Raw(item.ItemDescription)</h5>
+                                    @if (!string.IsNullOrWhiteSpace(item.Toppings))
+                                    {
+                                        <br>@Html.Raw(item.Toppings)
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.SpecialInstruction))
+                                    {
+                                        <br><span style="font-weight:600;">Instruction: </span>@item.SpecialInstruction
+                                    }
+
+                                </td>
+                                <td><span style="float: right;">@currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.NetPrice)</span></td>
+                            </tr>
+                            if (item.IsStock == true)
+                            {
+                                subtotal = subtotal + item.ItemPrice;
+                            }
+                            else
+                            {
+                                stockchange = true;
+                            }
+                        }
+                        if (Model.RestaurantCoupons != null && subtotal >= Convert.ToDouble(Model.RestaurantCoupons.MinimumOrder))
+                        {
+                            if (Model.RestaurantCoupons.DiscountType.ToLower() == "dollar")
+                            {
+                                disval = Convert.ToDouble(Model.RestaurantCoupons.Discount);
+                                totalsub = subtotal - Convert.ToDouble(Model.RestaurantCoupons.Discount);
+                            }
+                            else if (Model.RestaurantCoupons.DiscountType.ToLower() == "percent")
+                            {
+                                disval = (subtotal * Convert.ToDouble(Model.RestaurantCoupons.Discount)) / 100;
+                                totalsub = subtotal - disval;
+                            }
+                            else
+                            {
+                                totalsub = subtotal;
+                            }
+                        }
+                        else
+                        {
+                            totalsub = subtotal;
+                        }
+                        if (stockchange == true && (Model.ResturantOrder.TaxAmount.HasValue ? Model.ResturantOrder.TaxAmount.Value : 0) > 0)
+                        {
+                            var taxrate = ((Model.ResturantOrder.TaxAmount / ((Model.ResturantOrder.Amount - (Model.ResturantOrder.OrderType.ToLower() == "delivery" && Model.WebsiteLocation.DeliveryFee.HasValue ? Model.WebsiteLocation.DeliveryFee.Value : 0)) - Model.ResturantOrder.TaxAmount)) * 100);
+                            taxtotal = Convert.ToDouble((totalsub * taxrate) / 100);
+                            total = totalsub + taxtotal + (Model.ResturantOrder.OrderType.ToLower() == "delivery" && Model.WebsiteLocation.DeliveryFee.HasValue ? Model.WebsiteLocation.DeliveryFee.Value : 0);
+                        }
+                        else
+                        {
+                            total = totalsub + (Model.ResturantOrder.TaxAmount.HasValue ? Model.ResturantOrder.TaxAmount.Value : 0) + (Model.ResturantOrder.OrderType.ToLower() == "delivery" && Model.WebsiteLocation.DeliveryFee.HasValue ? Model.WebsiteLocation.DeliveryFee.Value : 0);
+                        }
+                    }
+                    <tr class="order_details_table_bottom">
+                        <td colspan="1">
+                        </td>
+                        <td colspan="1">
+                        </td>
+                        <td>
+                            <span class="bottom_header">Subtotal<span>:</span> </span>
+                        </td>
+                        <td style="float:right;">
+                            <span class="bottom_info">@currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(subtotal)</span>
+                        </td>
+                    </tr>
+                    @if (subtotal > 0 && Model.ResturantOrder.DiscountValue.HasValue && disval > 0)
+                    {
+                        <tr class="order_details_table_bottom">
+                            <td colspan="1">
+                            </td>
+                            <td colspan="1">
+                            </td>
+                            <td>
+                                <span class="bottom_header">Coupon code (@Model.ResturantOrder.DiscountCode)<span>:</span> </span>
+                            </td>
+                            <td style="float:right;">
+                                <span class="bottom_info" style="color:red;">-@currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(disval)</span>
+                            </td>
+                        </tr>
+                    }
+                    @if ((Model.ResturantOrder.TaxAmount.HasValue ? Model.ResturantOrder.TaxAmount.Value : 0) > 0)
+                    {
+                        <tr class="order_details_table_bottom">
+                            <td colspan="1">
+                            </td>
+                            <td colspan="1">
+                            </td>
+                            <td>
+                                <span class="bottom_header">Tax<span>:</span>  </span>
+                            </td>
+                            <td style="float:right;">
+                                @if (stockchange == true)
+                                {
+                                    <span class="bottom_info">  @currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(taxtotal)</span>
+                                }
+                                else
+                                {
+                                    <span class="bottom_info">  @currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.ResturantOrder.TaxAmount)</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (Model.ResturantOrder.OrderType.ToLower() == "delivery" && Model.WebsiteLocation.DeliveryFee.HasValue && Model.WebsiteLocation.DeliveryFee.Value > 0)
+                    {
+                        <tr class="order_details_table_bottom">
+                            <td colspan="1">
+                            </td>
+                            <td colspan="1">
+                            </td>
+                            <td>
+                                <span class="bottom_header">Delivery Fee<span>:</span>  </span>
+                            </td>
+                            <td style="float:right;">
+                                <span class="bottom_info">  @currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.WebsiteLocation.DeliveryFee.Value)</span>
+                            </td>
+                        </tr>
+                    }
+                    <tr class="order_details_table_bottom">
+                        <td colspan="1">
+                        </td>
+                        <td colspan="1">
+                        </td>
+                        <td>
+                            <span class="bottom_header">Total<span>:</span> </span>
+                        </td>
+                        <td style="float:right;">
+                            <span class="bottom_info"> @currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(total)</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+    <div class="order_detail_footer">
+        @if ((Model.ResturantOrder.IsDeleted.HasValue ? Model.ResturantOrder.IsDeleted.Value : false) == false)
+        {
+            <button class="btn green_button receive_order_btn" id="delivered_order_btn" onclick="SubmitResturantCustomerOrder('@Model.ResturantOrder.Id')">Submit</button>
+        }
+
+        <button class="btn green_button close_order_btn" onclick="CloseTopToBottomModal()">Close</button>
+    </div>

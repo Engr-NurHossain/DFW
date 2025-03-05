@@ -1,0 +1,249 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+    bool ShowTransferTab = PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.InventoryTechTransferTab);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Css/Inventory/PurchaseOrderPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Inventory/BadInventoryPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+<link href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet" />
+<script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+@Styles.Render("~/styles/Transfer")
+@Scripts.Render("~/scripts/Transfer")
+
+<script>
+    var InvTransferTab ='@ShowTransferTab';
+    var listSelet = '@Html.Raw(Json.Encode(@ViewBag.selectsts))';
+    var EstimatorId = '@ViewBag.EstimatorId';
+    listSelet = JSON.parse(listSelet);
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var OpenPOById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId + "&OpenTab=Ware");
+    }
+    var ReceivePOById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId + "&Receive=true&OpenTab=Ware");
+    }
+    var DeletePOById = function (POId) {
+        OpenConfirmationMessageNew("", "Are you sure you want to delete?", function () {
+            DeletePurchaseOrderbyId(POId);
+        });
+    }
+    var ReceivePOHistoryById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/ReceivePOHistory/?Id=" + POId);
+    }
+    var ApprovePOById = function (POId, apStatus) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId + "&Approve=" + apStatus);
+    }
+    var DeletePurchaseOrderbyId = function (PODeleteId) {
+        $.ajax({
+            url: domainurl + "/PurchaseOrder/DeletePurchaseOrder",
+            data: { Id: PODeleteId },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", "Purchase Order deleted successfully!");
+                    CloseTopToBottomModal();
+                    OpenPurchaseOrderTab();
+                } else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            }
+        });
+    }
+    var TrfLogListLoad = function (pageNoTrf, pageNoRcv, order, techTrfFrom, techTrfTo, techRCVFrom, techRCVTo) {
+        TrfLogListLoadPost(pageNoTrf, pageNoRcv, order, techTrfFrom, techTrfTo, techRCVFrom, techRCVTo);
+        //if (typeof (pageNoTrf) != "undefined") {
+        //    var setectSts = encodeURI($("#poStatus").val());
+        //    //if (EstimatorId == null || EstimatorId == "undefined" || EstimatorId =="") {
+        //    //    EstimatorId = $("#EstimatorId").val();
+        //    //}
+        //    EstimatorId = $("#EstimatorId").val();
+        //    //var LoadUrl = domainurl + "/Inventory/TechTransferLogListPartial/?SearchText=" + encodeURI($(".PoSearchText").val()) + "&selectsts=" + setectSts
+        //    var LoadUrl = domainurl + "/Inventory/TechTransferLogListPartial/?SearchText=" + encodeURI($(".PoSearchText").val()) + "&selectsts=" + setectSts
+        //        + "&PageNoTrf=" + pageNoTrf + "&PageNoRcv=" + pageNoRcv + "&order=" + order + "&TFEmployeeIds=" + techTrfFrom + "&TTEmployeeIds=" + techTrfTo + "&RFEmployeeIds=" + techRCVFrom + "&RTEmployeeIds=" + techRCVTo + "&EstimatorId=" + EstimatorId;
+        //    $(".PurchaseOrderTable").html(TabsLoaderText);
+        //    $(".PurchaseOrderTable").load(LoadUrl);
+        //}
+    }
+    var ResetFilter = function () {
+        $("#poStatus").selectpicker("val", "");
+        $(".PoSearchText").val("");
+        $("#EstimatorId").val("-1");
+        TrfLogListLoad(1, 1, null);
+    }
+
+    var DataListDownload = function (pageNoTrf, pageNoRcv, order, techTrf, techRCV, getReport) {
+
+        if (typeof (pageNoTrf) != "undefined") {
+            var setectSts = encodeURI($("#poStatus").val());
+            var EstimatorId = $("#EstimatorId").val();
+            StartDate = $(".min-date").val();
+            EndDate = $(".max-date").val();
+
+            var requestData = {
+                SearchText: encodeURI($(".PoSearchText").val()),
+                selectsts: setectSts,
+                PageNoTrf: pageNoTrf,
+                PageNoRcv: pageNoRcv,
+                order: order,
+                Start: encodeURI(StartDate),
+                End: encodeURI(EndDate),
+                GetReport: getReport,
+                TFEmployeeIds: techTrf,
+                TTEmployeeIds: techRCV,
+                EstimatorId: EstimatorId
+            };
+            var form = $('<form></form>');
+            form.attr('action', domainurl + '/Inventory/TechTransferLogListPartialPost/');
+            form.attr('method', 'post');
+            Object.keys(requestData).forEach(function (key) {
+                var input = $('<input type="hidden" name="' + key + '" />');
+
+                input.val(requestData[key]);
+                form.append(input);
+
+            });
+            form.appendTo('body');
+            form.submit();
+            form.remove();
+        }
+    };
+   
+
+    $(document).ready(function () {
+        if (listSelet.length != 0) {
+            $("#poStatus").selectpicker('val', listSelet);
+        }
+        else {
+            $("#poStatus").selectpicker('val', '');
+        }
+        $("#AddNewPO").click(function () {
+            OpenTopToBottomModal(domainurl + "/Inventory/AddTechTransfer?id=0&OpenTab=Ware");
+        });
+
+        $(".PoSearchText").keydown(function (e) {
+            if (e.which == 13) {
+                TrfLogListLoad(1, 1, null);
+            }
+        });
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            //var DateFrom = $(".min-date").val();
+            //var DateTo = $(".max-date").val();
+            UpdatePtoCookie();
+
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+         
+            RecevierTabLoad(1, 1, null, $("#TechTrfFromList").val(), $("#TechTrfToList").val(), $("#TechRcvFromList").val(), $("#TechRcvToList").val());
+          /*  TrfLogListLoadPost(1, 1, null, null, null, null, null);*/
+        });
+
+        //$(".bi_single_filte_info_container").hide();
+        //$(".btn-filter").click(function () {
+
+        //    if ($(".bi_single_filte_info_container").is(":visible")) {
+        //        $(".bi_single_filte_info_container").hide();
+
+        //    } else {
+        //        $(".bi_single_filte_info_container").show();
+
+        //    }
+        //});
+
+        //$("#EqList").attr("data-live-search", "true");
+        //$("#EqList").attr("data-selected-text-format", "count");
+        //if (selectedTechsList.length != 0) {
+        //    $("#EqList").selectpicker('val', selectedTechsList);
+        //}
+        //else {
+        //    $("#EqList").selectpicker('val', '');
+        //}
+        //$('.selectpicker').selectpicker('refresh');
+        console.log("Test ddd", InvTransferTab);
+        if (InvTransferTab == "True") {
+            TrfLogListLoad(1, 1, null);
+        }
+        else {
+            console.log("Test RecevierTabLoad");
+            $('#recieverTab_Load').click();
+        }
+        
+        //$("#AddNewPOReceive").click(function () {
+        //    OpenTopToBottomModal(domainurl + "/Inventory/AddTechTransfer?id=0&OpenTab=Ware");
+        //});
+        $('.selectpicker').selectpicker('refresh');
+    });
+</script>
+@*<script src="~/Content/Js/Inventory/TransferLogTab.js"></script>*@
+
+<div class="page-content-wrap cus-padding-top10p all_estimatePartial_Container">
+    <ul class="nav nav-tabs invoices-tabs" id="myTransfferLogTab">
+        @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.InventoryTechTransferTab))
+        {
+            <li class="active opentransfferTab" data-tab="Transfer">
+                <a data-target=".tranferTab_Load" data-toggle="tab" onclick="TrfLogListLoadPost(1, 1, null, null, null, null, null)">
+                    @Localize.T("Transfer")
+                </a>
+            </li>
+        }
+        <li class="recevierTab" data-tab="Receive">
+            <a data-target=".recieverTab_Load" data-toggle="tab" id="recieverTab_Load" onclick="RecevierTabLoad(1, 1, null, null, null, null, null)">
+                @Localize.T("Receive")
+            </a>
+        </li>
+    </ul>
+    <div class="dateviewed" style="width: auto; right: 20px; float:right">
+        @{Html.RenderAction("DateViewPartial", "Customer");}
+    </div>
+    @*<ul class="nav nav-tabs" id="myTab">
+            <li class="active">
+                <a data-target="#TechApproveTab"  data-toggle="tab">@Localize.T("Transfer")</a>
+            </li>
+            <li class="">
+                <a data-target="#TechReceivedTab"  data-toggle="tab">@Localize.T("Receive")</a>
+            </li>
+        </ul>*@
+
+    @*<div class="loadtransfferlist">
+
+
+        </div>
+        <div class="loadreceiverlist">
+
+
+        </div>*@
+    <div class="tab-content">
+        @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.InventoryTechTransferTab))
+        {
+            <div class="tab-pane active tranferTab_Load">
+
+            </div>
+        }
+
+        <div class="tab-pane recieverTab_Load">
+
+        </div>
+    </div>
+</div>
+

@@ -1,0 +1,384 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.Employee
+@using PermissionHelper = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<style>
+    /*.HireDate_pto{
+        pointer-events:none;
+    }*/
+    .payable_info_hover {
+        cursor: pointer;
+        font-size: 16px;
+        float: right;
+        margin-bottom: -2px;
+        color:#2ca01c;
+    }
+</style>
+<script>
+    var PtoUserId = '@Model.UserId';
+    var EmpPaytype = '@Model.PayType';
+    var DOB;
+    var AnniversaryDate;
+    var FormatedAmount = function (value) {
+        return parseFloat(value).toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,");
+    }
+    var SaveThisHrHumanRes = function () {
+        var url = domainurl + "/Hr/SaveHrHumanRes";
+        var param = JSON.stringify({
+            UserId: userId,
+            DOB: $("#DOB").val(),
+            HireDate: $("#HireDate").val(),
+            PayType: $("#PayType").val(),
+            AnniversaryDate: $("#AnniversaryDate").val(),
+            BasePay: $("#BasePay").val(),
+            HourlyRate: ($("#HourlyRate").val()) != "NaN" ? $("#HourlyRate").val().replaceAll(",", "") : 0,
+            EmpType: $("#EmpType").val(),
+            Department: $("#Department").val(),
+            PtoRate: ($("#PtoRate").val()) != "NaN" ? $("#PtoRate").val().replaceAll(",", "") : 0,
+            PtoHour: $("#PtoHour").val(),
+            PtoRemain: $("#PtoRemain").val(),
+            SalesCommissionStructure: $("#SalesCommissionStructure").val(),
+            Session: $("#Session").val(),
+            UserXComission: $("#UserXComission").val(),
+            TermSheetId: $("#TermSheetId").val()
+        })
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message, function () {
+                        $("#HumanresLoad").load(domainurl + "/Hr/HrHumanRes?userId=" + userId);
+                    });
+                } else {
+                    OpenErrorMessageNew("Error!", data.message, function () {
+
+                    });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    var OpenPTOhoursLogByUserId = function (UserId,Paytype) {
+        if (typeof (UserId) != "undefined") {
+            OpenTopToBottomModal(domainurl + "/Hr/GetEmployeePtoHoursLog/?UserId=" + UserId + "&Paytype=" + Paytype);
+        }
+    }
+
+    var SaveThisHrHumanResForHrHome = function () {
+        var url = domainurl + "/Hr/SaveHrHumanRes";
+        var param = JSON.stringify({
+            UserId: userId,
+            DOB: $("#DOB").val(),
+            HireDate: $("#HireDate").val(),
+            PayType: $("#PayType").val(),
+            AnniversaryDate: $("#AnniversaryDate").val(),
+            BasePay: $("#BasePay").val(),
+            HourlyRate: ($("#HourlyRate").val()) != "NaN" ? $("#HourlyRate").val().replaceAll(",", "") : 0,
+            EmpType: $("#EmpType").val(),
+            Department: $("#Department").val(),
+            PtoRate: ($("#PtoRate").val()) != "NaN" ? $("#PtoRate").val().replaceAll(",", "") : 0,
+            PtoHour: $("#PtoHour").val(),
+            PtoRemain: $("#PtoRemain").val(),
+            SalesCommissionStructure: $("#SalesCommissionStructure").val(),
+            Session: $("#Session").val(),
+            UserXComission: $("#UserXComission").val(),
+            IsSalesMatrixUserX: $("#IsSalesMatrixUserX").prop("checked"),
+            TermSheetId: $("#TermSheetId").val()
+        })
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    $("#HumanresLoad").load(domainurl + "/Hr/HrHumanRes?userId=" + userId);
+                } else {
+                    OpenErrorMessageNew("Error!", data.message, function () {
+                    });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+      
+    $(document).ready(function () {
+        DOB = new Pikaday({
+            format: 'MM/DD/YYYY',
+            field: $('#DOB')[0],
+            trigger: $('#DOB_custom')[0],
+            firstDay: 1
+        });
+        HireDate = new Pikaday({
+            format: 'MM/DD/YYYY',
+            field: $('#HireDate')[0],
+            trigger: $('#HireDate_custom')[0],
+            firstDay: 1
+        });
+        AnniversaryDate = new Pikaday({
+            format: 'MM/DD/YYYY',
+            field: $('#AnniversaryDate')[0],
+            trigger: $('#AnniversaryDateCustom')[0],
+            firstDay: 1
+        });
+        $("#btnSaveHrHumanRes").click(function () {
+            SaveThisHrHumanRes();
+        });
+        $("#IsSalesMatrixUserX").change(function () {
+            if ($("#IsSalesMatrixUserX").prop("checked")) {
+                $("#UserXComission").val("0");
+                $("#UserXComission").attr("disabled", true);
+            }
+            else {
+                $("#UserXComission").attr("disabled", false);
+            }
+        });
+        $("#HourlyRate").blur(function () {
+            var Revenue = $("#HourlyRate").val().replaceAll(",", "");
+            var formattedAmount = FormatedAmount(Revenue);
+            if (formattedAmount == "NaN") {
+                formattedAmount = 0;
+            }
+            $("#HourlyRate").val(formattedAmount);
+        })
+        //$("#PtoRate").blur(function () {
+        //    var Revenue = $("#PtoRate").val().replaceAll(",", "");
+        //    var formattedAmount = FormatedAmount(Revenue);
+        //    if (formattedAmount == "NaN") {
+        //        formattedAmount = 0;
+        //    }
+        //    $("#PtoRate").val(formattedAmount);
+        //})
+         
+       
+    });
+</script>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+ 
+ 
+<table class="udi_table">
+    <tr class="info-table-tr">
+
+        @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.HireDate))
+        { 
+            <td class="udi_title">
+                <label>@Localize.T("Hire Date")</label>
+                <div class="input_group_for_date add-on HireDate_pto" id="HireDate_custom"> 
+                        @Html.TextBoxFor(x => x.HireDate, new { @class = "form-control"}) 
+                    <div class="input-group-btn">
+                        <btn class="btn">
+                            <i class="fa fa-calendar" aria-hidden="true" style="cursor: none; pointer-events: none;"></i>
+                        </btn>
+                    </div>
+                </div>
+            </td> 
+            @*else
+            {
+                <td class="udi_title">
+                    <label>@Localize.T("Hire Date")</label>
+                    <div class="input_group_for_date add-on" id="HireDate_custom">
+                        @Html.TextBoxFor(x => x.HireDate, new { @class = "form-control" })
+                        <div class="input-group-btn">
+                            <btn class="btn">
+                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                            </btn>
+                        </div>
+                    </div>
+                </td>
+            }*@ 
+
+        }
+        <td class="udi_title">
+            <label>@Localize.T("Birthday")</label>
+            <div class="input_group_for_date add-on" id="DOB_custom">
+                @Html.TextBoxFor(x => x.DOB, new { @class = "form-control" })
+                <div class="input-group-btn">
+                    <btn class="btn">
+                        <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                    </btn>
+                </div>
+            </div>
+
+        </td>
+
+        @*<td class="udi_data">
+            <label>@Localize.T("Anniversary Date")</label>
+            <div class="input_group_for_date add-on" id="AnniversaryDateCustom">
+                @Html.TextBoxFor(x => x.AnniversaryDate, new { @class = "form-control" })
+                <div class="input-group-btn">
+                    <btn class="btn">
+                        <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                    </btn>
+                </div>
+            </div>
+        </td>*@
+    </tr>
+    <tr class="info-table-tr">
+        <td class="udi_title">
+            <label>@Localize.T("Hourly Rate")</label>
+            <div class="shipping-amount-span currency_style">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">
+                            @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)
+                        </span>
+                    </div>
+                    <input type="text" id="HourlyRate" value="@HS.Web.UI.Helper.LabelHelper.FormatAmount(Convert.ToDouble(Model.HourlyRate))" placeholder="Revenue" class="form-control" />
+
+                </div>
+            </div>
+        </td>
+        <td class="udi_title">
+            <label>@Localize.T("Department")</label>
+            @Html.DropDownListFor(x => x.Department, ViewBag.SelectDepartmentData as List<SelectListItem>, new { @class = "form-control" })
+        </td> 
+    </tr>
+    <tr class="info-table-tr">
+        <td class="udi_data">
+            <label>@Localize.T("Employee Type")</label>
+            @Html.DropDownListFor(x => x.EmpType, ViewBag.SelectEmployeeTypeData as List<SelectListItem>, new { @class = "form-control" })
+        </td>
+        <td class="udi_data">
+            <label>@Localize.T("Employee Pay Type")</label>
+            @Html.DropDownListFor(x => x.PayType, ViewBag.SelectEmployeePayTypeData as List<SelectListItem>, new { @class = "form-control" })
+        </td>
+    </tr>
+    <tr class="info-table-tr">
+        <td class="udi_data">
+            <label>@Localize.T("PTO Rate")</label>
+            <div class="shipping-amount-span currency_style">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">
+                            @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)
+                        </span>
+                    </div>
+                    @if (Model.PayType == "Salary")
+                    {
+                        <input disabled type="text" id="PtoRate" value="@HS.Web.UI.Helper.LabelHelper.FormatTo3DP(Convert.ToDouble(Model.PtoRate))" placeholder="Pto Rate" class="form-control" />
+                    }
+                    else
+                    {
+                        <input disabled type="text" id="PtoRate" value="@HS.Web.UI.Helper.LabelHelper.FormatFourDecimalAmount(Convert.ToDouble(Model.PtoRate))" placeholder="Pto Rate" class="form-control" />
+                    } 
+                </div>
+            </div> 
+        </td>
+        <td class="udi_title">
+            <label>@Localize.T("PTO Hours Accrued")</label>
+            <span class="payable_info_hover" onclick="OpenPTOhoursLogByUserId(PtoUserId,EmpPaytype)">
+                <i class="fa fa-info-circle" title="PTO Hours Accrued" aria-hidden="true"></i>
+                @*<div class="payable_tooltip_div">
+                    <span>User will get paid on the pay cycle</span>
+                </div>*@
+            </span>
+            @if (Model.PayType == "Salary")
+            {
+                <input type="number" id="PtoHour" disabled value="@HS.Web.UI.Helper.LabelHelper.FormatTo3DP(Convert.ToDouble(Model.PtoHour))" placeholder="Pto Hour" class="form-control" />
+            }
+            else
+            {
+                <input type="number" id="PtoHour" disabled value="@HS.Web.UI.Helper.LabelHelper.FormatFourDecimalAmount(Convert.ToDouble(Model.PtoHour))" placeholder="Pto Hour" class="form-control" />
+            }
+        </td>
+    </tr>
+    <tr class="info-table-tr">
+        @*@if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.PTORemaining))
+        {*@
+        @*@if (Model.PayType == "Salary")
+        {
+            <td class="udi_data hidden">
+                <label>@Localize.T("PTO Remaining")</label>
+
+                <input type="number" id="PtoRemain" disabled value="@HS.Web.UI.Helper.LabelHelper.FormatTo3DP(Convert.ToDouble(Model.PtoRemain))" placeholder="Pto Remain" class="form-control" />
+            </td>
+        }
+        else
+        {
+            <td class="udi_data hidden">
+                <label>@Localize.T("PTO Remaining")</label>
+
+                <input type="number" id="PtoRemain" disabled value="@HS.Web.UI.Helper.LabelHelper.FormatFourDecimalAmount(Convert.ToDouble(Model.PtoRemain))" placeholder="Pto Remain" class="form-control" />
+            </td>
+        }*@
+        @*}*@
+        @if (Model.PayType == "Salary")
+        {
+            <td class="udi_data">
+                <label>@Localize.T("PTO Unassigned")</label>
+                <input type="number" id="PtoRemain" disabled value="@HS.Web.UI.Helper.LabelHelper.FormatFourDecimalAmount(Convert.ToDouble(Model.PtoRemain))" placeholder="Pto Remain" class="form-control hidden" />
+                <input type="number" id="PTOUnassigned" disabled value="@HS.Web.UI.Helper.LabelHelper.FormatTo3DP(Convert.ToDouble(Model.PTOUnassigned))" placeholder="Pto Remain" class="form-control" />
+            </td>
+        }
+        else
+        {
+            <td class="udi_data">
+                <label>@Localize.T("PTO Unassigned")</label>
+                <input type="number" id="PtoRemain" disabled value="@HS.Web.UI.Helper.LabelHelper.FormatFourDecimalAmount(Convert.ToDouble(Model.PtoRemain))" placeholder="Pto Remain" class="form-control hidden" />
+                <input type="number" id="PTOUnassigned" disabled value="@HS.Web.UI.Helper.LabelHelper.FormatFourDecimalAmount(Convert.ToDouble(Model.PTOUnassigned))" placeholder="Pto Remain" class="form-control" />
+            </td>
+        }
+
+
+        <td class="udi_title">
+            <label>@Localize.T("Base Pay")</label>
+            @Html.DropDownListFor(x => x.BasePay, ViewBag.SelectBasePayData as List<SelectListItem>, new { @class = "form-control" })
+        </td>
+    </tr>
+    <tr>
+        @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.SalesCommission))
+        {
+            <td class="udi_data">
+                <label>@Localize.T("Sales Commission")</label>
+                @Html.DropDownListFor(x => x.SalesCommissionStructure, ViewBag.SalesCommisssion as List<SelectListItem>, new { @class = "form-control" })
+            </td>
+        }
+        @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.Season))
+        {
+            <td class="udi_title">
+                <label>@Localize.T("Season")</label>
+                @Html.DropDownListFor(x => x.Session, ViewBag.Session as List<SelectListItem>, new { @class = "form-control" })
+            </td>
+        }
+    </tr>
+    <tr>
+        <td class="udi_title">
+            <label>@Localize.T("User X")</label>
+            <div class="shipping-amount-span currency_style">
+                <div class="input-group">
+                    <input type="text" id="UserXComission" name="UserXComission" value="@Model.UserXComission" class="form-control" @(Model.IsSalesMatrixUserX == true ? "disabled" : "") />
+                    <input type="checkbox" id="IsSalesMatrixUserX" name="IsSalesMatrixUserX" @(Model.IsSalesMatrixUserX == true ? "checked" : "") />
+                </div>
+            </div>
+
+        </td>
+        @if (PermissionHelper.IsPermitted(Permissions.ReportMenuPermission.FundingBrinksTab))
+        {
+            <td class="udi_title">
+                <label>@Localize.T("Term Sheet")</label>
+                @Html.DropDownListFor(x => x.TermSheetId, ViewBag.TermSheetList as List<SelectListItem>, new { @class = "form-control" })
+            </td>
+        }
+    </tr>
+    <tr class="info-table-tr hidden">
+        <td class="udi_title"></td>
+        <td class="udi_data udi_data_custom">
+            <button class="style-btn-custom" id="btnSaveHrHumanRes"><i class="fa fa-floppy-o" aria-hidden="true"></i> Save</button>
+        </td>
+    </tr>
+</table>

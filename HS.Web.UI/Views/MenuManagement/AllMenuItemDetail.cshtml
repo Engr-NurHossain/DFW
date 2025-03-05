@@ -1,0 +1,437 @@
+﻿@model HS.Entities.AllMenuItemModel
+@{
+    Layout = null;
+    var currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HtmlAgilityPack;
+@Styles.Render("~/styles/MenuListPartial")
+<script>
+    $(document).ready(function () {
+        $(".all_menu_item_inner_height").height(window.innerHeight - 45);
+        $(".menu_edit_icon").click(function () {
+            var idval = $(this).attr('data-id');
+            $(".LoadMenuEdit").removeClass("hidden");
+            $(".menu_list_allitem").addClass("hidden");
+            $(".LoadMenuEdit").load("/MenuManagement/AddMenu?Id=" + idval + "&editmenu=true");
+        })
+        $(".menuItem_edit_icon").click(function () {
+            var menuid = $(this).attr('data-id');
+            var itemid = $(this).attr('data-itemid');
+            $(".LoadMenuItemEdit").removeClass("hidden");
+            $(".menuitem_list_allitem").addClass("hidden");
+            $(".LoadMenuItemEdit").load("/MenuManagement/AddMenuItem?menuId=" + menuid + "&miId=" + itemid + "&edititem=true");
+        })
+        $(".item_category_edit_icon").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenTopToBottomModal("/MenuManagement/AddCategory?Id=" + idval);
+        })
+        $(".topping_category_edit_icon").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenTopToBottomModal("/MenuManagement/AddTopping?ToppingCategoryId=" + idval);
+        })
+    });
+    $(window).resize(function () {
+        $(".all_menu_item_inner_height").height(window.innerHeight - 45);
+    });
+</script>
+<div class="all_menu_item_container">
+    <div class="all_menu_item_header">@Localize.T("Menu Detail")</div>
+    <div class="all_menu_item_inner_height">
+        <div class="all_menu_item_inner">
+            @{
+                if (Model.MenuList != null && Model.MenuList.Count > 0)
+                {
+                    <div class="all_menu_info_container">
+                        <div class="all_menu_info_head">@Localize.T("Menu")</div>
+
+                        <div class="all_menu_info_detail menu_list_allitem">
+                            <table class="display all_menu menu_list_partial_info" id="tblMenu">
+                                <thead class="table-head-border">
+                                    <tr>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Photo")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuid"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Menu")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuname"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuname"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Description")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuitemcount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuitemcount"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Days Available")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menudayavailable"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menudayavailable"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Time Available")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menutimeavailable"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menutimeavailable"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Status")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menustatus"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menustatus"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Action")</div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.MenuList)
+                                    {
+                                        <tr class="tr-style CheckItems" idval="@item.Id" data-menuitemid="@item.MenuItemId">
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Photo")<span>:</span></div>
+                                                @{
+                                                    if (!string.IsNullOrWhiteSpace(item.Photo))
+                                                    {
+                                                        <div class="menu_list_partial_device_info"> <img src="@item.Photo" width="50" height="50" /></div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="menu_list_partial_device_info"> <img src="~/Content/img/No_picture_available.png" width="50" height="50" /></div>
+                                                    }
+                                                }
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Menu")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info">
+                                                    <span>@item.MenuName</span>
+                                                </div>
+                                            </td>
+
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Description")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span>@item.Description</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Days Available")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span>@item.DaysAvailable</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Time Available")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span>@item.TimeAvailable</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Status")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info">
+                                                    @{
+                                                        if (item.Status == true)
+                                                        {
+                                                            <span>@Localize.T("Active")</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>@Localize.T("Inactive")</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Action")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><i class="fa fa-edit menu_edit_icon cus-anchor" data-id="@item.Id"></i></div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="LoadMenuEdit"></div>
+                    </div>
+                }
+                if (Model.MenuItemList != null && Model.MenuItemList.Count > 0)
+                {
+                    <div class="all_menu_info_container">
+                        <div class="all_menu_info_head">@Localize.T("Item")</div>
+
+                        <div class="all_menu_info_detail menuitem_list_allitem">
+                            <table class="display all_menu menu_list_partial_info" id="tblMenu">
+                                <thead class="table-head-border">
+                                    <tr>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Photo")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuid"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Item")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuname"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuname"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Price")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuitemcount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuitemcount"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Quantity")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menudayavailable"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menudayavailable"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Days Available")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menutimeavailable"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menutimeavailable"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Time Available")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menutimeavailable"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menutimeavailable"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Status")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menustatus"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menustatus"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Action")</div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.MenuItemList)
+                                    {
+                                        <tr class="tr-style CheckItems" idval="@item.Id">
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Photo")<span>:</span></div>
+                                                @{
+                                                    if (!string.IsNullOrWhiteSpace(item.Photo))
+                                                    {
+                                                        <div class="menu_list_partial_device_info"> <img src="@item.Photo" width="50" height="50" /></div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="menu_list_partial_device_info"> <img src="~/Content/img/No_picture_available.png" width="50" height="50" /></div>
+                                                    }
+                                                }
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Item")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info">
+                                                    <span>@item.ItemName</span>
+                                                </div>
+                                            </td>
+
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Price")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Price)</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Quantity")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span>@item.MaxQty</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Days Available")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span>@item.DaysAvailable</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Time Available")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span>@item.TimeAvailable</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Status")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info">
+                                                    @{
+                                                        if (item.Status == true)
+                                                        {
+                                                            <span>@Localize.T("Active")</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>@Localize.T("Inactive")</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Action")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span><i class="fa fa-edit cus-anchor menuItem_edit_icon" data-id="@item.MenuId" data-itemid="@item.Id"></i></span></div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="LoadMenuItemEdit"></div>
+                    </div>
+                }
+                if (Model.CategoryList != null && Model.CategoryList.Count > 0)
+                {
+                    <div class="all_menu_info_container">
+                        <div class="all_menu_info_head">@Localize.T("Category")</div>
+
+                        <div class="all_menu_info_detail">
+                            <table class="display all_menu menu_list_partial_info" id="tblMenu">
+                                <thead class="table-head-border">
+                                    <tr>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Photo")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuid"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Category")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuname"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuname"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Description")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuitemcount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuitemcount"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Days Available")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menutimeavailable"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menutimeavailable"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Time Available")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menutimeavailable"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menutimeavailable"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Status")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menustatus"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menustatus"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Action")</div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.CategoryList)
+                                    {
+                                        <tr class="tr-style CheckItems" idval="@item.Id">
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Photo")<span>:</span></div>
+                                                @{
+                                                    if (!string.IsNullOrWhiteSpace(item.Image))
+                                                    {
+                                                        <div class="menu_list_partial_device_info"> <img src="@item.Image" width="50" height="50" /></div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="menu_list_partial_device_info"> <img src="~/Content/img/No_picture_available.png" width="50" height="50" /></div>
+                                                    }
+                                                }
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Category")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info">
+                                                    <span>@item.CategoryName</span>
+                                                </div>
+                                            </td>
+
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Description")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span>@item.Description</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Days Available")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span>@item.DaysAvailable</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Time Available")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span>@item.TimeAvailable</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Status")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info">
+                                                    @{
+                                                        if (item.Status == true)
+                                                        {
+                                                            <span>@Localize.T("Active")</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>@Localize.T("Inactive")</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Action")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span><i class="fa fa-edit cus-anchor item_category_edit_icon" data-id="@item.Id"></i></span></div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                }
+                if (Model.ToppingCategoryList != null && Model.ToppingCategoryList.Count > 0)
+                {
+                    <div class="all_menu_info_container">
+                        <div class="all_menu_info_head">@Localize.T("Topping")</div>
+
+                        <div class="all_menu_info_detail">
+                            <table class="display all_menu menu_list_partial_info" id="tblMenu">
+                                <thead class="table-head-border">
+                                    <tr>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Topping Category")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuid"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Topping Name")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuname"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuname"></i></div>
+                                        </th>
+                                        <th class="thead-th-style">
+                                            <div>@Localize.T("Topping Price")</div>
+                                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuitemcount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuitemcount"></i></div>
+                                        </th>
+                                        <th>
+                                            <div>@Localize.T("Action")</div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.ToppingCategoryList)
+                                    {
+                                        List<string> pricestr = new List<string>();
+                                        var spprice = item.ToppingPrice.Split(',');
+                                        if (spprice.Length > 0)
+                                        {
+                                            foreach (var pri in spprice)
+                                            {
+                                                if (!string.IsNullOrWhiteSpace(pri))
+                                                {
+                                                    pricestr.Add(currency + HS.Web.UI.Helper.LabelHelper.FormatAmount(Convert.ToDouble(pri)));
+                                                }
+                                            }
+                                            item.ToppingPrice = string.Join(", ", pricestr);
+                                        }
+                                        var FItemName = item.ToppingName;
+                                        var FItemPrice = item.ToppingPrice;
+                                        if (item.ToppingName.Length > 50 || item.ToppingPrice.Length > 50)
+                                        {
+                                            item.ToppingName = item.ToppingName.Substring(0, 50) + ".....";
+                                            item.ToppingPrice = item.ToppingPrice.Substring(0, 50) + ".....";
+                                        }
+                                        <tr class="tr-style CheckItems" idval="@item.Id">
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Topping Category")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info">
+                                                    <span>@item.ToppingCategory</span>
+                                                </div>
+                                            </td>
+
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Topping Name")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span title="@FItemName">@item.ToppingName</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Topping Price")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span title="@FItemPrice">@item.ToppingPrice</span></div>
+                                            </td>
+                                            <td class="table-body-td-style" valign="top">
+                                                <div class="menu_list_partial_device_header">@Localize.T("Action")<span>:</span></div>
+                                                <div class="menu_list_partial_device_info"><span><i class="fa fa-edit cus-anchor topping_category_edit_icon" data-id="@item.Id"></i></span></div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+</div>

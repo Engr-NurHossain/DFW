@@ -1,0 +1,149 @@
+﻿@{
+    ViewBag.Title = "Contact";
+    Layout = null;
+    int i = 1;
+    int j = 1;
+    string SitePath = HS.Framework.Utils.AppConfig.DomainSitePath;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.ContactTabModel>
+<style>
+    .contact_tabs_container {
+            width: 99%;
+    margin: 5px 5px 0px 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    overflow-x: hidden;
+    margin-bottom: 10px;
+    }
+    .contact_details_main_nav > li {
+    border-top: none !important;
+    border-left: none !important;
+    border-right: 1px solid #ccc;
+    border-bottom: none !important;
+}
+    .contact_details_main_nav > li > a {
+        color:#000;
+    }
+    .contact_details_main_nav > li.active {
+        border-bottom:1px solid #fff !important;
+    }
+  .contact_details_main_nav > li.active > a > span {
+      color:#2ca01c !important;
+  }
+   
+</style>
+<script>
+    var ContactLoadId;
+    var ContactLoadGuid;
+    var TabLink = '@ViewBag.tablink';
+    var NoteId = '@ViewBag.noteid';
+    var TimeVal = '@ViewBag.time';
+    var complete = '@ViewBag.complete';
+ 
+
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide();
+        ContactLoadId = $(".contact_tabs_container .tab-list.active").attr('data-id');
+        ContactLoadGuid = $(".contact_tabs_container .tab-list.active").attr('data-Guid');
+
+        $(".contact_tabs_container .tab-pane.active").load(domainurl + String.format("/Contact/ContactDetails/?id={0}&tab={1}&noteid={2}&timeval={3}&IsComplete={4}", ContactLoadId, TabLink, NoteId, TimeVal, complete));
+
+        $(".contact_tabs_container .tab-list a").click(function (e) {
+            e.preventDefault();
+            if (cntrlIsPressed) {
+                var href = $(e.target).attr('href');
+                window.open(href, '_blank');
+            }
+        });
+
+        $(".contact_tabs_container .tab-list").click(function (e) {
+            //$(".customer_tabs_container .tab-pane").html("");
+            console.log(e);
+            ContactLoadId = $(this).attr('data-id');
+            ContactLoadGuid = $(this).attr('data-Guid');
+            console.log(ContactLoadId);
+
+            history.pushState(null, null, domainurl + String.format("/Contact/ContactDetail/?id={0}", ContactLoadId));
+            if ($("#contact_tab_" + ContactLoadId).html().trim() == "") {
+                $("#contact_tab_" + ContactLoadId).load(domainurl + String.format("/Contact/ContactDetails/?id={0}", ContactLoadId));
+            }
+        });
+
+        $(".tabCloseContact").click(function () {
+            if ($(".contact_tabs_container li.tab-list").length == 1) {
+                /*If cookie length ==1 just remove cookie*/
+                $.cookie("__Contact", "", { expires: -1, path: '/' });
+                location.href = "/Contacts";
+            }
+            else {
+                /*Remove DOM*/
+                if ($(this).parent().parent().hasClass('active')) {
+                    $(this).parent().parent().removeClass('active');
+                    $(".contact_tabs_container .tab-content .tab-pane").removeClass('active');
+
+                    $(".contact_tabs_container li.tab-list:first-child").addClass('active');
+
+                    ContactLoadId = $(".contact_tabs_container .tab-list.active").attr('data-id');
+                    ContactLoadGuid = $(".contact_tabs_container .tab-list.active").attr('data-Guid');
+
+                    $("#contact_tab_" + ContactLoadId).addClass('active');
+
+                    history.pushState(null, null, domainurl + String.format("/Contact/ContactDetail/?id={0}&tab={1}&noteid={2}&timeval={3}&IsComplete={4}", ContactLoadId, TabLink, NoteId, TimeVal, complete));
+                    $(".contact_tabs_container .tab-pane.active").load(domainurl + String.format("/Contact/ContactDetails/?id={0}&tab={1}&noteid={2}&timeval={3}&IsComplete={4}", ContactLoadId, TabLink, NoteId, TimeVal, complete));
+                }
+                var ClosedContactId = $(this).attr('data-id');
+
+                $(this).parent().parent().remove();
+                $("#contact_tab_" + ClosedContactId).remove();
+
+                /*Remove Contact Data From Cookie*/
+                if ($.cookie('__Contact') != null && $.cookie('__Contact') != '' && $.cookie('__Contact') != 'null')
+                {
+                    var cookie = $.cookie('__Contact');
+                    cookie = cookie.split('|');
+                    var NewCookie = "";
+                    $(cookie).each(function () {
+                        if (this.indexOf(ClosedContactId+',') > -1) {
+                            /*dont add to new cookie*/
+                        } else {
+                            if (this != '') {
+                                NewCookie += this + "|";
+                            }
+                        }
+                    });
+                    $.cookie("__Contact", NewCookie, { expires: 2, path: '/' });
+                }
+            }
+
+        });
+    });
+</script>
+<div class="contact_tabs_container">
+    @if (Model.Count() > 0)
+    {
+        <ul class="nav nav-tabs contact_details_main_nav">
+            @foreach (var item in Model)
+            {
+                <li class="tab-list @(i==1?"active":"")" data-id="@item.ContactId" data-Guid="@item.ContactGuid">
+                    <a href="@(SitePath)/Contact/ContactDetail/?id=@item.ContactId" data-target="#contact_tab_@item.ContactId" data-id="@item.ContactId" data-Guid="@item.ContactGuid" data-toggle="tab">
+                       
+                        <span><i class="fa fa-user fa-fw"></i>@item.ContactName</span>
+                        <div title="Close" class="tab_close_style tabCloseContact" data-id="@item.ContactName"></div>
+                    </a>
+                </li>
+                i++;
+            }
+        </ul>
+        <div class="tab-content">
+            @foreach (var item in Model)
+            {
+                <div class="tab-pane @(j == 1 ? "active" : "")" data-id="@item.ContactId" data-Guid="@item.ContactGuid" id="contact_tab_@item.ContactId"></div>
+                j++;
+            }
+        </div>
+    }
+</div>
+

@@ -1,0 +1,185 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.InventoryHistoryModel
+@using HS.Framework
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+
+<table class="table" id="InventoryCountReportTable">
+    <thead class="table-head-border">
+        <tr>
+            <th>
+                <div>@Localize.T("Name")</div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Description")</div>
+                <div><i data-val="ascending/customer"></i><i data-val="descending/customer"></i></div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Quantity")</div>
+                <div><i data-val="ascending/equipment"></i><i data-val="descending/equipment"></i></div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Date")</div>
+                <div><i data-val="ascending/quantity"></i><i data-val="descending/quantity"></i></div>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.InventoryHistoryList)
+        {
+            <tr>
+                <td class="table-body-td-style">
+                    <div>@item.EquipmentName</div>
+                </td>
+                <td class="table-body-td-style">
+                    <div>
+                        <span>@item.Description</span>
+                        @if (item.TicketId > 0)
+                        {
+                            <a title="@Localize.T("Ticket ID")" class="cus-anchor" onclick="OpenTicketById(@item.TicketId)" href="javascript:void(0)"><span>#@item.TicketId</span></a>
+                        }
+                    </div>
+                </td>
+                <td class="table-body-td-style">
+                    <div>@(item.Type == "Release" ? "-" : "")@item.Quantity</div>
+                </td>
+                <td class="table-body-td-style">
+                    @*<div>@string.Format(item.LastUpdatedDate.ToString("MM/dd/yy hh:mm tt"))</div>*@
+                    <div>@string.Format(item.LastUpdatedDate.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"))</div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="ProductHistoryLoad(@(ViewBag.PageNumber), @(ViewBag.order))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="ProductHistoryLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="ProductHistoryLoad(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="ProductHistoryLoad(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="ProductHistoryLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="ProductHistoryLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="ProductHistoryLoad(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="ProductHistoryLoad(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="ProductHistoryLoad(3, @(ViewBag.order))">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="ProductHistoryLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="ProductHistoryLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="ProductHistoryLoad(@(ViewBag.PageNumber-2), @(ViewBag.order))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="ProductHistoryLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="ProductHistoryLoad(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="ProductHistoryLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="ProductHistoryLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="ProductHistoryLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="ProductHistoryLoad(@(ViewBag.PageNumber + 2), @(ViewBag.order))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="ProductHistoryLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="ProductHistoryLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="ProductHistoryLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="ProductHistoryLoad(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="ProductHistoryLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="ProductHistoryLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="ProductHistoryLoad(@(ViewBag.PageNumber - 1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="ProductHistoryLoad(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="ProductHistoryLoad(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="ProductHistoryLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+

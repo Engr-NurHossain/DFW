@@ -1,0 +1,394 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.ShowBillModel
+@*@model List<HS.Entities.ShowBillModel>*@
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@Styles.Render("~/styles/EquipmentList")
+
+<link href="~/Content/Css/VendorBill/VendorBillList.css" rel="stylesheet" />
+
+
+<script>
+        var pageno = '@ViewBag.PageNumber';
+
+    var ClosePopup = function () {
+        $.magnificPopup.close();
+    }
+    var OpenBillById = function (BillId) {
+        console.log('OpenBillById');
+        if (typeof (BillId) != "undefined" && BillId > 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/AddVendorBill/?id=" + BillId);
+        } else if (typeof (BillId) != "undefined" && BillId.indexOf("BL") == 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/AddVendorBill/?BillID=" + BillId);
+        }
+    }
+    var OpenBillBySupplierId = function (SupplierId) {
+        console.log('OpenBillById');
+        if (typeof (SupplierId) != "undefined" && SupplierId > 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/AddVendorBill/?id=0&SupplierId=" + SupplierId);
+        }
+    }
+    var OpenPaymentByPaymentId =function(PaymentId){
+        if (typeof (PaymentId) != "undefined" && PaymentId > 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/MakePayment/?PaymentId=" + PaymentId);
+        }
+    }
+    var OpenPaymentByBillId = function (BillId, SupplierId, empid) {
+        if (typeof (BillId) != "undefined" && BillId > 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/MakePayment/?BillId=" + BillId + "&SupplierId=" + SupplierId + "&empid=" + empid);
+        }
+    }
+
+    var OpenCheck = function(name, amount,memo){
+        memo = encodeURI(memo);
+        name = encodeURI(name);
+        $("#OpenCheckPreview").attr("href", domainurl + "/Expense/CheckPreview/?Amount=" + amount + "&Name=" + name + "&Memo=" + memo);
+        $("#OpenCheckPreview").click();
+    }
+    $(document).ready(function () {
+
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+
+        if (StartDate != "" && EndDate != "") {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            NavigatePageListing(pageno, orderval);
+        });
+    })
+</script>
+
+
+<div class="custom-table">
+    @if (ViewBag.OutOfNumber == 0)
+    {
+        @ViewBag.Message;
+    }
+    else
+    {
+    <table class="display exp_billing_list" id="tblVendorBillList">
+        <thead class="table-head-border vbl_header_hide">
+            <tr>
+                <th class="thead-th-style">
+                    <div>@Localize.T("Bill Id") </div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/billid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/billid"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("Vendor") </div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/suppliername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/suppliername"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("Total Amt.") </div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/totalamount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/totalamount"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("Balance") </div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/balance"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/balance"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("Due Date") </div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/duedate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/duedate"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div>@Localize.T("Status") </div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+                </th>
+
+                <th class="thead-th-style">
+                    <div>@Localize.T("Actions") </div>
+                </th>
+            </tr>
+        </thead>
+        @foreach (var item in Model.ShowBillModelList)
+        {
+            if (item.Type == "Bill")
+            {
+                <tr class="tr-style">
+
+                    <td class="table-body-td-style" valign="top">
+                        <div> @Localize.T("Bill Id") <span>:</span></div>
+                        <div>
+                            @if (item.Type == "Bill")
+                            {
+                                <a class="cus-anchor" onclick="OpenBillById(@item.Id)" href="Javasicpt:Void(0)">@item.BillNo</a>
+                            }
+                            else if (item.Type == "Payment")
+                            {
+                                <a class="cus-anchor" onclick="OpenPaymentByPaymentId(@item.PaymentId)" href="Javasicpt:Void(0)">@item.Type</a>
+                            }
+                            else
+                            {
+                                <span>@item.Type</span>
+                            }
+                        </div>
+
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Vendor") <span>:</span></div>
+                        <div>@item.SupplierName</div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Total Amt.") <span>:</span></div>
+                        @{
+                            if (item.PaymentStatus == "Open")
+                            {
+                                <div style="color:red">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalAmount)</div>
+                            }
+                            else
+                            {
+                                <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalAmount)</div>
+                            }
+                        }
+
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Balance") <span>:</span></div>
+                        @{
+                            if (item.PaymentStatus == "Open")
+                            {
+                                <div style="color:red">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.OpenBalance)</div>
+                            }
+                            else
+                            {
+                                <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.OpenBalance)</div>
+                            }
+                        }
+
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Due Date") <span>:</span></div>
+                        @{
+                            if (item.PaymentStatus == "Open")
+                            {
+                                <div style="color:red">@item.DueDate.ToString("MM/dd/yy")</div>
+                            }
+                            else
+                            {
+                                <div>@item.DueDate.ToString("MM/dd/yy")</div>
+                            }
+                        }
+
+                    </td>
+
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Status") <span>:</span></div>
+                        @{
+                            if (item.PaymentStatus == "Open")
+                            {
+                                string status = item.PaymentStatus;
+                                status = item.DueDate < DateTime.Today ? "Due" : status;
+                                <div style="color:red">@status</div>
+                            }
+                            else
+                            {
+                                <div>@item.PaymentStatus</div>
+                            }
+                        }
+
+                    </td>
+
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Actions") <span>:</span></div>
+                        <div>
+                            @{
+                                if (item.PaymentStatus == "Paid")
+                                {
+                                    <span style="color:#2ca01c;">Paid</span>
+                                }
+                                else
+                                {
+                                    if (item.OpenBalance > 0 && item.Type == "Bill")
+                                    {
+                                        <a href="Javasicpt:Void(0)" class="cus-anchor" onclick="OpenPaymentByBillId(@item.Id, @item.SupplierId, '@item.EMPID')">Make Payment</a>
+
+                                    }
+                                    else if (item.Type == "Payment" && ViewBag.CheckList != null)
+                                    {
+                                        var itemList = ((List<HS.Entities.CheckPayment>)ViewBag.CheckList).Where(x => x.PaymentId == item.PaymentId).ToList();
+                                        foreach (var i in itemList)
+                                        {
+                                            <a href="Javasicpt:Void(0)" class="cus-anchor" onclick="OpenCheck('@i.SupplierName','@i.Amount','')">@i.BillId</a>
+                                        }
+                                    }
+                                }
+                            }
+
+                        </div>
+                    </td>
+
+                </tr>
+            }
+
+        }
+    <tr class="tr-style table_total_bg">
+        <td class="table-body-td-style" colspan="2">
+            <b class="float_right">
+                @Localize.T("Total:")
+            </b>
+        </td>
+        <td class="table-body-td-style">
+            <div>@Localize.T("Subtotal Amount") <span>:</span></div><b title="@Localize.T("Subtotal Amount")"> $ @Model.TTAmount.ToString("#,##0.00")</b>
+        </td>
+        <td class="table-body-td-style">
+            <div>@Localize.T("Total Balance") <span>:</span></div><b title="@Localize.T("Total Balance")"> $ @Model.TotalOpenBalance.ToString("#,##0.00")</b>
+        </td>
+        <td class="table-body-td-style" colspan="3">
+        </td>
+
+    </tr>
+
+    </table>
+  
+<div class="opportunities_pagination_container">
+    <div class="opportunities_pagination_inner">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+                {
+            <div class="paginationMiddleButtondv" id="pagination">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))">1</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons disabledBtn" disabled>Next</button>
+                    </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv" id="pagination">
+                <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""))">Previous</button>
+            </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigatePageListing(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigatePageListing(2)">2</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons" disabled="@(ViewBag.PageNumber == 2 ? "disabled" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 2 ? ViewBag.PageNumber + 1 : ""))">Next</button>
+                    </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv" id="pagination">
+                <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""))">Previous</button>
+            </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigatePageListing(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigatePageListing(2)">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 3 ? "activeBtn" : "")" onclick="NavigatePageListing(3)">3</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons" disabled="PaginationButtons @(ViewBag.PageNumber == 3 ? "disabled" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 3 ? ViewBag.PageNumber + 1 : ""))">Next</button>
+                    </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv" id="pagination">
+                    <button class="PaginationButtons" disabled onclick="NavigatePageListing()">Previous</button>
+                </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">Next</button>
+                        </div>
+            }
+            else if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))" id="pagination">Previous</button>
+                </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber - 2))" id="pagination">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))" id="pagination">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))" id="pagination">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" disabled onclick="NavigatePageListing()">Next</button>
+                        </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv" id="pagination">
+                    <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))">Previous</button>
+                </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">Next</button>
+                        </div>
+
+            }
+        }
+    </div>
+    @*<div class="area_zip_code_pagination_inner">
+            @if (ViewBag.PageCount > 0)
+            {
+                <div class="paginationtextdv">
+                    <span>Showing item @ViewBag.CurrentNumber of @ViewBag.OutOfNumber</span>
+                </div>
+            }
+        </div>*@
+</div>
+ }
+<div class="custom-pager hidden">
+    <ul class="pager">
+        <li><a href="javascript:void(0)">@Localize.T("Previous")</a></li>
+        <li><a href="javascript:void(0)">@Localize.T("Next")</a></li>
+    </ul>
+</div>
+<div class="hidden">
+    <a id="OpenCheckPreview" href="">CheckForm</a>
+</div>
+</div>

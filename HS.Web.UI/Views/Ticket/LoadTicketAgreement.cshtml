@@ -1,0 +1,182 @@
+﻿@model HS.Entities.Ticket
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using System.Collections;
+
+<script src="~/Content/Jquery-ui/jquery.js"></script>
+<script src="~/Content/Js/SignaturePad/SignaturePad.js"></script>
+<link href="~/Content/Css/Ticket/LoadTicketAgreement.css" rel="stylesheet" />
+<script>
+    var counter = 0;
+    var ticketid = '@Model.Id';
+    var tickettype = '@ViewBag.TicketType';
+    var signatureImage = '@Model.Signature';
+    var senemail = false;
+    var ImgData;
+    var canvas;
+    var ctx;
+    $(document).ready(function () {
+        //canvas = $('#signature-pad-ticket');
+        //ctx = $('#signature-pad-ticket')[0].getContext('2d');
+        $(".ticket_agree_inner").height((window.innerHeight - 89));
+
+        var signaturePad = new SignaturePad($('#signature-pad-ticket')[0]);
+        //function resizeCanvas() {
+        //    var ratio = Math.max(1, 1);
+        //    canvas.width = canvas.offsetWidth * ratio;
+        //    canvas.height = canvas.offsetHeight * ratio;
+        //    canvas[0].getContext("2d").scale(ratio, ratio);
+        //}
+        //resizeCanvas();
+
+        if (signatureImage != '') {
+            var c = document.getElementById("signature-pad-ticket");
+            var ctx = c.getContext("2d");
+            var img = document.getElementById("SignatureImg");
+            ctx.drawImage(img, 10, 10);
+        }
+        
+        $('#clear').click(function () {
+            signaturePad.clear();
+        });
+        $("#save-png").click(function () {
+            if (signaturePad.isEmpty() && signatureImage == '') {
+                parent.OpenErrorMessageNew("Error!", "Please draw your signature");
+            }
+            else {
+                sigclicked = true;
+                counter += 1;
+                ImgData = signaturePad.toDataURL('image/png');
+                var url = "/Ticket/LoadTicketSignatureImage";
+                var doctext = $(".ticket_agree_inner_info_block_info .document_text").text();
+                var doctext2 = $(".ticket_agree_inner_info_block_info .document_text2").text();
+                var email = $("#email_address").val();
+                if (typeof (email) != "undefined" && email != null && email != "") {
+                    senemail = true;
+                }
+                $.ajax({
+                    url: url,
+                    data: { data: ImgData, ticketid: ticketid, tickettype: tickettype, doctext: doctext, SentEmail: senemail, emailaddress: $("#email_address").val(), doctext2: doctext2 },
+                    type: "Post",
+                    dataType: "Json",
+                    success: function (data) {
+                        if (data.result) {
+                            parent.OpenSuccessMessageNew("Success", data.message, function () {
+                                parent.ClosePopup();
+                            });
+                        } else {
+                             parent.OpenErrorMessageNew("Error", data.message, function () {
+                                parent.ClosePopup();
+                            });
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    }
+                })
+            }
+        })
+    })
+</script>
+<div style="display:none;visibility:hidden;height:0px;">
+    <img id="SignatureImg" src="@Model.Signature" />
+</div>
+<div class="ticket_agree_container">
+    <div class="ticket_agree_header">
+        <label>@Localize.T("Agreement for Ticket #")@Model.Id (@Model.TicketType)</label>
+        <img class="CloseButtonDiv" onclick="parent.ClosePopup()" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+    </div>
+
+    @{
+        if (ViewBag.TicketType == "Drop Off")
+        {
+          <div class="ticket_agree_inner"> 
+              <div class="ticket_agree_inner_info_block">
+                  <div class="ticket_agree_inner_info_block_header">
+                      @Localize.T("Customer Satisfaction")
+                  </div>
+                  <div class="ticket_agree_inner_info_block_info">
+                       <span class="document_text span">This is to certify that the rug cleaning services provided by Dalworth Rug Cleaning of the above-mentioned rugs has been completed to my/our satisfation. Upon execution of this certificate and payment of all related invoices, I hereby release Dalworth Rug Cleaning of any and all future claims.</span>
+                  </div>
+              </div>
+              <div class="ticket_agree_inner_info_block">
+                  <div class="ticket_agree_inner_info_block_header">
+                      @Localize.T("Signature")
+                  </div>
+                  <div class="ticket_agree_inner_info_block_info">
+                      <div class="sign-document">
+                          <div class="wrapper">
+                              <canvas id="signature-pad-ticket" class="signature-pad" width=300 height=100 style="float:left;"></canvas>
+                          </div>
+                          <button class="btn" id="clear" title="@Localize.T("Clear Signature")">@Localize.T("Clear")</button>
+                      </div>
+                  </div>
+
+              </div>
+           
+              <div class="ticket_agree_inner_info_block">
+                  <div class="ticket_agree_inner_info_block_header">
+                      @Localize.T("Email")
+                  </div>
+                  <div class="ticket_agree_inner_info_block_info">
+                      <input class="form-control" value="@ViewBag.Email" id="email_address" style="width:540px !important;margin-top:10px;" />
+                  </div>
+              </div>
+          
+          </div>
+          <div class="ticket_agree_footer">
+              <button class="btn" id="save-png"><i class="fa fa-plus-circle" aria-hidden="true"></i>&nbsp;@Localize.T("I Agree")</button>
+          </div>
+        }
+        if (ViewBag.TicketType == "Pick Up")
+        {
+           <div class="ticket_agree_inner"> 
+               <div class="ticket_agree_inner_info_block">
+                   <div class="ticket_agree_inner_info_block_header">
+                       @Localize.T("Work authorization")
+                   </div>
+                   <div class="ticket_agree_inner_info_block_info">
+                       <span class="document_text span">Prior to beginning the work listed on the invoice for the job number identified above i have read and agree with the general contion of the rug as started hereIn. I hereby authorize dalworth to do the job based on the conditions described above. I hereby realesed Dalworth from responsibility for unforseen chemical conditions which may be present int the rug including, but not limited to, urline, pesticides, acne medication, make-up, Ink splits or marker tips, which could cause permanent stains to appear during or after the cleaning. Occasionally white knots can become more apparant after your rug has been cleaned. This is a characteristics of certain rugs.</span>
+                   </div>
+               </div>
+               <div class="ticket_agree_inner_info_block">
+                   <div class="ticket_agree_inner_info_block_header">
+                       @Localize.T("Signature")
+                   </div>
+                   <div class="ticket_agree_inner_info_block_info">
+                       <div class="sign-document">
+                           <div class="wrapper">
+                               <canvas id="signature-pad-ticket" class="signature-pad" width=300 height=100 style="float:left;"></canvas>
+                           </div>
+                           <button class="btn" id="clear" title="@Localize.T("Clear Signature")">@Localize.T("Clear")</button>
+                       </div>
+                   </div>
+               </div>
+               <div class="ticket_agree_inner_info_block">
+                   @*<div class="ticket_agree_inner_info_block_header"></div>*@
+                   <div class="ticket_agree_inner_info_block_info">
+                       <span class="document_text2 span">Any controversy or claim arising out of or relating to this contract, or the breach thereof, shall be settled by arbitration administered by American Arbitration Association under Commercial Arbitration Rules, and judgement on the award rendered by the arbitrator(s) may be entered in any court having jurisdication thereof.</span>
+                   </div>
+               </div>
+               <div class="ticket_agree_inner_info_block">
+                   <div class="ticket_agree_inner_info_block_header">
+                       @Localize.T("Email")
+                   </div>
+                   <div class="ticket_agree_inner_info_block_info">
+                       <input class="form-control" value="@ViewBag.Email" id="email_address" style="width:540px !important;margin-top:10px;" />
+                   </div>
+               </div>
+           </div>
+        <div class="ticket_agree_footer">
+            <button class="btn" id="save-png">@Localize.T("I Agree")</button>
+        </div>
+        }
+    }
+</div>
+
+
+

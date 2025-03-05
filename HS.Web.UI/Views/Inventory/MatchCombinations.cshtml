@@ -1,0 +1,350 @@
+﻿
+@{
+    ViewBag.Title = "MatchCombinations";
+    Layout = null;
+
+    var ShowView = (HS.Entities.ServiceDetailInfoView)ViewBag.ShowView;
+}
+@model HS.Entities.ServiceMap
+@using Localize= HS.Web.UI.Helper.LanguageHelper
+<style>
+    .match_combinations_container {
+        width:100%;
+        float:left;
+    }
+    .match_combinations_header {
+       width: 100%;
+        background-color: #eceef1;
+        padding: 10px 15px;
+        text-align: left;
+        font-size: 20px;
+    }
+    .match_combinations_container #ServiceDetailInfos {
+        width:100%;
+        float:left;
+        padding:15px;
+    }
+    .match_combinations_container #ServiceDetailInfos select {
+        margin-bottom:10px;
+    }
+    .match_combinations_container #ServiceDetailInfos label {
+        margin-bottom:0px;
+    }
+    .match_combinations_footer {
+        background: #eceef1;
+        height: 50px;
+        position: fixed;
+        width: 100%;
+        bottom: 0%;
+        text-align: right;
+        padding: 8px 15px;
+}
+    .match_combinations_footer button {
+        background-color:#2ca01c;
+        color:#fff;
+    }
+     
+    .match_combinations_container .tt-menu {
+        background: white;
+        min-width: 320px;
+        font-size: 12px;
+        max-height: 230px;
+        overflow-x: hidden;
+        -webkit-box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        margin-top: 0px;
+        overflow: hidden; 
+        position: absolute;
+        left: 0px;
+        z-index: 100;
+        display: none;
+        width: 100%;
+    }
+    .match_combinations_container .tt-dataset-autocomplete {
+        margin-top: -5px;
+    }
+    .match_combinations_container .tt-menu .tt-suggestion {
+        padding:5px;
+        cursor:pointer;
+    } 
+    .match_combinations_container .tt-sug-text {
+        width: 90%;
+        font-size: 14px;
+        text-overflow: ellipsis;
+    }
+
+    .match_combinations_container .tt-suggestion u {
+        text-decoration: none;
+        color: #aa2121;
+    }
+
+    .match_combinations_container .tt-suggestion.active {
+        background-color: #f2f2f2;
+    }
+
+    .match_combinations_container .tt-sug-desc {
+        width: 100%;
+        color: #999;
+        padding-top: 2px;
+        display: block;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+
+    .match_combinations_container .tt-sug-type {
+        position: absolute;
+        right: 17px;
+        top: 11px;
+        color: #999;
+        font-style: italic;
+    }
+
+</style>
+<script>
+    var PropertyLeadtemplate =
+                   '<div class="tt-suggestion tt-selectable" data-select="{1}" data-price="{2}" data-type="{5}" data-id="{0}" data-description="{6}">'
+                      //+ "<img src='{7}' class='EquipmentImage'>"
+                      + "<p class='tt-sug-text'>"
+                          + "<em class='tt-sug-type'>{5}</em>{1}" + "<br />"
+                          + "<em class='tt-eq-price'>${2}</em>"
+                          + "<br />"
+                      + "</p> "
+                   + "</div>";
+    var SaveCombination = function () {
+        var param = JSON.stringify({
+            Id: $("#ServiceDetailInfoId").val(),
+            ServiceId: $("#SelectedServiceId").val(),
+            ManufacturerId: $("#ManufacturerId").val(),
+            LocationId: $("#LocationId").val(),
+            ShowLocation: $("#ShowLocation").val(),
+            TypeId: $("#TypeId").val(),
+            ModelId: $("#ModelId").val(),
+            FinishId: $("#FinishId").val(),
+            CapacityId: $("#CapacityId").val(),
+            EquipmentId: $("#ServiceEquipmentId").attr('data-id'),
+        });
+        var url = domainurl + "/Inventory/AddCombination";
+
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".AddInvoiceLoader").removeClass('hidden'),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                $(".AddInvoiceLoader").addClass('hidden');
+                if (data.result) {
+                    OpenSuccessMessageNew("", data.message, function () {
+                        ShowServiceOptionsCombinationList($("#SelectedServiceId").val());
+                        $("#Right-To-Left-Modal-Body .close").click();
+                    });
+                } else {
+                    OpenErrorMessageNew("", data.message);
+                }
+                
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+
+            }
+        });
+    }
+    var CombinationInsertValidation = function () {
+        var result = true;
+        $("#ServiceDetailInfos select").each(function () {
+            if ($(this).val() == "00000000-0000-0000-0000-000000000000") {
+                $(this).addClass("required");
+                result = false;
+            }
+        });
+        return result;
+    }
+    var InvoiceEqSuggestionclickbind = function (item) {
+        $('.match_combinations_container .tt-suggestion').click(function () {
+            var clickitem = this;
+            $('.match_combinations_container .tt-menu').hide();
+            $(item).val($(clickitem).attr('data-select'));
+            var ServiceId = $(clickitem).attr('data-id');
+            $(item).attr('data-id', ServiceId);
+            var itemName = $(item).parent().find('span');
+            $(itemName).text($(item).val());
+
+            $(item).attr('data-id', $(clickitem).attr('data-id'));
+             
+
+        });
+        $('.match_combinations_container .tt-suggestion').hover(function () {
+            var clickitem = this;
+            $('.tt-suggestion').removeClass("active");
+            $(clickitem).addClass('active');
+        });
+    }
+
+    var SearchKeyUp = function (item, event) {
+        if (event.keyCode == 40 || event.keyCode == 38 || event.keyCode == 13)
+            return false;
+        var ExistEquipment = "";
+        var ExistEquipmentInner = "";
+        $(".HasItem").each(function () {
+            ExistEquipmentInner += "'" + $(this).attr('data-id') + "',";
+        });
+        if (ExistEquipmentInner.length > 0) {
+            ExistEquipmentInner = ExistEquipmentInner.slice(0, -1);
+            ExistEquipment = "(" + ExistEquipmentInner + ")";
+        }
+        $.ajax({
+            url: domainurl + "/Invoice/GetOnlyEquipmentListByKey",
+            data: {
+                key: $(item).val(),
+                ExistEquipment: ExistEquipment
+            },
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var resultparse = JSON.parse(data.result);
+
+                if (resultparse.length > 0) {
+                    var searchresultstring = "<div class='NewProjectSuggestion'>";
+                    for (var i = 0; i < resultparse.length; i++) {
+                        searchresultstring = searchresultstring + String.format(PropertyLeadtemplate,
+                            /*0*/resultparse[i].EquipmentId,
+                            /*1*/ resultparse[i].EquipmentName.replaceAll('"', '\'\''),
+                            /*2*/ resultparse[i].RetailPrice,
+                            /*3*/resultparse[i].Reorderpoint,
+                            /*4*/ resultparse[i].QuantityAvailable,
+                            /*5*/ resultparse[i].EquipmentType.replaceAll('"', '\'\''),
+                            /*6*/resultparse[i].EquipmentDescription.replaceAll('"', '\'\'')/*ImageSource*/);
+                    }
+                    searchresultstring += "</div>";
+                    var ttdom = $($(item).parent()).find('.tt-menu');
+                    var ttdomComplete = $($(item).parent()).find('.tt-dataset-autocomplete');
+                    $(ttdomComplete).html(searchresultstring);
+                    $(ttdom).show();
+
+                    InvoiceEqSuggestionclickbind(item);
+                    if (resultparse.length > 4) {
+                        $(".NewProjectSuggestion").height(352);
+                        $(".NewProjectSuggestion").css('position', 'relative');
+                        $(".NewProjectSuggestion").perfectScrollbar()
+                    }
+                }
+                if (resultparse.length == 0)
+                    $('.tt-menu').hide();
+            }
+        });
+    } 
+    var SearchKeyDown = function (item, event) {
+
+        if (event.keyCode == 13) {
+            $('.tt-menu').hide();
+        }
+        if (event.keyCode == 40) {
+            if ($('.tt-suggestion').length > 0) {
+                if ($('.tt-suggestion.active').length == 0) {
+                    $($('.tt-suggestion').get(0)).addClass('active');
+                    $(item).val($($('.tt-suggestion').get(0)).attr('data-select'))
+                }
+                else {
+                    var suggestionlist = $('.tt-suggestion');
+                    var activesuggestion = $('.tt-suggestion.active');
+                    var indexactive = -1;
+                    for (var id = 0; id < suggestionlist.length; id++) {
+                        if ($(suggestionlist[id]).hasClass('active'))
+                            indexactive = id;
+                    }
+                    if (indexactive < suggestionlist.length - 1) {
+                        $('.tt-suggestion').removeClass('active');
+                        var possibleactive = $('.tt-suggestion').get(indexactive + 1);
+                        $($('.tt-suggestion').get(indexactive + 1)).addClass('active');
+                        $(possibleactive).addClass('active');
+                        $(item).val($(possibleactive).attr('data-select'));
+                    }
+                }
+            }
+            event.preventDefault();
+        }
+        if (event.keyCode == 38) {
+            if ($('.tt-suggestion').length > 0 && $('.tt-suggestion.active').length > 0) {
+                var suggestionlist = $('.tt-suggestion');
+                var activesuggestion = $('.tt-suggestion.active');
+                var indexactive = -1;
+                for (var id = 0; id < suggestionlist.length; id++) {
+                    if ($(suggestionlist[id]).hasClass('active'))
+                        indexactive = id;
+                }
+                if (indexactive > 0) {
+                    $('.tt-suggestion').removeClass('active');
+                    var possibleactive = $('.tt-suggestion').get(indexactive - 1);
+                    $(possibleactive).addClass('active');
+                    $(item).val($(possibleactive).attr('data-select'))
+                }
+            }
+            event.preventDefault();
+        }
+    }
+
+
+    $(document).ready(function () {
+        $("#SaveCombinations").click(function () {
+            if (CombinationInsertValidation()) {
+                SaveCombination();
+            }
+        });
+    });
+</script>
+<div class="match_combinations_container">
+    <div class="match_combinations_header">@Localize.T("Add Combination")</div>
+    @if (ShowView == null)
+    {
+        <h2>@Localize.T("Please select options to show first.")</h2>
+    }
+    else
+    {
+        <div id="ServiceDetailInfos">
+            <input type="hidden" id="ServiceDetailInfoId"  value="@Model.Id"/>
+            <input type="hidden" id="SelectedServiceId" value="@Model.ServiceId" />
+            @if (ShowView.ShowManufacturer)
+            {
+                <label>@Localize.T("Manufacturer")</label>
+                @Html.DropDownListFor(x => x.ManufacturerId, (List<SelectListItem>)ViewBag.ShowManufacturerList, new { @class = "form-control", datarequired = "true" })
+            }
+            @if (ShowView.ShowLocation)
+            {
+                <label>@Localize.T("Location")</label>
+                @Html.DropDownListFor(x => x.LocationId, (List<SelectListItem>)ViewBag.ShowLocationList, new { @class = "form-control", datarequired = "true" })
+            }
+            @if (ShowView.ShowType)
+            {
+                <label>@Localize.T("Type")</label>
+                @Html.DropDownListFor(x => x.TypeId, (List<SelectListItem>)ViewBag.ShowTypeList, new { @class = "form-control", datarequired = "true" })
+            }
+            @if (ShowView.ShowModel)
+            {
+                <label>@Localize.T("Model")</label>
+                @Html.DropDownListFor(x => x.ModelId, (List<SelectListItem>)ViewBag.ShowModelList, new { @class = "form-control", datarequired = "true" })
+            }
+            @if (ShowView.ShowFinish)
+            {
+                <label>@Localize.T("Finish")</label>
+                @Html.DropDownListFor(x => x.FinishId, (List<SelectListItem>)ViewBag.ShowFinishList, new { @class = "form-control", datarequired = "true" })
+            }
+            @if (ShowView.ShowCapacity)
+            {
+                <label>@Localize.T("Capacity")</label>
+                @Html.DropDownListFor(x => x.CapacityId, (List<SelectListItem>)ViewBag.ShowCapacityList, new { @class = "form-control",datarequired="true" })
+            }
+            <div class="hidden">
+                <label>@Localize.T("Add Equipment (Optional)")</label>
+                <input type="text" value="@Model.EquipmentName" id="ServiceEquipmentId" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" placeholder="@Localize.T("Equipment Name")" data-id="@Model.EquipmentId" />
+                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+            </div>
+        </div>
+        <div class="match_combinations_footer">
+            <button class="btn" id="SaveCombinations"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")</button>
+        </div>
+    }
+    
+</div>
+

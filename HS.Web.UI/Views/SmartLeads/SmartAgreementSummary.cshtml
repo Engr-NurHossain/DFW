@@ -1,0 +1,966 @@
+﻿@{
+    Layout = null;
+    double TotalPrice = 0;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+    Currency = String.Concat(Currency.Where(c => !Char.IsWhiteSpace(c)));
+    double? OneTimeServiceTotal = Model.CustomerPackageOneTimeServiceList.Sum(x => x.Total);
+    double? ServiceTotal = Model.CustomerPackageServiceList.Sum(x => x.Total);
+    double? EquipmentTotal = Model.CustomerPackageEqpList.Sum(x => x.Total);
+    bool AbleToReceivePayment = false;
+
+    if ((!Model.EquipmentIsPaid && EquipmentTotal > 0) || (!Model.ServiceIsPaid && ServiceTotal + OneTimeServiceTotal > 0) || (!Model.PackageIsPaid && (Model.PackageCustomer.ActivationFee > 0 || Model.IsNonConfirming)))
+    {
+        AbleToReceivePayment = true;
+    }
+}
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@model HS.Entities.SmartSetupSummary
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+<link href="~/Content/Css/CustomerDetails/CustomerDetailsCustom.css" rel="stylesheet" />
+<link href="~/Content/Css/SmartLeads/SmartAgreementSummary.css" rel="stylesheet" />
+
+<script>  
+    var CurrentCustomerIntId = @Model.Customer.Id;
+    var CurrentCustomerId = '@Model.Customer.CustomerId';
+    var PackageIsPaid = '@Model.PackageIsPaid';
+    var ServiceIsPaid = '@Model.ServiceIsPaid';
+    var EquipmentIsPaid = '@Model.EquipmentIsPaid';
+    var AbleToReceivePayment = '@AbleToReceivePayment';
+    var Currency='@Currency';
+    var PaymentMethodInvoice = '@HS.Web.UI.Helper.LabelHelper.PaymentMethod.Invoice';
+   var PaymentMethodPromo = '@HS.Web.UI.Helper.LabelHelper.PaymentMethod.Promo';
+    var PaymentMethodFinanced = '@HS.Web.UI.Helper.LabelHelper.PaymentMethod.Financed';
+    var PaymentMethodCash = '@HS.Web.UI.Helper.LabelHelper.PaymentMethod.Cash';
+    var PaymentMethodOnFile = '@HS.Web.UI.Helper.LabelHelper.PaymentMethod.OnFile';
+    var TotalAmount = '@ViewBag.Total'
+    var CollectedAmount = '@ViewBag.CollectedTotal';
+    var AchPayment = '@ViewBag.AchPayment';
+    var CreditCardPayment = '@ViewBag.CreditCardPayment';
+    var CashPayment = '@ViewBag.CashPayment';
+    var CheckPayment = '@ViewBag.CheckPayment';
+    var InvoicePayment = '@ViewBag.InvoicePayment';
+    var IsAgreementSend = '@Model.Customer.IsAgreementSend';
+    var TaxSales = '@ViewBag.SaleTax';
+    var TaxSales = '@ViewBag.SaleTax';
+    var TaxSales = '@ViewBag.SaleTax';
+    var HasAdminPermission = '@ViewBag.HasAdminPermission';
+    var MoveCusId = '@Model.Customer.MoveCustomerId';
+    var IsPcAppId = '@ViewBag.IsPcAppId';
+    var IsLead = '@ViewBag.IsLead';
+    var TransMakeCurrency = '@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)';
+    
+</script>
+
+<script src="~/Content/Js/SmartSetup/SmartAgreementSummary.js"></script>
+<div class="AgreementSummaryLoader hidden">
+    <div class="loader-background"></div>
+    <div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>
+</div>
+
+<div class="smart_agreement_summery_container">
+
+    <input id="step" type="hidden" value="5" />
+    <input type="hidden" value="@Model.Customer.CustomerId" id="LeadCustomerID" />
+    <input type="hidden" value="@Model.Customer.Id" id="LeadContractId" />
+    <input type="hidden" value="@Model.Customer.CustomerId" id="LeadContractCustomerID" />
+    <input type="hidden" value="@Model.Customer.FirstName" id="LeadContractFirstName" />
+    <input type="hidden" value="@Model.Customer.LastName" id="LeadContractLastName" />
+    <input type="hidden" value="@Model.Customer.Street" id="LeadContractStreet" />
+    <input type="hidden" value="@Model.Customer.ZipCode" id="LeadContractZip" />
+
+    <div class="smart_lead_summary_paymentprofile">
+        <div class="ci_block">  
+            <div class="ci_header clearfix">
+                @Localize.T("Payment Profiles")
+            </div>
+            <div class="ci_info">
+                <div class="SaveBtnDiv smart_add_payment">
+                    <div style="float:left;" class="dropdown">
+                        <button title="@Localize.T("Add payment Profile")" class="btn addView_button dropdown-toggle" data-toggle="dropdown">@Localize.T("Add Payment Method")</button>
+
+
+                        <ul class="dropdown-menu">
+                            <li>
+                                <button class="btn" onclick="OpenACHAddView()">@Localize.T("ACH")</button>
+                            </li>
+                            <li>
+                                <button class="btn" onclick="OpenCCAddView()">@Localize.T("Credit Card")</button>
+                            </li>
+                            @if (PermissionChekcer.IsPermitted(Permissions.LeadPermissions.AllowCheckPaymentMethod))
+                            {
+                                <li>
+                                    <button class="btn" onclick="OpenCHKAddView()">@Localize.T("Check")</button>
+                                </li>
+                            }
+                            @if (PermissionChekcer.IsPermitted(Permissions.LeadPermissions.AllowCashPaymentMethod))
+                            {
+                                <li>
+                                    <button class="btn" onclick="AddCashOption('Package')">@Localize.T("Cash")</button>
+                                </li>
+                            }
+                            @if (PermissionChekcer.IsPermitted(Permissions.LeadPermissions.AllowInvoicePaymentMethod))
+                            {
+                                <li>
+                                    <button class="btn" onclick="AddInvoiceOption('Package')">@Localize.T("Invoice")</button>
+                                </li>
+                            }
+                            @if (PermissionChekcer.IsPermitted(Permissions.LeadPermissions.AllowFinancedPaymentMethod))
+                            {
+                                <li>
+                                    <button class="btn" onclick="AddFinancedOption('Package')">@Localize.T("Financed")</button>
+                                </li>
+                            }
+                            @if (PermissionChekcer.IsPermitted(Permissions.LeadPermissions.PaymentMethodPromo))
+                            {
+                                <li>
+                                    <button class="btn" onclick="AddPromoOption('Promo')">@Localize.T("Promo")</button>
+                                </li>
+
+                            }
+                        </ul>
+                    </div>
+                    @if (PermissionChekcer.IsPermitted(Permissions.LeadPermissions.ShowNFTAccount))
+                    {
+                        <div>
+
+                            <label style="float:right;margin-right:5px;"><input class="IsNFTTicket" type="checkbox" @((Model.PackageCustomer.IsNFTTicket != null && Model.PackageCustomer.IsNFTTicket.Value) ? "checked" : "") />@Localize.T("NFT Account")</label>
+
+                        </div>
+                    }
+                    @if (PermissionChekcer.IsPermitted(Permissions.LeadPermissions.ISPCApplyFinance))
+                    {
+                        <button title="@Localize.T("Apply For Finance")" class="btn addFinance_button green_button">@Localize.T("Apply For Finance")</button>
+                        <button title="@Localize.T("Get Finance Status")" class="btn finance_status_button green_button">@Localize.T("Get Finance Status")</button>
+                    }
+                    @if (PermissionChekcer.IsPermitted(Permissions.LeadPermissions.PowerPayApplyFinance))
+                    {
+                        <button title="@Localize.T("Apply For Finance(Power Pay)")" class="btn addFinancehpowerpay_button green_button">@Localize.T("Apply For Finance(Power Pay)")</button>
+                    }
+
+                </div>
+                <div class="sas_paument_method">
+                    @if (Model.PaymentProfileCustomer != null && Model.PaymentProfileCustomer.Count > 0)
+                    {
+                        <table style="width:100%;" class="uk-table uk-table-hover uk-table-striped" id="tbl_paymentprofilecustomer">
+                            <thead>
+                                <tr>
+                                    <th>@Localize.T("Title")</th>
+                                    <th>@Localize.T("Action")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.PaymentProfileCustomer)
+                                {
+                                    <tr>
+                                        <td>@item.Type</td>
+                                        @if (ViewBag.IsLead == false && ViewBag.DisableBtnCheck == "true")
+                                        {
+                                            <td></td>
+                                        }
+                                        else
+                                        {
+                                            <td><a href="javascript:void(0)" class="profile_item_delete" data-id="@item.Id" data-guid="@item.CustomerId"><i class="fa fa-trash" style="color:#2ca01c;"></i></a></td>
+                                        }
+
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    @if (Model.PackageCustomer != null)
+    {
+        <div class="smart_lead_summery_payment">
+            <div class="ci_block">
+                <div class="ci_header clearfix">
+                    @Localize.T("Package")
+                </div>
+                <div class="ci_info">
+                    <div class="smart_agree_package_info">
+                        <div>
+                            @if (!string.IsNullOrWhiteSpace(Model.PackageCustomer.SmartSystemTypeVal))
+                            {
+                                <span>@Model.PackageCustomer.SmartSystemTypeVal</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(Model.PackageCustomer.SmartInstallTypeVal))
+                            {
+                                <span> > @Model.PackageCustomer.SmartInstallTypeVal</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(Model.PackageCustomer.ManufacturerName))
+                            {
+                                <span> > @Model.PackageCustomer.ManufacturerName</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(Model.PackageCustomer.PackageName))
+                            {
+                                <span>> @((string.IsNullOrWhiteSpace(Model.PackageCustomer.UserType) || Model.PackageCustomer.UserType == "-1") ? "" : string.Format("{0} > ", Model.PackageCustomer.UserType)) @Model.PackageCustomer.PackageName @(string.IsNullOrWhiteSpace(Model.PackageCustomer.PackageCode) ? "" : string.Format("[{0}]", Model.PackageCustomer.PackageCode))</span>
+                            }
+                        </div>
+                    </div>
+                    <table class="Setup-Equipments-Table package_table">
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <label>Activation Fee </label>
+                                </td>
+                                <td>
+                                    <div>
+                                        <span id="activationFeelabel"> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.PackageCustomer.ActivationFee)</span>
+                                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerActivationFeelEdit))
+                                        {
+                                            if (ViewBag.IsLead == false && ViewBag.DisableBtnCheck == "true")
+                                            {
+
+                                            }
+                                            else
+                                            {
+                                                <i class="fa fa-edit cursor-pointer" id="update-activation-fee"></i>
+                                            }
+
+                                        }
+
+
+                                    </div>
+                                    <div id="edit-activatio-fee" class="hidden">
+                                        <input type="text" name="name" value="@Model.PackageCustomer.ActivationFee" id="ActivationFee" style="width:35%" />
+                                        <span id="change-activation" class="change-activation-fee cursor-pointer" onclick="updateActivationFee('@Model.PackageCustomer.CustomerId')">&#10004;</span> <span id="exit-activation" class="exit-activation-fee cursor-pointer">&#10008;</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            @if (ViewBag.HasLabourFee == "true")
+                            {
+                                <tr>
+                                    <td>
+                                        <label>Labor Fee </label>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <span id="labourFeelabel"> @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.PackageCustomer.LabourFee)</span>
+                                            @if (ViewBag.IsLead == false && ViewBag.DisableBtnCheck == "true")
+                                            {
+
+                                            }
+                                            else
+                                            {
+                                                <i class="fa fa-edit cursor-pointer" id="update-labour-fee"></i>
+                                            }
+
+
+                                        </div>
+                                        <div id="edit-labour-fee" class="hidden">
+                                            <input type="text" name="name" value="@Model.PackageCustomer.LabourFee" id="LabourFee" style="width:35%" />
+                                            <span id="change-labour" class="change-labour-fee cursor-pointer" onclick="updatelabourFee('@Model.PackageCustomer.CustomerId')">&#10004;</span> <span id="exit-labour" class="exit-labour-fee cursor-pointer">&#10008;</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+
+                            <tr>
+                                <td>
+                                    <label>Non Conforming Fee </label>
+                                </td>
+                                <td>
+                                    <span id="nonconformingFeelabel">
+
+                                        @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.PackageCustomer.NonConformingFee)
+                                    </span>
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerNonConfirmingfeeUpdate))
+                                    {
+                                        if (ViewBag.IsLead == false && ViewBag.DisableBtnCheck == "true")
+                                        {
+
+                                        }
+                                        else
+                                        {
+                                            <i class="fa fa-edit cursor-pointer" id="update-nonconforming-fee"></i>
+                                        }
+
+                                    }
+                                    <div id="edit-nonconformin-fee" class="hidden">
+                                        <input type="text" name="name" value="@Model.PackageCustomer.NonConformingFee" id="NonConformingFee" style="width:35%" />
+                                        <span id="change-nonconforming" class="change-nonconforming-fee cursor-pointer" onclick="updateNonCoformingFee('@Model.PackageCustomer.CustomerId')">&#10004;</span> <span id="exit-nonconforming" class="exit-nonconforming-fee cursor-pointer">&#10008;</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            @*@if (Model.Customer.BillTax != false)
+                                {*@
+                            <tr>
+                                <td>
+                                    <label>Sub Total </label>
+                                </td>
+                                <td>
+                                    @Currency@LabelHelper.FormatAmount(Model.PackageCustomer.ActivationFee + Model.PackageCustomer.NonConformingFee + Model.PackageCustomer.LabourFee)
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <label>@Localize.T("Tax") (@ViewBag.SaleTax %)</label>
+                                </td>
+                                <td>
+                                    @Currency@LabelHelper.FormatAmount(ViewBag.TaxActivationNoncorming)
+                                </td>
+                            </tr>
+                            @*}*@
+
+                            <tr>
+                                <td>
+                                    <label>Total </label>
+                                </td>
+                                <td>
+                                    
+                                    <span class="ActivationTotalAmount">
+                                        @Currency@LabelHelper.FormatAmount(Model.PackageCustomer.ActivationFee + Model.PackageCustomer.NonConformingFee + Model.PackageCustomer.LabourFee + ViewBag.TaxActivationNoncorming)
+                                    </span>
+
+                                   
+                                  <input type="hidden" value="@(Model.PackageCustomer.ActivationFee + Model.PackageCustomer.NonConformingFee + Model.PackageCustomer.LabourFee + ViewBag.TaxActivationNoncorming)" id="ActivationTotalAmount" />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    @if (((Model.PackageCustomer.ActivationFee + Model.PackageCustomer.NonConformingFee) > 0 || Model.IsNonConfirming) && !Model.PackageIsPaid)
+                    {
+                        AbleToReceivePayment = true;
+                        <div class="ActivationfeePaymentsDiv">
+                            <div class="form-group clearfix width-25p">
+                                <span class="text-custom">@Localize.T("Upfront Payment")</span>
+                                @Html.DropDownListFor(x => Model.PackagePaymentInfoId, ViewBag.ProfilePackage as List<SelectListItem>, new { @class = "form-control setfirstvalue", id = "payment_profile_package", datarequired = "true" })
+                            </div>
+                        </div>
+                    }
+                    <div class="sas_comment">
+                        @if (!string.IsNullOrWhiteSpace(Model.PackageComment))
+                        {
+                            @Html.Raw(Model.PackageComment)
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.PackageInvoice))
+                        {
+                            <div>Ref: <span class="cus-anchor" onclick="OpenInvById('@Model.PackageInvoice')">@Model.PackageInvoice</span></div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    @*@if (Model.PackageCustomer != null && Model.IsNonConfirming)
+        {
+            <div class="smart_lead_summery_payment">
+                <div class="ci_block">
+                    <div class="ci_header clearfix">
+                        @Localize.T("Package")
+                    </div>
+                    <div class="ci_info">
+                        <div class="smart_agree_package_info">
+                            <div>
+                                @if (!string.IsNullOrWhiteSpace(Model.PackageCustomer.SmartSystemTypeVal))
+                                {
+                                    <label>@Model.PackageCustomer.SmartSystemTypeVal</label>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.PackageCustomer.SmartInstallTypeVal))
+                                {
+                                    <label> > @Model.PackageCustomer.SmartInstallTypeVal</label>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.PackageCustomer.ManufacturerName))
+                                {
+                                    <label> > @Model.PackageCustomer.ManufacturerName</label>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.PackageCustomer.PackageName))
+                                {
+                                    <label>> @((string.IsNullOrWhiteSpace(Model.PackageCustomer.UserType) || Model.PackageCustomer.UserType == "-1") ? "" : string.Format("{0} > ", Model.PackageCustomer.UserType)) @Model.PackageCustomer.PackageName @(string.IsNullOrWhiteSpace(Model.PackageCustomer.PackageCode) ? "" : string.Format("[{0}]", Model.PackageCustomer.PackageCode))</label>
+                                }
+                            </div>
+                            <div> <label>NonConfirming Fee: @Currency@LabelHelper.FormatAmount(Model.PackageCustomer.ConformingFee)</label></div>
+                        </div>
+                        @if (Model.PackageCustomer.ConformingFee > 0 && !Model.NonConfirmingIsPaid)
+                        {
+                            AbleToReceivePayment = true;
+
+                            <div class="ActivationfeePaymentsDiv">
+                                <div class="form-group clearfix width-25p">
+                                    <span class="text-custom">@Localize.T("Payment")</span>
+                                    @Html.DropDownListFor(x => Model.NonConfirmingPaymentInfoId, ViewBag.profile as List<SelectListItem>, new { @class = "form-control", id = "payment_profile_package" })
+                                </div>
+                                <div class="width-75p SaveBtnDiv">
+                                    <div class="dropdown">
+                                        <button class="btn addView_button dropdown-toggle" data-toggle="dropdown"><i class="fa fa-plus"></i></button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <button class="btn" onclick="OpenACHAddView()">@Localize.T("ACH")</button>
+                                            </li>
+                                            <li>
+                                                <button class="btn" onclick="OpenCCAddView()">@Localize.T("Credit Card")</button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div class="list_payment_method">
+                                        <button class="btn list_View_method" onclick="OpenPaymentMethodList()"><i class="fa fa-list"></i></button>
+                                    </div>
+                                    <button class="btn" id="SaveNonConfirmingFeePayment"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")</button>
+                                </div>
+                            </div>
+                        }
+                        @if (Model.NonConfirmingIsPaid)
+                        {
+                            <div>
+                                <span>@Localize.T("Payment has been received.")</span>
+                                @if (!string.IsNullOrWhiteSpace(Model.ServiceInvoice))
+                                {
+                                    <span>Ref: @Model.NonConfirmingInvoice</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }*@
+    @if ((Model.CustomerPackageServiceList != null && Model.CustomerPackageServiceList.Count() > 0) || (Model.CustomerPackageOneTimeServiceList != null && Model.CustomerPackageOneTimeServiceList.Count() > 0))
+    {
+        <div class="smart_lead_summery_payment">
+            <div class="ci_block">
+                <div class="ci_header clearfix">
+                    @Localize.T("Services")
+                </div>
+                <div class="ci_info">
+                    <div class="smart_agree_summery_table_container">
+                        @if (Model.CustomerPackageOneTimeServiceList.Count > 0)
+                        {
+                            <table class="Setup-Equipments-Table">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            @Localize.T("Smart Service (One time)")
+                                        </th>
+                                        <th>
+                                            @Localize.T("Monthly Rate")
+                                        </th>
+                                        <th>
+                                            @Localize.T("Discounted Rate")
+                                        </th>
+                                        <th>
+                                            @Localize.T("Total Rate")
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (HS.Entities.CustomerPackageService item in Model.CustomerPackageOneTimeServiceList)
+                                    {
+                                        <tr class="Equipment_@item.Id serviceRows" serviceId="@item.EquipmentId">
+                                            <td>
+                                                @item.EquipmentServiceName
+                                            </td>
+                                            <td>
+                                                @Currency<span>@LabelHelper.FormatAmount(item.UnitPrice)</span>
+                                            </td>
+                                            <td>
+                                                @Currency<span>@LabelHelper.FormatAmount(item.DiscountUnitPricce)</span>
+                                            </td>
+                                            <td>
+                                                @Currency<span class="total_price">@LabelHelper.FormatAmount(item.Total)</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                    <tr class="BottomTotalTr_style">
+                                        <td></td>
+                                        <td>@Localize.T("Sub Total")</td>
+                                        <td class="retail-total ">@Currency@LabelHelper.FormatAmount(Model.CustomerPackageOneTimeServiceList.Sum(x => x.DiscountUnitPricce))</td>
+                                        <td class="sub-total OnetimeServiceSubTotal" sub-total="@Math.Round((OneTimeServiceTotal.HasValue? OneTimeServiceTotal.Value : 0),2)">@Currency@LabelHelper.FormatAmount(OneTimeServiceTotal)</td>
+
+                                    </tr>
+                                    <tr class="BottomTotalTr_style">
+                                        <td></td>
+                                        <td>@Localize.T("Tax") (@ViewBag.ServiceSaleTax  %)</td>
+                                        <td class="retail-total">-</td>
+                                        <td class="sub-total OnetimeServiceTaxTotal" total-tax="@Math.Round(ViewBag.OneTimeServiceTax,2)">@Currency@LabelHelper.FormatAmount(ViewBag.OneTimeServiceTax)</td>
+
+                                    </tr>
+                                    <tr class="BottomTotalTr_style">
+                                        <td></td>
+                                        <td>@Localize.T("Total")</td>
+                                        <td></td>
+                                        <td class="sub-total">@Currency<span class="OnetimeServiceTotalAmount">@LabelHelper.FormatAmount(OneTimeServiceTotal + ViewBag.OneTimeServiceTax)</span></td>
+
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="ServicePayments">
+                                <div class="form-group clearfix width-25p">
+                                    <span class="text-custom">@Localize.T("One Time Payment")</span>
+                                    @Html.DropDownListFor(x => Model.OneTimePaymentInfoId, ViewBag.profileOnetime as List<SelectListItem>, new { @class = "form-control setfirstvalue", id = "payment_profile_onetime" })
+                                </div>
+                            </div>
+                            <div class="width-100p">
+                                <br />
+                            </div>
+                        }
+
+                        <table class="Setup-Equipments-Table">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        @Localize.T("Smart Service (Recurring)")
+                                    </th>
+                                    <th>
+                                        @Localize.T("Monthly Rate")
+                                    </th>
+                                    <th>
+                                        @Localize.T("Discounted Rate")
+                                    </th>
+                                    <th>
+                                        @Localize.T("Total Rate")
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (HS.Entities.CustomerPackageService item in Model.CustomerPackageServiceList)
+                                {
+                                    <tr class="Equipment_@item.Id serviceRows" serviceId="@item.EquipmentId">
+                                        <td>
+                                            @item.EquipmentServiceName
+                                            @*@(string.IsNullOrWhiteSpace(item.Manufacturer) ? "" : string.Format("[{0}]", item.Manufacturer))
+                                                @(string.IsNullOrWhiteSpace(item.Location) ? "" : string.Format("[{0}]", item.Location))
+                                                @(string.IsNullOrWhiteSpace(item.Type) ? "" : string.Format("[{0}]", item.Type))
+                                                @(string.IsNullOrWhiteSpace(item.Model) ? "" : string.Format("[{0}]", item.Model))
+                                                @(string.IsNullOrWhiteSpace(item.Finish) ? "" : string.Format("[{0}]", item.Finish))
+                                                @(string.IsNullOrWhiteSpace(item.Capacity) ? "" : string.Format("[{0}]", item.Capacity))
+                                                @(string.IsNullOrWhiteSpace(item.SKU) ? "" : string.Format("[{0}]", item.SKU))*@
+                                        </td>
+                                        <td>
+                                            @Currency<span>@LabelHelper.FormatAmount(item.UnitPrice)</span>
+                                        </td>
+                                        <td>
+                                            @Currency<span>@LabelHelper.FormatAmount(item.DiscountUnitPricce)</span>
+                                        </td>
+                                        <td>
+                                            @Currency<span class="total_price">@LabelHelper.FormatAmount(item.Total)</span>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.ACHDiscountVal) && Convert.ToDouble(Model.ACHDiscountVal) > 0)
+                                {
+                                    <tr class="BottomTotalTr_style ACHDiscountDiv hidden">
+                                        <td></td>
+                                        <td>@Localize.T("Discount")</td>
+                                        <td class="retail-total">-</td>
+                                        <td class="padding-0 ServiceDiscount" id="ServiceDiscount" total-dis="@Model.ACHDiscountVal">-@Currency@LabelHelper.FormatAmount(Convert.ToDouble(Model.ACHDiscountVal))</td>
+                                    </tr>
+                                }
+                                <tr class="BottomTotalTr_style">
+                                    <td></td>
+                                    <td>@Localize.T("Sub Total")</td>
+                                    <td class="retail-total ">@Currency@LabelHelper.FormatAmount(Model.CustomerPackageServiceList.Sum(x => x.DiscountUnitPricce))</td>
+                                    <td class="sub-total ServiceSubTotal" sub-total="@Math.Round((ServiceTotal.HasValue? ServiceTotal.Value : 0),2)">@Currency@LabelHelper.FormatAmount(ServiceTotal)</td>
+
+                                </tr>
+                                <tr class="BottomTotalTr_style">
+                                    <td></td>
+                                    <td>@Localize.T("Tax") (@ViewBag.ServiceSaleTax  %)</td>
+                                    <td class="retail-total">-</td>
+                                    <td class="sub-total ServiceTaxTotal" total-tax="@Math.Round(ViewBag.ServiceTax,2)">@Currency@LabelHelper.FormatAmount(ViewBag.ServiceTax)</td>
+
+                                </tr>
+                                <tr class="BottomTotalTr_style">
+                                    <td></td>
+                                    <td>@Localize.T("Monthly Total")</td>
+                                    <td></td>
+                                    <td class="sub-total">@Currency<span class="MonthlyTotalAmount">@LabelHelper.FormatAmount((ServiceTotal + ViewBag.ServiceTax))</span></td>
+
+                                </tr>
+                                <tr class="BottomTotalTr_style">
+                                    <td></td>
+                                    <td>@Localize.T("For Month(s)")</td>
+                                    <td class="retail-total">-</td>
+                                    <td class="padding-0"><input class="ServiceMonthCount" total-amount="@Math.Round(((ServiceTotal + ViewBag.ServiceTax) * Model.ServiceForMonths),2)" type="number" id="ServiceMonthCount" value="@Model.ServiceForMonths" /> </td>
+
+                                </tr>
+                                <tr class="BottomTotalTr_style">
+                                    <td></td>
+                                    <td>@Localize.T("Total")</td>
+                                    <td></td>
+                                    <td class="sub-total ServiceTotalAmount2">@Currency<span class="ServiceTotalAmount">@LabelHelper.FormatAmount((ServiceTotal + ViewBag.ServiceTax) * Model.ServiceForMonths)</span></td>
+
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    @if (ServiceTotal.HasValue && ServiceTotal > 0 && !Model.ServiceIsPaid)
+                    {
+                        AbleToReceivePayment = true;
+
+                        <div class="ServicePayments">
+                            <div class="form-group clearfix width-25p">
+                                <span class="text-custom">@Localize.T("Payment for Today")</span>
+                                @Html.DropDownListFor(x => Model.ServicePaymentInfoId, ViewBag.profilefortoday as List<SelectListItem>, new { @class = "form-control setfirstvalue", id = "payment_profile_service", datarequired = "true" })
+                            </div>
+                        </div>
+                    }
+                    <div class="sas_comment">
+                        @if (!string.IsNullOrWhiteSpace(Model.ServiceComment))
+                        {
+                            @Html.Raw(Model.ServiceComment)
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.ServiceInvoice))
+                        {
+                            <div>Ref: <span class="cus-anchor" onclick="OpenInvById('@Model.ServiceInvoice')">@Model.ServiceInvoice</span></div>
+                        }
+                    </div>
+                    @*else if (Model.ServiceIsPaid)
+                        {
+                            <div>
+                                <span>@Localize.T("Invoice created.")</span>
+                                @if (!string.IsNullOrWhiteSpace(Model.ServiceInvoice))
+                                {
+                                    <span>Ref: @Model.ServiceInvoice</span>
+                                }
+                            </div>
+                        }*@
+
+                    <div class="ServicePayments">
+                        <div class="form-group clearfix width-25p">
+                            <span class="text-custom">@Localize.T("Billing Method for RMR")</span>
+                            @Html.DropDownListFor(x => Model.MMRPaymentInfoId, ViewBag.profileMMR as List<SelectListItem>, new { @class = "form-control setfirstvalue", id = "payment_profile_mmr" })
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+    }
+    @if (Model.CustomerPackageEqpList != null && Model.CustomerPackageEqpList.Count > 0)
+    {
+        <div class="smart_lead_summery_payment">
+            <div class="ci_block">
+                <div class="ci_header clearfix">
+                    @Localize.T("Equipment")
+                </div>
+                <div class="ci_info">
+                    <div class="existing-equipments">
+                        <table class="Setup-Equipments-Table">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        @Localize.T("Product")
+                                    </th>
+                                    <th>
+                                        @Localize.T("Quantity")
+                                    </th>
+                                    <th>
+                                        @Localize.T("Unit Price")
+                                    </th>
+                                    <th>
+                                        @Localize.T("Discount Unit Price")
+                                    </th>
+                                    <th>
+                                        @Localize.T("Total Retail")
+                                    </th>
+                                    <th>
+                                        @Localize.T("Total Discount")
+                                    </th>
+                                    <th>
+                                        @Localize.T("Total Price")
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.CustomerPackageEqpList)
+                                {
+                                    <tr class="Equipment_@item.Id">
+                                        <td>
+                                            @item.EquipmentServiceName
+                                        </td>
+                                        <td>
+                                            @item.Quantity
+                                        </td>
+                                        <td>
+                                            <!--Unit Price-->
+                                            <span>
+                                                @Currency@String.Format("{0:0.00}", item.UnitPrice)
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <!--Discount Unit Price-->
+                                            <span>
+                                                @Currency@String.Format("{0:0.00}", (item.UnitPrice - item.DiscountUnitPricce))
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <!--Total Retail-->
+                                            <span>
+                                                @Currency@String.Format("{0:0.00}", (item.UnitPrice * item.Quantity))
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <!--Total Discount-->
+                                            <span>
+                                                @Currency@String.Format("{0:0.00}", (item.DiscountPckage * item.Quantity))
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <!--Total Price-->
+                                            <span class="total_price">@Currency@String.Format("{0:0.00}", item.Total)</span>
+                                        </td>
+                                    </tr>
+                                }
+                                <tr class="BottomTotalTr">
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>@Localize.T("Sub Total")</td>
+                                    <td>@Currency@LabelHelper.FormatAmount(Model.CustomerPackageEqpList.Sum(x => x.UnitPrice * x.Quantity))</td>
+                                    <td class="retail-total">@Currency@LabelHelper.FormatAmount(Model.CustomerPackageEqpList.Sum(x => x.Quantity * x.DiscountPckage))</td>
+                                    <td class="sub-total">@Currency@LabelHelper.FormatAmount(EquipmentTotal)</td>
+                                </tr>
+
+                                <tr class="BottomTotalTr">
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>@Localize.T("Discount")</td>
+                                    <td>-</td>
+                                    <td class="retail-total">-</td>
+                                    <td class="sub-total" id="lblUserDiscount">@Currency@LabelHelper.FormatAmount(ViewBag.UserDiscount)</td>
+                                </tr>
+                                <tr class="BottomTotalTr">
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>@Localize.T("Sub Total")</td>
+                                    <td>-</td>
+                                    <td class="retail-total">-</td>
+                                    <td class="sub-total" id="lblSubAfterDiscount">0.00</td>
+                                </tr>
+                                <tr class="BottomTotalTr">
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>@Localize.T("Tax") (@ViewBag.SaleTax %)</td>
+                                    <td>-</td>
+                                    <td class="retail-total"> - </td>
+                                    <td class="sub-total" id="lblTaxAmount">@Currency@LabelHelper.FormatAmount(ViewBag.TaxEquip)</td>
+                                </tr>
+                                <tr class="BottomTotalTr">
+                                    <td> </td>
+                                    <td> </td>
+                                    <td></td>
+                                    <td>@Localize.T("Total")</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="sub-total EquipmentTotalAmount" id="lblFinalAmount">@Currency@LabelHelper.FormatAmount(EquipmentTotal + ViewBag.TaxEquip)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <input type="hidden" value="@Model.CustomerPackageEqpList.Sum(x => x.UnitPrice * x.Quantity).ToString()" id="hdEqpRetailTotalAmount" />
+                        <input type="hidden" value="@ViewBag.TaxEquip.ToString()" id="hdEqpTotalTax" />
+                        <input type="hidden" value="@Model.CustomerPackageEqpList.Sum(x => x.Quantity * x.DiscountPckage).ToString()" id="hdEqpDiscountTotal" />
+                        <input type="hidden" value="@EquipmentTotal.ToString()" id="hdEqpPriceTotalAmount" />
+                        <input type="hidden" value="" id="hdEqpTotalDiscountPercent" />
+
+                        <input type="hidden" value="" id="hdEqpTotalDiscountAmount" />
+
+                        <input type="hidden" value="" id="hdEqpFinalTotal" />
+                        <input type="hidden" value="@ViewBag.SaleTax" id="hdSalesTax" />
+
+                        @*  // "MAYUR" : for updatting discount in invoice while capture payment ::start  *@
+
+                        <input type="hidden" value="0" id="EqpTax" />
+                        <input type="hidden" value="0" id="EqpDiscountPercentage" />
+                        <input type="hidden" value="0" id="EqpDiscountAmount" />
+                        <input type="hidden" value="0" id="Eqpfinalamount" />
+                        <input type="hidden" value="0" id="EqpDiscountQty" />
+                        <input type="hidden" value="0" id="EqpDiscountType" />
+
+
+                        @* // "MAYUR" : for updatting discount in invoice while capture payment ::End  *@
+
+
+                        <div class="sas_comment">
+                            <span class="discount_text_custom">@Localize.T("Discount")</span>
+                        </div>
+                        <div class="sas_comment">
+                            @*<div class="col-xs-1">
+                                <button type="button" class="btn green_button" id="btnSaveEqDiscountandClose">
+                                    <i class="fa fa-close" aria-hidden="true"></i> <span>Add</span>
+                                </button>
+                            </div>*@
+                            <div class="col-xs-1">
+
+                                @Html.DropDownListFor(x => x.DiscountType, (List<SelectListItem>)ViewBag.DiscountMethod, new { @class = "form-control setfirstvalue", @id = "ddlEquipDiscount", @style = "width: 85px;" })
+                            </div>
+                            <div class="col-xs-1">
+                                @if (Model.DiscountType == "percent")
+                                {
+                                    if (Model.Discountpercent > 0)
+                                    {
+                                        <input type="text" id="discountAmount" class="float-left form-control" value="@ViewBag.AdditionalDiscount" />
+                                    }
+                                    else
+                                    {
+                                         <input type="text" id="discountAmount" class="float-left form-control" value="@ViewBag.AdditionalDiscount" />
+                                    }
+                                }
+                                else if (Model.DiscountType == "amount")
+                                {
+                                    if (Model.DiscountAmount > 0)
+                                    {
+                                        <input type="text" id="discountAmount" class="float-left form-control" value="@ViewBag.AdditionalDiscount" />
+                                    }
+                                    else
+                                    {
+                                        <input type="text" id="discountAmount" class="float-left form-control" value="@ViewBag.AdditionalDiscount" />
+                                    }
+                                }
+                                else
+                                {
+                                    <input type="text" id="discountAmount" class="float-left form-control" value="@ViewBag.AdditionalDiscount" />
+                                }
+                                <br />
+                            </div>
+                        </div>
+
+
+                    </div>
+
+                    @if (EquipmentTotal.HasValue && EquipmentTotal.Value > 0 && !Model.EquipmentIsPaid)
+                    {
+                        AbleToReceivePayment = true;
+
+                        <div class="EquipmentPricePayment">
+                            <div class="clearfix width-25p">
+                                <span class="text-custom">@Localize.T("Payment")</span>
+                                @Html.DropDownListFor(x => Model.EquipmentPaymentInfoId, ViewBag.profileEquipmet as List<SelectListItem>, new { @class = "form-control setfirstvalue", id = "payment_profile_equipment", datarequired = "true" })
+                            </div>
+                        </div>
+                    }
+                    <div class="sas_comment">
+                        @if (!string.IsNullOrWhiteSpace(Model.EquipmentComment))
+                        {
+                            @Html.Raw(Model.EquipmentComment)
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.EquipmentInvoice))
+                        {
+                            <div>Ref: <span class="cus-anchor" onclick="OpenInvById('@Model.EquipmentInvoice')">@Model.EquipmentInvoice</span></div>
+                        }
+                    </div>
+
+                    @*@if (Model.EquipmentIsPaid)
+                        {
+                            <div>
+                                <span>@Localize.T("Invoice created.")</span>
+                                @if (!string.IsNullOrWhiteSpace(Model.ServiceInvoice))
+                                {
+                                    <span>Ref: @Model.EquipmentInvoice</span>
+                                }
+                            </div>
+                        }*@
+
+                </div>
+            </div>
+        </div>
+    }
+
+
+
+    <div class="smart_lead_summery_payment">
+        <div class="ci_block">
+            <div class="ci_header clearfix">
+                @Localize.T("Additional Info")
+            </div>
+            <div class="ci_info">
+                <div class="smart_agree_additional_info">
+                    <div>
+                        <label>@Localize.T("Verbal Password:")</label>
+                        <label>@(string.IsNullOrWhiteSpace(Model.Customer.Passcode) ? "-" : Model.Customer.Passcode)</label>
+                    </div>
+                    <div>
+                        <label>@Localize.T("Contract Term:")</label>
+                        @{
+                            float ContractTerm = 0;
+                            float.TryParse(Model.Customer.ContractTeam, out ContractTerm);
+                            ContractTerm = ContractTerm * 12;
+                        }
+                        <label>
+                            @Math.Ceiling(ContractTerm)
+                            @if (ContractTerm == 1)
+                            {
+                                <span>@Localize.T("Month")</span>
+                            }
+                            else
+                            {
+                                <span>@Localize.T("Month")</span>
+                            }
+                        </label>
+                    </div>
+                </div>
+                <div id="EmergencyContactList">
+
+                </div>
+                @if (PermissionChekcer.IsPermitted(Permissions.LeadPermissions.SendEcontractToBrinks))
+                {
+
+                    <div class="additional_cont_inner_info">
+
+                        <div class="form-group clearfix item_margin">
+                            <span class="reminder-form">@Localize.T("Promotion Month")</span>
+                            <div class="input_group_for_date add-on" id="PaymentDateCustom">
+                                <input type="number" class="form-control" value="0" id="Promomonth" />
+                            </div>
+                        </div>
+
+                        <div class="form-group clearfix item_margin">
+                            <span class="reminder-form">@Localize.T("Prepaid Month")</span>
+                            <div class="input_group_for_date add-on" id="PaymentDateCustom">
+                                <input type="number" class="form-control" value="1" id="Prepaidmonth" />
+                            </div>
+                        </div>
+                        <div class="form-group clearfix item_margin">
+                            <span class="reminder-form">@Localize.T("Installation Start Date")</span>
+                            <div class="input_group_for_date add-on" id="InstallStartDateCustom">
+                                @Html.TextBox("Date", "", new { @class = "form-control close-datepicker", Placeholder = "Date", id = "StartDate" })
+                                <div class="input-group-btn">
+                                    <btn class="btn">
+                                        <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                    </btn>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group clearfix item_margin">
+                            <span class="reminder-form">@Localize.T("Installation Finish Date")</span>
+                            <div class="input_group_for_date add-on" id="InstallFinishDateCustom">
+                                @Html.TextBox("Date", "", new { @class = "form-control close-datepicker", Placeholder = "Date", id = "FinishDate" })
+                                <div class="input-group-btn">
+                                    <btn class="btn">
+                                        <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                    </btn>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group clearfix item_margin">
+                            <span class="reminder-form">@Localize.T("Payment Effective Date")</span>
+                            <div class="input_group_for_date add-on" id="PaymentDateCustom">
+                                @Html.TextBox("Date", "", new { @class = "form-control close-datepicker", Placeholder = "Date", id = "PaymentDate" })
+                                <div class="input-group-btn">
+                                    <btn class="btn">
+                                        <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                    </btn>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                    </div>
+                }
+
+            </div>
+        </div>
+    </div>
+</div>

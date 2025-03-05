@@ -1,0 +1,739 @@
+﻿@{
+    Layout = null;
+    var profileUrl = HS.Framework.Utils.AppConfig.DomainSitePath + "/Content/img/Defaultimages.png";
+    if (!string.IsNullOrEmpty(Model.Employee.ProfilePicture))
+    {
+        profileUrl = string.Format(HS.Framework.Utils.AppConfig.AWSS3Url,HS.Framework.Utils.AppConfig.AWSS3BucketName).TrimEnd('/')+ Model.Employee.ProfilePicture;
+    }
+    var currentuser = ((HS.Web.UI.Helper.CustomPrincipal)(User));
+}
+@using PermissionHelper = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.AddUser
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<script src="~/Content/Select2/Select2.min.js"></script>
+
+<script>
+    var DateHire;
+    var FireExpDate;
+    var SalesExpDate;
+    var DriverExpDate;
+    var InstallExpDate;
+    var usernum = '@Model.Employee.UserName';
+    var empid = '@Model.Employee.Id';
+    var userId = '@Model.Employee.UserId';
+    var EmployeeProfilePicture = '@Model.Employee.ProfilePicture';
+    var timeclocksupervisor = '@Html.Raw(Json.Encode(ViewBag.timeclocksupervisor))';
+    timeclocksupervisor = JSON.parse(timeclocksupervisor);
+    var supervisorPermission = '@PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.SuperVisor)';
+    var Emparr = [];
+    @if(@Model.RouteList != null){
+        @: Emparr = [
+    foreach(var item in Model.RouteList)
+        {
+        @: '@item.RouteId',
+        }
+    @:];
+    }
+
+    $(document).ready(function () {
+        $("#Route").select2({ placeholder: "Select Route" }).val(Emparr).trigger("change");
+        $("#btnSaveUser").click(function () {
+            if (($("#Route").length > 0 && typeof (encodeURI($("#Route").val())) != "undefined") && (encodeURI($("#Route").val()) == "" || encodeURI($("#Route").val()) == "null" || encodeURI($("#Route").val()) == null)) {
+                $(".Route").removeClass("hidden");
+            }
+        })
+    });
+</script>
+@Styles.Render("~/styles/UserInformation")
+@Scripts.Render("~/scripts/UserInformation")
+<div class="hidden">
+    <input type="hidden" id="CurrenUsername" value="@Model.Employee.UserName" />
+    @*@Html.HiddenFor(x => x.Employee.HireDate, new { @class = "AddHire" })*@
+</div>
+<div class="content-wrap custom-head user_information_container">
+    <div class="container-fluid">
+        <div class="row style-row">
+            <div class="col-xs-12 user_info_device_head">
+                <div class="user_info_header_container">
+                    <a class="GoUser" href="javascript:void(0)">
+                        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+                    </a>
+                    <h2 class="user_info_head_text">@Model.Employee.FirstName @Model.Employee.LastName</h2>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <ul class="nav nav-tabs">
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.DetailTab))
+                    {
+                        <li class="active"><a class="cursor_link" data-target="#DetailInfoTab" data-toggle="tab">@Localize.T("Detail")</a></li>
+                    }
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.HRTab))
+                    {
+                    <li onclick="LoadHrTab()">
+                        <a class="cursor_link" data-target="#HrInfoTab" data-toggle="tab">@Localize.T("HR")</a>
+                    </li>
+                    }
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.ManagementTab))
+                    {
+                    <li onclick="LoadMgmtTab()">
+                        <a class="cursor_link" data-target="#VehicleInfoTab" data-toggle="tab">@Localize.T("Management")</a>
+                    </li>
+                    }
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.HRTab))
+                    {
+                        <li><a class="cursor_link" data-target="#DocInfoTab" data-toggle="tab">@Localize.T("Documents")</a></li>
+                    }
+
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.PermissionTab))
+                    {
+                        <li><a class="cursor_link" data-target="#PermissionInfoTab" data-toggle="tab">@Localize.T("User Permission")</a></li>
+                    }
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.ReviewTab))
+                    {
+                        <li onclick="LoadEmployeeReviewsTab()"> <a class="cursor_link" data-target="#EmployeeReviewTab" data-toggle="tab">@Localize.T("Employee Reviews")</a></li>
+                    }
+               
+
+                    @*<li><a data-target="#TechscheduleTab" data-toggle="tab">@Localize.T("Tech Schedule Setting")</a></li>*@
+                </ul>
+                <div class="tab-content">
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.DetailTab))
+                    {
+                        <div class="tab-pane active" id="DetailInfoTab">
+                            @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.InformationBox))
+                            {
+                                <div class="width-33p">
+                                    <div class="udi_information_block">
+                                        <div class="ci_block udi_pad_bottom">
+                                            <div class="ci_header clearfix">
+                                                <div>
+                                                    <span>@Localize.T("Information")</span>
+                                                    <span style="float:right;">@Localize.T("User ID"): @Model.UserLogin.Id</span>
+                                                </div>
+                                            </div>
+                                            <div class="udi_info_ui">
+                                                <div class="user_content_info_half">
+                                                    <label>@Localize.T("First Name")</label>
+                                                    @Html.TextBoxFor(x => x.Employee.FirstName, new { @class = "form-control" })
+                                                </div>
+                                                <div class="user_content_info_half">
+                                                    <label>@Localize.T("Last Name")</label>
+                                                    @Html.TextBoxFor(x => x.Employee.LastName, new { @class = "form-control" })
+                                                </div>
+                                                <div class="user_content_info_full">
+                                                    <label class="user_info_header">@Localize.T("User Name")</label>
+                                                    <input class="form-control" onblur="IsUserExists()" type="text" value="@Model.Employee.UserName" name="Employee_UserName" id="Employee_UserName" />
+                                                    <label class="hidden red label userexistsmsg">@Localize.T("Username already exists")</label>
+                                                </div>
+                                                <div class="user_content_info_full">
+                                                    <label class="user_info_header">@Localize.T("Email")</label>
+                                                    @Html.TextBoxFor(x => x.Employee.Email, new { @class = "form-control" })
+                                                </div>
+                                                <div class="user_content_info_half">
+                                                    <label>@Localize.T("Phone")</label>
+                                                    @Html.TextBoxFor(x => x.Employee.Phone, new { @class = "form-control", placeholder = "xxx-xxx-xxxx" })
+                                                </div>
+                                                <div class="user_content_info_half">
+                                                    <label>@Localize.T("SSN")</label>
+                                                    @Html.TextBoxFor(x => x.Employee.SSN, new { @class = "form-control", placeholder = "xxx-xx-xxxx" })
+                                                </div>
+                                                <div class="user_info_inner_block">
+                                                    <div class="ci_block">
+                                                        <div class="ci_header clearfix">
+                                                            <div>@Localize.T("Primary Address")</div>
+                                                        </div>
+                                                        <div class="udi_info_ui">
+                                                            <div class="user_content_info_half">
+                                                                <label>@Localize.T("Street 1")</label>
+                                                                @Html.TextBoxFor(x => x.Employee.Street, new { @class = "form-control", placeholder = "Street" })
+                                                            </div>
+
+                                                            <div class="user_content_info_half">
+                                                                <label>@Localize.T("Street 2")</label>
+                                                                @Html.TextBoxFor(x => x.Employee.StreetPrevious, new { @class = "form-control", placeholder = "Street2" })
+                                                            </div>
+
+                                                            <div class="user_content_info_half CityState_insert_div">
+                                                                <label>@Localize.T("Zip Code")</label>
+                                                                <input type="text" class="form-control" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" value="@Model.Employee.ZipCode" id="ZipCode" placeholder="Zip Code" />
+                                                                <div class='tt-menu'>
+                                                                    <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="user_content_info_half">
+                                                                <label>@Localize.T("City")</label>
+                                                                @Html.TextBoxFor(x => x.Employee.City, new { @class = "form-control", style = "text-transform:capitalize", id = "City", placeholder = "City" })
+                                                            </div>
+                                                            <div class="user_content_info_half">
+                                                                <label>@Localize.T("State")</label>
+                                                                @Html.TextBoxFor(x => x.Employee.State, new { @class = "form-control", id = "State", placeholder = "State" })
+                                                            </div>
+                                                            @if (PermissionHelper.IsPermitted(Permissions.MenuPermissions.QuickMenuMyCompanyManageUserShowRouteList))
+                                                            {
+                                                                if (ViewBag.EmployeeRole == "Employee")
+                                                                {
+                                                                    <div class="user_content_info_half">
+                                                                        <label>@Localize.T("Route")<span class="red">*</span></label>
+                                                                        @Html.DropDownListFor(x => x.RouteList, (List<SelectListItem>)ViewBag.RouteList, new { @class = "form-control", id = "Route", @multiple = "multiple", datarequired = "true" })
+                                                                        <label rel="Route" class="label hidden red position-absolute Route">*@Localize.T("Route required")</label>
+                                                                    </div>
+                                                                }
+                                                            }
+                                                        </div>
+                                                    </div>
+
+                                                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.UserSecondaryAddress))
+                                                    {
+                                                        <div class="ci_block">
+                                                            <div class="ci_header clearfix">
+                                                                <div>@Localize.T("Secondary Address")</div>
+                                                            </div>
+                                                            <div class="udi_info_ui">
+                                                                <div class="user_content_info_half">
+                                                                    <label>@Localize.T("Street")</label>
+                                                                    @Html.TextBoxFor(x => x.Employee.Street2, new { @class = "form-control", id = "Street2", placeholder = "Street" })
+                                                                </div>
+                                                                <div class="user_content_info_half CityState_insert_div_previous">
+                                                                    <label>@Localize.T("Zip Code")</label>
+                                                                    <input type="text" class="form-control" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" value="@Model.Employee.ZipCode2" id="ZipCodePrevious" placeholder="Zip Code" />
+                                                                    <div class='tt-menu'>
+                                                                        <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="user_content_info_half">
+                                                                    <label>@Localize.T("City")</label>
+                                                                    @Html.TextBoxFor(x => x.Employee.City2, new { @class = "form-control", style = "text-transform:capitalize", id = "CityPrevious", placeholder = "City" })
+                                                                </div>
+                                                                <div class="user_content_info_half">
+                                                                    <label>@Localize.T("State")</label>
+                                                                    @Html.TextBoxFor(x => x.Employee.State2, new { @class = "form-control", id = "StatePrevious", placeholder = "State" })
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                    }
+                                                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.BrinksDelearCredential))
+                                                    {
+                                                        <div class="user_info_inner_block">
+                                                            <div class="ci_block">
+                                                                <div class="ci_header clearfix">
+                                                                    <div>@Localize.T("Brinks Dealer Credential")</div>
+                                                                </div>
+                                                                <div class="udi_info_ui">
+                                                                    <div class="user_content_info_half">
+                                                                        <label>@Localize.T("Dealer User")</label>
+                                                                        @Html.TextBoxFor(x => x.Employee.BrinksDealerUser, new { @class = "form-control", placeholder = "User Name" })
+                                                                    </div>
+
+                                                                    <div class="user_content_info_half">
+                                                                        <label>@Localize.T("Delear Password")</label>
+                                                                        @Html.TextBoxFor(x => x.Employee.BrinksDealerPassword, new { @class = "form-control", placeholder = "Password" })
+                                                                    </div>
+
+
+                                                                </div>
+                                                            </div>
+
+                                                        </div>
+                                                    }
+
+                                                </div>
+
+
+
+                                                @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.BadgerUserId))
+                                                {
+                                                    <div class="user_content_info_full">
+                                                        <label class="user_info_header">@Localize.T("Badger UserId")</label>
+                                                        <input class="form-control" type="text" value="@Model.Employee.BadgerUserId" name="Employee_BadgerUserId" id="Employee_BadgerUserId" />
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.LeadSourcesBox))
+                                    {
+                                        <div class="udi_information_block">
+                                            <div class="ci_block udi_pad_bottom">
+                                                <div class="ci_header clearfix">
+                                                    <div>@Localize.T("Lead Sources")</div>
+                                                </div>
+                                                <div class="udi_info_ui">
+                                                    <div class="user_content_info_full">
+                                                        @Html.DropDownList("LeadSources", ViewBag.LeadSourcesList as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple" })
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div style="display:none" class="udi_title_mail">
+                                    <label>@Localize.T("Email")</label>
+                                    @Html.TextBoxFor(x => x.Employee.Email, new { @class = "form-control" })
+                                </div>
+                            }
+                            @if (!PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.HideUserDetail))
+                            {
+                            <div class="width-33p">
+                                <div class="udi_change_Detail_block">
+                                    <div class="ci_block udi_pad_bottom">
+                                        <div class="ci_header clearfix">
+                                            <div>@Localize.T("User Detail")</div>
+                                        </div>
+                                        <div class="udi_info_ui">
+                                            @*@if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.HireDate))
+                                            {*@
+                                                <div class="user_content_info_half hidden">
+                                                    <label>@Localize.T("Hire Date")</label>
+
+                                                    <div class="input_group_for_date add-on" id="AddHireCustom">
+                                                        @{      if (Model.Employee.HireDate == DateTime.MinValue)
+                                                                {
+                                                                    Model.Employee.HireDate = null;
+                                                                }
+                                                           }
+                                                        @Html.TextBoxFor(x => x.Employee.HireDate, new { @class = "form-control AddHire" })
+                                                        <div class="input-group-btn">
+                                                            <btn class="btn">
+                                                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                                            </btn>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @*}*@
+                                            @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.JobTitle))
+                                            {
+                                                <div class="user_content_info_half">
+                                                    <label>@Localize.T("Job Title")</label>
+                                                    @Html.TextBoxFor(x => x.Employee.JobTitle, new { @class = "form-control", placeholder = "Job Title" })
+                                                </div>
+                                            }
+                                            @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.LicenseNo))
+                                            {
+                                                <div class="user_content_info_full">
+                                                    <label>@Localize.T("Driver License No")</label>
+                                                    @Html.TextBoxFor(x => x.Employee.LicenseNo, new { @class = "form-control", id = "LicenseNo", placeholder = "License No" })
+                                                </div>
+                                            }
+                                            @*@{
+                                                    if (currentuser.UserTags.ToLower().IndexOf("sysadmin") > -1 || currentuser.UserTags.ToLower().IndexOf("admin") > -1)
+                                                    {
+
+                                                        <div class="user_content_info_half">
+                                                            <lable><strong>@Localize.T("Time Clock Supervisor")</strong></lable>
+                                                            <div class="user_info_time_supv"> @Html.DropDownList("TimeClockSupervisorId", ViewBag.UserList as List<SelectListItem>, new { @class = "form-control TimeClockSupervisorId", @multiple = "multiple" })</div>
+                                                        </div>
+
+                                                    }
+                                                }*@
+
+                                            @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.SuperVisor))
+                                            {
+                                                <div class="user_content_info_half">
+                                                    <label>@Localize.T("Supervisor")</label>
+                                                    @Html.DropDownListFor(x => x.Employee.SuperVisorId, ViewBag.SupervisorList as List<SelectListItem>, new { @class = "form-control" })
+                                                    <label class="label hidden red position-absolute supervisor_hierarchy">@Localize.T("Hierarchy invalid")</label>
+                                                </div>
+                                            }
+                                            <div class="user_content_info_full">
+                                                <label><input type="checkbox" name="Employee.IsCurrentEmployee" id="Employee_IsCurrentEmployee" @((Model.Employee.IsCurrentEmployee != null && Model.Employee.IsCurrentEmployee.HasValue && Model.Employee.IsCurrentEmployee.Value) ? "checked" : "") /> <abbr title="@Localize.T("Is this employee is a current?")">@Localize.T("Is Current Employee")</abbr></label>
+                                            </div>
+                                            @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.SuperVisor))
+                                            {
+                                            <div class="user_content_info_full">
+                                                <label><input type="checkbox" name="Employee.NoAutoClockOut" id="Employee_NoAutoClockOut" @((Model.Employee.NoAutoClockOut.HasValue && Model.Employee.NoAutoClockOut.Value) ? "checked" : "") /> <abbr title="@Localize.T("Do you want this employee to not to auto clock out by the system?")">@Localize.T("No auto clock out")</abbr></label>
+                                            </div>
+                                            }
+                                            @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.SuperVisor))
+                                            {
+                                                <div class="user_content_info_full">
+                                                    <label><input type="checkbox" name="Employee.IsSupervisor" id="Employee_IsSupervisor" @((Model.Employee.IsSupervisor.HasValue && Model.Employee.IsSupervisor.Value) ? "checked" : "") /> <abbr title="@Localize.T("Is this employee is a supervisor?")">@Localize.T("Is Supervisor")</abbr></label>
+                                                </div>
+                                            }
+                                            @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.IsSalesMatrix))
+                                            {
+                                                <div class="user_content_info_full">
+                                                    <label><input type="checkbox" name="Employee.IsSalesMatrix" id="Employee_IsSalesMatrix" @((Model.Employee.IsSalesMatrix.HasValue && Model.Employee.IsSalesMatrix.Value) ? "checked" : "") /> <abbr>@Localize.T("Is Sales Matrix")</abbr></label>
+                                                </div>
+                                            }
+                                            <div class="user_content_info_full">
+                                                @if (Model.Employee.IsPayroll.HasValue)
+                                                {
+                                                    <input type="checkbox" @(Model.Employee.IsPayroll.Value ? "checked" : "") id="ispayroll" />
+                                                }
+                                                else
+                                                {
+                                                    <input type="checkbox" id="ispayroll" />
+                                                }
+                                                <label><abbr title="@Localize.T("Do you want to show this employee's payroll report?")">@Localize.T("Is Payroll")</abbr></label>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                                @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.ExpirationDateBox))
+                                {
+                                    <div class="udi_Expiration_block">
+                                        <div class="ci_block udi_pad_bottom">
+                                            <div class="ci_header clearfix">
+                                                <div>@Localize.T("Expiration Dates")</div>
+                                            </div>
+                                            <div class="udi_info_ui">
+                                                <div class="user_content_info_half">
+                                                    <label>@Localize.T("Fire Alarm License Date")</label>
+                                                    <div class="input_group_for_date add-on" id="FireLicenseExpirationDateCustom">
+                                                        @{ 
+                                                                if (Model.Employee.FireLicenseExpirationDate == DateTime.MinValue)
+                                                                {
+                                                                    Model.Employee.FireLicenseExpirationDate = null;
+                                                                } 
+                                                           }
+                                                        @Html.TextBoxFor(x => x.Employee.FireLicenseExpirationDate, new { @class = "form-control" })
+                                                        <div class="input-group-btn">
+                                                            <btn class="btn">
+                                                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                                            </btn>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="user_content_info_half">
+                                                    <label>@Localize.T("Sales Person License Date")</label>
+                                                    <div class="input_group_for_date add-on" id="SalesLicenseExpirationDateCustom">
+                                                        @{ 
+                                                            if (Model.Employee.SalesLicenseExpirationDate == DateTime.MinValue)
+                                                            { 
+                                                                Model.Employee.SalesLicenseExpirationDate = null;
+                                                            } 
+                                                          }
+                                                        @Html.TextBoxFor(x => x.Employee.SalesLicenseExpirationDate, new { @class = "form-control" })
+                                                        <div class="input-group-btn">
+                                                            <btn class="btn">
+                                                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                                            </btn>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="user_content_info_half">
+                                                    <label>@Localize.T("Drivers License Date")</label>
+                                                    <div class="input_group_for_date add-on" id="DriversLicenseExpirationDateCustom">
+                                                        @{ 
+                                                            if (Model.Employee.DriversLicenseExpirationDate == DateTime.MinValue)
+                                                            {
+                                                                Model.Employee.DriversLicenseExpirationDate = null;
+                                                            } 
+                                                        }
+                                                        @Html.TextBoxFor(x => x.Employee.DriversLicenseExpirationDate, new { @class = "form-control " })
+                                                        <div class="input-group-btn">
+                                                            <btn class="btn">
+                                                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                                            </btn>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="user_content_info_half">
+                                                    <label>@Localize.T("Installer License Date")</label>
+                                                    <div class="input_group_for_date add-on" id="InstallLicenseExpirationDateCustom">
+                                                        @{  
+                                                                if (Model.Employee.InstallLicenseExpirationDate == DateTime.MinValue)
+                                                                {
+                                                                    Model.Employee.InstallLicenseExpirationDate = null;
+                                                                } 
+                                                           }
+                                                        @Html.TextBoxFor(x => x.Employee.InstallLicenseExpirationDate, new { @class = "form-control" })
+                                                        <div class="input-group-btn">
+                                                            <btn class="btn">
+                                                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                                            </btn>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            }
+                            <div class="width-33p">
+                                @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.ProfileBox))
+                                {
+                                    <div class="udi_Detail_block">
+                                        <div class="ci_block udi_pad_bottom">
+                                            <div class="ci_header clearfix">
+                                                @Localize.T("User Profile")
+                                            </div>
+                                            <div class="container-fluid">
+                                                <div class="txt-form Upload_Doc">
+                                                    <div class="col-md-12 padding-left-0">
+                                                        <div class="fileborder border_none">
+                                                            <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="@profileUrl" />
+                                                        </div>
+                                                        @*<input class="deleteDoc" type="image" src="~/Content/Icons/cross_update.png" />*@
+                                                        <div class="deleteDoc cursor-pointer hidden">
+                                                            <img src="~/Content/Icons/cross-image-delete.png" />
+                                                        </div>
+                                                        <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                                                            <span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                                                            <span class="changeFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+                                                        <div class="progress progress-striped active">
+                                                            <div class="progress-bar progress-bar-success" style="width:0%">
+                                                                <span> 0%</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <label class="label red position-relative hidden" id="uploadfileerror">*@Localize.T("File required")</label>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                <div class="udi_Expiration_block">
+                                    <div class="ci_block udi_pad_bottom">
+                                        <div class="ci_header clearfix">
+                                            <div>@Localize.T("Change password")</div>
+                                        </div>
+
+                                        @*@if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.ShowUserPassword))
+        {
+            <div>
+                <span class="successmessaegeforcopy_cont">
+                    <i class="fa fa-info" onclick=CopyTitelInCopyBord(@Model.UserLogin.Password) title="@Model.UserLogin.Password"></i>
+                    <span id="@("SuccessMessaegeForCopy" + Model.UserLogin.Password)" class="alert alert-success hidden">
+                        @Localize.T("Copied.")
+                    </span>
+                </span>
+            </div>
+        }*@
+
+                                        <div class="udi_info_ui">
+                                            <div class="user_content_info_half">
+                                                <label>@Localize.T("Password")</label>
+                                                <input name="UserPassword" type="password" value="" class="form-control" id="UserPassword" placeholder="******" />
+                                                <label class="hidden red label position-absolute" rel="UserPassword">@Localize.T("Minimum 6 characters required")</label>
+                                            </div>
+                                            <div class="user_content_info_half">
+                                                <label>@Localize.T("Confirm Password")</label>
+                                                <input name="UserConfirmPassword" type="password" value="" id="UserConfirmPassword" class="form-control" placeholder="******" />
+                                                <label class="hidden red label position-absolute" rel="UserConfirmPassword">@Localize.T("Minimum 6 characters required")</label>
+                                                <label id="errConfirmPass" class="label hidden red position-absolute"> @Localize.T("Password not matched.")</label>
+                                            </div>
+
+                                        </div>
+                                        <div class="udi_info_ui">
+                                            <div class="user_content_info_half">
+                                                <label>@Localize.T("Password Update Days")</label>
+                                                @Html.TextBoxFor(x => x.Employee.PasswordUpdateDays, new { @class = "form-control", @id = "PasswordUpdateDays", type = "number" })
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.CalanderBox))
+                                {
+                                    <div class="udi_Expiration_block">
+                                        <div class="ci_block udi_pad_bottom">
+                                            <div class="ci_header clearfix">
+                                                <div>@Localize.T("Calendar")</div>
+                                            </div>
+                                            <div class="udi_info_ui">
+                                                <div class="user_content_info_full">
+                                                    <label>@Localize.T("Color")</label>
+                                                    <input class="jscolor form-control" value="@Model.Employee.CalendarColor" id="CalendarColor">
+                                                </div>
+                                                <div class="user_content_info_full">
+                                                    @if (Model.Employee.IsCalendar.HasValue)
+                                                    {
+                                                        <input type="checkbox" @(Model.Employee.IsCalendar.Value ? "checked" : "") id="IsCalendar" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="checkbox" id="IsCalendar" />
+                                                    }
+                                                    <label>@Localize.T("Show Calendar")</label>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div style="display:none" class="udi_title">
+                                        @if (Model.Employee.IsCalendar.HasValue)
+                                        {
+                                            <input type="checkbox" @(Model.Employee.IsCalendar.Value ? "checked" : "") id="IsCalendar" />
+                                        }
+                                        else
+                                        {
+                                            <input type="checkbox" id="IsCalendar" />
+                                        }
+                                        <label>@Localize.T("Show Calendar")</label>
+                                    </div>
+                                }
+                                @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.IPListBox))
+                                {
+                                    <div class="udi_Expiration_block">
+                                        <div class="ci_block udi_pad_bottom">
+                                            <div class="ci_header clearfix">
+                                                <div>@Localize.T("Clock in IP list")</div>
+                                            </div>
+                                            <div class="udi_info_ui">
+                                                <div class="user_content_info_full">
+                                                    @Html.TextBoxFor(x => x.Employee.ClockInIP, new { @class = "form-control" })
+                                                    <label class="label" style="color:black;">*@Localize.T("You can put multiple ip addresses using ';' separator")</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.BranchBox))
+                                {
+                                    <div class="udi_Expiration_block">
+                                        <div class="ci_block udi_pad_bottom">
+                                            <div class="ci_header clearfix">
+                                                <div>@Localize.T("Branch")</div>
+                                            </div>
+                                            <div class="udi_info_ui">
+                                                <div class="user_content_info_full">
+                                                    @Html.DropDownListFor(x => x.UserBranchDetails.BranchId, ViewBag.BranchList as List<SelectListItem>, new { @class = "form-control" })<SelectListItem><SelectListItem>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <div class="col-xs-12 user_info_device_btn">
+                                @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.DeleteUser))
+                                {
+                                    <button class="btn ui_delete_btn" id="DeleteThisUser" dataid="@Model.UserLogin.Id" title="@Localize.T(" Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i>@Localize.T(" Delete")</button>
+                                }
+                                <div class="row custome-col-style">
+                                    @*@if(PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.EditUserPermissions))
+                                        {
+                                        <button class="style-btn" id="edit-permissions" idval="@Model.UserLogin.UserName"><i class="fa fa-lock" aria-hidden="true"></i>@Localize.T(" Edit Permissions")</button>
+                                        }*@
+                                    @*<button class="style-btn" id="edit-permissions" idval="@Model.UserLogin.UserName"><i class="fa fa-lock" aria-hidden="true"></i></button>
+                                        <button class="style-btn" id="edit-permissions" idval="@Model.UserLogin.UserName"><i class="fa fa-lock" aria-hidden="true"></i></button>*@
+                                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.SaveUserInformation))
+                                    {
+                                        <button class="btn" id="btnSaveUser"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+                                    }
+
+
+
+                                </div>
+                            </div>
+                        </div>
+
+                    }
+                    <div class="tab-pane" id="HrInfoTab">
+                        <div class="LoadHrInfo"></div>
+                    </div>
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.HRTab))
+                    {
+                        <div class="tab-pane" id="DocInfoTab">
+                            <div class="LoadDocInfo"></div>
+                        </div>
+                    }
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.ManagementTab))
+                    {
+                    <div class="tab-pane" id="VehicleInfoTab">
+                        <div class="LoadVehicleInfo"></div>
+                    </div>
+                    }
+                    @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.PermissionTab))
+                    {
+                        <div class="tab-pane" id="PermissionInfoTab">
+
+
+                            <div class="udi_change_permission_block">
+                                <div class="ci_block ci_margin_top">
+                                    <div class="ci_header clearfix">
+                                        <div>@Localize.T("Change Group")</div>
+                                    </div>
+                                    <div class="udi_info">
+                                        <table class="udi_table">
+                                            <tr>
+                                                <td class="udi_title">
+                                                    <label>@Localize.T("User Group")</label>
+                                                    @Html.DropDownListFor(x => x.PermissionGroup.Id, (List<SelectListItem>)ViewBag.PermissionGroupList, new { @class = "form-control" })<SelectListItem><SelectListItem><SelectListItem>
+                                                </td>
+
+                                                @if (PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.UserChangePermissionGroup))
+                                                {
+                                                    <td class="udi_data">
+                                                        <button class="btn permission_btn green_button" id="ChangeUserPermission"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save Group")</button>
+                                                    </td>
+                                                }
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="udi_permission_info_block">
+                                <div class="ci_block ci_margin_top">
+                                    <div class="ci_header">@Localize.T("User Permisssion Information")</div>
+                                    <div class="ci_info ci_margin_top">
+                                        @if (Model.Permisssions != null && Model.Permisssions.Count() > 0)
+                                        {
+                                            <label>@Localize.T("Permissions")</label><br />
+                                            foreach (var Permission in Model.Permisssions)
+                                            {
+                                                if (Permission.Id > 0)
+                                                {
+                                                    <div class="ui_permission_info"> @Permission.Name<</div>
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    @*@if (!PermissionHelper.IsPermitted(Permissions.UserMgmtPermissions.ReviewTab))
+                    {*@
+                        <div class="tab-pane" id="EmployeeReviewTab">
+                            <div class="LoadEmployeeRevies"></div>
+                        </div>
+                    @*}*@
+                    
+                </div>
+            </div>
+        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+        <div class="row">
+            <div class="col-md-12">&nbsp;</div>
+        </div>
+        <div class="">
+            <input type="hidden" id="UploadedPath" value="" />
+            <input type="file" name="CustomerFile" class="hidden" id="UploadedFile" accept="image/*" />
+        </div>
+    </div>
+</div>
+<script src="~/Content/Js/jscolor.js"></script>

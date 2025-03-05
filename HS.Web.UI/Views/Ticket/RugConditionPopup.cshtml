@@ -1,0 +1,320 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Web.UI.Models.RugCondtionsModel
+    
+<script src="~/Content/Jquery-ui/jquery.js"></script>
+<script src="~/Content/JQueryFileUpload/jquery-ui-1.9.2.min.js"></script>
+<script src="~/Content/JQueryFileUpload/jquery.fileupload.js"></script>
+<script src="~/Content/JQueryFileUpload/jquery.fileupload-ui.js"></script>
+<link href="~/Content/Css/Ticket/RugConditionPopup.css" rel="stylesheet" />
+<script>
+    var jqXHRProjectData;
+    var PhotoIndexNumber = 0;
+    var jqXHR = [];
+    var DetailId = '@Model.DetailId';
+
+    var SaveCondtions = function () {
+        var Conditions = [];
+        var Images = [];
+        $(".dv-preview-pic").each(function () {
+            Images.push({
+                Location: $(this).find('img.project-photo').attr('src'),
+                Description: $($(this).find('.image-caption')).val()
+            });
+        });
+        $( ".Conditions:checked" ).each(function(){
+            //console.log($(this).val());
+            Conditions.push($(this).val());
+        });
+
+        $.ajax({
+            type: "POST",
+            ajaxStart: null,
+            url: parent.domainurl + "/Ticket/SaveRugCondition",
+            data: JSON.stringify({
+                Conditions: Conditions,
+                Files: Images,
+                Comments: $(".Comments").val(),
+                TicketBookingDetailId: DetailId
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                parent.ClosePopup();
+            }
+        });
+
+
+    }
+
+    $(document).ready(function () {
+        $(".rug_condition_pop_inner").height(window.innerHeight - 113);
+        $("#btnProjectUpload").click(function () {
+            $('#fu-my-project-upload').click();
+            $("#UploadSuccessMessage").addClass('hidden');
+        });
+
+        $("#SaveButton").click(function () {
+            SaveCondtions();
+        });
+
+        $('.upload-gallary').delegate('.image-delete', 'click', function (evt) {
+            evt.preventDefault();
+            var id = $(this).attr('data-id');
+            parent.OpenConfirmationMessageNew("Delete", "Do you want to delete this item?", function () {
+                $(".preview_" + id).remove();
+                $("#preview_" + id).remove();
+                var piccountProject = $(".upload-gallary img.preview-pic").length;
+                if (piccountProject < 20) {
+                    $(".project-blank-thumb").show();
+                }
+            })
+        });
+
+        $('#fu-my-project-upload').fileupload({
+            pasteZone: null,
+            url: '/File/TicketBookingDetailFiles',
+            dataType: 'json',
+            progress: function (e, data) {
+                var progress = parseInt(data.loaded / data.total * 100, 10);
+                $(".project-progress_" + data.files[0].uploadID).show();
+                $(".project-progress_" + data.files[0].uploadID + " .progress-bar").animate({
+                    width: progress + "%"
+                }, 40);
+                $(".progressbar-project-percentage_" + data.files[0].uploadID + " span").text(progress + "%");
+            },
+            add: function (e, data) {
+
+                jqXHRProjectData = data;
+                PhotoUploadXHRData = [];
+                PhotoUploadXHRData.push(jqXHRProjectData);
+                var validationPass = true;
+
+                var piccount = $(".upload-gallary img.preview-pic").length;
+                if ((piccount + PhotoUploadXHRData.length) > 20) {
+                    /*console.log('more than 20 photo');
+                    $("#lblProjectMgs").text("Max 20 photo.");
+                    $("#dvProjectMgsbox").show();
+                    setTimeout(function () {
+                        $("#dvProjectMgsbox").hide();
+                    }, 3000);*/
+                    parent.OpenErrorMessageNew("", "You can upload upto 20 photos.");
+                    validationPass = false;
+                }
+                else if (data.files[0].size > (7*1024*1024)) {
+                    /*console.log('more than 7MB');
+                    $("#lblProjectMgs").text("Image size not more than 7MB.");
+                    $("#dvProjectMgsbox").show();
+                    setTimeout(function () {
+                        $("#dvProjectMgsbox").hide();
+                    }, 3000);*/
+                    parent.OpenErrorMessageNew("", "File size upto 7MB.");
+                    validationPass = false;
+                }
+                if (validationPass) {
+                    data.files[0].uploadID = PhotoIndexNumber;
+
+                    var ProgressBarString =
+                        "<div class='progressbar-div progress-container project-progress_" + PhotoIndexNumber + "' style='position: relative;margin-top:-6px;'>" +
+                        "<div class='progress progress-striped active progressbar-bar'>" +
+                        "<div class='progress-bar progress-bar-danger' style='width: 0%;'>" +
+                        "</div>" +
+                        "</div>" +
+                        "<div class='progressbar-project-percentage_" + PhotoIndexNumber + "'>" +
+                        "<span></span>" +
+                        "</div>" +
+                        "</div>";
+
+                    var CaptionText = "Add caption";
+                    if (typeof (CaptionTextTranslation) != "undefined") {
+                        CaptionText = CaptionTextTranslation;
+                    }
+                    var CaptionErrorText = "The content have exceeded 30 characters";
+                    if (typeof (CaptionErrorTextTranslation) != "undefined") {
+                        CaptionErrorText = CaptionErrorTextTranslation;
+                    }
+                    $(".upload-gallary").append(" <div id='NewFileUp_" + PhotoIndexNumber + "' class='dv-preview-pic '><div class='image-delete' style='cursor:pointer;' newImgDataId='" + PhotoIndexNumber + "'><img src='/Content/Icons/cross_update.png' style='width: 20px;border-radius: 10px;' /></div><div class='dv-preview-pic-inner'><img class='preview-pic project-photo' src=''/></div><input type='text' propertycontentid='' class='image-caption' placeholder='" + CaptionText + "'/><label class='label hidden red lblCaptionError' id=''>" + CaptionErrorText + ".</label>" + ProgressBarString + "</div></div>");
+                    jqXHR[PhotoIndexNumber] = data.submit();
+                    PhotoIndexNumber++;
+                }
+            },
+            done: function (event, data) {
+                console.log(data)
+                if (data.result.status.length > 0) {
+                    for (var u = 0; u < data.result.status.length; u++) {
+                        var resultdata = data.result.status[u];
+                        $("#hf-uploaded-cover-path").val(resultdata.File);
+                        fullImagePath = resultdata.filepath;
+                        //$(".upload-gallary").append(" <div id='preview_" + resultdata.Id + "' class='dv-preview-pic'><div class='image-delete' data-id='" + resultdata.Id + "'><img src='/Content/Icons/cross-image-delete.png' /></div><div class='dv-preview-pic-inner'><img class='preview-pic project-photo' src='" + fullImagePath + "'/></div><input type='text' propertycontentid='" + resultdata.Id + "' class='image-caption' placeholder='Add caption not more than 30 characters'/></div></div>");
+                        var NewIdName = "#NewFileUp_" + data.files[u].uploadID;
+                        $(NewIdName).addClass("preview_" + data.files[u].uploadID);
+                        $(NewIdName + " .image-delete").attr('data-id', data.files[u].uploadID);
+                        $(NewIdName + " .preview-pic").attr('src', fullImagePath);
+                        $(NewIdName + " .image-caption").attr('propertycontentid', resultdata.Id);
+                        $(NewIdName + " .lblCaptionError").attr('id', "lblCaptionErr_" + resultdata.Id);
+
+                    }
+                    var piccount = $(".upload-gallary img.preview-pic").length;
+                    if (piccount > 0) {
+                        $(".project-blank-thumb-img").attr("src", "/Content/Icons/blank_thumb_file.png");
+                    }
+                    if (piccount == 20) {
+                        $(".project-blank-thumb").hide();
+                    }
+                    setTimeout(function () {
+                        $(".project-progress_" + data.files[0].uploadID).hide();
+                        //$(".project-progress").hide();
+                        $(".project-progress .progress-bar").animate({
+                            width: "0%"
+                        }, 10);
+                        $(".progressbar-project-percentage span").text(+ "0%");
+                        //$("#lblProjectMgs").text("Photos are successfully uploaded.");
+                        //$("#dvProjectMgsbox").show();
+                    }, 1000);
+                    //setTimeout(function () {
+                    //    $("#dvProjectMgsbox").hide();
+                    //}, 3000);
+                }
+                else {
+
+                }
+            },
+            fail: function (event, data) {
+                if (data.files[0].error) {
+                    alert(data.files[0].error);
+                }
+            }
+        })/*.on('fileuploadadd', function (e, data) {
+        $.each(data.files, function (index, file) {
+            file.uploadID = 'someidentification';
+        });
+    });*/
+        $("#fu-my-project-upload").on("change", function () {
+            if (jqXHRProjectData) {
+                var piccount = $(".upload-gallary img.preview-pic").length;
+                piccount += PhotoUploadXHRData.length;
+                var uploadPhoto = PhotoUploadXHRData.length;
+                var sizeLimit = false;
+                for (var ur = 0; ur < PhotoUploadXHRData.length; ur++) {
+                    if (PhotoUploadXHRData[ur].files[0].size > 7340032)
+                        sizeLimit = true;
+                }
+                if (!sizeLimit || uploadPhoto > 1) {
+                    if (piccount > 20) {
+                       /* $("#lblProjectMgs").text("Max 20 photo.");
+                        $("#dvProjectMgsbox").show();
+                        setTimeout(function () {
+                            $("#dvProjectMgsbox").hide();
+                        }, 3000);*/
+                        parent.OpenErrorMessageNew("", "Upto 20 photos.");
+                    }
+                    else {
+                         var items = PhotoUploadXHRData[0];
+                        //for (var u = 0; u < PhotoUploadXHRData.length; u++) {
+                        //    if (items.files[0].name != PhotoUploadXHRData[u].files[0].name) {
+                        //        items.files.push(PhotoUploadXHRData[u].files[0]);
+                        //    }
+                        //}
+                        //items.submit();
+
+                        //var items = PhotoUploadXHRData[0];
+                        //for (var u = 0; u < PhotoUploadXHRData.length; u++) {
+                        //    var items = PhotoUploadXHRData[0];
+                        //    items.files[0] = PhotoUploadXHRData[u].files[0];
+                        //    items.submit();
+                        //}
+                    }
+                }
+                else {
+                    $("#lblProjectMgs").text("Image size not more than 7MB.");
+                    $("#dvProjectMgsbox").show();
+                    setTimeout(function () {
+                        $("#dvProjectMgsbox").hide();
+                    }, 3000);
+                }
+                PhotoUploadXHRData = [];
+            }
+            return false;
+        });
+
+    });
+</script>
+<div class="rug_condition_pop_container">
+    <div class="rug_condition_pop_main_header">
+        Settings<img class="rug_pop_close" src="/Content/Icons/cross_update.png" onclick="parent.ClosePopup();">
+    </div>
+    <div class="rug_condition_pop_inner">
+        <div class="rug_condition_pop_block">
+            <div class="rug_condition_pop_header">Rug Conditions</div>
+            <div class="RugCondtionsCBox">
+                @if (Model.RugCondtitions != null && Model.RugCondtitions.Count > 0)
+            {
+                foreach (var item in Model.RugCondtitions)
+                {
+                        <div class="RugCondtionsCBox_content">
+                            <label><input type="checkbox" class="Conditions" value="@item.Value" @(item.Selected ? "checked" : "") /> @item.Text</label>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+        <div class="rug_condition_pop_block">
+            <div class="rug_condition_pop_header image_header_style"><span class="image_header_text">Images</span> <button id="btnProjectUpload">Upload Image</button></div>
+            <div class="RugImages">
+
+                <div class="AddImageDiv">
+                    <div class="upload-gallary">
+                       
+                        @*<div class="project-blank-thumb" style="cursor:pointer;width:190px;float:left;">
+                            <img id="btnProjectUpload" class="cursor-pointer blank-thumb project-blank-thumb-img" src="~/Content/Icons/blank_thumb_file.png" />
+                        </div>*@
+                        @*<div id="NewFileUp_0" class="dv-preview-pic  preview_0">
+                                <div class="image-delete" style="cursor:pointer;" newimgdataid="0" data-id="0">
+                                    <img src="/Content/Icons/cross_update.png" style="background-color: white;width: 20px;border-radius: 10px;">
+                                </div>
+                                <div class="dv-preview-pic-inner">
+                                    <img class="preview-pic project-photo" src="/Files/Demo-Company/TicketFile//11-8/2059080120-___21761685_2001275503450756_7141903415822736759_n.jpg">
+                                </div>
+                                <input type="text" value="asd" class="image-caption" placeholder="Add caption">
+                                <label class="label hidden red lblCaptionError" id="lblCaptionErr_undefined">The content have exceeded 30 characters.</label>
+                            </div>*@
+                        @if (Model.RugImages != null && Model.RugImages.Count > 0)
+                        {
+                            foreach (var item in Model.RugImages)
+                            {
+                                <div id="NewFileUp_@item.Id" class="dv-preview-pic  preview_@item.Id">
+                                    <div class="image-delete" newimgdataid="0" data-id="@item.Id">
+                                        <img title="Delete" src="/Content/Icons/cross_update.png">
+                                    </div>
+                                    <div class="dv-preview-pic-inner">
+                                        <img class="preview-pic project-photo" src="@item.FileLocation">
+                                    </div>
+                                    <input type="text" value="@item.Description" class="image-caption" placeholder="Add caption">
+                                    <label class="label hidden red lblCaptionError" id="lblCaptionErr_undefined">The content have exceeded 30 characters.</label>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="rug_condition_pop_block">
+            <div class="rug_condition_pop_header image_header_style"><span class="image_header_text">Comments</span></div>
+            <div>
+                <textarea class="Comments" rows="5" style="width:100%;">@Model.Comment</textarea>
+            </div>
+        </div>
+    </div>
+    <div class="rug_SaveBtnDiv SaveBtnDiv">
+        <button class="btn" id="SaveButton">Save</button>
+    </div>
+</div>
+
+<div class="hidden" style="display:none;">
+    <div style="display:none;">
+        @Html.Hidden("UploadedImagePath", string.Empty, new { id = "hf-uploaded-image-path" })
+        <input id="fu-my-project-upload" name="ImageFile" accept="image/*" type="file" value="" multiple>
+    </div>
+</div>

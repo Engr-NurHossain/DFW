@@ -1,0 +1,273 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.AssignedUserModel
+@using System.Collections;
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+<link href="~/Content/Css/Estimator/EstimatorFilter.css" rel="stylesheet" />
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/FontAwesome/css/font-awesome.css" rel="stylesheet" />
+<script src="~/Content/JQuery/jquery-3.1.1.js"></script>
+<script src="~/Content/Bootstrap/js/bootstrap.min.js"></script>
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<style>
+    body {
+        margin: 0px;
+        padding: 0px;
+    }
+
+    .ra_container {
+        width: 100%;
+        float: left;
+    }
+
+    .ra_header {
+        width: 100%;
+        float: left;
+        padding: 10px 15px;
+        font-size: 20px;
+        border-bottom: 1px solid #ccc;
+    }
+
+    .ra_inner_height {
+        width: 100%;
+        float: left;
+        overflow: auto;
+    }
+
+    .ra_inner {
+        width: 100%;
+        float: left;
+        padding: 10px 15px;
+    }
+
+    .ra_footer {
+        width: 100%;
+        float: left;
+        text-align: right;
+        padding: 10px 15px;
+        border-top: 1px solid #ccc;
+    }
+
+    .CloseButtonDiv {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        cursor: pointer;
+    }
+
+        .CloseButtonDiv img {
+            width: 25px;
+        }
+
+    .green_button {
+        background-color: #2ca01c !important;
+        color: #fff !important;
+        border-color: #2ca01c !important;
+        border-radius: 4px;
+        padding: 2px 8px;
+        height: 34px;
+    }
+
+        .green_button:hover,
+        .green_button:focus {
+            background-color: #2ca01c !important;
+            color: #fff !important;
+            border-color: #2ca01c !important;
+        }
+
+    .red_button,
+    .red_button:hover,
+    .red_button:focus {
+        background-color: #d71920 !important;
+        color: #fff !important;
+        border-color: #d71920 !important;
+        border-radius: 4px !important;
+        border: 1px solid #d71920 !important;
+    }
+
+    .form_block {
+        width: 100%;
+        float: left;
+    }
+
+        .form_block label {
+            margin-bottom: 0px;
+        }
+
+    #Assign svg {
+        width: 18px;
+        height: 16px;
+        float: left;
+        margin-right: 2px;
+    }
+
+        #Assign svg path {
+            fill: #fff;
+        }
+
+    .user_list_block_div {
+        width: 100%;
+        float: left;
+    }
+
+    .user_list_block_div_inner {
+        width: 100%;
+        float: left;
+        border: 1px solid #ccc;
+    }
+
+        .user_list_block_div_inner div {
+            width: 100%;
+            float: left;
+            padding: 5px;
+            position: relative;
+        }
+
+            .user_list_block_div_inner div:nth-child(odd) {
+                background-color: #f4f5f8;
+            }
+
+            .user_list_block_div_inner div button {
+                position: absolute;
+                right: 0px;
+                top: 0px;
+                padding: 6px 8px;
+                height: unset !important;
+            }
+   
+</style>
+<script>
+    var EmpArray = [];
+    @if (Model.UserIds != null) {
+      @:EmpArray = [
+        foreach(var item in Model.UserIds)  {
+        @: '@item',
+        }
+        @:];
+        }
+    var time
+    var Id = '@ViewBag.KnowledgebaseId';
+    var AssignToUser = function () {
+
+        $.ajax({
+            url: "/Sales/SaveAssignKnowledgebaseToUser",
+            data: {
+                Id: Id,
+                UserIdList: $("#txt_installer").val()
+            },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result == true) {
+                    parent.ClosePopup();
+                }
+                else {
+                    /*parent.OpenErrorMessageNew("Error!", data.message);*/
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        })
+    }
+    var DeleteAssignedUser = function (Userid) {
+            $.ajax({
+                type: "Post",
+                url: "/Sales/UnassignKnowledgebase",
+                data: {
+                    Id: Id,
+                    UserId: Userid
+                },
+                dataType: "json",
+                success: function (data) {
+                    parent.AssignKnowledgebase(data.Id);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            });
+    }
+    $(document).ready(function () {
+        $("#txt_installer").selectpicker('val', EmpArray);
+        $("#Assign").click(function () {
+            AssignToUser();
+        });
+        $(".ra_inner_height").height(window.innerHeight - 105);
+    });
+</script>
+<div class="ra_container">
+    <div class="ra_header">
+        Assign To User
+        <div class="CloseButtonDiv" onclick="parent.ClosePopup()" style="text-align:right; cursor:pointer">
+            <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+        </div>
+    </div>
+    <div class="ra_inner_height">
+        <div class="ra_inner">
+            <div class="form_block">
+                <div class="form-group">
+                    <label>@Localize.T("Assign To:")</label>
+                    @Html.DropDownList("txt_installer", (List<SelectListItem>)ViewBag.InstallerList, new { @class = "form-control filter_drp_cus_lead", @title = "Select Users", @multiple = "multiple" })
+                </div>
+            </div>
+            @if (Model.Users != null && Model.Users.Count() > 0)
+            {
+                <div class="user_list_block_div">
+
+                    <label>@Localize.T("Already Assigned To:")</label>
+                    <div class="user_list_block_div_inner">
+                        @foreach (var item in Model.Users)
+                        {
+                            <div>
+                                @item.UserName
+                                @if (!item.IsRead)
+                                {
+
+                                    <button class="btn red_button knowledgebase-delete" onclick="DeleteAssignedUser('@item.UserId')" title="Unassign">
+                                        <i class="fa fa-undo" aria-hidden="true"></i>
+                                    </button>
+
+                                }
+                                else
+                                {
+                                    <button title="Read" class="btn green_button"> <i class="fa fa-check-circle-o"></i></button>
+                                }
+                            </div>
+
+                        }
+                    </div>
+
+                </div>
+            }
+        </div>
+    </div>
+    <div class="ra_footer">
+        <button class="btn green_button" id="Assign">
+            <svg version="1.1" id="Layer_1" x="0px" y="0px" width="35px" height="35px" viewBox="0 0 35 35" enable-background="new 0 0 35 35" xml:space="preserve">
+<g>
+            <path d="M13.241,29.551c-0.258,0.493-2.198,2.268-2.198,2.268H34.84c-0.529-11.775-10.506-14.384-10.506-14.384
+		c4.583-3.032,4.019-7.615,4.019-7.615c-1.022-8.497-8.672-8.32-8.672-8.32c-8.708,0.846-8.46,8.637-8.46,8.637
+		c-0.212,4.512,4.16,7.368,4.16,7.368c-4.195,0.917-7.65,5.323-7.65,5.323v0.118h4.571V21.96c0.858-0.835,1.193-0.788,1.193-0.788
+		c0.828-0.211,1.533,0.283,1.533,0.283c0.405,0.176,2.609,2.731,2.609,2.731c0.458,1.216-0.176,1.763-0.176,1.763l-2.556,2.415
+		c-0.494,0.44-1.534,0.229-1.534,0.229C13.406,29.492,13.241,29.551,13.241,29.551z M21.514,4.003
+		c0.317-0.388,0.717-0.188,0.717-0.188c2.726,1.152,3.549,3.22,3.549,3.22c1.163,2.021,0.587,4.583,0.587,4.583
+		c-0.2,0.541-0.705,0.435-0.705,0.435c-0.47-0.212-0.294-0.693-0.294-0.693c0.436-2.75-0.705-4.207-0.705-4.207
+		c-1.045-1.798-2.926-2.385-2.926-2.385C21.22,4.403,21.514,4.003,21.514,4.003z M19.822,3.369c0.325,0,0.588,0.248,0.588,0.552
+		c0,0.305-0.263,0.552-0.588,0.552s-0.587-0.247-0.587-0.552C19.234,3.616,19.497,3.369,19.822,3.369z"></path>
+            <path d="M3.535,24.07h9.824v-1.645c0,0,0.399-0.681,1.128,0l1.927,1.975c0,0,0.47,0.446-0.071,1.022l-1.939,1.939
+		c0,0-0.634,0.47-1.045-0.165l0.023-1.54L3.535,25.61C3.535,25.61,2.641,24.776,3.535,24.07z"></path>
+            <path d="M0.521,28.183h8.927v-1.495c0,0,0.363-0.62,1.025,0l1.752,1.794c0,0,0.427,0.406-0.064,0.929l-1.762,1.762
+		c0,0-0.577,0.427-0.95-0.149l0.021-1.399l-8.949-0.043C0.521,29.582-0.291,28.824,0.521,28.183z"></path>
+</g>
+</svg>
+            Assign
+        </button>
+    </div>
+</div>
+

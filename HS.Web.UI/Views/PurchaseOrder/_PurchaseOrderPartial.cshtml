@@ -1,0 +1,216 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Css/Inventory/PurchaseOrderPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Inventory/BadInventoryPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script>
+    var listSelet = '@Html.Raw(Json.Encode(@ViewBag.selectsts))';
+    var EstimatorId = '@ViewBag.EstimatorId';
+    listSelet = JSON.parse(listSelet);
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var currentPage = getCurrentPageFromQueryParams() || 1; 
+    function getCurrentPageFromQueryParams() {
+        var params = new URLSearchParams(window.location.search);
+        return params.get('page'); 
+    }
+    var OpenPOById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId + "&OpenTab=Ware");
+    }
+    var ReceivePOById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId + "&Receive=true&OpenTab=Ware");
+    }
+    var DeletePOById = function (POId) {
+        OpenConfirmationMessageNew("", "Are you sure you want to delete?", function () {
+            DeletePurchaseOrderbyId(POId, currentPage);
+        });
+    }
+    var ReceivePOHistoryById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/ReceivePOHistory/?Id=" + POId);
+    }
+    var ApprovePOById = function (POId, apStatus) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId + "&Approve=" + apStatus);
+    }
+    var DeletePurchaseOrderbyId = function (PODeleteId, pageNo) {
+        $.ajax({
+            url: domainurl + "/PurchaseOrder/DeletePurchaseOrder",
+            data: { Id: PODeleteId },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", "Purchase Order deleted successfully!");
+                    CloseTopToBottomModal();
+                    POListLoad(pageNo);
+                } else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            }
+        });
+    }
+    var POListLoad = function (pageNo, order, getReport) {
+        if (typeof (pageNo) != "undefined") {
+            currentPage = pageNo;
+            var setectSts = encodeURI($("#poStatus").val());
+            //if (EstimatorId == null || EstimatorId == "undefined" || EstimatorId =="") {
+            //    EstimatorId = $("#EstimatorId").val();
+            //}
+            StartDate = $(".min-date").val();
+            EndDate = $(".max-date").val();
+
+            EstimatorId = $("#EstimatorId").val();
+            var LoadUrl = domainurl + "/PurchaseOrder/PurchaseOrderListPartial/?SearchText=" + encodeURI($(".PoSearchText").val()) + "&selectsts=" + setectSts
+                + "&PageNo=" + pageNo + "&order=" + order + "&EstimatorId=" + EstimatorId + "&GetReport=" + getReport + "&Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate);
+            $(".PurchaseOrderTable").html(TabsLoaderText);
+            $(".PurchaseOrderTable").load(LoadUrl, function () {
+                
+                var newUrl = new URL(window.location.href);
+                newUrl.searchParams.set('page', currentPage);
+                window.history.pushState({}, '', newUrl);
+            });
+        }
+    }
+    var PurchaseOrderDataListDownload = function (pageNo, order,getReport) {
+        StartDate = $(".min-date").val();
+        EndDate = $(".max-date").val();
+
+        if (typeof (pageNo) != "undefined") {
+            var setectSts = encodeURI($("#poStatus").val());
+            EstimatorId = $("#EstimatorId").val();
+            window.location.href = domainurl + "/PurchaseOrder/PurchaseOrderListPartial/?SearchText=" + encodeURI($(".PoSearchText").val()) + "&selectsts=" + setectSts + "&GetReport=" + getReport + "&Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate);
+        }
+    }
+    var ResetFilter = function () {
+        $("#poStatus").selectpicker("val", "");
+        $(".PoSearchText").val("");
+        $("#EstimatorId").val("-1");
+        POListLoad(1);
+    }
+    $(document).ready(function () {
+        if (listSelet.length != 0) {
+            $("#poStatus").selectpicker('val', listSelet);
+        }
+        else {
+            $("#poStatus").selectpicker('val', '');
+        }
+        $("#AddNewPO").click(function () {
+            OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder?id=0&OpenTab=Ware");
+        });
+        $("#RequestOrderPopUp").click(function () {
+            OpenTopToBottomModal(domainurl + "/PurchaseOrder/RequestOrderList/");
+        });
+        $("#btnsearchtext").click(function () {
+            POListLoad(1, null);
+        });
+        $(".poapplyfilterbutton").click(function () {
+            POListLoad(1, null);
+        });
+        $(".PoSearchText").keydown(function (e) {
+            if (e.which == 13) {
+                POListLoad(1, null);
+            }
+        });
+        $(".bi_single_filte_info_container").hide();
+        $(".btn-filter").click(function () {
+
+            if ($(".bi_single_filte_info_container").is(":visible")) {
+                $(".bi_single_filte_info_container").hide();
+
+            } else {
+                $(".bi_single_filte_info_container").show();
+
+            }
+        });
+        POListLoad(currentPage, null);
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            //var DateFrom = $(".min-date").val();
+            //var DateTo = $(".max-date").val();
+            UpdatePtoCookie();
+
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+            POListLoad(1, null);
+
+        });
+        $("#btnDownloadPurchaseReport").click(function () {
+            PurchaseOrderDataListDownload(1, null,true);
+        })
+    });
+</script>
+
+<div class="purchase_order_partial_container">
+    <div class="purchase_order_partial_search_add">
+
+        <div class="input-group add-on" style="margin-right:10px; width:auto; float:left;">
+            <input class="form-control PoSearchText" @*id="PoSearchText"*@ type="text" placeholder="Search" />
+
+            <div class="input-group-btn"><button class="btn search_PO_btn green_button" id="btnsearchtext" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button></div>
+        </div>
+        <div class="bi_single_filter_div_style filter_fill" style="width: auto; float: left;">
+            <button class="btn btn-filter green_button" title="Filter">
+                <i class="glyphicon glyphicon-filter"></i>
+            </button>
+        </div>
+        <div  style="width: auto; float:right">
+            <div class="dateviewed" style="width: auto; margin-left: 20px; float:left">
+                @{Html.RenderAction("DateViewPartial", "Customer");}
+            </div>
+            @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.PurchaseOrderCreate))
+            {
+                <button class="btn btnPO" id="AddNewPO"><i class="fa fa-plus"></i> @Localize.T("New")</button>
+            }
+            <button title="@Localize.T(" Download")" class="report_btn lrp_float_right" id="btnDownloadPurchaseReport"><i class="fa fa-download" aria-hidden="true"></i></button>
+
+        </div>
+     
+        @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.RequestOrderList))
+        {
+            <button class="btn btnPO" id="RequestOrderPopUp" title="@Localize.T("Add New Order List")"><i class="fa fa-plus"></i> @Localize.T("Order List")</button>
+        }
+
+        <div class="bi_single_filte_info_container">
+
+            <div class="bi_single_filter_info_inner_content col-md-4">
+                @Html.DropDownList("poStatus", ViewBag.POStatus as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Status" })
+            </div>
+            @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowEstimatorIdFilter))
+            {
+                <div class="bi_single_filter_info_inner_content col-md-4">
+                    @Html.DropDownList("EstimatorId", ViewBag.EstimatorIdList as List<SelectListItem>, new { @class = "form-control", @title = "Estimate Id" })
+                </div>
+            }
+            <div class="bi_single_filter_info_footer">
+                <button class="btn search_BI_btn green_button poapplyfilterbutton" title="@Localize.T("Apply Filter")"><i class="fa fa-check" aria-hidden="true"></i>@Localize.T(" Apply")</button>
+                <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilter()">@Localize.T("Reset")</button>
+
+            </div>
+        </div>
+
+
+
+    </div>
+    <div class="PurchaseOrderTable">
+
+    </div>
+</div>
+
+

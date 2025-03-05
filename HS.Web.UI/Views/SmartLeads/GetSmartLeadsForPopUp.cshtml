@@ -1,0 +1,540 @@
+﻿@model HS.Entities.Customer
+@{
+    Layout = null;
+    var DocURL = HS.Framework.DESEncryptionDecryption.EncryptPlainTextToCipherText(ViewBag.LeadId + "#" + ViewBag.agreementtempid + "#" + ViewBag.firstpage + "#" + ViewBag.ticketid + "#" + ViewBag.recreate + "#" + ViewBag.isinvoice + "#" + ViewBag.invoiceid + "#" + ViewBag.isestimator + "#" + ViewBag.estid + "#" + ViewBag.userid + "#" + ViewBag.commercial +"#"+ ViewBag.EstimatorId);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+<script src="~/Content/Js/Login/domainurl.js"></script>
+@Styles.Render("~/styles/GetInvoice")
+<link href="~/Content/FontAwesome/css/font-awesome.min.css" rel="stylesheet" />
+<script src="~/Content/Jquery-ui/jquery.js"></script>
+@*<script src="~/Content/MagnificPopUp/jquery.magnific-popup.js"></script>*@
+@*<script src="~/Content/Js/Popups/GetLeadsForPopUp.js"></script>*@
+<script src="~/Content/Js/SignaturePad/SignaturePad.js"></script>
+<script src="~/Content/Js/NumberFormet/NumberFormat.js"></script>
+<script src="~/Content/Js/Layout/Device.js"></script>
+<link href="~/Content/Css/SmartLeads/GetSmartLeadsForPopUp.css" rel="stylesheet" />
+<script>
+    var globalval = parseInt('@ViewBag.AgreementDocumentHeight');
+    var CustomerIntId = '@Model.Id';
+    var LeadConvertId = "@ViewBag.LeadId";
+    var recreate = '@ViewBag.IsRecreate';
+    var templateid = '@ViewBag.agreementtempid';
+    var firstpage = '@ViewBag.firstpage';
+    var commercial = '@ViewBag.commercial';
+    var ticketid = '@ViewBag.ticketid';
+    var recreate = '@ViewBag.recreate';
+    var invoiceid = '@ViewBag.invoiceid';
+    var isinvoice = '@ViewBag.isinvoice';
+    var isestimator = '@ViewBag.isestimator';
+    var estid = '@ViewBag.estid';
+    var userid = '@ViewBag.userid';
+    var EstimatorId = '@ViewBag.EstimatorId';
+    var printFrame = function (id) {
+        var frm = document.getElementById(id).contentWindow;
+        frm.focus();// focus on contentWindow is needed on some ie versions
+        frm.print();
+        return false;
+    }
+    var IAgree = function () {
+        /*LeadConvertedToCustomer(LeadConvertId);
+        LeadtoCustomerConvert(LeadConvertId);
+        AllScheduleCalendar(LeadConvertId);
+        LeadConvertedToCustomerPDF(LeadConvertId);*/
+        IAgreeSetup(LeadConvertId);
+    }
+
+    var IAgreeSetup = function (idval) {
+        var Id = idval;
+        $(".LoadImgDiv").removeClass('hidden');
+        $.ajax({
+            url: domainurl + "/Leads/IAgreeSetup/",
+            data: { Id },
+            type: "Post",
+            dataType: "Json"
+        }).done(function () {
+            parent.LoadCustomer(true);
+            parent.ClosePopup();
+        });
+    }
+    var LeadConvertedToCustomer = function (idval) {
+        var Id = idval;
+        $.ajax({
+            url: domainurl + "/SmartLeads/ConvertLeadToCustomer/",
+            data: { Id },
+            type: "Post",
+            dataType: "Json"
+        }).done(function () {
+
+        });
+    }
+    var LeadConvertedToCustomerPDF = function (idval) {
+        var Id = idval;
+        $.ajax({
+            url: domainurl + "/Leads/LeadConvertedToCustomerPDF/",
+            data: { Id },
+            type: "Post",
+            dataType: "Json"
+        }).done(function () {
+
+        });
+    }
+    var AllScheduleCalendar = function (Scheduleidval) {
+        var LeadScheduleId = Scheduleidval;
+        $.ajax({
+            url: domainurl + "/Schedule/AllScheduleCalendar/",
+            data: { LeadScheduleId },
+            type: "Post",
+            dataType: "Json"
+        }).done(function () {
+
+        });
+    }
+    var AggrementMail = function (Leadid) {
+        var leadid = Leadid;
+        var PrefferedEmail = $("#EmailAddress").val();
+        var URL = domainurl + "/SmartLeads/SmartLeadConvertedToCustomerPDFMail/";
+        $(".LoadImgDiv").removeClass('hidden');
+        $.ajax({
+            url: URL,
+            data: JSON.stringify({
+                leadid: leadid,
+                PrefferedEmail: PrefferedEmail,
+                IsRecreate: recreate,
+                agreementtempid: templateid,
+                firstpage: firstpage,
+                ticketid: ticketid,
+                recreate: recreate,
+                isinvoice: isinvoice,
+                invoiceid: invoiceid,
+                isestimator:isestimator,
+                estid:estid,
+                userid: userid,
+                commercial : commercial,
+                EstimatorId: EstimatorId
+            }),
+            type: "POST",
+            dataType: "json",
+            contentType: "application/json; charset=utf-8",
+        }).done(function (data) {
+            if (data.result == true) {
+                if (recreate=="True"||firstpage=="True" || commercial=="True") {
+                    parent.$("#LoadLeadDetail").load("/SmartLeads/SmartAgreementSummary?id=" + LeadConvertId);
+                    parent.$("#leadToCustomerConvertForAgreement").removeClass('hidden');
+                    parent.OpenSuccessMessageNew("Success!", data.message, parent.ClosePopup());
+
+                }
+                else if (isinvoice.toLocaleLowerCase() =="true")
+                {
+                    parent.OpenSuccessMessageNew("Success!", data.message, parent.ClosePopup());
+                }
+                else if (isestimator)
+                {
+                    console.log("estimatorsend");
+                    parent.OpenSuccessMessageNew("Success!", data.message, parent.ClosePopup());
+                }
+                else {
+                    parent.OpenSuccessMessageNew("Success!", data.message, function () {
+                    parent.window.location.href = "/Lead/Leadsdetail/?id=" + LeadConvertId + "#LeadDetailTab";
+                    parent.$("#leadToCustomerConvertForAgreement").removeClass('hidden');
+                });
+                }
+            }
+            else {
+                parent.OpenErrorMessageNew("Error!", data.message, function () {
+                    $(".LoadImgDiv").addClass('hidden');
+                });
+            }
+        });
+    }
+    var SendAgreementLinkBySMS = function (Leadid) {
+        var URL = domainurl + "/SMS/SMSAgreementLinkForPrintBlank/";
+        var leadid = Leadid;
+        var PrefferedNO = $("#Phone_no").val();
+        $(".LoadImgDiv").removeClass('hidden');
+        $.ajax({
+            url: URL,
+            data: JSON.stringify({
+                leadid: leadid,
+                PrefferedNO: PrefferedNO,
+                IsRecreate: recreate,
+                agreementtempid: templateid,
+                firstpage: firstpage,
+                ticketid: ticketid,
+                recreate: recreate,
+                isinvoice: isinvoice,
+                invoiceid: invoiceid,
+                isestimator:isestimator,
+                estid:estid,
+                userid: userid,
+                commercial: commercial
+            }),
+            type: "POST",
+            dataType: "json",
+            contentType: "application/json; charset=utf-8",
+        }).done(function (data) {
+            if (data.result == true) {
+
+                if (recreate == "True" || firstpage == "True" || commercial == "True") {
+                     parent.OpenSuccessMessageNew("Success!", data.message, function () {
+                    console.log("hlwww");
+                    parent.$("#LoadLeadDetail").load("/SmartLeads/SmartAgreementSummary?id=" + LeadConvertId);
+                    parent.$("#leadToCustomerConvertForAgreement").removeClass('hidden');
+                    parent.ClosePopup()
+
+                });
+                }
+                else if (isinvoice.toLocaleLowerCase() == "true")
+                {
+                    parent.OpenSuccessMessageNew("Success!", data.message, function () {
+                    parent.ClosePopup()
+
+                });
+                }
+                else if (isestimator)
+                {
+                    parent.OpenSuccessMessageNew("Success!", data.message, function () {
+                    parent.ClosePopup()
+
+                });
+                }
+                else {
+                    parent.OpenSuccessMessageNew("Success!", data.message, function () {
+                        parent.window.location.href = "/Lead/Leadsdetail/?id=" + LeadConvertId + "#LeadDetailTab";
+                        parent.$("#leadToCustomerConvertForAgreement").removeClass('hidden');
+                    });
+                }
+            }
+            else {
+                parent.OpenErrorMessageNew("Error!", data.message, function () {
+                    $(".LoadImgDiv").addClass('hidden');
+                });
+            }
+        });
+    }
+    var SendBothMailAndSMS = function (Leadid) {
+        var leadid = Leadid;
+        var PrefferedEmail = $("#EmailAddress").val();
+        var PrefferedNO = $("#Phone_no").val();
+        var URL = domainurl + "/SmartLeads/SmartLeadConvertedToCustomerPDFMailAndSMS/";
+        $(".LoadImgDiv").removeClass('hidden');
+        $.ajax({
+            url: URL,
+            data: JSON.stringify({
+                leadid: leadid,
+                PrefferedEmail: PrefferedEmail,
+                PrefferedNO: PrefferedNO,
+                IsRecreate: recreate,
+                agreementtempid: templateid,
+                firstpage: firstpage,
+                ticketid: ticketid,
+                recreate: recreate,
+                isestimator:isestimator,
+                estid:estid,
+                userid: userid,
+                commercial: commercial
+            }),
+            type: "POST",
+            dataType: "json",
+            contentType: "application/json; charset=utf-8",
+        }).done(function (data) {
+            if (data.result == true) {
+                if (recreate == "True" || firstpage == "True" || commercial == "True") {
+                    parent.$("#LoadLeadDetail").load("/SmartLeads/SmartAgreementSummary?id=" + LeadConvertId);
+                    parent.$("#leadToCustomerConvertForAgreement").removeClass('hidden');
+                    parent.OpenSuccessMessageNew("Success!", data.message, parent.ClosePopup());
+                }
+                else if (isinvoice.toLocaleLowerCase()=="true")
+                {
+                 parent.OpenSuccessMessageNew("Success!", data.message, parent.ClosePopup());
+                }
+                else if (isestimator)
+                {
+                 parent.OpenSuccessMessageNew("Success!", data.message, parent.ClosePopup());
+                }
+                else {
+                    parent.OpenSuccessMessageNew("Success!", data.message, function () {
+                    parent.window.location.href = "/Lead/Leadsdetail/?id=" + LeadConvertId + "#LeadDetailTab";
+                    parent.$("#leadToCustomerConvertForAgreement").removeClass('hidden');
+                });
+                }
+            }
+            else {
+                parent.OpenErrorMessageNew("Error!", data.message, function () {
+                    $(".LoadImgDiv").addClass('hidden');
+                });
+            }
+        });
+    }
+
+    var LeadtoCustomerConvert = function (Leadid) {
+
+        var LeadtoCustomerid = Leadid;
+        $.ajax({
+            url: domainurl + "/Leads/LeadtoCustomerConvertQAEmail/",
+            data: { LeadtoCustomerid },
+            type: "Post",
+            dataType: "Json"
+        }).done(function () {
+
+        });
+    }
+    var LoadCustomerSignature = function () {
+
+    }
+    var PrimaryPhoneFormat = function () {
+        var phonenumber = $("#Phone_no").val().replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1$2$3");
+        var FormatedPhoneNo = $("#Phone_no").val();
+    }
+    var counter = 0;
+    $(document).ready(function () {
+
+
+        if (Device.All()) {
+            $('#AggrementDiv').remove();
+        }
+        else {
+            $('.mobile_document_btn').remove();
+        }
+
+
+        $(".btnSign").click(function () {
+            $(".bodyConentsDiv").addClass('hidden');
+            $(".sign-document").removeClass('hidden');
+        });
+        $("#btnSendMail").click(function () {
+            if (($("#street").val() != "" || $("#city").val() != "" && $("#state").val() != "") && $("#zipcode").val() != "") {
+                AggrementMail(LeadConvertId);
+            }
+            else {
+                parent.OpenErrorMessageNew("Error!", "Cannot send agreement without an address.");
+            }
+        });
+        $("#btnSendSMS").click(function () {
+            if (($("#street").val() != "" || $("#city").val() != "" && $("#state").val() != "") && $("#zipcode").val() != "") {
+                SendAgreementLinkBySMS(LeadConvertId);
+            }
+            else {
+                parent.OpenErrorMessageNew("Error!", "Cannot send agreement without an address.");
+            }
+        });
+        var canvas = $('#signature-pad');
+        var ctx = $('#signature-pad')[0].getContext('2d');
+        var signaturePad = new SignaturePad($('#signature-pad')[0]);
+        function resizeCanvas() {
+            var ratio = Math.max(1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas[0].getContext("2d").scale(ratio, ratio);
+        }
+        resizeCanvas();
+        var img = new Image();
+        img.onload = function () {
+            ctx.drawImage(img, 0, 0);
+        };
+        img.crossOrigin = 'anonymous';
+        function download(dataURL, filename) {
+            var blob = dataURLToBlob(dataURL);
+            var url = window.URL.createObjectURL(blob);
+
+            var a = document.createElement("a");
+            a.style = "display: none";
+            a.href = url;
+            a.download = filename;
+
+            document.body.appendChild(a);
+            a.click();
+
+            window.URL.revokeObjectURL(url);
+        }
+        function dataURLToBlob(dataURL) {
+            var parts = dataURL.split(';base64,');
+            var contentType = parts[0].split(":")[1];
+            var raw = window.atob(parts[1]);
+            var rawLength = raw.length;
+            var uInt8Array = new Uint8Array(rawLength);
+
+            for (var i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+            }
+
+            return new Blob([uInt8Array], { type: contentType });
+        }
+        $('#clear').click(function () {
+            signaturePad.clear();
+        });
+        $("#IsSignAgrSendToCus").change(function () {
+            var url = domainurl + "/SmartLeads/SignAgrSendToCus";
+            var CustId = $(this).attr("data-customerid");
+            var IsSignAgrSendToCus = $("#IsSignAgrSendToCus").prop("checked");
+            var Param = JSON.stringify({
+                CustId: CustId,
+                IsSignAgrSendToCus: IsSignAgrSendToCus
+            });
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: Param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.res == true) {
+                        OpenSuccessMessageNew("", "", function () {
+
+                        });
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+
+                }
+            });
+        });
+        $("#save-png").click(function () {
+            if (signaturePad.isEmpty()) {
+                parent.OpenErrorMessageNew("Error!", "Please Draw Your Signature", "");
+            }
+            else {
+                counter += 1;
+                var data = signaturePad.toDataURL('image/png');
+                var url = domainurl + "/SmartLeads/LoadCustomerSignatureImage";
+                $.ajax({
+                    url: url,
+                    data: { data, LeadConvertId },
+                    type: "Post",
+                    dataType: "Json",
+                    success: function (data) {
+                        if (data.uploadImage == true) {
+                            parent.OpenSuccessMessageNew("Success!", "Signature added successfully. Scroll at the bottom to fully review and submit document.", function () {
+                                $(".sign-document").addClass('hidden');
+                                $(".bodyConentsDiv").removeClass('hidden');
+                                $(".LoadImgDiv").removeClass('hidden');
+                                var ifr = $('iframe')[0];
+                                ifr.src = ifr.src
+                            });
+                            setTimeout(function () {
+                                $(".LoadImgDiv").addClass('hidden');
+                            }, 10000);
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    }
+                })
+            }
+        });
+        //$(".warning-error").hide();
+        $(".btnIAgree").attr("disabled", true);
+
+        $(".btnIAgree").click(function () {
+            if (!signaturePad.isEmpty() && counter == 1) {
+                //$(".warning-error").hide();
+                IAgree();
+            }
+            else {
+                if (signaturePad.isEmpty()) {
+                    $(".wrapper").css("border-color", "red");
+                    parent.OpenErrorMessageNew("Error!", "Please press sign document", "");
+                }
+                if (!signaturePad.isEmpty() && counter == 0) {
+                    parent.OpenErrorMessageNew("Error!", "Please Save your signature first", "");
+                    $(".wrapper").css("border-color", "#ccc");
+                }
+                //if (!$(".chechbox-IAgree").is(':checked'))
+                //    $(".warning-error").show();
+            }
+        })
+        $("#AggrementDiv").scroll(function () {
+            var MathScroll = ($("#AggrementDiv iframe").height() - $("#AggrementDiv").scrollTop());
+            console.log(MathScroll);
+            //var Globalval = parseInt();
+            if (MathScroll <= 500) {
+                $(".btnIAgree").removeAttr("disabled");
+            }
+            else {
+                $(".btnIAgree").attr("disabled", true);
+
+                $(".btnIAgree").addClass('DisablebtnAgree');
+            }
+        })
+        $("#btnSendMailAndSMS").click(function () {
+            if (($("#street").val() != "" || $("#city").val() != "" && $("#state").val() != "") && $("#zipcode").val() != "") {
+                SendBothMailAndSMS(LeadConvertId);
+            }
+            else {
+                parent.OpenErrorMessageNew("Error!", "Cannot send agreement without an address.");
+            }
+        })
+    })
+</script>
+
+<div id="body_id" class="pba_container">
+    <div class="hidden LoadImgDiv">
+        <input type="hidden" value="@Model.Street" id="street" />
+        <input type="hidden" value="@Model.City" id="city" />
+        <input type="hidden" value="@Model.State" id="state" />
+        <input type="hidden" value="@Model.ZipCode" id="zipcode" />
+        <div class="lds-css ng-scope">
+            <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+        </div>
+    </div>
+    <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+        <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+    </div>
+    <div class="HeadContents">
+        <h4>@Localize.T("Print preview")</h4>
+        <span>@Localize.T("To print, right-click the preview and select Print. Or, click the Print icon if you see one below.")</span>
+    </div>
+    <div style="float:left;margin-bottom:10px;margin-left:30px; margin-top:10px;">
+        <button class="btnPrint all_button" onclick="printFrame('iframePdf')"><i class="fa fa-print" aria-hidden="true"></i>&nbsp;@Localize.T(" Print")</button>
+    </div>
+    @*<div style="float:right;margin-top:10px;margin-right:35px;">
+            <button class="btnSign"><i class="fa fa-sign-in" aria-hidden="true"></i>&nbsp;@Localize.T("Sign Document")</button>
+        </div>*@
+
+    <div class="bodyConentsDiv" id="AggrementDiv">
+        <iframe name="iframe" class="pdf-styles cus-pdf-style" id="iframePdf" src="@(AppConfig.DomainSitePath)/SmartLeads/SmartInstallationAgreement/?url=@DocURL"></iframe>
+    </div>
+
+    <div class="mobile_document_btn">
+        <a class="btn btn-default" target="_blank" href="@(AppConfig.DomainSitePath)/SmartLeads/SmartInstallationAgreement/?url=@DocURL"><i class="fa fa-eye"></i> @Localize.T(" View Document")</a>
+    </div>
+
+
+    <div class="sign-document hidden">
+        <div class="wrapper">
+            <canvas id="signature-pad" class="signature-pad" width=300 height=100 style="float:left;"></canvas>
+        </div>
+        <button class="btn all_button" id="save-png"><i class="fa fa-floppy-o" aria-hidden="true"></i>&nbsp;@Localize.T(" Save")</button>
+        <button class="btn all_button" id="clear"><i class="fa fa-trash-o" aria-hidden="true"></i>&nbsp;@Localize.T(" Clear")</button>
+    </div>
+    <div class="footerContents" style="float:right;">
+        @*<div style="float:right; display:table;">
+                <button class="btnIAgree all_button" @*onclick="IAgree();><i class="fa fa-check-square" aria-hidden="true"></i>&nbsp;@Localize.T(" I Agree")</button>
+            </div>*@
+
+    </div>
+    <div class="gslfp_footer">
+        <div class="gslfp_footer_inner">
+            <div class="input-group add-on">
+                <input type="text" value="@Model.EmailAddress" id="EmailAddress" placeholder="ex@mail.com;ex2@mail.com" class="form-control" />
+                <div class="input-group-btn">
+                    <button class="btn" id="btnSendMail"><i class="fa fa-envelope" aria-hidden="true"></i>&nbsp;@Localize.T("Email Quote")</button>
+                </div>
+            </div>
+            <div class="smart_agree_checkbox">
+                <input data-customerid="@Model.Id" type="checkbox" @(Model.CustomerExtended.IsSignAgrSendToCus == true ? "Checked":"") id="IsSignAgrSendToCus" name="IsSignAgrSendToCus" title="Sign Agreement Send To Customer" />
+            </div>
+            <div class="input-group add-on sms_send_div">
+                <input type="text" value="@Model.PhoneNumberVal" id="Phone_no" placeholder="xxx-xxx-xxxx" class="form-control input-phone-format" />
+                <div class="input-group-btn">
+                    <button class="btn" id="btnSendSMS"><i class="fa fa-commenting-o" aria-hidden="true"></i>&nbsp;@Localize.T("Text Quote")</button>
+                </div>
+            </div>
+            <button class="btn" id="btnSendMailAndSMS">@Localize.T("Send To Both")</button>
+        </div>
+
+    </div>
+</div>

@@ -1,0 +1,426 @@
+﻿
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script src="~/Content/Js/ProductList/ProductList.js"></script>
+<link href="~/Content/Css/Equipment/EuipmentList.css" rel="stylesheet" />
+<link href="~/Content/Css/Sales/AllSalesPartial.css" rel="stylesheet" />
+<script>
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var LoadEquipmentList = function () {
+        setTimeout(function () {
+            $(".ListContents").hide();
+            $(".ListViewLoader").show();
+            $(".ListContents").load(domainurl + "/Inventory/EquipmentsListPartial");
+        }, 500);
+    }
+    var EquipmentSearchKeyUp = function (pageNumber) {
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var ActiveStatus = $("#ActiveStatus").val();
+        var EquipmentClass = $("#EquipmentClass").val();
+        var EquipmentCategory = $("#EquipmentCategory").val();
+        var StockStatus = $("#StockStatus").val();
+        var searchtext = $('#srch-term').val();
+        $('.filter-inventory-equipments').html('');
+        $('.filter-inventory-equipments').load(domainurl + "/Inventory/FilterEquipmentsListPartial/?ActiveStatus=" + ActiveStatus + "&EquipmentClass=" + EquipmentClass + "&EquipmentCategory=" + EquipmentCategory + "&StockStatus=" + StockStatus + "&PageNo=" + pageNumber + "&SearchText=" + searchtext);
+    }
+
+    var ProductSearchKeyUp = function (pageNumber) {
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        var ActiveStatus = 1/*$("#ActiveStatus").val()*/;
+        var EquipmentClass = $("#EquipmentClass").val();
+        var EquipmentCategory = $("#EquipmentCategory").val();
+        var StockStatus = $("#StockStatus").val();
+        var searchtext = $('#srch-term').val();
+        if (typeof (TabsLoaderText) != "undefined") {
+            $('#ProductsandServices').html(TabsLoaderText);
+        } else {
+            $('#ProductsandServices').html('');
+        }
+        /*&EquipmentClass=" + EquipmentClass + "&EquipmentCategory=" + EquipmentCategory + "&StockStatus=" + StockStatus + */
+        $('#ProductsandServices').load(domainurl + "/Inventory/ProductListPartial/?ActiveStatus=" + ActiveStatus + "&PageNo=" + pageNumber + "&SearchText=" + searchtext +"&Transferred_Date_To="+StartDate+"&Transferred_Date_From="+EndDate);
+    }
+    var windowHashChange = function () {
+        /*This one is ued for loading tab from url*/
+        if (top.location.hash.toLowerCase().indexOf('#employeestimeclock') > -1) {
+            EmployeeTabHeadClick();
+        }
+        else if ($("[tabname='" + top.location.hash + "']").length > 0) {
+
+            TabPopStateCheck = true;
+            $("[tabname='" + top.location.hash + "']").click();
+        }
+    }
+    var OpenAllSalesTab = function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $("#AllFundings").html(TabsLoaderText);
+        $("#AllFundings").load(domainurl + "/Sales/AllFundingData?FromDate=" + StartDate + "&ToDate=" + EndDate);
+    }
+    var OpenAllInvoicesTab = function () {
+        $("#InvoicesList").html(TabsLoaderText);
+        $("#InvoicesList").load(domainurl + "/Sales/AllInvoiceTabs");
+    }
+    var OpenProductAndServicesTab = function () {
+        ProductSearchKeyUp(1);
+    }
+    var OpenAccountReceivableTab = function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $("#AccountReceivable").html(TabsLoaderText);
+        $("#AccountReceivable").load(domainurl + "/Sales/AllReceivePayments?StartDate="+StartDate+"&EndDate="+EndDate);
+    }
+    var my_date_format = function (input) {
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var LoadAllSales = function () {
+        var SearchBy = $("#SearchBy").val();
+        var SearchText = $(".all_sales_search_text").val();
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        var pageNo = 1;
+        console.log("LoadAllSales");
+        $("#AllFundings").html(TabsLoaderText);
+
+        $("#AllFundings").load(domainurl + "/Sales/AllFundingData?FromDate=" + StartDate + "&ToDate=" + EndDate + "&PageNo=" + pageNo + "&SearchText=" + SearchText + "&SearchBy=" + SearchBy);
+    }
+    var LoadAllInvoiceWithFilter = function()
+    { 
+        var BilligCycle = $("#BillingCycle").val();
+        var SearchText = $(".all_invoices_search_text").val();
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        var pageNo = 1;
+        console.log(SearchText + " " + StartDate);
+        $(".invoices-tabs .tab-pane.active").html(TabsLoaderText);
+
+        $(".invoices-tabs .tab-pane.active").load(domainurl + "/Sales/AllInvoices/?PageNo=" + pageNo
+            + "&SearchText=" + encodeURIComponent(SearchText)
+            + "&InvoiceFor=" + encodeURIComponent(InvoiceFor)
+            + "&BillingCycle=" + BilligCycle
+            + "&InvoiceStartDate=" + StartDate
+            + "&InvoiceEndDate=" + EndDate + "&Status=" + encodeURIComponent(invstatus)
+            );
+    }
+    var LoadAllReturnsWithFilter = function () {
+        var PageNo = 1;
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        console.log(StartDate);
+        var Status = $("#StatusFilter").val();
+        var SearchText = $(".AllReturnsSearch").val();
+        var Url = String.format(domainurl + "/Sales/AllReturnsByFilter/?PageNo={0}&SearchText={1}&StartDate={2}&EndDate={3}&Status={4}", PageNo, SearchText, StartDate, EndDate,Status);
+        var redirectUrl = Url.replace(" ", "");
+        console.log(redirectUrl);
+        $(".AllReturnsLoadDiv").html(TabsLoaderText);
+        $(".AllReturnsLoadDiv").load(redirectUrl);
+    }
+    var LoadAllSuspendedWithFilter = function () {
+        var PageNo = 1;
+
+        var Status = $("#StatusFilter").val();
+        var SearchText = $(".AllReturnsSearch").val();
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        var paymentmethod = $("#PaymentMethodFilter").val();
+        var Url = domainurl + String.format("/Sales/AllCustomerByFilter/?PageNo={0}&SearchText={1}&Status={2}&StartDate={3}&EndDate={4}&Paymentmethod={5}", PageNo, SearchText, Status, StartDate, EndDate,paymentmethod);
+        var redirectUrl = Url.replace(" ", "");
+    
+        $(".AllCustomerLoadDiv").html(TabsLoaderText);
+        $(".AllCustomerLoadDiv").load(redirectUrl);
+    }
+    var LoadACHARBDataWithFilter = function (InvoiceFor) {
+        var BilligCycle = $("#BillingCycle").val();
+        var SearchText = $(".all_invoices_search_text").val();
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        var pageNo = 1;
+        $(".invoices-tabs .tab-pane.active").html(TabsLoaderText);
+        $(".invoices-tabs .tab-pane.active").load(domainurl + "/Sales/SalesARBInvoices/?PageNo=" + pageNo
+            + "&SearchText=" + encodeURI(SearchText)
+            + "&InvoiceFor=" + encodeURI(InvoiceFor)
+            + "&BillingCycle=" + BilligCycle
+            + "&InvoiceStartDate=" + StartDate
+            + "&InvoiceEndDate=" + EndDate
+            );
+    }
+
+   
+    String.prototype.replaceAll = function(search, replacement) {
+        var target = this;
+        return target.split(search).join(replacement);
+    }; 
+    $(document).ready(function () {
+        
+        $(document).click(function (e) {
+            if ($($(e.target).parent()).hasClass('btn-filter')) {
+                return;
+            }
+            else if ($(".customer-fliter-list").is(":visible")) {
+                $(".customer-fliter-list").hide();
+            }
+        });
+       
+        $(".DateFilterContents .btn-apply-Datefilter").click(function () {
+            if ($(".AllFundings").hasClass("active")) {
+
+                LoadAllSales();
+            }
+            else if ($(".InvoicesList ").hasClass("active"))
+            {
+                if($(".AllACHInvoice").hasClass("active"))
+                {
+                    var InvoiceFor = "ACH";
+                    LoadACHARBDataWithFilter(InvoiceFor);
+                }
+                else if ($(".AllCreditCardInvoice").hasClass("active")) {
+                    InvoiceFor = "Credit Card";
+                    LoadACHARBDataWithFilter(InvoiceFor);
+                }
+                else if ($(".OthersInvoice").hasClass("active")) {
+                    InvoiceFor = "SystemGenerated";
+                    LoadAllInvoiceWithFilter(InvoiceFor);
+                }
+                else if ($(".UnsettledCustomers").hasClass("active")) {
+                    InvoiceFor = "UnsettledCustomers";
+                    LoadAllInvoiceWithFilter(InvoiceFor);
+                }
+                else if($(".ReturnsCustomers").hasClass("active"))
+                {
+                    console.log("sdf");
+                    LoadAllReturnsWithFilter();
+                }
+                else if ($(".SubscribedCustomers").hasClass("active"))
+                {
+                    LoadAllSuspendedWithFilter();
+                }
+                else if ($(".RecurringBillingInvoice ").hasClass("active")) {
+
+                    LoadAllUnpaidInvoices(1);
+                }
+            }
+            else if ($(".AccountReceivable ").hasClass("active"))
+            {
+                var SearchBy = "";
+                var StartDate = $(".min-date").val();
+                var EndDate = $(".max-date").val();
+                var SearchText = $(".rcv_all_payments_text").val();
+                var pageNo = 1;
+                $("#AccountReceivable").html(TabsLoaderText);
+
+                $("#AccountReceivable").load(domainurl + "/Sales/AllReceivePayments/?PageNo=" + pageNo + "&SearchText=" + SearchText + "&SearchBy=" + SearchBy + "&StartDate=" + StartDate + "&EndDate=" + EndDate);
+            }
+            else if ($(".ProductsandServices ").hasClass("active"))
+            {
+
+                ProductSearchKeyUp(1);
+            }           
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+            UpdatePtoCookie();
+        });
+
+        $(".LoaderWorkingDiv").hide();
+
+        $('ul#SalesMenuTabs li a').click(function (e) {
+            if (!TabPopStateCheck) {
+                window.history.pushState({ urlPath: window.location.pathname }, "", $(e.target).attr('tabname'));
+            }
+            TabPopStateCheck = false;
+        });
+        if (top.location.hash != '') {
+            windowHashChange();
+        }
+        else {
+            OpenAllSalesTab();
+        }
+        $("#ErrorPage").load(domainurl + "/Sales/ErrorPage");
+        //tab click events
+        //$(".AllFundings").click(function () {
+        //    var StartDate = $(".min-date").val();
+        //    var EndDate = $(".max-date").val();
+        //    $("#AllFundings").html(TabsLoaderText);
+        //    $("#AllFundings").load(domainurl + "/Sales/AllFundingData?FromDate=" + StartDate + "&ToDate=" + EndDate);
+        //});
+
+        //$(".ProductsandServices").click(function () {
+           
+        //    /*$("#ProductsandServices").html(TabsLoaderText);
+        //    $("#ProductsandServices").load("/Inventory/FilterEquipmentsListPartial/?ActiveStatus=-1&EquipmentClass=-1&EquipmentCategory=-1&StockStatus=-1&PageNo=1&SearchText=");*/
+        //});
+        
+         
+    });
+    $(window).on('hashchange', function (e) {
+        windowHashChange();
+    });
+</script>
+<style>
+    .equipment-list-filter-product {
+        float: left;
+    }
+
+    .product-fliter-list {
+        display: none;
+        position: absolute;
+        background: #fff;
+        border: 2px solid #ddd;
+        z-index: 99999;
+        padding: 5px;
+        width: 290px;
+    }
+    .equipment-list-filter-product button {
+        border: none;
+        background: transparent;
+        height: 35px;
+        font-size: 24px;
+    }
+
+    .left-items {
+        left: 0;
+    }
+
+    .right-items {
+        right: 0;
+    }
+
+    .sub-list {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-bottom: 5px;
+    }
+
+        .sub-list span {
+            font-weight: 600;
+            display: block;
+            padding-bottom: 2px;
+        }
+
+    .sub-list-btn {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-bottom: 10px;
+        padding-top: 20px;
+    }
+
+    .btn-reset-filter {
+        border: none;
+        background: #2ca01c !important;
+        height: 35px;
+        padding-left: 15px;
+        padding-right: 15px;
+        float: left;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+         -webkit-border-radius: 5px;
+-moz-border-radius: 5px;
+border-radius: 5px;
+    }
+
+    .btn-apply-filter {
+        border: none;
+        background: #2ca01c !important;
+        height: 35px;
+        padding-left: 15px;
+        padding-right: 15px;
+        float: right;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+         -webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+    }
+    .equipment-search {
+        float: left;
+        padding-right: 10px;
+        width: 80%;
+    }
+</style>
+
+
+<div class="all_sales_partial_container">
+    <div class="dateviewed">
+        @{Html.RenderAction("DateViewPartial", "Customer");}
+    </div>
+    <div class="report_tabs_header">
+        <div class="ReportsTitle">@Localize.T("Sales")</div>
+        <ul class="nav nav-tabs reports-tabs sales_top_nav" id="SalesMenuTabs"> 
+            <li class="active AllFundings" onclick="OpenAllSalesTab()">
+                <a tabname="#AllSalesTab" data-target="#AllFundings" data-toggle="tab">@Localize.T("All Sales")</a>
+            </li> 
+            <li class="InvoicesList" onclick="OpenAllInvoicesTab()">
+                @if (PermissionChecker.IsPermitted(Permissions.SalesPermissions.AutomaticRecurringBilling))
+                {
+                     <a tabname="#ARBTab" data-target="#InvoicesList" data-toggle="tab">@Localize.T("Automatic Recurring Billing")</a>
+                }
+            </li>
+            <li class="ProductsandServices" onclick="OpenProductAndServicesTab()">
+                @if (PermissionChecker.IsPermitted(Permissions.SalesPermissions.SalesProductsListTab))
+                {
+                    <a tabname="#ProductsTab" idval="" data-target="#ProductsandServices" data-toggle="tab">@Localize.T("Products and Services")</a>
+                }
+                @*else
+                {
+                    <a tabname="#ProductsTab" idval="" data-target="#ErrorPage" data-toggle="tab">@Localize.T("Products and Services")</a>
+                }*@
+            </li>
+            <li onclick="OpenAccountReceivableTab()" class="AccountReceivable">
+                @if (PermissionChecker.IsPermitted(Permissions.SalesPermissions.AccountReceivable))
+                {
+                    <a tabname="#AccountReceivableTab" idval="" data-target="#AccountReceivable" data-toggle="tab">@Localize.T("Account Receivable")</a>
+                }
+            </li>
+        </ul>
+    </div>
+    <div class="Report-Tabs sales_tab_style">
+        <div class="nav-detail-contents">
+
+            <div class="tab-content">
+                 
+                <div class="tab-pane active" id="AllFundings">
+
+                </div>
+                @if (PermissionChecker.IsPermitted(Permissions.SalesPermissions.SalesProductsListTab))
+                {
+                    <div class="tab-pane" id="ProductsandServices">
+
+                    </div>
+                }
+                <div class="tab-pane" id="InvoicesList">
+
+                </div>
+                
+                <div class="tab-pane" id="AccountReceivable">
+
+                </div>
+                <div class="tab-pane" id="ErrorPage">
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

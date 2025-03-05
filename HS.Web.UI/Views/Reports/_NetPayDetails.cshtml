@@ -1,0 +1,527 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using HS.Framework
+@model HS.Entities.EmpSalesPayReport
+
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var order = '@ViewBag.order'
+    var SalesPersonId = '@Model.SalesPersonId';
+    var DedudctionDetails = function (payrollBrinksId) {
+        OpenTopToBottomModal("/Reports/DedudctionDetails?PayrollBrinksId=" + payrollBrinksId);
+    }
+</script>
+<style>
+    .net_pay_details_container {
+        width: 100%;
+        float: left;
+    }
+
+    .net_pay_details_header {
+        width: 100%;
+        float: left;
+        padding: 7px 50px 7px 15px;
+        border-bottom: 2px solid #ccc;
+    }
+
+        .net_pay_details_header span {
+            font-size: 20px;
+            float: left;
+        }
+
+        .net_pay_details_header button {
+            float: right;
+            margin-left: 10px;
+        }
+
+    .report_pagination_container {
+        width: 100%;
+        float: left;
+        margin-top: 20px;
+        margin-right: 25px;
+        padding-left: 25px;
+    }
+
+    #PayrollReportTable {
+        width: 100%;
+        float: left;
+        table-layout: fixed;
+    }
+
+        #PayrollReportTable thead tr th,
+        #PayrollReportTable tbody tr td {
+            border: 1px solid #ccc;
+            padding: 10px 5px;
+        }
+
+            #PayrollReportTable thead tr th:nth-child(1) {
+                width: 200px;
+            }
+
+        #PayrollReportTable tbody tr:nth-child(odd) {
+            background-color: #f8f8f8;
+        }
+
+        #PayrollReportTable tbody tr:hover {
+            background-color: #f4f5f8;
+        }
+
+    .net_pay_details_height {
+        width: 100%;
+        float: left;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .net_pay_details_inner {
+        width: 100%;
+        float: left;
+        padding: 5px 15px;
+    }
+</style>
+<script>
+    var MakePayrollStatusChangeConfirm = function (status) {
+        var url = "/Reports/MakePayrollStatusChange";
+
+        var CustomerListForStatusChange = [];
+        $(".ChkSalesPayItem:checked").each(function () {
+            CustomerListForStatusChange.push($(this).attr('data-id'));
+        });
+        var param = JSON.stringify({
+            CustomerListForStatusChange: CustomerListForStatusChange,
+            Status: status
+        });
+
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result == true) {
+                    OpenSuccessMessageNew("", "", function () {
+                        NetPayDetails(SalesPersonId);
+                    })
+
+                }
+                else {
+                    OpenErrorMessageNew("", "", function () {
+                        NetPayDetails(SalesPersonId);
+                    });
+                }
+
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var MakePayrollStatusChange = function (status) {
+        if ($(".ChkSalesPayItem:checked").length == 0) {
+            OpenErrorMessageNew("", "You need to select at least one.")
+        }
+        else {
+            OpenConfirmationMessageNew("", "Are you sure you want to change status?", function () {
+                MakePayrollStatusChangeConfirm(status);
+            });
+        }
+    }
+    var DownLoadNetPayDetails = function () {
+        var StartDate = $("#WeeklyStartDatePayrollBrinks").val();
+        var EndDate = $("#WeeklyEndDatePayrollBrinks").val();
+        var PayrollBrinksStatus = $("#PayrollBrinksStatus").val();
+        var PayrollBrinksFunding = encodeURI($("#PayrollBrinksFunding").val());
+        window.location.href = domainurl + "/Reports/NetPayDetails?GetReport=true&UserId=" + SalesPersonId + "&StartDate=" + StartDate + "&EndDate=" + EndDate + "&PayrollBrinksStatus=" + PayrollBrinksStatus + "&PayrollBrinksFunding=" + PayrollBrinksFunding;
+    }
+    $(document).ready(function () {
+        $(".net_pay_details_height").height(window.innerHeight - 45);
+        $(".ChkAllSalesPayItem").change(function () {
+            if ($(this).prop("checked")) {
+                $(".ChkSalesPayItem").prop("checked", true);
+            }
+            else {
+                $(".ChkSalesPayItem").prop("checked", false);
+            }
+        });
+        $("#btnDownloadPayrollNetPay").click(function () {
+            DownLoadNetPayDetails();
+        });
+    });
+    $(window).resize(function () {
+        $(".net_pay_details_height").height(window.innerHeight - 45);
+    });
+</script>
+<div class="net_pay_details_container">
+    <div class="net_pay_details_header">
+        <span>@Model.SalesPersonName Net Pay Details</span>
+        <button title="Download" class="btn btnBI" id="btnDownloadPayrollNetPay"><i class="fa fa-download" aria-hidden="true"></i></button>
+        <button title="Rep Paid" id="BtnRepPaid" onclick="MakePayrollStatusChange('RepPaid')" class="btn green_button">Rep Paid</button>
+        <button title="Non Pay Acct" id="BtnNonPayAcct" onclick="MakePayrollStatusChange('NonPayAcct')" class="btn green_button">Non Pay Acct</button>
+
+        <button title="Pending" id="BtnPending" onclick="MakePayrollStatusChange('Pending')" class="btn green_button">Pending</button>
+
+    </div>
+    <div class="net_pay_details_height">
+        <div class="net_pay_details_inner">
+            <table id="PayrollReportTable">
+                <thead>
+                    <tr>
+                        <th>
+                            <div>@Localize.T("Customer")</div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Equipment")</div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("MMR")</div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Finance Monthly Payment")</div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Total Monthly")</div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Multiple")</div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Gross Pay")</div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Hold Back")</div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Pass-Thrus")</div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Deductions")</div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Adjustments")</div>
+                        </th>
+                        <th>
+                            <div>@Localize.T("Net Pay")</div>
+                        </th>
+                        <th>
+                            <div>
+                                @Localize.T("Action")
+                                <input type="checkbox" class="ChkAllSalesPayItem" />
+                            </div>
+
+                        </th>
+                    </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.SalesPayList)
+                {
+                <tr>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("Customer") <span>:</span></div>
+                        @if (item.CustomerIntId > 0)
+                        {
+                            <div class="rpt_pr_sls_dtp">
+                                <strong>Customer Id: </strong><a target="_blank" href="/Customer/Customerdetail?id=@item.CustomerIntId" class="cus-anchor">@item.CustomerIntId</a>
+                            </div>
+                        }
+                        <div class="rpt_pr_sls_dtp">
+                            <strong>Name:</strong> <span>@item.CustomerName</span>
+                        </div>
+                        @if (item.AccountId > 0)
+                        {
+                            <div class="rpt_pr_sls_dtp">
+                                <strong>CS#:</strong> <span>@item.AccountId</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.PaymentMethodForRMR))
+                        {
+                            <div class="rpt_pr_sls_dtp">
+                                <strong>Billing Method:</strong> <span>@item.PaymentMethodForRMR</span>
+                            </div>
+                        }
+                        @if (item.CreditScoreValue > 0)
+                        {
+                            <div class="rpt_pr_sls_dtp">
+                                <strong>Credit Score:</strong> <span>@LabelHelper.FormatAmount(item.CreditScoreValue)</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.CreditGrade))
+                        {
+                            <div class="rpt_pr_sls_dtp">
+                                <strong>Credit Grade:</strong> <span>@item.CreditGrade</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.Type))
+                        {
+                            <div class="rpt_pr_sls_dtp">
+                                <strong>Type:</strong> <span>@item.Type</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.ContractTerm))
+                        {
+                            <div class="rpt_pr_sls_dtp">
+                                <strong>Term:</strong> <span>@item.ContractTerm</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.PayType))
+                        {
+                            <div class="rpt_pr_sls_dtp">
+                                <strong>Pay Type:</strong> <span>@item.PayType</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.BrinksFundingStatus) && item.BrinksFundingStatus != "-1")
+                        {
+                            <div class="rpt_pr_sls_dtp">
+                                <strong>Funding Status:</strong> <span>@item.BrinksFundingStatus</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.FinanceFundingStatus) && item.FinanceFundingStatus != "-1")
+                        {
+                            <div class="rpt_pr_sls_dtp">
+                                <strong>Finance Status:</strong> <span>@item.FinanceFundingStatus</span>
+                            </div>
+                        }
+                    </td>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("Equipment") <span>:</span></div>
+                        <div class="rpt_pr_sls_dtp">
+                            <span>@item.EquipmentList</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("MMR") <span>:</span></div>
+                        <div class="rpt_pr_sls_dtp">
+                            <span>@Currency@LabelHelper.FormatAmount(item.TotalRMR)</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("Finance Monthly Payment") <span>:</span></div>
+                        <div class="rpt_pr_sls_dtp">
+                            <span>@Currency@LabelHelper.FormatAmount(item.FinanceMonthlyPayment)</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("Total Monthly") <span>:</span></div>
+                        <div class="rpt_pr_sls_dtp">
+                            <span>@Currency@LabelHelper.FormatAmount(item.TotalMonthly)</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("Multiple") <span>:</span></div>
+                        <div class="rpt_pr_sls_dtp">
+                            <span>@LabelHelper.FormatAmount(item.TotalMultiple)</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("Gross Pay") <span>:</span></div>
+                        <div class="rpt_pr_sls_dtp">
+                            <span>@Currency@LabelHelper.FormatAmount(item.GrossPay)</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("Hold Back") <span>:</span></div>
+                        <div class="rpt_pr_sls_dtp">
+                            <span>@Currency@LabelHelper.FormatAmount(item.HoldBack)</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("Pass-Thrus") <span>:</span></div>
+                        <div class="rpt_pr_sls_dtp">
+                            <span>@LabelHelper.FormatAmount(item.PassThrus)</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("Deductions") <span>:</span></div>
+                        <div class="rpt_pr_sls_dtp">
+                            <span class="cus-anchor" onclick="DedudctionDetails(@item.Id)">@Currency@LabelHelper.FormatAmount(item.Deductions)</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("Adjustments") <span>:</span></div>
+                        <div class="rpt_pr_sls_dtp">
+                            <span>@Currency@LabelHelper.FormatAmount(item.Adjustment)</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rpt_pr_sls_mb">@Localize.T("Net Pay") <span>:</span></div>
+                        <div class="rpt_pr_sls_dtp">
+                            <span>@Currency@LabelHelper.FormatAmount(item.NetPay)</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span>@item.FundingStatus</span>
+                        <input type="checkbox" class="ChkSalesPayItem" data-id="@item.Id" />
+                    </td>
+                </tr>
+                }
+            <tr class="table_total_bg">
+                <td>
+                    <b class="float_right">@Localize.T("Total:")</b>
+                </td>
+                <td></td>
+                <td>
+                    <div class="rpt_pr_sls_mb">@Localize.T("Total RMR") <span>:</span></div>
+                    <div class="rpt_pr_sls_dtp">
+                        <b title="@Localize.T("Total RMR")">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@LabelHelper.FormatAmount(Model.TotalTotalRMR)</b>
+                    </div>                
+                </td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td>
+                    <div class="rpt_pr_sls_mb">@Localize.T("Total Gross Pay") <span>:</span></div>
+                    <div class="rpt_pr_sls_dtp">
+                        <b title="@Localize.T("Total Gross Pay")">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@LabelHelper.FormatAmount(Model.TotalGrossPay)</b>
+                    </div>                
+                </td>
+                <td></td>
+                <td></td>
+                <td>
+                    <div class="rpt_pr_sls_mb">@Localize.T("Total Deductions") <span>:</span></div>
+                    <div class="rpt_pr_sls_dtp">
+                        <b title="@Localize.T("Total Deductions")">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@LabelHelper.FormatAmount(Model.TotalDeductions)</b>
+                    </div>               
+                </td>
+                <td>
+                    <div class="rpt_pr_sls_mb">@Localize.T("Total Adjustments") <span>:</span></div>
+                    <div class="rpt_pr_sls_dtp">
+                        <b title="@Localize.T("Total Adjustments")">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@LabelHelper.FormatAmount(Model.TotalAdjustments)</b>
+                    </div>              
+                </td>
+                <td>
+                    <div class="rpt_pr_sls_mb">@Localize.T("Total Net Pay") <span>:</span></div>
+                    <div class="rpt_pr_sls_dtp">
+                        <b title="@Localize.T("Total Net Pay")">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@LabelHelper.FormatAmount(Model.TotalNetPay)</b>
+                    </div>               
+                </td>
+                <td></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="report_pagination_container">
+            <div class="report_pagination_inner">
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton activeBtn" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber),'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons disabledBtn" disabled>Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigateSalesPayListing(1, '@ViewBag.order')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigateSalesPayListing(2,'@ViewBag.order')">2</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons" disabled="@(ViewBag.PageNumber == 2 ? "disabled" : "")" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber != 2 ? ViewBag.PageNumber + 1 : ""),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigateSalesPayListing(1,'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigateSalesPayListing(2,'@ViewBag.order')">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 3 ? "activeBtn" : "")" onclick="NavigateSalesPayListing(3,'@ViewBag.order')">3</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons" disabled="PaginationButtons @(ViewBag.PageNumber == 3 ? "disabled" : "")" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber != 3 ? ViewBag.PageNumber + 1 : ""),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv" id="pagination">
+                            <button class="PaginationButtons" disabled onclick="NavigateSalesPayListing()">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber + 2),'@ViewBag.order')">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')" id="pagination">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber - 2),'@ViewBag.order')" id="pagination">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')" id="pagination">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber),'@ViewBag.order')" id="pagination">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" disabled onclick="NavigateSalesPayListing()">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigateSalesPayListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">Next</button>
+                        </div>
+
+                    }
+                }
+            </div>
+            <div class="area_zip_code_pagination_inner">
+                @if (ViewBag.PageCount > 0)
+                {
+                    <div class="paginationtextdv">
+                        <span>Showing item @ViewBag.CurrentNumber of @ViewBag.OutOfNumber</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+
+
+

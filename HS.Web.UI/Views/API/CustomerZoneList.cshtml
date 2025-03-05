@@ -1,0 +1,182 @@
+﻿@model IEnumerable<HS.Entities.CustomerSecurityZones>
+@{
+    Layout = null;
+}
+<script>
+    var DeleteZone = function (ZoneId) {
+
+        var param = {
+            "ZoneId": ZoneId,
+        };
+
+        console.log(param);
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: "/Api/DeleteUccZone",
+            data: JSON.stringify(param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (typeof (data) != 'undefined') {
+                 
+                    $("#Zonelist").load("/API/CustomerZoneList?CustomerId=" + CustomerLoadGuid + "&Platform="+ Platform);
+
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+             
+                console.log(errorThrown);
+            }
+        });
+    }
+    var DeleteZoneConfirm = function (ZoneId) {
+        OpenConfirmationMessageNew("", "Do you want to delete this zone?",function () {
+            DeleteZone(ZoneId);
+        })
+    }
+    var EditZones = function (ZoneId) {
+        var param = {
+            "ZoneId": ZoneId,
+        };
+
+        console.log(param);
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: "/Api/GetCustomerSecurityZone",
+            data: JSON.stringify(param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                console.log(data);
+                if (typeof (data) != 'undefined') {
+                    if (data.result.Platform == "Brinks") {
+                        $("#ZoneId").val(data.result.ID);
+                        $("#BrinksZoneNumber1").val(data.result.ZoneNumber);
+                        $("#BrinksEventCode1").val(data.result.EventCode);
+                        $("#BrinksEquipType").val(data.result.EquipmentType);
+                        $("#BrinksEquipLocation1").val(data.result.Location);
+                        $("#ZoneComment").val(data.result.ZoneComment);
+                         if ($("#BrinksEventCode1").val() != '' && $("#BrinksEventCode1").val() != '-1') {
+                            GetEquipmentType();
+                         }
+                    }
+                     else if (data.result.Platform == "UCC") {
+                        $("#ZoneId").val(data.result.ID);
+                        $("#UccZoneNumber1").val(data.result.ZoneNumber);
+                        $("#UccEventCode1").val(data.result.EventCode);
+                        $("#UccLocation1").val(data.result.Location);
+                    }
+                     else if (data.result.Platform == "NMC") {
+                        $("#ZoneId").val(data.result.ID);
+                        $("#NMCZoneNumber").val(data.result.ZoneNumber);
+                        $("#NMCEventCode").val(data.result.EventCode);
+                        $("#NMCEquipType").val(data.result.EquipmentType);
+                        $("#NMCEquipLocation").val(data.result.Location);
+                    }
+                     else if (data.result.Platform == "AG") {
+                        $("#ZoneId").val(data.result.ID);
+                        $("#AGZoneNumber").val(data.result.ZoneNumber);
+                        $("#AGEventCode").val(data.result.EventCode);
+                        $("#SignalCode").val(data.result.EquipmentType);
+                     
+                    }
+                   
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+
+                console.log(errorThrown);
+            }
+        });
+   
+        
+
+    }
+
+    $(document).ready(function () {
+      
+        if (Platform == "'UCC'") {
+            $('.EquipmentType').hide();
+            $('.comment').hide();
+        }
+    })
+       
+</script>
+<table class="table">
+    <tr>
+
+        <th>
+            Zone Number
+        </th>
+        <th>
+            Event Code
+        </th>
+        <th>
+            Location
+        </th>
+
+        <th class="EquipmentType">
+            Equipment Type
+        </th>
+        <th class="comment">
+            Comment
+        </th>
+        <th>
+
+        </th>
+    </tr>
+
+@foreach (var item in Model) {
+<tr>
+
+    <td>
+     
+        <a href="javascript:void(0)" class="cus-anchor" onclick="EditZones('@item.ID')">@item.ZoneNumber</a>
+    </td>
+    <td>
+        <span>@item.EventCodeVal</span>
+    </td>
+    <td>
+        @if (!string.IsNullOrEmpty(item.LocationVal))
+        {
+            @Html.DisplayFor(modelItem => item.LocationVal)
+        }
+        else if (!string.IsNullOrEmpty(item.NmcEqpLoc))
+        {
+            @Html.DisplayFor(modelItem => item.NmcEqpLoc)
+        }
+        else
+        {
+            @Html.DisplayFor(modelItem => item.Location)
+        }
+    </td>
+    <td class="EquipmentType">
+        @if (!string.IsNullOrEmpty(item.EquipmentTypeVal))
+        {
+            @Html.DisplayFor(modelItem => item.EquipmentTypeVal)
+        }
+        else if (!string.IsNullOrEmpty(item.NmcEqpType))
+        {
+            @Html.DisplayFor(modelItem => item.NmcEqpType)
+        }
+        else
+        {
+            @Html.DisplayFor(modelItem => item.EquipmentType)
+        }
+
+    </td>
+    <td class="comment">
+        @Html.DisplayFor(modelItem => item.ZoneComment)
+    </td>
+    <td>
+        <a class="zone_delete" data-toggle="tooltip" title="" onclick="DeleteZoneConfirm('@item.ID')" data-original-title="Delete"><i class="fa fa-trash-o"></i></a>
+    </td>
+
+</tr>
+}
+
+</table>

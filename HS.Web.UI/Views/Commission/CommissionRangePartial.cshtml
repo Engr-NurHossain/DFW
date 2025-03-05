@@ -1,0 +1,215 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.CommisionRange>
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+@Styles.Render("~/styles/DataTableBundles")
+@Scripts.Render("~/scripts/DataTableBundles")
+<link href="~/Content/Css/Commission/CommissionRangePartial.css" rel="stylesheet" />
+<script>
+    var DataTablePageSize = 50;
+    var changeval;
+    var sval;
+    var FilterTypeSeason = function () {
+        var url = "@(AppConfig.DomainSitePath)/Commission/FilterCommissionRange";
+        $.ajax({
+            url: url,
+            data: { changeval: changeval, sval: sval },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result == true) {
+                    $(".table-CommissionType-range").hide();
+                    $(".filter-commission-range").load("@(AppConfig.DomainSitePath)/Commission/FilterCommissionRangePartial?id=" + data.valrange + "&sid=" + data.srange);
+                }
+            },
+            error: function () {
+            }
+        });
+    }
+    var selectedDeleteId = 0;
+    var DeleteCommissionRange = function () {
+        var delitem = selectedDeleteId;
+        $.ajax({
+            url: "@(AppConfig.DomainSitePath)/Commission/DeleteCommissionRange",
+            data: { Id: delitem },
+            type: "Post",
+            dataType: "Json",
+            success: function (result) {
+                parent.$("#CommissionRangeTab").load("@(AppConfig.DomainSitePath)/Commission/CommissionRangePartial");
+            },
+            error: function () {
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide();
+        var table = $('#tblCRange').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        $('#tblCRange tbody').on('click', 'tr', function () {
+            if ($(this).hasClass('selected')) {
+                $(this).removeClass('selected');
+            }
+            else {
+                table.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+            }
+        });
+        $("#Commission-Range-srch-term").keyup(function () {
+            $("#tblCRange_filter input").val($("#Commission-Range-srch-term").val());
+            $("#tblCRange_filter input").trigger('keyup');
+        });
+        $("#AddCommissionRange").click(function () {
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/Commission/AddCommissionRange?id=0");
+        })
+        $(".item-deleterange").click(function () {
+            selectedDeleteId = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this Commission Range?", DeleteCommissionRange);
+        })
+        $(".item-editrange").click(function () {
+            var typeval = $(this).attr('data-id');
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/Commission/AddCommissionRange?id=" + typeval);
+        })
+        $("#btn-filter-range").click(function () {
+            changeval = $("#ListType").val();
+            sval = $("#ListSeason").val();
+            if ($("#ListType").val() != "-1" || $("#ListSeason").val() != "-1") {
+                FilterTypeSeason();
+            }
+            else {
+                $(".table-CommissionType-range").show();
+                $(".table-CommissionType-range1").hide();
+            }
+        })
+    })
+</script>
+
+<div class="commission-type-wrap">
+    <div class="container-fluid commission_range_header_content">
+        <div class="row">
+            <div class="ctype_left_content">
+                <div class="commission_range_search_div">
+                    <div class="input-group add-on">
+                        <input class="form-control" placeholder="Find a commission Range" name="srch-term" id="Commission-Range-srch-term" type="text">
+                        <div class="input-group-btn">
+                            <button class="btn custom-btn green_button" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ctype_middle_content">
+                <div class="commission_range_filter_left">
+                    <label>@Localize.T("Type Filter")</label>
+                    @Html.DropDownList("ListType", ViewBag.TypeCommission as List<SelectListItem>, new { @class = "form-control filter_border_left" })
+                </div>
+                <div class="commission_range_filter_middle">
+                    <label>@Localize.T("Season Filter")</label>
+                    @Html.DropDownList("ListSeason", ViewBag.SessionCommission as List<SelectListItem>, new { @class = "form-control filter_border_middle" })
+                </div>
+                <div class="commission_range_filter_right"> 
+                <button class="btn btn-primary cr_filter" id="btn-filter-range"><i class="fa fa-filter" aria-hidden="true"></i></button>
+                </div>
+            </div>
+            <div class="ctype_right_content">
+                <button class="btn btn-primary btnCommissionType" id="AddCommissionRange"><i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T("New")</button>
+            </div>
+        </div>
+    </div>
+    <div class="table-CommissionType-range">
+        <table id="tblCRange" class="ui celled table" cellspacing="0">
+            <thead class="crp_header_hide">
+                <tr>
+                    <th class="thead-th-style">@Localize.T("Type")</th>
+                    <th class="thead-th-style">@Localize.T("Season")</th>
+                    <th class="thead-th-style">@Localize.T("Range Start")</th>
+                    <th class="thead-th-style">@Localize.T("Range End")</th>
+                    <th class="thead-th-style">@Localize.T("Upfront")</th>
+                    <th class="thead-th-style">@Localize.T("Backend")</th>
+                    <th class="thead-th-style">@Localize.T("Bonus")</th>
+                    <th class="thead-th-style">@Localize.T("Rent Bonus")</th>
+                    <th class="thead-th-style">@Localize.T("Action")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    foreach (var item in Model)
+                    {
+                        <tr class="tr-style">
+                            <td class="table-body-td-style crp_device_row" valign="top">
+                                <div class="crp_device_header">
+                                <label>@Localize.T("Type")</label>
+                                </div>
+                                <div class="crp_device_info"> @item.TypeName</div>
+                            </td>
+                            <td class="table-body-td-style crp_device_row" valign="top">
+                                <div class="crp_device_header">
+                                    <label>@Localize.T("Session")</label>
+                                </div>
+                                <div class="crp_device_info">@item.SessionName</div>
+                            </td>
+                            <td class="table-body-td-style crp_device_row" valign="top">
+                                <div class="crp_device_header">
+                                    <label>@Localize.T("Range Start")</label>
+                                </div>
+                                <div class="crp_device_info">@item.RangeStart</div>
+                            </td>
+                            <td class="table-body-td-style crp_device_row" valign="top">
+                                <div class="crp_device_header">
+                                    <label>@Localize.T("Range End")</label>
+                                </div>
+                                <div class="crp_device_info">@item.RangeEnd</div>
+                            </td>
+                            <td class="table-body-td-style crp_device_row" valign="top">
+                                <div class="crp_device_header">
+                                    <label>@Localize.T("Upfront")</label>
+                                </div>
+                                <div class="crp_device_info">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Upfront.Value)</div>
+                            </td>
+                            <td class="table-body-td-style crp_device_row" valign="top">
+                                <div class="crp_device_header">
+                                    <label>@Localize.T("Backend")</label>
+                                </div>
+                                <div class="crp_device_info">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Backend.Value)</div>
+                            </td>
+                            <td class="table-body-td-style crp_device_row" valign="top">
+                                <div class="crp_device_header">
+                                    <label>@Localize.T("Bonus")</label>
+                                </div>
+                                <div class="crp_device_info">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Bonus.Value)</div>
+                            </td>
+                            <td class="table-body-td-style crp_device_row" valign="top">
+                                <div class="crp_device_header">
+                                    <label>@Localize.T("Rent Bonus")</label>
+                                </div>
+                                <div class="crp_device_info">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.RentBonus.Value)</div>
+                            </td>
+                            <td class="table-body-td-style crp_device_row" valign="top">
+                                 <div class="crp_device_header">
+                                    <label>@Localize.T("Rent Bonus")</label>
+                                </div>
+                                <div class="crp_device_info">
+                                    <a href="javascript:void(0)" class="item-editrange" data-id="@item.Id"><i class="fa fa-edit" aria-hidden="true"></i>@Localize.T("Edit")</a>
+                                    <a href="javascript:void(0)" class="item-deleterange" data-id="@item.Id" title="@Localize.T("Delete")">
+                                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+                                
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="filter-commission-range"></div>
+</div>
+
+

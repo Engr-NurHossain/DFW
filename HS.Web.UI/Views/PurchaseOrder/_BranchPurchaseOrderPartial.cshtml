@@ -1,0 +1,177 @@
+﻿@{
+    Layout = null;
+}
+@model List<HS.Entities.CompanyBranch>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+<style>
+    .row_style {
+        margin-top: 10px;
+    }
+
+    .btnPO {
+        background-color: #2ca01c;
+        color: white;
+    }
+
+    .search_PO_btn {
+        cursor: pointer;
+        background-color: #2ca01c;
+        border-color: #2ca01c;
+        color: white;
+    }
+
+    .BranchListContentPurchase {
+        border-bottom: 1px solid #aaa;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+        .BranchListContentPurchase:hover {
+            cursor: pointer;
+            background-color: #ccc;
+            opacity: 0.9;
+        }
+
+    .BranchList {
+        width: 317px;
+        float: left;
+    }
+
+    .width-100per {
+        width: 100%;
+        padding-top: 5px;
+    }
+
+    .BranchListHeader {
+        background-color: #ccc;
+        padding: 11px 5px;
+    }
+
+    .BranchListTitle {
+        font-size: 15px;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .BranchListContent {
+        border-bottom: 1px solid #aaa;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+        .BranchListContent:hover {
+            cursor: pointer;
+            background-color: #ccc;
+            opacity: 0.9;
+        }
+
+    .individualBranchDetail {
+        float: right;
+    }
+
+    .NoInventoryDiv {
+        padding: 10px 10px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+</style>
+<script>
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var BranchId=0;
+    var BranchOpenPOById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId);
+    }
+    var BranchReceivePOById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId + "&Receive=true");
+    }
+    var ReceivePOById = function (POId) {
+        OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + POId + "&Receive=true&OpenTab=Branch");
+    }
+    var BranchPOListLoad = function (pageNo, order) {
+        if (typeof (pageNo) != "undefined") {
+            var LoadUrl = domainurl + "/PurchaseOrder/BranchPurchaseOrderListPartial/?SearchText=" + encodeURI($("#BranchPoSearchText").val())
+                + "&PageNo=" + pageNo + "&order=" + order;
+            $(".BranchPurchaseOrderTable").html(TabsLoaderText);
+            $(".BranchPurchaseOrderTable").load(LoadUrl);
+        }
+    }
+    var BranchPOListLoadOwn = function (BranchId, pageNo) {
+        if (typeof (pageNo) != "undefined") {
+            var LoadUrl = domainurl + "/PurchaseOrder/BranchPurchaseOrderListPartial/?PageNo=" + pageNo + "&BranchId=" + BranchId;
+            $(".BranchPurchaseOrderTableOwn").html(TabsLoaderText);
+            $(".BranchPurchaseOrderTableOwn").load(LoadUrl);
+        }
+    }
+    $(document).ready(function () {
+        $("#BranchAddNewPO").click(function () {
+            OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder?id=0&OpenTab=Branch");
+        });
+        $("#Branchbtnsearchtext").click(function () {
+            BranchPOListLoad(1, null);
+        });
+        BranchPOListLoad(1, null);
+        $(".BranchListContentPurchase").click(function () {
+            BranchId = $(this).attr('idval');
+            BranchPOListLoadOwn(BranchId, 1);
+        });
+    });
+</script>
+@if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.BranchAllPurchaseOrder))
+{
+    <div class="width-100per">
+        <div class="BranchList">
+            <div class="BranchListHeader">
+                <div class="BranchListTitle">@Localize.T("Branch List")</div>
+            </div>
+
+            @if (Model.Count > 0)
+            {
+                foreach (var item in Model)
+                {
+                    <div class="BranchListContentPurchase" idval="@item.Id">
+                        <div>@item.Name</div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="NoInventoryDiv">
+                    <a class="AddBranch">@Localize.T("No Branch found. Please add Branch")</a>
+                </div>
+
+            }
+        </div>
+
+        <div class="BranchPurchaseOrderTableOwn">
+
+        </div>
+
+    </div>
+}
+@if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.BranchOwnPurchaseOrder))
+{
+    <div class="row row_style">
+        <div class="col-md-3">
+            <input class="form-control" id="BranchPoSearchText" type="text" placeholder="Search" />
+        </div>
+        <div class="col-md-2">
+            <button class="btn search_PO_btn" id="Branchbtnsearchtext">Search</button>
+        </div>
+        <div class="col-md-7">
+            <button class="btn btnPO" id="BranchAddNewPO" style="float:right;"><i class="fa fa-plus"></i> @Localize.T("New")</button>
+        </div>
+    </div>
+    <div class="BranchPurchaseOrderTable">
+
+    </div>
+}
+
+
+

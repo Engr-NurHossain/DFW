@@ -1,0 +1,417 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.RestCategory
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script>
+    var ccategoryid = '@Model.Id';
+</script>
+<style>
+    .custom_form_group {
+        width: 100%;
+        float: left;
+        padding-left: 15px;
+        padding-right: 15px;
+        margin-bottom:10px;
+    }
+    .add_category_footer #saveCategoryAndClose,
+    .add_category_footer #saveCategoryAndNew{
+        background-color: #2ca01c;
+        color: #fff;
+    }
+    textarea.form-control{
+        height:75px !important;
+    }
+</style>
+<script>
+    var weburl = "";
+    var weburlslug = '@Model.WebsiteLocation.WebsiteURL';
+</script>
+<link href="~/Content/Css/AddFile/AddFile.css" rel="stylesheet" />
+
+@Styles.Render("~/styles/AddEquipment")
+@Scripts.Render("~/scripts/AddCategory")
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Tiny/tiny.js"></script>
+<style>
+    .add_category_container {
+        overflow-y: auto;
+        height: 85vh;
+    }
+</style>
+<script>
+    var categoryid = '@Model.Id';
+    var StatusValue = '@(Model != null && Model.Status.HasValue ? Model.Status.Value : false)';
+    var selectTimeFrom = '@ViewBag.selectTimeFrom'
+    var selectTimeTo = '@ViewBag.selectTimeTo'
+    var selectStatus = '@ViewBag.selectCategoryStatus';
+    $("#timeFrom").val(selectTimeFrom);
+    $("#timeTo").val(selectTimeTo);
+    if (typeof (selectStatus) != "undefined" && selectStatus != null) {
+        $("#CategoryStatus").val(selectStatus);
+    }
+    var urlslug = '@Model.UrlSlug';
+    var GetUrlSlug = function () {
+            $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: "/MenuManagement/GetURLSlug",
+            data: JSON.stringify({ key: $("#CategoryName").val() }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                 if (data.result) {
+                       $("#UrlSlug").val(data.str);
+                 }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        //  if (StatusValue == "True") {
+        //    $("#CategoryStatus").val("1");
+
+        //}
+        //else {
+
+        //    $("#CategoryStatus").val("0");
+
+        //}
+        $("#CategoryName").blur(function () {
+            if ($("#CategoryName").val().length > 0) {
+                $(".urlslug_div").removeClass('hidden');
+                GetUrlSlug();
+            }
+            else {
+                $(".urlslug_div").addClass('hidden');
+            }
+        })
+        $("#CategoryName").keyup(function () {
+            if ($("#CategoryName").val().length > 0) {
+                $(".urlslug_div").removeClass('hidden');
+                GetUrlSlug();
+            }
+            else {
+                $(".urlslug_div").addClass('hidden');
+            }
+        })
+        
+    })
+</script>
+<script>
+    var selecteddaysavailable = '@Html.Raw(Json.Encode(@ViewBag.dayavailable))';
+    selecteddaysavailable = JSON.parse(selecteddaysavailable);
+    var daysavail = '@Html.Raw(Json.Encode(@Model.AvailableDays))';
+    daysavail = JSON.parse(daysavail);
+    var daysavailoption = '@Model.DaysAvailableOption';
+    var timeavailoption = '@Model.TimeAvailableOption';
+    var storetimefrom = '@ViewBag.storetimefrom';
+    var storetimeto = '@ViewBag.storetimeto';
+    var categoryid = '@Model.Id';
+    $(document).ready(function () {
+        if (daysavailoption != "" && daysavailoption != "-1") {
+            if (daysavailoption == "default") {
+                $("#day_available_option").val(daysavailoption);
+            }
+            else if (daysavailoption == "custom") {
+                $("#day_available_option").val(daysavailoption);
+                $(".day_available_div").removeClass('hidden');
+                $("#selectDaysAvailable").selectpicker('val', daysavail);
+            }
+        }
+        else {
+            $(".day_available_div").addClass('hidden');
+        }
+        if (timeavailoption != "" && timeavailoption != "-1") {
+            if (timeavailoption == "default") {
+                $("#time_available_option").val(timeavailoption);
+            }
+            else if (timeavailoption == "custom") {
+                $("#time_available_option").val(timeavailoption);
+                $(".time_from_div").removeClass('hidden');
+                $(".time_to_div").removeClass('hidden');
+                $("#timeFrom").val(selectTimeFrom);
+                $("#timeTo").val(selectTimeTo);
+            }
+        }
+        else {
+            $(".time_from_div").addClass('hidden');
+            $(".time_to_div").addClass('hidden');
+        }
+        $("#day_available_option").change(function () {
+            console.log("days")
+            if ($(this).val() != "-1" && $(this).val() == "default") {
+                $(".day_available_div").addClass('hidden');
+                $("#selectDaysAvailable").selectpicker('val', selecteddaysavailable);
+            }
+            else if ($(this).val() != "-1" && $(this).val() == "custom") {
+                $(".day_available_div").removeClass('hidden');
+                $("#selectDaysAvailable").selectpicker("val", "");
+            }
+            else {
+                $(".day_available_div").addClass('hidden');
+            }
+        })
+        $("#time_available_option").change(function () {
+            if ($(this).val() != "-1" && $(this).val() == "default") {
+                $(".time_from_div").addClass('hidden');
+                $(".time_to_div").addClass('hidden');
+                $("#timeFrom").val(storetimefrom);
+                $("#timeTo").val(storetimeto);
+            }
+            else if ($(this).val() != "-1" && $(this).val() == "custom") {
+                $(".time_from_div").removeClass('hidden');
+                $(".time_to_div").removeClass('hidden');
+                $("#timeFrom").val("-1");
+                $("#timeTo").val("-1");
+            }
+            else {
+                $(".time_from_div").addClass('hidden');
+                $(".time_to_div").addClass('hidden');
+            }
+        })
+        if (parseInt(categoryid) == 0) {
+            $("#saveCategory").css("background-color", "#999");
+            $("#saveCategoryAndClose").css("background-color", "#999");
+        }
+        else {
+            $("#saveCategoryAndNew").css("background-color", "#999");
+        }
+    })
+</script>
+
+<div class="add_category_container_main">
+    @Html.HiddenFor(x => x.Id, new { id = "Id" })
+
+    <div class="add_category_header">
+        @Localize.T("Create Category")
+    </div>
+
+    <div class="add_category_container">
+        <div class="add_category_height">
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Category Name")<span class="red">*</span></span>
+                @Html.TextBoxFor(x => x.CategoryName, new
+       {
+           @class = "form-control required-field",
+           placeholder = "Name",
+           id = "CategoryName",
+           datarequired = "true"
+       })
+                <label rel="Name" class="label hidden red position-absolute">*@Localize.T("Name Required")</label>
+            </div>
+            @{
+                if (Model.Id > 0)
+                {
+                    <div class="form-group clearfix">
+                        <span class="span-style">@Localize.T("URL Slug")</span>
+                        @Html.TextBoxFor(x => x.UrlSlug, new { @class = "form-control", id = "UrlSlug", placeholder = Localize.T("Url Slug") })
+                    </div>
+                }
+                else
+                {
+                    <div class="form-group clearfix urlslug_div hidden">
+                        <span class="span-style">@Localize.T("URL Slug")</span>
+                        @Html.TextBoxFor(x => x.UrlSlug, new { @class = "form-control", id = "UrlSlug", placeholder = Localize.T("Url Slug") })
+                    </div>
+                }
+            }
+            @if (Model.Id > 0)
+            {
+                <div class="form-group clearfix">
+                    <span class="span-style">@Localize.T("Website URL")</span>
+                    @Html.TextBoxFor(x => x.WebsiteURL, new { @class = "form-control", id = "WebsiteURL", placeholder = Localize.T("Website URL"), @readonly = "readonly" })
+                </div>
+            }
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Status")</span>
+                @*@Html.DropDownListFor(x => x.Status, ViewBag.CategoryStatus as List<SelectListItem>, new { @class = "form-control", id = "CategoryStatus" })*@
+                <select class="form-control" id="CategoryStatus">
+                    <option value="1" id="category0">@Localize.T("Active")</option>
+                    <option value="0" id="category1">@Localize.T("Inactive")</option>
+
+                </select>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Days Available Option")<span class="red">*</span></span>
+                <select class="form-control" id="day_available_option" datarequired="true">
+                    <option value="default">@Localize.T("Store Default")</option>
+                    <option value="custom">@Localize.T("Custom")</option>
+                </select>
+            </div>
+            <div class="form-group clearfix day_available_div hidden">
+                <span class="span-style">@Localize.T("Days Available")<span class="red">*</span></span>
+                @Html.DropDownList("selectDaysAvailable", ViewBag.DaysAvailable as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple", id = "selectDaysAvailable" })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Time Available Option")<span class="red">*</span></span>
+                <select class="form-control" id="time_available_option" datarequired="true">
+                    <option value="default">@Localize.T("Store Default")</option>
+                    <option value="custom">@Localize.T("Custom")</option>
+                </select>
+            </div>
+            <div class="form-group clearfix time_from_div hidden">
+                <span class="span-style">@Localize.T("Time Available: From")<span class="red">*</span></span>
+                @Html.DropDownListFor(x => x.TimeFrom, ViewBag.timeAvailable as List<SelectListItem>, new { @class = "form-control", id = "timeFrom", datarequired = "true" })
+            </div>
+            <div class="form-group clearfix time_to_div hidden">
+                <span class="span-style">@Localize.T("To")<span class="red">*</span></span>
+                @Html.DropDownListFor(x => x.TimeTo, ViewBag.timeAvailable as List<SelectListItem>, new { @class = "form-control", id = "timeTo", datarequired = "true" })
+            </div>
+
+            <div class="custom_form_group">
+                <span class="span-style">@Localize.T("Description")</span>
+                @*@Html.TextAreaFor(x => x.Description, new { @class = "form-control", id = "Description", placeholder = "Description" })*@
+                <textarea class="form-control" id="Description" placeholder="@Localize.T("Description")">@(!string.IsNullOrWhiteSpace(Model.Description) ? Model.Description.Replace("<p>", "").Replace("</p>", "") : "")</textarea>
+            </div>
+            <div class="custom_form_group">
+                <span class="span-style">@Localize.T("Image")</span>
+
+                <div class="txt-form Upload_Doc">
+                    <div class="col-md-12 padding-left-0">
+                        <div class="fileborder border_none">
+                            @{
+                                if (!String.IsNullOrWhiteSpace(Model.Image) && Model.Image != null)
+                                {
+                                    <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="/@Model.WebsiteLocation.State.ToLower()/@Model.WebsiteLocation.City.ToLower()/@Model.WebsiteLocation.UrlSlug.ToLower()/Category/@Model.UrlSlug.ToLower()/Image/W1400/H930/@Model.Id/@Model.WebsiteLocation.CompanyId/Image_Preview.png" />
+                                }
+                                else
+                                {
+                                    <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="~/Content/img/toppng.com-file-upload-image-icon-980x980.png" />
+                                }
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.Image))
+                        {
+                            <div class="deleteDoc cursor-pointer">
+                                <img src="~/Content/Icons/cross-image-delete.png" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="deleteDoc cursor-pointer hidden">
+                                <img src="~/Content/Icons/cross-image-delete.png" />
+                            </div>
+                        }
+
+                        <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                            <span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                            <span class="changeFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                        </div>
+                        <div class="LoadPreviewDocument hidden">
+                            <div class="show-image PropertyLogoPreviewPic">
+                                <div class="image-delete" data-id="">
+                                    <img src="~/Content/Icons/cross-image-delete.png" />
+                                </div>
+                                <img class="Preview_Doc T360image-photo T360image" src="" />
+                            </div>
+                            <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                                <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 progress-container file-progress" style="display: none; padding-left: 0; padding-right: 0; margin-top: 15px;">
+                        <div class="progress progress-striped active">
+                            <div class="progress-bar progress-bar-success" style="width:0%">
+                                <span> 0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <label class="label red position-relative hidden" id="uploadfileerror">@Localize.T("File required")</label>
+                </div>
+                <div class="LoadPreviewDocument hidden">
+                    <div class="show-image">
+                        <img id="Preview_Doc" src="" />
+                        <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                    <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                        <span><img src="~/Content/Icons/edit-icon.png" /></span>
+                    </div>
+                </div>
+                <div class="LoadPreviewDocument1 hidden">
+                    <div class="show-image">
+                        <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+                        <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                    </div>
+                </div>
+                <div class="UploadedVideo hidden">
+                    <div class="show-image">
+                        <span>Click save button for add this video</span>
+                    </div>
+                </div>
+                <div class="">
+                    @if (!string.IsNullOrWhiteSpace(Model.Image))
+                    {
+                        <input type="hidden" id="UploadedPath" value="@Model.Image" />
+                    }
+                    else
+                    {
+                        <input type="hidden" id="UploadedPath" value="" />
+                    }
+                    <input type="file" name="CustomerFile" class="hidden" id="UploadedFile" />
+
+                </div>
+            </div>
+            <div class="custom_form_group">
+                <span class="span-style">@Localize.T("Meta Title")</span>
+                @Html.TextBoxFor(x => x.MetaTitle, new { @class = "form-control", id = "MetaTitle", placeholder = "Meta Title" })
+            </div>
+            <div class="custom_form_group">
+                <span class="span-style">@Localize.T("Meta Description")</span>
+                @Html.TextAreaFor(x => x.MetaDescription, new { @class = "form-control", id = "MetaDescription", style = "height:75px !important;", placeholder = "Meta Description" })
+            </div>
+
+
+            @*@if (Model.Id > 0)
+            {
+                <div class="Loadcategoryitem" data-id="@Model.Id"></div>
+            }*@
+        </div>
+
+    </div>
+
+
+
+
+
+    <div class="add_category_footer">
+        <button class="btn" onclick="CloseTopToBottomModal()" id="">
+            @Localize.T("Cancel")
+        </button>
+        @if (PermissionChekcer.IsPermitted(Permissions.MenuManagementPermissions.CategoryDelete))
+        {
+            if (Model != null)
+            {
+                <button class="btn btn-default DeleteThisCustomer acButton_for_desktop" id="DeleteThisCategory"><i class="fa fa-trash-o" aria-hidden="true"></i> @Localize.T("Delete")</button> @*This button shows on Desktop*@
+                @*<button class="btn btn-default DeleteThisCustomer acButton_for_mobile" id="DeleteThisCategory"><i class="fa fa-trash-o" aria-hidden="true"></i></button>*@ @*This button shows on Device*@
+            }
+        }
+        @*<button class="btn" id="">
+            @Localize.T("Delete")
+        </button>*@
+        <button class="btn" id="saveCategory">
+            <i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")
+        </button>
+        <button class="btn" id="saveCategoryAndClose">
+            @Localize.T("Save and Close")
+        </button>
+        <button class="btn" id="saveCategoryAndNew">
+            @Localize.T("Save and New")
+        </button>
+
+
+    </div>
+
+</div>

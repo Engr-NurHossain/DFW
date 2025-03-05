@@ -1,0 +1,313 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.POListModel
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using POHelper = HS.Web.UI.Helper.LabelHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+<style>
+    .branch-search-add {
+        width: 100%;
+        float: left;
+        margin-bottom: 10px;
+    }
+    .th_timeclock_pre {
+        padding: 5px;
+        border-right: 1px solid #ccc;
+    }
+
+    .th_timeclock {
+        font-weight: bold !important;
+        padding: 5px;
+        border-right: 1px solid #ccc;
+    }
+    #tblPO_branch{
+        border: 1px solid #ccc;
+    }
+</style>
+<script>
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var ApprovePOFinal=function(POId,YesOrNo)
+    {
+        var url = domainurl + "/PurchaseOrder/ApprovePO";
+        var param = JSON.stringify({
+            POId: POId,
+            YesOrNo: YesOrNo
+        });
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew ("Success!", data.message, function () {
+
+                    });
+                } else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+
+            }
+        });
+    }
+    var ApprovePOById=function(POId,YesOrNo)
+    {
+        OpenConfirmationMessageNew("Confirm?", "Are you sure you want to do this?", function () {
+            ApprovePOFinal(POId,YesOrNo);
+        });
+    }
+    var BranchPOListLoad = function (pageNo, order) {
+        if (typeof (pageNo) != "undefined") {
+            var LoadUrl = domainurl + "/PurchaseOrder/BranchPurchaseOrderListPartial/?SearchText=" + encodeURI($("#BranchPoSearchText").val())
+                + "&PageNo=" + pageNo + "&order=" + order;
+            $(".BranchPurchaseOrderTable").html(TabsLoaderText);
+            $(".BranchPurchaseOrderTable").load(LoadUrl);
+        }
+    }
+    var table = $("#tblPO_branch").DataTable({
+        "ordering": false,
+        searching: false, paging: false, info: false
+    })
+    var pageno = '@ViewBag.PageNumber';
+    $(document).ready(function () {
+        $("#BranchAddNewPOInner").click(function () {
+            OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder?id=0&OpenTab=Branch&BranchId=" + BranchId);
+        });
+        $("#BranchbtnsearchtextInner").click(function () {
+            BranchPOListLoad(1, null);
+        });
+        $(".icon_sort_po").click(function () {
+            var orderval = $(this).attr('data-val');
+            BranchPOListLoad(pageno, orderval);
+        })
+    });
+</script>
+@if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.BranchAllPurchaseOrder))
+{
+    <div class="row row_style branch-search-add">
+        <div class="col-md-3">
+            <input class="form-control" id="BranchPoSearchTextInner" type="text" placeholder="Search" />
+        </div>
+        <div class="col-md-2">
+            <button class="btn search_PO_btn" id="BranchbtnsearchtextInner">Search</button>
+        </div>
+        <div class="col-md-7">
+            <button class="btn btnPO" id="BranchAddNewPOInner" style="float:right;"><i class="fa fa-plus"></i> @Localize.T("New")</button>
+        </div>
+    </div>
+}
+<table id="tblPO_branch" style="width:100%;">
+    <thead class="table-head-border">
+        <tr>
+            @if (!string.IsNullOrWhiteSpace(ViewBag.order))
+            {
+                if (ViewBag.order == "ascending/po" || ViewBag.order == "descending/po")
+                {
+                    <th class="th_timeclock">@Localize.T("PO NO.")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/po"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/po"></i></th>
+                }
+                else
+                {
+                    <th class="th_timeclock_pre">@Localize.T("PO NO.")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/po"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/po"></i></th>
+                }
+                if (ViewBag.order == "ascending/status" || ViewBag.order == "descending/status")
+                {
+                    <th class="th_timeclock">@Localize.T("Status")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/status"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/status"></i></th>
+                }
+                else
+                {
+                    <th class="th_timeclock_pre">@Localize.T("Status")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/status"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/status"></i></th>
+                }
+                
+                if (ViewBag.order == "ascending/odate" || ViewBag.order == "descending/odate")
+                {
+                    <th class="th_timeclock">@Localize.T("Order Date")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/odate"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/odate"></i></th>
+                }
+                else
+                {
+                    <th class="th_timeclock_pre">@Localize.T("Order Date")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/odate"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/odate"></i></th>
+                }
+                if (ViewBag.order == "ascending/amount" || ViewBag.order == "descending/amount")
+                {
+                    <th class="th_timeclock">@Localize.T("Total Amount")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/amount"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/amount"></i></th>
+                }
+                else
+                {
+                    <th class="th_timeclock_pre">@Localize.T("Total Amount")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/amount"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/amount"></i></th>
+                }
+                <th class="th_timeclock_pre">@Localize.T("Actions")</th>
+            }
+            else
+            {
+                <th class="th_timeclock_pre">@Localize.T("PO NO.")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/po"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/po"></i></th>
+                <th class="th_timeclock_pre">@Localize.T("Status")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/status"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/status"></i></th>
+                
+                <th class="th_timeclock_pre">@Localize.T("Order Date")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/odate"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/odate"></i></th>
+                <th class="th_timeclock_pre">@Localize.T("Total Amount")<i class="fa fa-angle-up icon_sort_po" style="float:right; cursor:pointer;" data-val="ascending/amount"></i><br /><i class="fa fa-angle-down icon_sort_po" style="float:right;cursor:pointer;" data-val="descending/amount"></i></th>
+                <th class="th_timeclock_pre">@Localize.T("Actions")</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.PurchaseOrderList)
+        {
+            <tr>
+                <td class="table-body-td-style"><span class="cus-anchor" onclick="OpenPOById(@item.Id)">@item.PurchaseOrderId</span></td>
+                <td class="table-body-td-style">@item.Status</td>
+                <td class="table-body-td-style">@item.OrderDate.ToString("MM/dd/yy")</td>
+                <td class="table-body-td-style">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalAmount.Value)</td>
+                <td class="table-body-td-style">
+                    @if (item.Action == POHelper.PurchaseOrderAction.NotApprove)
+                    {
+                        <span onclick="ApprovePOById(@item.Id,'Yes')" class="cus-anchor">@Localize.T("Yes")</span>
+                        <span onclick="ApprovePOById(@item.Id,'No')" class="cus-anchor">@Localize.T("No")</span>
+                    }
+                    else if(item.Action == POHelper.PurchaseOrderAction.RecieveOn)
+                    {
+                        if (item.Status != POHelper.PurchaseOrderStatus.Received)
+                        {
+                            <span onclick="ReceivePOById(@item.Id)" class="cus-anchor">@Localize.T("Receive Products")</span>
+                        }
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="POListLoad(@(ViewBag.PageNumber), @(ViewBag.order))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="POListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="POListLoad(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="POListLoad(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="POListLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="POListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="POListLoad(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="POListLoad(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="POListLoad(3, @(ViewBag.order))">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="POListLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber-2), @(ViewBag.order))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="POListLoad(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="POListLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber + 2), @(ViewBag.order))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber - 1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="POListLoad(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+
+

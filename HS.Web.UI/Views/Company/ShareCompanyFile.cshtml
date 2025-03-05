@@ -1,0 +1,139 @@
+﻿@model HS.Entities.Permission
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper 
+@using AppConfig = HS.Framework.Utils.AppConfig;
+ 
+@Styles.Render("~/styles/AddCompanyBranch")
+@Scripts.Render("~/scripts/AddCompanyBranch")
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Css/UserManagement/ChangeUserGroupPermission.css" rel="stylesheet" />
+@*<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>*@
+<style>
+    .content-text{
+        width:100%;
+    }
+</style>
+<script>
+
+    var ShareCompanyFile = function () {
+        var Typestring = "";
+        var CompanyFileId = $("#CompanyFileId").val();
+
+        $(".TypeCheckBox:checked").each(function () {
+            Typestring += $(this).attr("value") + ";";
+        });
+        if ($("#indEmail").val() != "") {
+            Typestring += $("#indEmail").val() + ";";
+        }
+        if (Typestring == "") {
+            OpenErrorMessageNew("Error!", "Please select at least one email address to share file", function () {
+            });
+        }
+        else {
+            var url = "@(AppConfig.DomainSitePath)/Company/SendCompanyFiles";
+            var param = {
+                CompanyFileId: CompanyFileId,
+                EmailAddresss: Typestring,
+            }
+            console.log(param);
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: JSON.stringify(param),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        OpenSuccessMessageNew("Success!", "File shared successfully", "");
+                        OpenRightToLeftModal();
+                    } else {
+                        OpenErrorMessageNew("Error!", "Something Wrong!!!", function () {
+                            OpenRightToLeftModal();
+                        });
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+        }
+    }
+
+    var LoadUser = function (e) {
+        var url = 'Company/LoadUser/' + e;
+        $.ajax({
+            type: 'GET',
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            url: url,
+            success: function (data) {
+                console.log("data" + data);
+                var template = "";
+                $(".userList").empty();
+                $.each(data, function () {
+                    //template += "<label class='containercheck' value=''><span class='tesst'>" + this['FullName'] + ' (' + this['EmailAddress'] + ')' + "</span><input class='user' type='checkbox' value='" + this['EmailAddress'] + "'><span class='checkmark'></span></label>";
+                    template += "<input type='checkbox' class='TypeCheckBox' id='Is_" + this['EmailAddress'] + "' value='" + this['EmailAddress'] + "' style='margin-left:0px' /> " + this['FullName'] + ' (' + this['EmailAddress'] + ')' + "  <br />";
+                });
+                $(".userList").append(template);
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $("#SendCompanyFile").click(function () {
+            ShareCompanyFile();
+        })
+    })
+</script>
+<div class="add_company_branch_header">
+    <div>@Localize.T("Share Company File")</div>
+</div>
+<div>
+    @Html.HiddenFor(x => x.Id)
+
+    @*<div class="clearfix">
+        &nbsp;
+    </div>*@
+    <div class="acb_container">
+        <div class="col-xs-12 acb_margin_top">
+            <span class="content-type">@Localize.T("Individual Email")</span>
+            <div class="txt-form col-xs-12 acb_both_pad">
+                <input type="text" name="name" value="" id="indEmail" dataformat="email" />
+                <label rel="Name" class="label hidden red position-absolute"></label>
+            </div>
+        </div>
+        <div class="col-xs-12 acb_margin_top">
+            <span class="content-type">@Localize.T("User Group")</span>
+            <div class="txt-form col-xs-12 acb_both_pad">
+                @Html.DropDownListFor(x => x.Id, (List<SelectListItem>
+                    )ViewBag.permissions, new { @class = "form-control content-text select-list", datarequired = "true", id = "permissiongroup", onchange = "LoadUser(this.value)" })
+                    <label rel="Name" class="label hidden red position-absolute"></label>
+            </div>
+        </div>
+
+        <div class="col-xs-12 acb_margin_top userList">
+        </div>
+    </div>
+</div>
+<div class="">
+    <input type="hidden" name="CompanyFileId" id="CompanyFileId" value="@ViewBag.companyFileId" />
+    <input type="file" name="CompanyBranchFileEmail" class="hidden" id="UploadedFileEmail" />
+    <input type="file" name="CompanyBranchFileColored" class="hidden" id="UploadedFileColored" />
+</div>
+<section class="footer-section">
+    <footer class="footer">
+        <div class="SaveCancelDiv">
+            <button class="btn" id="SendCompanyFile"><i class="fa fa-share" aria-hidden="true"></i>@Localize.T(" Share")</button>
+        </div>
+    </footer>
+</section>

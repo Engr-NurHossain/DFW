@@ -1,0 +1,757 @@
+﻿@{
+    Layout = null;
+    //DateTime EndDate = (DateTime)ViewBag.EndDate;
+    //DateTime StartDate = (DateTime)ViewBag.StartDate;
+}
+
+@model HS.Entities.SalesARBInvoices
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@Styles.Render("~/styles/Invoice")
+@Scripts.Render("~/scripts/Invoice")
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<script>
+    var listBillcycle = '@Html.Raw(Json.Encode(@ViewBag.BilCycleList))';
+    listBillcycle = JSON.parse(listBillcycle);
+
+    var listInvoicestatus = '@Html.Raw(Json.Encode(@ViewBag.InvoiceStatusList))';
+    listInvoicestatus = JSON.parse(listInvoicestatus);
+
+    var pageno = '@ViewBag.PageNumber '
+    var InvoiceFor = '@Model.InvoiceFor';
+    //var Status = '@*@Model.Status*@';
+    var ModelCount = '@Model.Summary.TotalCount';
+    var invstatus = '@ViewBag.invstatus';
+    //var ArrayItemToMail = [];
+    var ArrayItemInvoiceId = [];
+    var LoadInvoiceData = function () {
+
+        //var SearchBy = "";
+        var BilligCycle = $("#BillingCycle").val();
+        //var BillingDay = $("#BillingDayDrp").val();
+        //var TaxApplied = $("#TaxApplied").val();
+        var InvoiceStatus = $("#InvoiceStatus").val();
+        var SearchText = $(".all_invoices_search_text").val();
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+
+        //var PaymentFilter = $("#PaymentFilter").val();
+        //var InvoiceSortOrder = orderval;
+        var pageNo = 1;
+        console.log(SearchText + " " + StartDate);
+        $(".invoices-tabs .tab-pane.active").html(TabsLoaderText);
+
+
+
+        $(".invoices-tabs .tab-pane.active").load(domainurl + "/Sales/SalesARBInvoices/?PageNo=" + pageNo
+            + "&SearchText=" + encodeURIComponent(SearchText)
+            //+ "&SearchBy=" + SearchBy
+            + "&InvoiceFor=" + encodeURIComponent(InvoiceFor)
+            + "&BillicycleIdList=" + encodeURIComponent(BilligCycle)
+            //+ "&BillingDay=" + BillingDay
+            //+ "&IsTax=" + TaxApplied
+            //+ "&PaymentFilter=" + PaymentFilter
+            + "&SortBy=" + InvoiceSortBy
+            + "&SortOrder=" + InvoiceSortOrder
+            + "&InvoiceStartDate=" + StartDate
+           
+            + "&InvoiceEndDate=" + EndDate + "&InvoicestatusIdList=" + encodeURIComponent(InvoiceStatus)
+            );
+    }
+    var DownloadAllARBReport = function () {
+        console.log("sdvasdvasdvasvas");
+        if (ModelCount == 0) {
+            OpenErrorMessageNew("Error!", "You have no data to download.");
+        }
+        else {
+            var InvoiceStatus = $("#InvoiceStatus").val();
+
+            var BilligCycle = $("#BillingCycle").val();
+            var SearchText = $(".all_invoices_search_text").val();
+            var StartDate = $(".InvoiceFilterStartDate").val();
+            var EndDate = $(".InvoiceFilterEndDate").val();
+            var pageNo = 1;
+            window.open(domainurl + "/Reports/GetAllARBReport/?PageNo=" + pageNo
+                + "&SearchText=" + encodeURI(SearchText)
+                + "&InvoiceFor=" + encodeURI(InvoiceFor)
+                + "&BillicycleIdList=" + encodeURI(BilligCycle)
+                + "&InvoiceStartDate=" + StartDate
+                + "&InvoiceEndDate=" + EndDate
+                + "&InvoicestatusIdList=" + encodeURI(InvoiceStatus)
+                );
+        }
+    }
+
+    var SendInvoiceEmail = function () {
+        OpenConfirmationMessageNew("", "Do You Want To Send Email.", function () {
+            $(".CheckItems").each(function () {
+                if ($(this).is(':checked')) {
+                    //var CustomerId = $(this).attr("data-customer-id");
+                    var InvoiceId = $(this).attr("data-invoice-id");
+                    //ArrayItemToMail.push(CustomerId);
+                    ArrayItemInvoiceId.push(InvoiceId);
+                }
+            });
+            //console.log(ArrayItemToMail);
+            console.log(ArrayItemInvoiceId);
+            var url = "/Invoice/SendInvoiceInEmail";
+            var param = JSON.stringify({
+                //ArrayItemToMail: ArrayItemToMail,
+                ArrayItemInvoiceId: ArrayItemInvoiceId
+
+
+            })
+
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    window.location.reload();
+                },
+
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            })
+        }, function () {
+            $(".CheckItems").prop("checked", false)
+
+        });
+    }
+
+    $(document).ready(function () {
+
+              if (listBillcycle != null) {
+              if (listBillcycle.length != 0) {
+              $("#BillingCycle").selectpicker('val', listBillcycle);
+                  }
+              else {
+              $("#BillingCycle").selectpicker('val', '');
+               }
+               }
+
+            if (listInvoicestatus != null) {
+            if (listInvoicestatus.length != 0) {
+                $("#InvoiceStatus").selectpicker('val', listInvoicestatus);
+             }
+             else {
+                $("#InvoiceStatus").selectpicker('val', '');
+              }
+        }
+         
+        $(".InvoiceSendMail").click(function(){
+
+            if($(".CheckItems").is(':checked')){
+                SendInvoiceEmail();
+            }
+            else {
+                OpenErrorMessageNew("Error!", "You Have To Select Customer First.");
+            }
+
+        });
+
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            LoadACHARBData(pageno, orderval);
+        })
+
+        var Popupwidth = 920;
+        if (window.innerWidth < 920) {
+            Popupwidth = window.innerWidth;
+        }
+        var idlist = [{ id: ".InvoicePrint", type: 'iframe', width: Popupwidth, height: 600 }
+        ];
+
+          $(".InvPrint").click(function () {
+                console.log("test run");
+                var ids = "";
+                var idsAll = "";
+                var flag = 0;
+                $(".CheckItems").each(function () {
+                    idsAll += $(this).attr("data-id") + ",";
+                    if ($(this).is(':checked')) {
+                        flag = 1;
+                        ids += $(this).attr("data-id") + ","
+                    }
+
+                });
+
+                if (flag == 0) {
+                    if (idsAll != "") {
+                        $(".InvoicePrint").attr("href", domainurl + "/Invoice/PrintInvoiceList/?idlist=" + idsAll);
+                        $(".InvoicePrint").click();
+                    }
+                    else {
+
+                        OpenErrorMessageNew("", "Invoice List are empty.", function () {
+                            location.reload();
+                        });
+                    }
+                }
+                else {
+                    if (ids != "") {
+                        $(".InvoicePrint").attr("href", domainurl + "/Invoice/PrintInvoiceList/?idlist=" + ids);
+                        $(".InvoicePrint").click();
+                    }
+                    else {
+                        OpenErrorMessageNew("", "Invoice List are empty.");
+                    }
+                }
+
+
+            });
+
+        $("#invoice_status").change(function () {
+            invstatus = $(this).val();
+        })
+        if (invstatus != null && invstatus != "") {
+            $("#invoice_status").val(invstatus);
+        }
+        else {
+            $("#invoice_status").val("-1");
+        }
+            $("#IsCheckVal").change(function () {
+        console.log("hlw");
+        if ($(this).is(':checked')) {
+            $(".CheckItems").each(function () {
+                $(this).prop('checked', true);
+            });
+        }
+        else {
+            $(".CheckItems").each(function () {
+                $(this).prop('checked', false);
+            });
+        }
+            })
+                $(".CheckItems").change(function () {
+        console.log("oi");
+             if ($(this).is(':checked')) {
+
+                 $(".CheckItems").each(function () {
+              if ($('.CheckItems:checked').length == $('.CheckItems').length) {
+             $("#IsCheckVal").prop('checked', true);
+        }
+               
+            });
+        }
+      
+        else {
+            $(".CheckItems").each(function () {
+                $("#IsCheckVal").prop('checked', false);
+            });
+        }
+    })
+           $(".all_invoices_search_text").keydown(function (e) {
+
+                if (e.which == 13) {
+                    LoadInvoiceData();
+                }
+            });
+    });
+</script>
+
+<div class="page-content-wrap cus-padding-top10p">
+    <div class="header-section">
+        <div class="row">
+            <div class="col-md-12 all_invoice_info_bar">
+                <div class="width-100p">
+                    <div class="afd_amount_info">
+                        <div class="afd_total_amount afd_estimate cursor-pointer" id="TotalCustomerMmr">
+                            <div class="ta_div">@Localize.T("Total Customer / MMR")</div>
+                            <div class="ta_amount">@string.Format("{0:n0}", Model.Summary.TotalCustomer)/@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Summary.TotalMMR)</div>
+                        </div>
+                        <div class="afd_balance_due afd_reveneu cursor-pointer" id="Monthly_Customer">
+                            <div class="ta_div">@Localize.T("Monthly Customer/Amount")</div>
+                            <div class="ta_amount">@string.Format("{0:n0}", Model.Summary.MonthlyCustomer)/@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Summary.MonthlyMMR)</div>
+                        </div>
+                        <div class="afd_total_amount afd_receivable cursor-pointer">
+                            <div id="Returned_Customer">
+                                <div class="ta_div">@Localize.T("Returned Customer / Amount")</div>
+                                <div class="ta_amount">@string.Format("{0:n0}", Model.Summary.InActiveCustomer)/@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Summary.InActiveCustomerMMR)</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="arb_ach_search">
+                    <input type="text" placeholder="Search by customer name or invoice id" value="@Model.SearchText" @*id="all_invoices_search_text"*@ class="form-control all_invoices_search_text" />
+                    <div class="billingCycle_div">
+                        @Html.DropDownList("BillingCycle", ViewBag.BillCycle as List<SelectListItem>, new { @class = "form-control select_search ats_margin width-25p", style = "height:34px;", @multiple = "multiple", @title = "Billing Cycle" })
+                    </div>
+
+                    @*@Html.DropDownListFor(x => x.BillingCycle, (List<SelectListItem>)ViewBag.BillCycle, new { @class = "form-control select_search ats_margin width-25p", style = "height:34px;" })*@
+                <span class="input-group add-on">
+                    @Html.DropDownList("InvoiceStatus", ViewBag.InvoiceStatus as List<SelectListItem>, new { @class = "form-control select_search ats_margin width-25p", style = "height:34px;", @multiple = "multiple", @title = "Invoice Status" })
+
+                    @*<select id="invoice_status" class="form-control width-30p ats_margin">
+                        <option value="-1">Invoice Status</option>
+                        <option value="@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Credited">@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Credited</option>
+                        <option value="@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Cancelled">@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Cancelled</option>
+                        <option value="@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Declined">@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Declined</option>
+                        <option value="@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Due">@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Due</option>
+                        <option value="@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.OnHold">@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.OnHold</option>
+                        <option value="@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Open">@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Open</option>
+                        <option value="@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Paid">@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Paid</option>
+                        <option value="@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Partial">@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.Partial</option>
+                        <option value="@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.RolledOver">@HS.Web.UI.Helper.LabelHelper.InvoiceStatus.RolledOver</option>
+                    </select>*@
+                    <span class="input-group-btn"><button class="btn btn-default custom-btn all_invoices_search_button green_button" id="all_ach_cc_invoices_search_button" title="@Localize.T("Search")" onclick="LoadInvoiceData()"><i class="glyphicon glyphicon-search"></i></button></span>
+                </span>
+                    <div class="width-35p all_invoice_search_drop_list hidden">
+                        <div class="width-15p hidden">
+                            <input type="text" placeholder="Start Date" value="@(Model.InvStarDate == new DateTime() ? "" :Model.InvStarDate.ToString("MM/dd/yy") )" class="form-control border-radius-0 InvoiceFilterStartDate" />
+                        </div>
+                        <div class="width-15p hidden">
+                            <input type="text" placeholder="End Date" value="@(Model.InvEndDate == new DateTime() ? "" :Model.InvEndDate.ToString("MM/dd/yy"))" class="form-control border-radius-0 InvoiceFilterEndDate" />
+                        </div>
+                        <select id="BillingDayDrp" class="form-control width-20p hidden">
+                            <option value="-1">Billing Day</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                            <option value="19">19</option>
+                            <option value="20">20</option>
+                            <option value="21">21</option>
+                            <option value="22">22</option>
+                            <option value="23">23</option>
+                            <option value="24">24</option>
+                            <option value="25">25</option>
+                            <option value="26">26</option>
+                            <option value="27">27</option>
+                            <option value="28">28</option>
+                        </select>
+                        <select id="TaxApplied" class="form-control width-15p hidden">
+                            <option value="-1">Any</option>
+                            <option value="true">Tax</option>
+                            <option value="false">Non-Tax</option>
+                        </select>
+                        <select id="PaymentFilter" class="form-control width-20p hidden">
+                            <option value="-1">Payment</option>
+                            <option value="Cleared">Cleared</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-add-invoice" id="PrintInvoiceList">
+                        <i class="fa fa-print"></i> @Localize.T("Print All")
+                    </button>
+                    @*<button onclick="PrintAllARBReport()" class="btn arb_ach_dwn" title="@Localize.T("Print")"><i class="glyphicon glyphicon-download-alt"></i></button>*@
+                    @*<button id="button2" class="btn " title="@Localize.T("Print")"><i class="glyphicon glyphicon-download-alt"></i></button>*@
+                    <button onclick="DownloadAllARBReport()" class="btn arb_ach_dwn" title="@Localize.T("Download")"><i class="glyphicon glyphicon-download-alt"></i></button>
+
+
+                    <span class="InvPrint">
+                        <a title="Print" class="btn green_button InvoicePrint" href="javascript:void(0);"><i class="fa fa-print" aria-hidden="true"></i></a>
+                    </span>
+                    <span class="InvSendMail">
+                        <a title="SendMail" class="btn green_button InvoiceSendMail" href="javascript:void(0);"><i class="fa fa-mail-forward" aria-hidden="true"></i></a>
+                    </span>
+                </div>
+
+            </div>
+            <div class="text-right all_invoice_right_btn">
+                <div class="excel-download-arb">
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="invoice-table all_invoices_Table sales_ach_table">
+    <table class="display" id="">
+        <thead class="table-head-border">
+            <tr>
+                @*<th> <input type="checkbox" value = 0 class="selectall" /> Select all </th>*@
+                <th class="thead-th-style c_name">
+                    <div title="@Localize.T("Customer Name")">
+                        <label for="IsCheckVal" class="label-cbx">
+                            <input id="IsCheckVal" type="checkbox" style="position:relative;" class="cus-checkBox invisible " autocomplete="off">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                        @Localize.T("Customer Name")
+                    </div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customername"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div title="@Localize.T("Invoice NO")">@Localize.T("Invoice NO")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/invoiceno"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/invoiceno"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div title="@Localize.T("Billed Amount")">@Localize.T("Billed Amount")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/billamount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/billamount"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div title="@Localize.T("Description")">@Localize.T("Description")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/description"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/description"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div title="@Localize.T("Settlement Date")">@Localize.T("Settlement Date")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/settlementdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/settlementdate"></i></div>
+                </th>
+                <th class="thead-th-style">
+                    <div title="@Localize.T("Transaction ID")">@Localize.T("Transaction ID")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/transactionid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/transactionid"></i></div>
+
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.InvoiceList)
+            {
+                <tr class="tr-style">
+                    @*<td class="table-body-td-style" valign="top">
+                <input type="checkbox" value= @item.Id name="name1"/>
+
+                </td>*@
+
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Customer Name")</div>
+                        <div>
+                            <label for="IsCheckVal1_@item.InvoiceId" class="label-cbx">
+                                <input id="IsCheckVal1_@item.InvoiceId" type="checkbox" data-invoice-id="@item.InvoiceId" data-id="@item.InvId" data-customer-id="@item.CustomerId" style="position:relative;" class="cus-checkBox CheckItems" />
+
+                            </label>
+                            @{
+                                if (!string.IsNullOrWhiteSpace(item.BusinessName))
+                                {
+                                    <a class="cus-anchor" href="javascript:void(0)" onclick="OpenCustomerDetailById(@item.Id)">@item.BusinessName (@item.Id)</a><br />
+                                }
+                                else
+                                {
+                                    <a class="cus-anchor" href="javascript:void(0)" onclick="OpenCustomerDetailById(@item.Id)">@item.CustomerName (@item.Id)</a><br />
+                                }
+                            }
+                            @if (!string.IsNullOrWhiteSpace(item.AuthorizeRefId))
+                            {
+                                <span><strong>@Localize.T("Subscription ID: ")</strong>@item.AuthorizeRefId</span>
+                            }
+                        </div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Invoice NO")</div>
+                        <div>
+                            <a class="cus-anchor" onclick="OpenTopToBottomModal(domainurl + '/Invoice/AddInvoice/?customerid=' + '@item.CustomerId' + '&InvoiceId=' + '@item.InvoiceId')">@item.InvoiceId</a>
+                            <br /><span>@Localize.T("Status: ")@item.Status</span>
+                        </div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Billed Amount")</div>
+                        <div><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount((item.TotalAmount))</span></div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Description")</div>
+                        <div> <span>@item.Description</span></div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Settlement Date")</div>
+                        <div> <span>@item.CreatedDate.ToString("MM/dd/yy")</span></div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div>@Localize.T("Transaction ID")</div>
+                        <div><a class="cus-anchor" href="/Customer/Customerdetail/?id=@item.Id#TransactionsTab" target="_blank">@item.TransactionId</a></div>
+                    </td>
+                </tr>
+            }
+            <tr class="tr-style table_total_bg">
+                <td class="table-body-td-style" colspan="2">
+                    <b class="float_right">
+                        @Localize.T("Total:")
+                    </b>
+                </td>
+                <td class="table-body-td-style" colspan="4">
+                    <b title="@Localize.T("Total Billed Amount")">$@Model.TotalAmountByPage.ToString("#,##0.00")</b>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</div>
+@{
+    if (!string.IsNullOrWhiteSpace(Model.InvoiceFor) && Model.InvoiceFor == "ACH")
+    {
+        <div class="AgentListPagination">
+            <div class="paginationContainer">
+                @if (ViewBag.PageCount > 0)
+                {
+                    <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+                }
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber),'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="AllACHInvoicesNavigation(1,'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="AllACHInvoicesNavigation(2,'@ViewBag.order')">2</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="AllACHInvoicesNavigation(1,'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="AllACHInvoicesNavigation(2,'@ViewBag.order')">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="AllACHInvoicesNavigation(3,'@ViewBag.order')">3</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber-2),'@ViewBag.order')">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons disabledBtn" onclick="AllACHInvoicesNavigation()">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber + 2),'@ViewBag.order')">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 2)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber - 1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="AllACHInvoicesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.InvoiceFor) && Model.InvoiceFor == "Credit Card")
+    {
+        <div class="AgentListPagination">
+            <div class="paginationContainer">
+                @if (ViewBag.PageCount > 0)
+                {
+                    <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+                }
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber),'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="AllCreditInvoicesNavigation(1,'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="AllCreditInvoicesNavigation(2,'@ViewBag.order')">2</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="AllCreditInvoicesNavigation(1,'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="AllCreditInvoicesNavigation(2,'@ViewBag.order')">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="AllCreditInvoicesNavigation(3,'@ViewBag.order')">3</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber-2),'@ViewBag.order')">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons disabledBtn" onclick="AllCreditInvoicesNavigation()">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber + 2),'@ViewBag.order')">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 2)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber - 1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="AllCreditInvoicesNavigation(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+}
+

@@ -1,0 +1,129 @@
+﻿
+@{
+    Layout = null;
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@model List<HS.Entities.BillPaymentHistory>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<script>
+    var DataTablePageSize = 50;
+    var PaymentStartDatePicker;
+    var BillEndDatePicker;
+    $(document).ready(function () {
+        $("#PaymentReceivedReportTab .invoice-loader").hide();
+        var table = $('#PaymentReportTable').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+
+        PaymentStartDatePicker = new Pikaday({
+            format: 'MM/DD/YYYY',
+            yearRange: [2017, (new Date()).getFullYear()],
+            field: $('#report_PaymentStartDate')[0]
+        });
+
+        PaymentEndDatePicker = new Pikaday({
+            format: 'MM/DD/YYYY',
+            yearRange: [2017, (new Date()).getFullYear()],
+            field: $('#report_PaymentEndDate')[0]
+        });
+
+        $("#btnDownloadPaymentReport").click(function () {
+            var StartDate = $("#report_PaymentStartDate").val();
+            var EndDate = $("#report_PaymentEndDate").val();
+
+            if (StartDate.trim().length == 10 && EndDate.trim().length == 10) {
+                StartDate = StartDate.replaceAll('/', '_');
+                EndDate = EndDate.replaceAll('/', '_');
+                location.href = domainurl + "/Reports/PaymentReportPartial/?Start=" + StartDate + "&End=" + EndDate + "&GetReport=true";
+            } else {
+                location.href = domainurl + "/Reports/PaymentReportPartial/?GetReport=true";
+            }
+        });
+        $("#PaymentFilterButton").click(function () {
+            var StartDate = $("#report_PaymentStartDate").val();
+            var EndDate = $("#report_PaymentEndDate").val();
+            StartDate = StartDate.replaceAll('/', '_');
+            EndDate = EndDate.replaceAll('/', '_');
+            $("#BillPaidReportTab").html(TabsLoaderText);
+            $("#BillPaidReportTab").load(domainurl + "/Reports/PaymentReportPartial/?Start=" + StartDate + "&End=" + EndDate);
+        });
+    });
+</script>
+
+<link href="~/Content/Css/Report/PaymentReportPartial.css" rel="stylesheet" />
+<div class="payment_report_partial_top_info">
+    <div class="col-md-12 prp_total">
+        @Localize.T("Total: ") @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@*@Model.Sum(x=>x.Amount).ToString("0,0.00")*@@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Sum(x => x.Amount))<span class="prp_payment_info">paid in @Model.Count() transactions. </span>
+    </div>
+    @*<div class="col-md-12">
+        <a href="/Reports/PaymentReportPartial/?GetReport=true" target="_blank">Download</a>
+    </div>*@
+</div>
+
+<div class="payment_report_partial_top_bar">
+            <div class="payment_report_partial_FilterDiv">
+   
+        <label class="payment_report_margin_top">@Localize.T("Filter by dates")</label>
+   
+       <input type="text" class="form-control" value="@ViewBag.Start" id="report_PaymentStartDate" placeholder="Start Date" />
+  
+        <input type="text" class="form-control" value="@ViewBag.End" id="report_PaymentEndDate" placeholder="End Date" />
+   
+        <button class="payment_report_btn" id="PaymentFilterButton"><i class="fa fa-filter" aria-hidden="true"></i>@Localize.T(" Filter")</button>
+    </div>
+
+    @*<div class="col-md-6">
+        <div class="col-md-2 padding-left-0">
+            <h4>Filter by dates</h4>
+        </div>
+        <div class="col-md-4">
+            <input type="text" value="@ViewBag.Start" id="report_PaymentStartDate" placeholder="Start Date" />
+        </div>
+        <div class="col-md-4">
+            <input type="text" value="@ViewBag.End" id="report_PaymentEndDate" placeholder="End Date" />
+        </div>
+        <div class="col-md-2 padding-left-0 padding-right-0">
+            <button class="report_btn" id="PaymentFilterButton">Filter</button>
+        </div>
+    </div>*@
+    @if (PermissionChekcer.IsPermitted(Permissions.ReportsPermissions.BillPaymentReport))
+    {
+      
+            <button title="@Localize.T(" Download")" class="payment_report_btn payment_report_float_right" id="btnDownloadPaymentReport"><i class="fa fa-download" aria-hidden="true"></i></button>
+      
+    } 
+   
+</div>
+
+    <table id="PaymentReportTable">
+        <thead>
+            <tr>
+                <th>Bill No.</th>
+                <th>Supplier Name</th>
+                <th>Supplier Company</th>
+                <th>Total Amount</th>
+                <th>Balance Due</th>
+                <th>Transaction Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.BillNo</td>
+                    <td>@item.SupplierName</td>
+                    <td>@item.SupplierCompanyName</td>
+                    <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)</td>
+                    <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Balance)</td>
+                    <td>@item.TransacationDate.ToString("MM/dd/yy")</td> 
+                </tr>
+            }
+        </tbody>
+    </table>
+
+

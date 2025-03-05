@@ -1,0 +1,252 @@
+﻿@model HS.Entities.LeadServiceSetupCustomModel
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+@Styles.Render("~/styles/LeadVerifyInfo")
+@Scripts.Render("~/scripts/LeadVerifyInfo")
+
+<script src="~/Content/Js/NumberFormet/NumberFormat.js"></script>
+<link href="~/Content/Css/Lead/ContactTermPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/CustomerDetails/CustomerDetailsCustom.css" rel="stylesheet" />
+<link href="~/Content/Css/Lead/EmergencyContactPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Lead/PackagePartial.css" rel="stylesheet" />
+<script src="~/Content/Js/CreditScore/CreditScoreCheck.js"></script>
+<script>
+    var LeadIdEmgList = '@ViewBag.LeadCustomerID';
+    var ContactTermValue = '@Model.CustomerModel.ContractTeam';
+    var RenewalTermValue = '@Model.CustomerModel.RenewalTerm';
+    var NonConforming = '@ViewBag.NonConforming';
+    var PassCode = '@Model.CustomerModel.Passcode';
+
+
+
+
+
+
+    var originaldatepicker;
+    var LoadEmergencyContactList = function () {
+        $("#EmergencyContactList").load(domainurl + "/Leads/EmergencyContactListPartial?LeadId=" + LeadIdEmgList);
+    }
+    var LoadAddNewEmergencyContactDiv = function () {
+        $("#AddNewEmgContactPartial").show();
+        $("#AddNewEmgContactPartial").load(domainurl + "/Leads/AddEmergencyContact?LeadId=" + LeadIdEmgList + "&EmgId=0");
+    }
+    var EditEmergencyContactDiv = function (emgId) {
+        $("#AddNewEmgContactPartial").show();
+        $("#AddNewEmgContactPartial").load(domainurl + "/Leads/AddEmergencyContact?LeadId=" + LeadIdEmgList + "&EmgId=" + emgId);
+    }
+    var HideNewEmgContactPartial = function () {
+        $("#AddNewEmgContactPartial").hide();
+    }
+    function FormateSSNNumber(Value) {
+    var ValueClean = "";
+    if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-  ]/g, '');
+            if (Value.length == 9) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{2})\-?(\d{4})/, "$1-$2-$3");
+                $("#SSN2").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 9) {
+                ValueClean = Value;
+                $("#SSN2").css({ "border": "1px solid red" });
+            }
+            else {
+                ValueClean = Value;
+                $("#SSN2").css({ "border": "1px solid #babec5" });
+            }
+        }
+        return ValueClean;
+    }
+    $(document).ready(function () {
+
+        $("#btnSavandNex").removeClass("hidden");
+        $(".CustomerModel_Passcode").val(PassCode);
+        LoadEmergencyContactList();
+        $("#SSN2").keyup(function () {
+        var SSNNumber = $(this).val();
+            if (SSNNumber != undefined && SSNNumber != null && SSNNumber != "") {
+                var cleanSSNNumber = FormateSSNNumber(SSNNumber);
+                $(this).val(cleanSSNNumber);
+            }
+        });
+        if (ContactTermValue != "" && ContactTermValue != 3 && ContactTermValue != 5)
+        {
+            var CustomContactTermEdit = parseFloat(ContactTermValue) * parseInt(12);
+            $("#CustomerModel_ContractTeam").val("Custom");
+            $(".custom-contactterm").removeClass("hidden");
+            $(".CustomContactTerm").val(CustomContactTermEdit);
+        }
+        $("#btnAddNewEmgContact").click(function () {
+            LoadAddNewEmergencyContactDiv();
+        });
+        $("#CustomerModel_ContractTeam").change(function () {
+            if ($(this).val() == "Custom") {
+                $(".custom-contactterm").removeClass("hidden");
+            }
+            else {
+                $(".custom-contactterm").addClass("hidden");
+                SaveLeadSetupContactVerbal();
+            }
+        });
+        $(".CustomerModel_originalcontactdate").change(function () {
+            SaveLeadSetupContactVerbal();
+        })
+        $(".CustomerModel_Passcode,.CustomContactTerm,#CustomerModel_RenewalTerm,#SSN2").blur(function () {
+            SaveLeadSetupContactVerbal();
+        });
+        Asofdatepicker = new Pikaday({ format: 'MM/DD/YYYY', field: $('#AsOfDate')[0] });
+        $("#MonthlyMonitoringFee").val('@Model.CustomerModel.MonthlyMonitoringFee');
+        originaldatepicker = new Pikaday({ format: 'MM/DD/YYYY', field: $('#original_contact_date')[0] });
+    });
+</script>
+<div>
+    <input id="step" type="hidden" value="4" />
+    <input type="hidden" value="@ViewBag.LeadCustomerID" id="LeadCustomerID" />
+    <input type="hidden" value="@ViewBag.leadcontractid" id="LeadContractId" />
+    <input type="hidden" value="@ViewBag.leadcontractcustomerid" id="LeadContractCustomerID" />
+    <input type="hidden" value="@ViewBag.leadcontractfirstname" id="LeadContractFirstName" />
+    <input type="hidden" value="@ViewBag.leadcontractlastname" id="LeadContractLastName" />
+    <input type="hidden" value="@ViewBag.leadcontractstreet" id="LeadContractStreet" />
+    <input type="hidden" value="@ViewBag.leadcontractZipCode" id="LeadContractZip" />
+    @Html.HiddenFor(x => x.CustomerModel.PaymentMethod)
+    @Html.HiddenFor(x => x.CustomerModel.ActivationFeePaymentMethod)
+    @Html.HiddenFor(x => x.CustomerModel.SSN, new { id = "SSN" })
+
+    <div class="row margin_top_row">
+        <div class="col-sm-3 new_margin">
+            <span class="text-custom">@Localize.T("Verbal Password")</span>
+            <input type="text" class="CustomerModel_Passcode form-control" id="varbelPassword" placeholder="@Localize.T("Verbal Password")" reqval="@ViewBag.SmartSetUpVerbalPasswordIsRequired" datarequired="@ViewBag.SmartSetUpVerbalPasswordIsRequired" />
+            @if (ViewBag.SmartSetUpVerbalPasswordIsRequired == "true")
+            {
+                <label class="label hidden red absolute" rel="varbelPassword">*@Localize.T("Please enter Verbal password"). </label>
+            }
+        </div>
+        <div class="col-sm-3 new_margin1">
+            @{
+                var SSN = "";
+                if (!string.IsNullOrEmpty(Model.CustomerModel.SSN) && Model.CustomerModel.SSN.Length > 4)
+                {
+                    var FormateSSN = Model.CustomerModel.SSN.Substring(Model.CustomerModel.SSN.Length - 4);
+                    int SSNInt = 0;
+                    if (Int32.TryParse(FormateSSN, out SSNInt) && SSNInt > 0)
+                    {
+                        SSN = String.Format("{0:XXX-XX-0000}", SSNInt);
+                    }
+                }
+                else
+                {
+                    SSN = "XXX-XX-XXXX";
+                }
+            }
+            <span class="text-custom">@Localize.T("SSN")</span>
+            <input id="SSN2" name="SSN2" type="text" class="form-control" placeholder="@SSN" />
+        </div>
+        <div class="col-sm-3 new_margin1">
+            <span class="text-custom">@Localize.T("Contract Term")<span class="red">*</span></span>
+            @Html.DropDownListFor(x => x.CustomerModel.ContractTeam, (List<SelectListItem>)ViewBag.ContactTerms, new { @class = "form-control", datarequired = "true" })
+
+        </div>
+        <div class="col-sm-3 custom-contactterm hidden">
+            <span class="text-custom">@Localize.T("Contract Term (Month)")</span>
+            <input type="text" class="form-control CustomContactTerm" placeholder="Contract Term (Month)" />
+        </div>
+        <div class="col-sm-3 new_margin1">
+            <span class="text-custom">@Localize.T("Renewal Term (Month)")</span>
+            <input id="CustomerModel_RenewalTerm" name="CustomerModel.RenewalTerm" type="text" @(PermissionChecker.IsPermitted(PermissionList.LeadPermissions.SmartSetUpRenewalTerm) ? "" : "disabled") class="form-control" placeholder="@Localize.T("Renewal Term (Month)")" value="@Model.CustomerModel.RenewalTerm" />
+        </div>
+
+    </div>
+    @{
+        if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.ShowOriginalContractDate))
+        {
+            if (Model.CustomerModel.OriginalContactDate != null && Model.CustomerModel.OriginalContactDate.HasValue && Model.CustomerModel.OriginalContactDate.Value != new DateTime())
+            {
+                <div class="row margin_top_row">
+                    <div class="col-sm-3 new_margin">
+                        <span class="text-custom">@Localize.T("Original Contact Date")</span>
+                        <input type="text" class="CustomerModel_originalcontactdate form-control" id="original_contact_date" placeholder="@Localize.T("Original Contact Date")" value="@Model.CustomerModel.OriginalContactDate.Value" />
+                    </div>
+                </div>
+            }
+            else if (Model.CustomerModel.InstallDate != null && Model.CustomerModel.InstallDate.HasValue && Model.CustomerModel.InstallDate.Value != new DateTime())
+            {
+                <div class="row margin_top_row">
+                    <div class="col-sm-3 new_margin">
+                        <span class="text-custom">@Localize.T("Original Contact Date")</span>
+                        <input type="text" class="CustomerModel_originalcontactdate form-control" id="original_contact_date" placeholder="@Localize.T("Original Contact Date")" value="@Model.CustomerModel.InstallDate.Value" />
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="row margin_top_row">
+                    <div class="col-sm-3 new_margin">
+                        <span class="text-custom">@Localize.T("Original Contact Date")</span>
+                        <input type="text" class="CustomerModel_originalcontactdate form-control" id="original_contact_date" placeholder="@Localize.T("Original Contact Date")" />
+                    </div>
+                </div>
+            }
+        }
+    }
+
+    <div class="smart_agreementDetails_container">
+
+        <div class="em_con_list_header_container">
+            <div class="em_con_list_header">
+                <div>@Localize.T("Emergency Contact")</div>
+                <button type="button" class="btn" id="btnAddNewEmgContact">
+                    <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" New")
+                </button>
+            </div>
+        </div>
+
+        <div class="" id="AddNewEmgContactPartial">
+
+        </div>
+        <div id="EmergencyContactList">
+
+        </div>
+
+    </div>
+
+    <div style="display:none">
+        <a href="" class="SecondaryContactMagnific">@Localize.T("Secondary Contact")</a>
+    </div>
+    @if (PermissionChecker.IsPermitted(PermissionList.CustomerPermissions.SoftCreditCheckEFX))
+    {
+        <button type="button" class="btn green_button btnCheck" id="EFXCheckCreditSoft" title="Check Credit">
+            <span>@Localize.T("Pull Soft Credit (EFX)")</span>
+        </button>
+    }
+    @if (PermissionChecker.IsPermitted(PermissionList.CustomerPermissions.HardCreditCheckEFX))
+    {
+        <button type="button" class="btn green_button btnCheck" id="EFXCheckCreditHard" title="Check Credit">
+            <span>@Localize.T("Pull Hard Credit (EFX)")</span>
+        </button>
+    }
+    @if (PermissionChecker.IsPermitted(PermissionList.CustomerPermissions.SoftCreditCheckTU))
+    {
+        <button type="button" class="btn green_button btnCheck" id="TUCheckCreditSoft" title="Check Credit">
+            <span>@Localize.T("Pull Soft Credit (TU)")</span>
+        </button>
+    }
+    @if (PermissionChecker.IsPermitted(PermissionList.CustomerPermissions.HardCreditCheckTU))
+    {
+        <button type="button" class="btn green_button btnCheck" id="TUCheckCreditHard" title="Check Credit">
+            <span>@Localize.T("Pull Hard Credit (TU)")</span>
+        </button>
+    }
+    @if (PermissionChecker.IsPermitted(PermissionList.CustomerPermissions.UseSecondaryContact))
+    {
+        <input type="checkbox" id="UseDiffAddress" style="margin-left:10px;" />
+        <label for="UseDiffAddress" style="cursor:pointer;">Use Different Contact</label>
+        <div id="SecondaryContactList">
+
+        </div>
+    }
+
+
+</div>

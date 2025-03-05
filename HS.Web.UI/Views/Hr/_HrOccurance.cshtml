@@ -1,0 +1,111 @@
+﻿@model List<HS.Entities.EmployeeOccurences>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using HS.Framework
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+<link href="~/Content/Css/Hr/HrOccurance.css" rel="stylesheet" />
+<script>
+    var EditOccurance = function (occId) {
+        OpenRightToLeftModal(domainurl + "/Hr/AddHrOccurance?Id=" + occId);
+    }
+    var DeleteOccurenceConfirm = function(Id)
+    {
+        OpenConfirmationMessageNew("", "Do you want to delete this occurence?", function () {
+            DeleteOccurence(Id);
+        })
+    }
+    var DeleteOccurence = function (Id) {
+
+        var url = "/Hr/DeleteOccurence";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify({
+                Id: Id,
+        
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result == true) {
+                   
+                    OpenSuccessMessageNew("Success !", data.message, function () {
+                        $("#OccuranceLoad").load(domainurl + "/Hr/HrOccurance?userId=" + userId);
+                    });
+                }
+                
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $("#AddNewOccurance").click(function () {
+            OpenRightToLeftModal(domainurl + "/Hr/AddHrOccurance");
+        });
+        $(".edit-Occurance").click(function () {
+            var occId = $(this).attr('data-id');
+            EditOccurance(occId);
+        });
+    });
+</script>
+<div class="employee-occurance-container">
+  
+        <div class="col-md-12 clearfix right_side_pad">
+            <span style="font-size:18px;">@Localize.T("Total Occurences"): @ViewBag.occuranceTotal</span>
+            <button type="button" class="btn" id="AddNewOccurance">
+                <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" New")
+            </button>
+        </div>
+   
+    <div class="col-md-12 hr_occurance_info">
+        <table>
+            <thead>
+                <tr>
+                    <th>@Localize.T("Occurence Date")</th>
+                    <th>@Localize.T("Point")</th>
+                    <th>@Localize.T("Notes")</th>
+                    @if (PermissionChecker.IsPermitted(PermissionList.UserMgmtPermissions.OccuranceDelete))
+                    {
+                        <th>@Localize.T("Action")</th>
+                    }
+                    
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count() > 0)
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div>@Localize.T("Occurence Date")<span>:</span></div>
+                                <div>
+                                    <a class="edit-Occurance cus-anchor" data-id="@item.Id">@item.OccurenceDate.Value.ToString("MM/dd/yy")</a>
+                                </div>
+                            </td>
+                            <td>
+                                <div>@Localize.T("Point")<span>:</span></div>
+                                <div>@item.Amount</div>
+                            </td>
+                            <td>
+                                <div>@Localize.T("Notes")<span>:</span></div>
+                                <div>@item.Notes</div>
+                            </td>
+                            @if (PermissionChecker.IsPermitted(PermissionList.UserMgmtPermissions.OccuranceDelete))
+                            {
+                            <td>
+                                <div>@Localize.T("Action")<span>:</span></div>
+                                <div> <button class="btn btn-default red_button" data-toggle="tooltip" title="" onclick="DeleteOccurenceConfirm('@item.Id')" data-original-title="Delete"><i class="fa fa-trash-o"></i></button></div>
+                            </td>
+                            }
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

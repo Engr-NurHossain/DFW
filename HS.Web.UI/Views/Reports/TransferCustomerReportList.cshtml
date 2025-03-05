@@ -1,0 +1,321 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@model List<HS.Entities.DelinquentCustomerModel>
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework
+
+
+<script>
+    var pageno = '@ViewBag.PageNumber';
+
+    var totalcount = '@Localize.T("Total:") @string.Format("{0:#,##0}", ViewBag.TotalLeads)';
+    var UnlinkCustomerFun = function (ids, val) {
+
+        var url = "/Reports/UnlinkCustomer";
+        var param = JSON.stringify({
+            Id: ids,
+            Value: val
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result == true) {
+                    Console.log("changed");
+                    window.location.reload();
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        })
+    }
+    $(document).ready(function () {
+        parent.$(".lead_total_color").html(totalcount);
+        $(".icon_sort_timeclock").click(function () {
+
+            var orderval = $(this).attr('data-val');
+            console.log(orderval);
+            CustomerSearchKeyUp(pageno, orderval);
+        });
+        $(".CheckItemsTransfer").change(function () {
+               var qqq = $(this);
+
+            if ($(this).prop("checked") == true) {
+                var ids = "";
+                if ($(this).is(':checked')) {
+                    ids = $(this).attr("data-id");
+                }
+             OpenConfirmationMessageNew("Confirmation", "Are you sure, you want to unlink this customer", function () {
+                 UnlinkCustomerFun(ids, true);
+                 CustomerSearchKeyUp(1);
+             }, function () {
+                       qqq.prop("checked", false);
+                });
+             //   UnlinkCustomerFun(ids, true);
+            }
+            else {
+                ids = $(this).attr("data-id");
+                   OpenConfirmationMessageNew("Confirmation", "Are you sure, you want to link this customer", function () {
+                       UnlinkCustomerFun(ids, false);
+                      CustomerSearchKeyUp(1);
+
+               }, function () {
+                       qqq.prop("checked", true);
+                });
+              //  UnlinkCustomerFun(ids, false);
+            }
+        });
+    })
+</script>
+
+<table id="LeadsReportTable">
+    <thead>
+        <tr>
+            <th>
+                <div>@Localize.T("Customer")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customer"></i></div>
+
+            </th>
+            <th>
+                <div>@Localize.T("Old Customer")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/oldcustomer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/oldcustomer"></i></div>
+
+            </th>
+            <th>
+                <div>@Localize.T("Phone No")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/phoneno"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/phoneno"></i></div>
+
+            </th>
+            <th>
+                <div>@Localize.T("Email")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/email"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/email"></i></div>
+
+            </th>
+            <th>
+                <div>@Localize.T("Address")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/address"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/address"></i></div>
+
+            </th>
+            <th>
+                <div>@Localize.T("Transfer Date")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/date"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/date"></i></div>
+
+            </th>
+            <th>
+                <div>@Localize.T("Link/Unlink")</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/date"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/date"></i></div>
+
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+            {
+        <tr>
+            <td>
+                <div>@Localize.T("Customer") <span>:</span></div>
+                <div>
+                    <a href="/Customer/Customerdetail/?id=@item.Id" class="lead_click_item" data-id="@item.CustomerId" target="_blank">@item.CustomerName</a> <br />
+                    <b>@Localize.T("Id"):</b><a target="_blank" href="/Customer/CustomerDetail/?id=@item.Id" data-id="@item.Id" class="lead_click_item">@item.Id</a>
+                </div>
+
+                @*<div><a href="javascript:void(0)" class="lead_click_item" data-id="@item.Id" onclick="EditCustomer('@item.Id')">@item.Id</a></div>*@
+            </td>
+            <td>
+                <div>@Localize.T("Old Customer") <span>:</span></div>
+                <div>
+                    <a href="/Customer/Customerdetail/?id=@item.TransferCustomerId" class="lead_click_item" data-id="@item.CustomerId" target="_blank">@item.OldCustomer</a> <br />
+                </div>
+
+                @*<div><a href="javascript:void(0)" class="lead_click_item" data-id="@item.Id" onclick="EditCustomer('@item.Id')">@item.Id</a></div>*@
+            </td>
+            <td>
+                <div>@Localize.T("Phone No") <span>:</span></div>
+                <div><a href="tel:@item.PhoneNo" class="lead_click_item">@HS.Web.UI.Helper.LabelHelper.PhoneNumFormat.Format(@item.PhoneNo)</a></div>
+            </td>
+            <td>
+                <div>@Localize.T("Email") <span>:</span></div>
+                <div>@item.Email</div>
+
+            </td>
+            <td>
+                <div>@Localize.T("Address") <span>:</span></div>
+                <div>@Html.Raw(item.Address)</div>
+
+            </td>
+            <td>
+                <div>@Localize.T("Transfer Date") <span>:</span></div>
+                <div>@string.Format(item.CreatedDate.UTCToClientTime().ToString("M/d/yy"))</div>
+            </td>
+            <td>
+                <div>@Localize.T("Link/Unlink") <span>:</span></div>
+                <div class="est_par_device_info">
+                    @*<label for="CheckValTransfer_@item.Id" class="label-cbx">
+                    <input id="CheckValTransfer_@item.Id" type="checkbox" style="position:relative;" data-id="@item.Id" @(item.UnlinkCustomer ? "checked" : "") class="cus-checkBox invisible CheckItemsTransfer" autocomplete="off">
+                    <div class="checkbox">
+                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                            <polyline points="4 11 8 15 16 6"></polyline>
+                        </svg>
+                    </div>
+
+                </label>*@
+                    <span class="report_tooltip_div">
+                        <input id="CheckValTransfer_@item.Id" type="checkbox" style="position:relative;" data-id="@item.Id" @(item.UnlinkCustomer ? "checked" : "") class="CheckItemsTransfer" autocomplete="off">
+                        <span class="report_tooltip">
+                            @if (@item.UnlinkCustomer == true)
+                            {
+                                @Localize.T("Link")
+                            }
+                            else
+                            {
+                                @Localize.T("Unlink")
+                            }
+
+                        </span>
+                    </span>
+                </div>
+            </td>
+        </tr>
+        }
+    </tbody>
+</table>
+<div class="AgentListPagination">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+            {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+            {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">1</button>
+            </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="CustomerSearchKeyUp(3)">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="CustomerSearchKeyUp()">Next</button>
+                    </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+            }
+        }
+    </div>
+</div>
+

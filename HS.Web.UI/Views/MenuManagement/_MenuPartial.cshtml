@@ -1,0 +1,338 @@
+﻿@model HS.Entities.MenuListModel
+@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HtmlAgilityPack;
+@Styles.Render("~/styles/MenuListPartial")
+@Scripts.Render("~/scripts/MenuList")
+<style>
+    .btn_copy_menu{
+        float: right;
+    background-color: #2ca01c;
+    border-color: #2ca01c;
+    color: white;
+    margin-left:10px;
+    }
+</style>
+<script>
+    var DeleteAllMenuItemByMenuId = function (id) {
+        var url = "/MenuManagement/DeleteAllMenuItemByMenuId";
+        var param = JSON.stringify({
+            MenuId: id
+        })
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenIeateryPopupModal("Success", data.message);
+                    LoadMenusTab();
+                }
+                else {
+                    OpenErrorMessageNew("Error", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+   
+    $(document).ready(function () {
+        $(".menu_delete").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirmation", "Are you sure, you want to delete this item?", function () {
+                DeleteAllMenuItemByMenuId(idval);
+            });
+        })
+    })
+   
+</script>
+
+<div class="menulist_container">
+    <div class="menulist_search_filter">
+        <div class="input-group add-on">
+            <input value="@TempData["data"]" class="form-control filterinput border_radius_0 menu_search_text" id="searchtext" placeholder="Search">
+            <div class="input-group-btn"><button title="Search" class="btn search_menu_btn" id="btnsearchtext"><i class="glyphicon glyphicon-search"></i></button></div>
+        </div>
+        @if (Model.WebsiteLocation != null && !string.IsNullOrWhiteSpace(Model.WebsiteLocation.OperationStartTime) && !string.IsNullOrWhiteSpace(Model.WebsiteLocation.OperationEndTime) && ViewBag.ItemCount > 0 && CurrentUser != null && (CurrentUser.UserRole.ToLower() == "sysadmin" || CurrentUser.UserRole.ToLower() == "admin"))
+        {
+            <button class="btn btn_copy_menu" id="btn_copy_menu" onclick="OpenRightToLeftModal('/MenuManagement/CopyMenuPartial')">Export Menu</button>
+        }
+        <button title="@Localize.T("Create Menu")" class="btn create_menu_btn btnAddNewMenu" @*id="btnAddNewTicket"*@>@Localize.T("Create Menu")</button>
+    </div>
+ 
+  
+    <div class="menu-table">
+        <table class="display all_menu menu_list_partial_info" id="tblMenu">
+            <thead class="table-head-border">
+                <tr>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Menu Name")</div>
+                        @if (ViewBag.order == "ascending/menuname" || ViewBag.order == "descending/menuname")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuname"></i> <i style="color:darkred;font-weight: bold"  class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuname"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuname"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuname"></i></div>
+                        }
+                       
+                    </th>
+                    @*<th class="thead-th-style">
+                        <div>@Localize.T("Number of Items")</div>
+                        @if (ViewBag.order == "ascending/menuitemcount" || ViewBag.order == "descending/menuitemcount")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuitemcount"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuitemcount"></i></div>
+                        }
+                        else
+                        {
+                            <div><i  class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuitemcount"></i> <i  class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuitemcount"></i></div>
+                        }
+
+                    </th>*@
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Days Available")</div>
+                        @if (ViewBag.order == "ascending/menudayavailable" || ViewBag.order == "descending/menudayavailable")
+                        {
+                            <div><i style="color: darkred; font-weight: bold " class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menudayavailable"></i> <i  style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menudayavailable"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menudayavailable"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menudayavailable"></i></div>
+                        }
+
+
+                    </th>
+                    @*<th class="thead-th-style">
+                        <div>@Localize.T("Time Available")</div>
+                        @if (ViewBag.order == "ascending/menutimeavailable" || ViewBag.order == "descending/menutimeavailable")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menutimeavailable"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menutimeavailable"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menutimeavailable"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menutimeavailable"></i></div>
+                        }
+
+                       
+                    </th>*@
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Status")</div>
+                        @if (ViewBag.order == "ascending/menustatus" || ViewBag.order == "descending/menustatus")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menustatus"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menustatus"></i></div>
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menustatus"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menustatus"></i></div>
+                        }
+
+
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Action")</div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Menus)
+                {
+                    <tr class="tr-style CheckItems" idval="@item.Id" data-menuitemid="@item.MenuItemId">
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Menu Name")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"> <a class="cus-anchor" onclick="OpenMenuById(@item.Id)" href="javascript:void(0)">@item.MenuName</a></div>
+                        </td>
+                        @*<td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Number of Items")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"><span>@item.NumberOfItems</span></div>
+                        </td>*@
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Days Available")<span>:</span></div>
+                            <div class="menu_list_partial_device_info">
+                                @if (!string.IsNullOrWhiteSpace(item.DaysAvailableOption) && item.DaysAvailableOption == "default")
+                                {
+                                    <span>Store Default</span>
+                                }
+                                else if (!string.IsNullOrWhiteSpace(item.DaysAvailableOption) && item.DaysAvailableOption == "custom")
+                                {
+                                    <span>Custom</span>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+
+                            </div>
+                        </td>
+                        @*<td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Time Available")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"><span>@item.TimeAvailable</span></div>
+                        </td>*@
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Status")<span>:</span></div>
+                            @{
+                                if (item.Status == true)
+                                {
+                                <div class="menu_list_partial_device_info">Active</div>
+                                }
+                                else
+                                {
+                                 <div class="menu_list_partial_device_info" style="color:red;">Inactive</div>
+                                }
+                            }
+
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Action")<span>:</span></div>
+                            <div class="menu_list_partial_device_info">
+                                <span><i class="fa fa-trash menu_delete cus-anchor" data-id="@item.Id"></i></span>
+                                
+
+                            </div>
+                        </td>
+                    </tr>
+                                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="MenuListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="MenuListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="MenuListLoad(1, '@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="MenuListLoad(2,'@(ViewBag.order)')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="MenuListLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="MenuListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="MenuListLoad(1,'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="MenuListLoad(2,'@(ViewBag.order)''@(ViewBag.order)')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="MenuListLoad(3,'@(ViewBag.order)')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="MenuListLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="MenuListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="MenuListLoad(@(ViewBag.PageNumber-2),'@(ViewBag.order)')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="MenuListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="MenuListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="MenuListLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="MenuListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="MenuListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="MenuListLoad(@(ViewBag.PageNumber + 2),'@(ViewBag.order)')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="MenuListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="MenuListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="MenuListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="MenuListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="MenuListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="MenuListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="MenuListLoad(@(ViewBag.PageNumber - 1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="MenuListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="MenuListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="MenuListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+@*<div class="ticket_export_confirm"></div>*@

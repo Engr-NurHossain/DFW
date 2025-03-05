@@ -1,0 +1,157 @@
+﻿
+@model HS.Entities.AllSalesInfoModel
+@{
+    Layout = null;
+}
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@*<script>
+    var frmDate = new Pikaday({ format: 'MM/DD/YYYY', field: $('#sfrmdate')[0] });
+    var toDate = new Pikaday({ format: 'MM/DD/YYYY', field: $('#stodate')[0] });
+    var AllSalesNavigation = function (pageNo) {
+        if (typeof (pageNo) == "undefined") {
+            return;
+        }
+        var SearchBy = $("#SearchBy").val();
+        var SearchText = $("#all_sales_search_text").val();
+        $("#AllFundings").load("/Sales/AllFundingData/?PageNo=" + pageNo + "&SearchText=" + SearchText + "&SearchBy="+SearchBy);
+    }
+    $(document).ready(function () {
+        var frmval = $('#sfrmdate').val();
+        var toval = $('#stodate').val();
+        $(".sales-date-range").hide();
+        $(".btn-filter").click(function () {
+            $(".sales-date-range").toggle();
+        });
+        $(".btn-apply-sales").click(function () {
+            $(".filter-fundingdata").load("/Sales/FilterAllFundingData?FromDate=" + $('#sfrmdate').val() + "&ToDate=" + $('#stodate').val());
+        });
+        var Popupwidth = 920;
+        if (window.innerWidth < 920) {
+            Popupwidth = window.innerWidth;
+        }
+        var idlist = [{ id: ".InvEstPreview", type: 'iframe', width: Popupwidth, height: 600 }
+        ];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+        $("#all_sales_search_button").click(function () {
+            var SearchBy = $("#SearchBy").val();
+            var SearchText = $("#all_sales_search_text").val();
+            var pageNo = 1;
+            $("#AllFundings").load("/Sales/AllFundingData/?PageNo=" + pageNo + "&SearchText=" + SearchText + "&SearchBy=" + SearchBy);
+        });
+    })
+</script>*@
+<script src="~/Content/Js/Transactions/Transactions.js"></script>
+
+<link href="~/Content/Css/Sales/AllFundingData.css" rel="stylesheet" />
+<div class="page-content-wrap cus-padding-top10p afd_container_custom">
+    <div class="invoice-table">
+        <table class="display" id="tblTransactions">
+            <thead class="table-head-border">
+                <tr>
+                    <th class="thead-th-style">
+                        @Localize.T("Customer Name")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Type")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Invoice No.")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Due Date")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Balance")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Total")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Status")
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Actions")
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.TransactionList)
+                {
+                    DateTime DueDate = new DateTime(item.InvoiceDueDate.Year, item.InvoiceDueDate.Month, item.InvoiceDueDate.Day);
+
+                    <tr class="tr-style @((item.Type=="Invoice" && item.Balance>0 && DueDate < DateTime.Now.AddDays(-1))?"red":"")">
+                        <td class="table-body-td-style" valign="top">
+                            @{
+                                if (!string.IsNullOrWhiteSpace(item.CustomerBussinessName))
+                                {
+                                    <span>@item.CustomerBussinessName</span><br />
+                                }
+                                else
+                                {
+                                    <span>@item.CustomerName</span><br />
+                                }
+                            }
+
+                            <span>@item.AuthRefId</span>
+                        </td>
+                        <td @(item.Type == "Invoice" ? "onclick=OpenInvById(" + @item.InvoiceId + ")" : "") @(item.Type == "Payment" ? "onclick=OpenPaymentByTrId(" + @item.Id + ")" : "") class="table-body-td-style" valign="top">
+                            <a class="cus-anchor" href="javascript:void(0)">@item.Type</a>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <span>@item.InvoiceIdStr</span>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <span>@item.InvoiceDueDate.ToString("MM/dd/yy")</span>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <span>$@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Balance)</span>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <span>$@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)</span>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            @{
+                                if (item.Status == "Open")
+                                {
+                                    string status = item.Status;
+                                    status = item.InvoiceDueDate < DateTime.Today ? "Due" : status;
+                                    <span class="vbl_device_info" style="color:red">@status</span>
+                                }
+                                if (item.Status == "Cancel")
+                                {
+                                    <span class="vbl_device_info" style="color:red">@item.Status</span>
+                                }
+                                else
+                                {
+                                    <span class="vbl_device_info">@item.Status</span>
+                                }
+                            }
+                        </td>
+                        <td>
+                            @if (item.Balance > 0 && item.Type == "Invoice" && item.Status != "Cancel")
+                            {
+                                if (PermissionChekcer.IsPermitted(Permissions.SalesPermissions.AllSalesReceivePayment))
+                                {
+                                    <a class="cus-anchor" onclick="ReceivePaymentByInvAndCus(@item.InvoiceId,'@item.CustomerId')" href="javascript:void(0)">@Localize.T("Receive Payment")</a>
+                                }
+                            }
+                            else if (item.Type == "Invoice")
+                            {
+                                if (PermissionChekcer.IsPermitted(Permissions.SalesPermissions.AllSalesPrint))
+                                {
+                                    <a class="InvEstPreview cus-anchor" href="@(AppConfig.DomainSitePath)/Sales/GetAllInvoiceData/@item.InvoiceId">@Localize.T("Print")</a>
+                                }
+
+                            }
+                        </td>
+                    </tr>
+                                }
+            </tbody>
+        </table>
+    </div>
+</div>

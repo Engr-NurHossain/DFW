@@ -1,0 +1,371 @@
+﻿@model HS.Entities.TrackingNumberSetting
+@{
+    Layout = null;
+}
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Css/Invoice/AddInvoice.css" rel="stylesheet" />
+<link href="~/Content/Css/Invoice/AddInvoice_custom.css" rel="stylesheet" />
+<script src="~/Content/Js/Site/Validation.js"></script>
+<style>
+    .add_tracking_header {
+        width: 100%;
+        font-size: 2rem;
+        background-color: #f4f5f8;
+        padding: 10px 15px;
+    }
+
+    .span-style {
+        font-weight: 600;
+        color: #615b5b;
+        display: block;
+        font-size: 14px;
+        -webkit-tap-highlight-color: transparent;
+        position: relative;
+    }
+
+    .add_tracking_footer {
+        width: 100%;
+        float: left;
+        padding: 5px 15px;
+        text-align: right;
+    }
+
+    #SaveTrackingNumber {
+        background-color: #2ca01c !important;
+        color: #fff !important;
+        border-color: #2ca01c !important;
+    }
+
+    .add_tracking_inner_height {
+        width: 100%;
+        float: left;
+        padding: 5px 15px;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+        .add_tracking_inner_height .form-group {
+            margin-bottom: 10px;
+        }
+
+    .tt-menu {
+        background: white;
+        min-width: 320px;
+        font-size: 12px;
+        max-height: 230px;
+        -webkit-box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        margin-top: 0px;
+        position: absolute;
+        z-index: 100;
+        display: none;
+        overflow-y: scroll;
+    }
+
+    .tt-dataset-autocomplete {
+        margin-top: -5px;
+    }
+
+    .tt-suggestion {
+        min-height: 36px;
+        display: block;
+        padding: 10px 10px 9px 15px;
+        position: relative;
+        cursor: pointer;
+        white-space: nowrap;
+        border-bottom: 1px solid #ccc;
+    }
+
+        .tt-suggestion span {
+            width: 85%;
+            float: left;
+            display: inline;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            font-size: 12px;
+            display: block !important;
+        }
+
+    .tt-sug-text {
+        width: 100%;
+        font-size: 14px;
+        text-overflow: ellipsis;
+    }
+
+    .tt-suggestion.active {
+        background-color: #f2f2f2;
+    }
+</style>
+<script>
+    var trackactive = '@(Model.IsActive.HasValue ? Model.IsActive == true ? 1 : 0 : 1)';
+    var trackrecord = '@(Model.IsRecorded.HasValue ? Model.IsRecorded == true ? 1 : 0 : 1)';
+    var trackprompt = '@(Model.IsPrompt.HasValue ? Model.IsPrompt == true ? 1 : 0 : 1)';
+    var SaveTrackingNumber = function () {
+        var url = "/Website/AddTrackingNumber";
+        var param = JSON.stringify({
+            Id: $("#track_number_id").val(),
+            TrackingId: $("#TrackingId").val(),
+            TrackingNumber: $("#TrackingNumber").val(),
+            CompanyId: $("#Track_CompanyId").val(),
+            IsActive: $("#track_isactive").val() == "1" ? true : false,
+            IsRecorded: $("#track_isrecord").val() == "1" ? true : false,
+            IsPrompt: $("#track_isprompt").val() == "1" ? true : false,
+            Comments: $("#Comments").val(),
+            SubAccountId: $("#SubAccountId").val(),
+            SubAccountToken: $("#SubAccountToken").val(),
+            ForwardingNumber: $("#ForwardingNumber").val()
+        })
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data) {
+                    OpenRightToLeftModal(false);
+                    OpenIeateryPopupModal("Success", "Tracking number saved successfully");
+                    LoadTrackingSetting();
+                }
+                else {
+                    OpenErrorMessageNew("Error", "Tracking number not valid or exist");
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        })
+    }
+    function FormatTrackNumber(svalue) {
+    var ValueCleanSecondary = "";
+    if (svalue != undefined && svalue != "" && svalue != null) {
+        svalue = svalue.replace(/[-  ]/g, '');
+        if (svalue.length == 10) {
+            ValueCleanSecondary = svalue.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+            $("#TrackingNumber").css({ "border": "1px solid #babec5" });
+        }
+        else if (svalue.length > 10) {
+            ValueCleanSecondary = svalue;
+            $("#TrackingNumber").css({ "border": "1px solid red" });
+        }
+        else {
+            $("#TrackingNumber").css({ "border": "1px solid red" });
+            ValueCleanSecondary = svalue;
+        }
+    }
+    return ValueCleanSecondary;
+    }
+    function FormatForwardingNumber(svalue) {
+    var ValueCleanSecondary = "";
+    if (svalue != undefined && svalue != "" && svalue != null) {
+        svalue = svalue.replace(/[-  ]/g, '');
+        if (svalue.length == 10) {
+            ValueCleanSecondary = svalue.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+            $("#ForwardingNumber").css({ "border": "1px solid #babec5" });
+        }
+        else if (svalue.length > 10) {
+            ValueCleanSecondary = svalue;
+            $("#ForwardingNumber").css({ "border": "1px solid red" });
+        }
+        else {
+            $("#ForwardingNumber").css({ "border": "1px solid red" });
+            ValueCleanSecondary = svalue;
+        }
+    }
+    return ValueCleanSecondary;
+    }
+    var CustomerSuggestiontemplate =
+    '<div class="tt-suggestion tt-selectable" data-number="{0}">'
+
+    + "<p class='tt-sug-text'>"
+    + "{0}"
+    + "</p> "
+        + "</div>";
+    var SearchTrackingNumber = function (item, event) {
+        if (event.keyCode == 40 || event.keyCode == 38 || event.keyCode == 13)
+            return false;
+        $.ajax({
+        url: "/Website/GetTrackingNumberSearchResult",
+            data: {
+                key: $(item).val(),
+                comid: $("#Track_CompanyId").val() != "-1" ? $("#Track_CompanyId").val() : "00000000-0000-0000-0000-000000000000",
+                authid: $("#SubAccountId").val()
+        },
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+            success: function (data) {
+                console.log("search data");
+                var resultparse = JSON.parse(data.result);
+                $("#SubAccountId").val(data.authid);
+                $("#SubAccountToken").val(data.authtoken);
+            if (resultparse.length > 0) {
+                var searchresultstring = "<div class='NewProjectSuggestion'>";
+                for (var i = 0; i < resultparse.length; i++) {
+                    var Number = "+" + resultparse[i].Number;
+                    searchresultstring = searchresultstring + String.format(CustomerSuggestiontemplate, Number.replace("+1", "").replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3"));
+                }
+                searchresultstring += "</div>";
+                var ttdom = $($(item).parent()).find('.tt-menu');
+                var ttdomComplete = $($(item).parent()).find('.tt-dataset-autocomplete');
+                $(ttdomComplete).html(searchresultstring);
+                $(ttdom).show();
+
+                InvoiceCustomerclickbind(item);
+                $(".customer_name_insert_div .NewProjectSuggestion").height(200);
+            }
+            if (resultparse.length == 0)
+                $('.tt-menu').hide();
+
+        }
+    });
+    }
+    var InvoiceCustomerclickbind = function (item) {
+        $('.customer_name_insert_div .tt-suggestion').click(function () {
+            var clickitem = this;
+            $('.customer_name_insert_div .tt-menu').hide();
+
+            var selectednumber = $(clickitem).attr("data-number").trim();
+            $("#TrackingNumber").val(selectednumber);
+
+            var sPhoneNumber = selectednumber;
+            if (sPhoneNumber != undefined && sPhoneNumber != null && sPhoneNumber != "") {
+                var scleanPhoneNumber = FormatTrackNumber(sPhoneNumber);
+                $(this).val(scleanPhoneNumber);
+            }
+        });
+        $('.customer_name_insert_div .tt-suggestion').hover(function () {
+        var clickitem = this;
+        $('.tt-suggestion').removeClass("active");
+        $(clickitem).addClass('active');
+    });
+    }
+    
+    $(document).ready(function () {
+        $(".add_tracking_inner_height").height(window.innerHeight - 105);
+        $("#SaveTrackingNumber").click(function () {
+            if (CommonUiValidation()) {
+                SaveTrackingNumber();
+            }
+        })
+        $("#track_isactive").val(trackactive);
+        $("#track_isrecord").val(trackrecord);
+        $("#track_isprompt").val(trackprompt);
+        $("#TrackingNumber").keyup(function () {
+        var sPhoneNumber = $(this).val();
+            if (sPhoneNumber != undefined && sPhoneNumber != null && sPhoneNumber != "") {
+                var scleanPhoneNumber = FormatTrackNumber(sPhoneNumber);
+            $(this).val(scleanPhoneNumber);
+        }
+        });
+        $("#ForwardingNumber").keyup(function () {
+        var sPhoneNumber = $(this).val();
+            if (sPhoneNumber != undefined && sPhoneNumber != null && sPhoneNumber != "") {
+                var scleanPhoneNumber = FormatForwardingNumber(sPhoneNumber);
+            $(this).val(scleanPhoneNumber);
+        }
+        });
+        $("#Track_CompanyId").change(function () {
+            if ($("#Track_CompanyId").val() != "-1") {
+                $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+                url: "/Website/GetStorePhoneNumberByTracking",
+                data: JSON.stringify({ comid: $("#Track_CompanyId").val() }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        $("#ForwardingNumber").val(data.storephn);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        })
+            }
+            
+        })
+    })
+    $(window).resize(function () {
+        $(".add_tracking_inner_height").height(window.innerHeight - 105);
+    });
+</script>
+@Html.HiddenFor(x => x.Id, new { id = "track_number_id" })
+@Html.HiddenFor(x => x.TrackingId, new { id = "TrackingId" })
+@Html.HiddenFor(x => x.SubAccountId, new { id = "SubAccountId" })
+@Html.HiddenFor(x => x.SubAccountToken, new { id = "SubAccountToken" })
+<div class="add_tracking_container">
+    <div class="add_tracking_header">
+        @if (Model.Id > 0)
+        {
+            @Localize.T("Edit Tracking Number")
+        }
+        else
+        {
+            @Localize.T("Add Tracking Number")
+        }
+    </div>
+    <div class="add_tracking_inner_height">
+        <div class="add_tracking_inner">
+            <div class="form-group clearfix customer_name_insert_div">
+                <span class="span-style">@Localize.T("Tracking Number")</span>
+                @if (Model.Id > 0)
+                {
+                    @Html.TextBoxFor(x => x.TrackingNumber, new { @class = "form-control", id = "TrackingNumber", placeholder = Localize.T("Tracking Number"), datarequired = "true", @readonly = "readonly" })
+                }
+                else
+                {
+                    @Html.TextBoxFor(x => x.TrackingNumber, new { @class = "form-control", id = "TrackingNumber", placeholder = Localize.T("Tracking Number"), datarequired = "true", onkeyup = "SearchTrackingNumber(this, event)" })
+                }
+                <div class='tt-menu'>
+                    <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                </div>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Location")</span>
+                @Html.DropDownListFor(x => x.CompanyId, ViewBag.domainlist as List<SelectListItem>, new { @class = "form-control", id = "Track_CompanyId", datarequired = "true" })
+            </div>
+            <div class="form-group clearfix forwarding_number_insert_div">
+                <span class="span-style">@Localize.T("Forwarding Number")</span>
+                @Html.TextBoxFor(x => x.ForwardingNumber, new { @class = "form-control", id = "ForwardingNumber", placeholder = Localize.T("Forwarding Number") })
+                <div class='tt-menu'>
+                    <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                </div>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Active Numbers?")</span>
+                <select class="form-control" id="track_isactive">
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                </select>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Record Calls?")</span>
+                <select class="form-control" id="track_isrecord">
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                </select>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Play Prompt?")</span>
+                <select class="form-control" id="track_isprompt">
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                </select>
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Comment")</span>
+                @Html.TextAreaFor(x => x.Comments, new { @class = "form-control", id = "Comments", placeholder = Localize.T("Comment") })
+            </div>
+        </div>
+    </div>
+    <div class="add_tracking_footer">
+        <button class="btn btn-default" id="SaveTrackingNumber"> @Localize.T("Save")</button>
+    </div>
+</div>

@@ -1,0 +1,633 @@
+﻿@model HS.Entities.TicketListModel
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<style>
+    .install_cus_report_left {
+        float: left;
+        width: auto;
+    }
+
+    .install_cus_report_filte_innerr {
+        width: 100%;
+        float: left;
+    }
+
+    .install_cus_report_left .input-group {
+        width: 300px;
+        float: left;
+    }
+
+    .install_cus_report_left #install_cus_filterbtn {
+        float: left;
+        margin-left: 10px;
+    }
+
+    .install_cus_filter_list .install_cus_filter_button button {
+        margin: 5px;
+        border-color: #2ca01c;
+        background-color: #2ca01c;
+        color: white;
+    }
+
+    .install_cus_report_filter {
+        width: 100%;
+        float: left;
+        border: 1px solid #ccc;
+        padding: 10px;
+    }
+
+        .install_cus_report_filter .install_cus_report_filte_innerr div {
+            float: left;
+            width: 20%;
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+
+    .install_cus_report_footer {
+        width: 100%;
+        float: left;
+        background-color: #fff;
+        padding: 5px;
+        text-align: right;
+    }
+    .DescriptionBox{
+        width: 180px;
+    }
+    .Installed{
+        width: 85px;
+    }
+    .Points{
+        width: 80px;
+    }
+</style>
+<script>
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var pageno = '@ViewBag.PageNumber';
+    var tickettype = '@Html.Raw(Json.Encode(@ViewBag.tikettype))';
+    tickettype = JSON.parse(tickettype);
+    var statustiket = '@Html.Raw(Json.Encode(@ViewBag.statustiket))';
+    statustiket = JSON.parse(statustiket);
+    var assignticket = '@Html.Raw(Json.Encode(@ViewBag.assignticket))';
+    assignticket = JSON.parse(assignticket);
+    var listcategory = '@Html.Raw(Json.Encode(@ViewBag.listcategory))';
+    listcategory = JSON.parse(listcategory);
+    var listtechnician = '@Html.Raw(Json.Encode(@ViewBag.tech))';
+    listtechnician = JSON.parse(listtechnician);
+    var listmanu = '@Html.Raw(Json.Encode(@ViewBag.listmanu))';
+    listmanu = JSON.parse(listmanu);
+    @*var EquipmentStatus = '@Html.Raw(Json.Encode(@ViewBag.Equipment))';
+    EquipmentStatus = JSON.parse(EquipmentStatus);*@
+
+    var TicketListLoad = function (pageNo, order, Generate) {
+
+        console.log(order);
+        if (typeof (pageNo) != "undefined" && pageNo > 0) {
+
+
+            var AssignedSearch = encodeURI($("#Assigned_search_install").val());
+            var TicketTypeSearch = decodeURI($("#TicketType_Search_install").val());
+            var TicketStatusSearch = $("#Ticket_Status_Search_install").val();
+            var MyTicketSearch = $("#TicketFor_search_install").val();
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+            var SearchText = $("#searchtext_install").val();
+            console.log(DateFrom);
+            console.log(pageNo);
+            var category = encodeURI($("#eqpCategory_install").val());
+            var technicians =  $("#eqpTechnician_install").val();
+            var EquipmentStatus = encodeURI($("#EquipmentStatus_install").val());
+            var manufacturer = encodeURI($("#manufacturer_install").val());
+            $("#LoadTicketReport_install").html(TabsLoaderText);
+            $("#LoadTicketReport_install").load(domainurl + "/Reports/LoadTicketReportListInstall", { PageNo: pageNo, SearchText: SearchText, order: order, StartDate: DateFrom, EndDate: DateTo, TicketType: TicketTypeSearch, TicketStatusArr: TicketStatusSearch, AssignedUserTicket: AssignedSearch, MyTicket: MyTicketSearch, category: category, manufact: manufacturer, technicianlist: technicians, Generate: Generate }); //, EquipmentStatus: EquipmentStatus
+
+            //var LoadUrl = domainurl + "/Reports/LoadTicketReportListInstall/?PageNo=" + pageNo + "&SearchText=" + $("#searchtext_install").val() + "&order=" + order + "&StartDate=" + DateFrom + "&EndDate=" + DateTo + "&TicketType=" + TicketTypeSearch + "&TicketStatusArr=" + $("#Ticket_Status_Search_install").val() + "&AssignedUserTicket=" + encodeURI($("#Assigned_search_install").val()) + "&MyTicket=" + encodeURI($("#TicketFor_search_install").val()) + "&category=" + encodeURI($("#eqpCategory_install").val()) + "&manufact=" + manufacturer + "&technicianlist=" + technicians;
+            //$("#LoadTicketReport_install").load(LoadUrl);
+
+        }
+    }
+    $(document).ready(function () {
+
+        $('[data-toggle="tooltip"]').tooltip();
+
+        $("#btnsearchtext_install").click(function () {
+            //$("#LoadTicketReport_install").html(TabsLoaderText);;
+            TicketListLoad(1);
+            //$("#LoadTicketReport_install").hide();
+        });
+
+        $(".DateFilterContents .btn-apply-Datefilter").click(function () {
+        var DateFrom = $(".min-date").val();
+        var DateTo = $(".max-date").val();
+
+            if (top.location.hash != "" && top.location.hash == "#InstalledEquipmentReportTab") {
+                UpdatePtoCookie();
+                TicketListLoad(1);
+                var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+        var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+        if (StartDate == "NaN undefined, NaN") {
+            StartDate = "All Time";
+            EndDate = "";
+        }
+
+        $(".DateFilterContents .date-start").html("");
+        $(".DateFilterContents .date-end").html("");
+        $(".DateFilterContents .date-start").html(StartDate);
+        $(".DateFilterContents .date-end").html(EndDate);
+        $(".DateFilterContents .dropdown-filter").hide();
+            }
+    });
+
+           $("#searchtext_install").keydown(function (e) {
+                          var SearchText = $("#searchtext_install").val();
+
+                if (e.which == 13) {
+                 $("#LoadTicketReport_install").load(domainurl + "/Reports/LoadTicketReportListInstall?SearchText=" + encodeURI(SearchText));
+                }
+            });
+        //$('#searchtext_install').keypress(function (e) {
+        //    var key = e.which;
+        //    if (key == 13)
+        //    {
+        //        TicketListLoad(1);
+        //    }
+        //});
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            TicketListLoad(pageno, orderval);
+        })
+        //$("#TicketType_Search_install").selectpicker('val', tickettype);
+        //$("#Ticket_Status_Search_install").selectpicker('val', statustiket);
+        //$("#Assigned_search_install").selectpicker('val', assignticket);
+        //$("#eqpCategory_install").selectpicker('val', listcategory);
+        //$("#manufacturer_install").selectpicker('val', listmanu);
+        if (tickettype.length != 0) {
+            $("#TicketType_Search_install").selectpicker('val', tickettype);
+        }
+        else {
+            $("#TicketType_Search_install").selectpicker('val', '');
+        }
+        if (statustiket.length != 0) {
+            $("#Ticket_Status_Search_install").selectpicker('val', statustiket);
+        }
+        else {
+            $("#Ticket_Status_Search_install").selectpicker('val', '');
+        }
+        if (assignticket.length != 0) {
+            $("#Assigned_search_install").selectpicker('val', assignticket);
+        }
+        else {
+            $("#Assigned_search_install").selectpicker('val', '');
+        }
+        if (listcategory.length != 0) {
+            $("#eqpCategory_install").selectpicker('val', listcategory);
+        }
+        else {
+            $("#eqpCategory_install").selectpicker('val', '');
+        }
+           if (listtechnician.length != 0) {
+            $("#eqpTechnician_install").selectpicker('val', listtechnician);
+        }
+        else {
+            $("#eqpTechnician_install").selectpicker('val', '');
+        }
+        if (listmanu.length != 0) {
+            $("#manufacturer_install").selectpicker('val', listmanu);
+        }
+        else {
+            $("#manufacturer_install").selectpicker('val', '');
+        }
+        //if (EquipmentStatus.length != 0) {
+        //    $("#EquipmentStatus_install").selectpicker('val', EquipmentStatus);
+        //}
+        //else {
+        //    $("#EquipmentStatus_install").selectpicker('val', '');
+        //}
+        $("#btnDownloadticketReport3").click(function () {
+
+            location.href = domainurl + "/Reports/TicketReportPartial/?GetReport=true" + "&SearchText=" + $("#searchtext_install").val() + "&TicketType=" + $("#TicketType_Search_install").val() + "&TicketStatus=" + $("#Ticket_Status_Search_install").val() + "&Assigned=" + $("#Assigned_search_install").val() + "&RepType=Install" + "&category=" + encodeURI($("#eqpCategory_install").val()) + "&manufact=" + encodeURI($("#manufacturer_install").val()) + "&technicianlist=" + $("#eqpTechnician_install").val(); //+ "&EquipmentStatus=" + EquipmentStatus
+        });
+
+
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#completion_install_min_date')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#completion_install_max_date')[0] });
+        $(".install_cus_report_filter").hide();
+        $("#install_cus_filterbtn").click(function () {
+            console.log("filter");
+            if ($(".install_cus_report_filter").is(":visible")) {
+                $(".install_cus_report_filter").hide();
+
+            } else {
+                $(".install_cus_report_filter").show();
+
+            }
+        });
+        $("#btnGenerateReport").click(function () {
+            TicketListLoad(1, null, true);
+        });
+        $(document).click(function (e) {
+            if ($($(e.target).parent().parent()).hasClass('install_cus_div')
+                        || $($(e.target).parent()).hasClass('install_cus_div')
+                        || $($(e.target).parent().parent()).hasClass('install_cus_div')) {
+                return;
+            }
+            else if ($(".install_cus_report_filter").is(":visible")) {
+                $(".install_cus_report_filter").hide();
+            }
+        });
+    });
+</script>
+
+<div class="page-content-wrap cus-padding-top10p invoicelist">
+    <div class="FilterFunding clearfix">
+        <div class="ins_equip_srch_filter_report">
+            <input value="@Model.Searchtext" class="form-control filterinput border_radius_0 ticket_search_text" id="searchtext_install" placeholder="Search">
+
+            @Html.DropDownListFor(x => x.TicketType, ViewBag.TicketType as List<SelectListItem>, new { @class = "form-control border_radius_0 TicketType_Search", id = "TicketType_Search_install", @multiple = "multiple", @title = "Ticket Type" })
+            @Html.DropDownListFor(x => x.TicketStatus, ViewBag.TicketStatus as List<SelectListItem>, new { @class = "form-control border_radius_0 Ticket_Status_Search", id = "Ticket_Status_Search_install", @multiple = "multiple", @title = "Ticket Status" })
+
+
+            @Html.DropDownList("eqpCategory_install", ViewBag.eqpCategory as List<SelectListItem>, new { @class = "form-control border_radius_0 Ticket_Status_Search", @multiple = "multiple", @title = "Category" })
+
+            @Html.DropDownList("eqpTechnician_install", ViewBag.listtechnician as List<SelectListItem>, new { @class = "form-control border_radius_0 Ticket_Status_Search", @multiple = "multiple", @title = "Technician" })
+            @*@Html.DropDownList("EquipmentStatus_install", ViewBag.EquipmentStatus as List<SelectListItem>, new { @class = "form-control border_radius_0 Ticket_Status_Search", @multiple = "multiple", @title = "Select One" })*@
+            <div class="input-group add-on">
+                @Html.DropDownList("manufacturer_install", ViewBag.manufacturer as List<SelectListItem>, new { @class = "form-control border_radius_0 Assigned_search", @multiple = "multiple", @title = "Manufacturer" })
+                <div class="input-group-btn"><button class="btn search_ticket_btn green_button" id="btnsearchtext_install" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button></div>
+            </div>
+        </div>
+        <button title="@Localize.T(" Download")" class="report_btn lrp_float_right" id="btnDownloadticketReport3"><i class="fa fa-download" aria-hidden="true"></i></button>
+        @*<button title="@Localize.T("Generate Report")" class="report_btn lrp_float_right" id="btnGenerateReport"><i class="fa fa-files-o" aria-hidden="true"></i>@Localize.T(" Generate Report")</button>*@
+    </div>
+    <div class="install_cus_report_filter">
+        <div class="install_cus_report_filte_innerr install_cus_div">
+            <div class="form-group clearfix">
+                <label>@Localize.T("Ticket ID")</label>
+                <input class="form-control install_cus_inp" placeholder="Ticket ID" id="ticket_id" />
+            </div>
+            <div class="form-group clearfix">
+                <label>@Localize.T("Customer ID")</label>
+                <input class="form-control install_cus_inp" placeholder="Customer ID" id="customer_id" />
+            </div>
+            <div class="form-group clearfix">
+                <label>@Localize.T("Ticket Type")</label>
+                @Html.DropDownListFor(x => x.TicketType, ViewBag.TicketType as List<SelectListItem>, new { @class = "form-control border_radius_0 TicketType_Search install_cus_inp_drp", id = "TicketType_Search_reference", @multiple = "multiple", @title = "Ticket Type" })
+            </div>
+            <div class="form-group clearfix">
+                <label>@Localize.T("Ticket Status")</label>
+                @Html.DropDownListFor(x => x.TicketStatus, ViewBag.TicketStatus as List<SelectListItem>, new { @class = "form-control border_radius_0 Ticket_Status_Search install_cus_inp_drp", id = "Ticket_Status_Search_reference", @multiple = "multiple", @title = "Ticket Status" })
+            </div>
+            <div class="form-group clearfix">
+                <label>@Localize.T("Assigned User")</label>
+                @Html.DropDownListFor(x => x.Assigned, ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control border_radius_0 Assigned_search install_cus_inp_drp", id = "Assigned_search_reference", @multiple = "multiple", @title = "Assigned User" })
+            </div>
+            <div class="form-group clearfix">
+                <label>@Localize.T("Scheduled On Min Date")</label>
+                <input class="form-control install_cus_inp" placeholder="Scheduled On Min Date" id="completion_install_min_date" />
+            </div>
+            <div class="form-group clearfix">
+                <label>@Localize.T("Scheduled On Max Date")</label>
+                <input class="form-control install_cus_inp" placeholder="Scheduled On Max Date" id="completion_install_max_date" />
+            </div>
+            
+        </div>
+        <div class="install_cus_report_footer install_cus_div">
+            <button class="btn" id="apply_btn_filter" onclick="TicketListLoad(1)">@Localize.T("Apply")</button>
+            <button class="btn" id="reset_btn_filter" onclick="ResetFilter()">@Localize.T("Reset")</button>
+        </div>
+    </div>
+    </div>
+   
+    <div class="install_equip_table">
+        <table class="loadticketreportlist_table">
+            <thead class="table-head-border">
+                <tr>
+                    <th class="thead-th-style"> <div>@Localize.T("Tickets")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ticketid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ticketid"></i></div></th>
+                   
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Customer")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customername"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Appt. Date")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/appointmentdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/appointmentdate"></i></div>
+                    </th>
+                    @*<th class="thead-th-style">
+            <div>@Localize.T("Install Type")</div>
+            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customername"></i></div>
+        </th>*@
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Technician")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/technician"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/technician"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Sold By")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/SoldBy"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/SoldBy"></i></div>
+                    </th>
+                    <th class="thead-th-style DescriptionBox">
+                        <div>@Localize.T("Description")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/description"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/description"></i></div>
+                    </th>
+                    @*<th class="thead-th-style">
+            <div>@Localize.T("Quantity")</div>
+            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customername"></i></div>
+        </th>*@
+                    <th class="thead-th-style Installed">
+                        <div>@Localize.T("Installed")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/installed"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/installed"></i></div>
+                    </th>
+                    <th class="thead-th-style Points">
+                        <div>@Localize.T("Points")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/points"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/points"></i></div>
+                    </th>
+
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Cost $")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/cost"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/cost"></i></div>
+                    </th>
+                    @*<th class="thead-th-style">
+            <div>@Localize.T("Customer Cost $")</div>
+            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customername"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customername"></i></div>
+        </th>*@
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Tickets)
+                {
+                <tr class="tr-style">
+                    <td class="table-body-td-style" valign="top">
+                        <div class="ticket_list_partial_device_header">@Localize.T("Ticket")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info">
+
+                            @if (item.IsClosed == true)
+                            {
+                                <span><i style="color:#2ca01c; cursor:pointer;" class="fa fa-lock" title="Ticket Close"></i></span>
+                            }
+                            <a title="@Localize.T("Ticket ID")" class="cus-anchor" onclick="OpenTicketById(@item.Id)" href="javascript:void(0)">@item.Id</a> <br />
+                            <span title="@Localize.T("Install Type")">@item.TicketType</span> <br />
+                            <span title="@Localize.T("Status")">@item.Status</span>
+                        </div>
+                    </td>
+                   
+                    <td class="table-body-td-style" valign="top">
+                        <div class="ticket_list_partial_device_header">@Localize.T("ID")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info"> <a class="cus-anchor" href="/Customer/CustomerDetail/?id=@item.CusIdInt" target="_blank">@item.CusIdInt</a></div>
+
+                        <div class="ticket_list_partial_device_header">@Localize.T("Name")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info"> <span>@item.CustomerName</span></div>
+
+                        <div class="ticket_list_partial_device_header">@Localize.T("Business Name")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info"> <span>@item.CusBusinessName</span></div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div class="ticket_list_partial_device_header">@Localize.T("Appointment Date")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info"> <span>@item.CompletionDate.ToString("M/d/yy")</span></div>
+                    </td>
+                    @*<td class="table-body-td-style" valign="top">
+            <div class="ticket_list_partial_device_header">@Localize.T("Install Type")<span>:</span></div>
+            <div class="ticket_list_partial_device_info"> <span>@item.TicketType</span></div>
+        </td>*@
+                    <td class="table-body-td-style" valign="top">
+                        <div class="ticket_list_partial_device_header">@Localize.T("Technician")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info"> <span>@item.EmpUser</span></div>
+                    </td>
+                    <td class="table-body-td-style" valign="top">
+                        <div class="ticket_list_partial_device_header">@Localize.T("SKU")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info"> <span>@item.SoldBy</span></div>
+                    </td>
+                    <td class="table-body-td-style DescriptionBox" valign="top">
+                        <div class="ticket_list_partial_device_header">@Localize.T("Description")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info text_elipsis_inner"> <span title="@item.Description">@item.Description</span></div>
+                        <div class="ticket_list_partial_device_info"><span>SKU: </span><span>@item.SKU</span></div>
+                    </td>
+                    @*<td class="table-body-td-style" valign="top">
+            <div class="ticket_list_partial_device_header">@Localize.T("Quantity")<span>:</span></div>
+            <div class="ticket_list_partial_device_info"> <span>@item.Quantity</span></div>
+        </td>*@
+                    <td class="table-body-td-style Installed" valign="top">
+                        <div class="ticket_list_partial_device_header">@Localize.T("Installed")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info"> <span>@item.Quantity</span></div>
+                    </td>
+                    <td class="table-body-td-style Points" valign="top">
+                        <div class="ticket_list_partial_device_header">@Localize.T("Points")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info"> <span>@string.Format("{0:#,##0.00}", item.TotalPoint)</span></div>
+                    </td>
+
+                    <td class="table-body-td-style" valign="top">
+                        <div class="ticket_list_partial_device_header">@Localize.T("Cost $")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info">
+                            <span>@Localize.T("Company")<span>:</span></span>
+                            @{
+                                if (item.CompanyCost > 0)
+                                {
+                                    <span>$@string.Format("{0:#,##0.00}", item.CompanyCost)</span>
+                                }
+                                else
+                                {
+                                    <span>$0.00</span>
+                                }
+                            }
+                            <br />
+                            <span>@Localize.T("Customer")<span>:</span></span>
+                            @{
+                                if (item.CustomerCost > 0)
+                                {
+                                    <span>$@string.Format("{0:#,##0.00}", item.CustomerCost)</span>
+                                }
+                                else
+                                {
+                                    <span>$0.00</span>
+                                }
+                            }
+
+                        </div>
+                    </td>
+                    @*<td class="table-body-td-style" valign="top">
+            <div class="ticket_list_partial_device_header">@Localize.T("Customer Cost $")<span>:</span></div>
+            <div class="ticket_list_partial_device_info">
+                @{
+                    if (item.CustomerCost > 0)
+                    {
+                        <span>$@string.Format("{0:#,##0.00}", item.CustomerCost)</span>
+                    }
+                    else
+                    {
+                        <span>$0.00</span>
+                    }
+                }
+            </div>
+        </td>*@
+                </tr>
+                                }
+            <tr class="table_total_bg">
+                <td colspan="6">
+                    <b class="float_right">@Localize.T("Total:")</b>
+
+                </td>
+                <td>
+                    <div class="ticket_list_partial_device_header">@Localize.T("Total Installed")<span>:</span></div>
+                    <div class="ticket_list_partial_device_info">
+                        <b title="@Localize.T("Total Installed")">@Model.TotalQuantity</b>
+                    </div>                
+                </td>
+                <td>
+                    <div class="ticket_list_partial_device_header">@Localize.T("Total Point")<span>:</span></div>
+                    <div class="ticket_list_partial_device_info">
+                        <b title="@Localize.T("Total Point")">@Model.PointSum.ToString("#,##0.00")</b>
+                    </div>                
+                </td>
+                <td>
+                    <div>
+                        <div class="ticket_list_partial_device_header">@Localize.T("Total Company Cost")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info">
+                            <b title="@Localize.T("Total Company Cost")">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.TotalCompanyCost.ToString("#,##0.00")</b>
+                        </div>                    
+                    </div>                    
+                    <div>
+                        <div class="ticket_list_partial_device_header">@Localize.T("Total Customer Cost")<span>:</span></div>
+                        <div class="ticket_list_partial_device_info">
+                            <b title="@Localize.T("Total Customer Cost")">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.TotalCustomerCost.ToString("#,##0.00")</b>
+                        </div>                    
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+           
+        </table>
+    </div>
+
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="TicketListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="TicketListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton  @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="TicketListLoad(1, '@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="TicketListLoad(2,'@(ViewBag.order)')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="TicketListLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="TicketListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="TicketListLoad(1,'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="TicketListLoad(2,'@(ViewBag.order)')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="TicketListLoad(3,'@(ViewBag.order)')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="TicketListLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber-2),'@(ViewBag.order)')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="TicketListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="TicketListLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber + 2),'@(ViewBag.order)')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber - 1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="TicketListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TicketListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TicketListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>

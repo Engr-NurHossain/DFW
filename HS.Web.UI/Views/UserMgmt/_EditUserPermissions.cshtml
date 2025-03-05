@@ -1,0 +1,119 @@
+﻿@*@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.EidtUserPermission
+<link href="~/Content/Css/UserManagement/EditUserPermissions.css" rel="stylesheet" />
+
+<script>
+    var UpdateUserPermissions = function () {
+        var uname = $("#btn-update-permission").attr("id-val");
+        var selectedID = [];
+        var checkboxs = $('.checkbox-custom');
+        for (var i = 0; i < checkboxs.length; i++) {
+            if ($(checkboxs[i]).is(":checked")) {
+                selectedID.push(parseInt($(checkboxs[i]).attr('idval')));
+            }
+        }
+        var url = "/UserMgmt/EditUserPermissions/";
+        var param = JSON.stringify({
+            username: uname,
+            plist: selectedID
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result == true) {
+                    var userid = data.userid;
+                    OpenConfirmationMessage("Success", "User permissions updated successfully");
+                    LoadUserInfo(userid, true);
+                    OpenRightToLeftLgModal();
+                }
+                else {
+
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    var PermissionListTreeViewDynamicHeight = function () {
+        console.log("no of call");
+        var windowsize = $(window).height();
+        var footerHeight = $(".footer-section").height() + 54;
+        var height = windowsize - footerHeight;
+        $(".PermissionListTreeView").height(height);
+    }
+    $(document).ready(function () {
+        PermissionListTreeViewDynamicHeight();
+        $(window).resize(function () {
+            PermissionListTreeViewDynamicHeight();
+        });
+
+        $("#btn-update-permission").click(function () {
+            UpdateUserPermissions();
+        });
+    });
+    $(document).on('click', '.tree label', function (e) {
+        $(this).next('ul').fadeToggle();
+        e.stopPropagation();
+    });
+    $(document).on('change', '.tree input[type=checkbox]', function (e) {
+        $(this).siblings('ul').find("input[type='checkbox']").prop('checked', this.checked);
+        $(this).parentsUntil('.tree').children("input[type='checkbox']").prop('checked', this.checked);
+        e.stopPropagation();
+    });
+</script>
+
+<div class="ChooseUserTypeHeader">
+    @Localize.T("Choose permission from list")
+</div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="">   
+
+                @foreach (var roles in ViewBag.DistincRoles)
+                {
+                int Count = Model.CustomUserPermissionList.Where(s => s.RoleName == roles).Count();
+                    <ul class="tree">
+                        <li class="has">
+                            
+                            <input class="checkbox-custom" @(roles==ViewBag.UserRole? "checked":"") type="checkbox" name="domain[]">
+                            <label class="roles">@roles<span class="total"> (@Count)</span></label>
+                            <ul class="subdomain">
+                                @foreach (var permissions in Model.CustomUserPermissionList)
+                                {
+                                    if (permissions.RoleName == roles)
+                                    {
+                                        <li class="">
+                                            <input class="checkbox-custom" @(roles==ViewBag.UserRole? "checked":"") type="checkbox" name="subdomain[]" idval="@permissions.PermissionId">
+                                            <label class="permissionrules">@permissions.PermissionName</label>
+                                        </li>
+                                    }
+                                }
+                            </ul>
+                        </li>
+                    </ul>
+                }
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="footer-section">
+    <footer class="footer">
+        <div class="SaveCancelDiv">
+            <button id="btn-update-permission" id-val="@Model.UserName" type="button" class="btn"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save Permissions")</button>
+        </div>
+    </footer>
+</section>*@

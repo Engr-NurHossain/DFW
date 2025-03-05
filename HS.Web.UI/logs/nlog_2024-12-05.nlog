@@ -1,0 +1,143 @@
+2024-12-05 09:48:59.3836|ERROR|HS.Framework.DataAccess.BaseDataAccess| declare @pagestart int
+                                    declare @pageend int
+                                    declare @pageno int
+                                    declare @pagesize int
+                                    set @pageno = 1
+                                    set @pagesize = 100
+
+
+                                    set @pagestart=(@pageno-1)* @pagesize 
+                                    set @pageend = @pagesize
+
+                                    SELECT 
+                                        _eqp.*,
+                                        _eqpClass.Name as EquipmentClass,
+	                                    ((Select ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add' And invinner.LocationId = '22222222-2222-2222-2222-222222222222')- (Select ISNULL(SUM(invinner2.Quantity),0) from InventoryWarehouse invinner2 where invinner2.EquipmentId=_eqp.EquipmentId and Type='Release' And invinner2.LocationId = '22222222-2222-2222-2222-222222222222')
+                                            	-(select ISNull(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId =
+	                                       '22222222-2222-2222-2222-222222222222' And b.IsApprove = 0 and b.IsDecline = 0)
+                                        ) as Quantity,
+                                         sup.CompanyName as SupplierName,
+                                          _eqpType.Name as Category,
+										  --_eqp.SupplierCost as VendorCost,
+                                          eqpv.Cost as VendorCost,
+										  manu.Name as ManufacturerName,
+                                          
+                                          (SELECT 
+                                          ISNULL(SUM(Quantity),0) AS TotalQty
+                                          FROM
+                                          (SELECT 
+                                          ISNULL(SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END),0) AS Quantity
+                                          FROM 
+                                          InventoryTech
+                                          WHERE 
+                                          EquipmentId = _eqp.EquipmentId AND
+										  TechnicianId NOT IN 
+										  ('00000000-0000-0000-0000-000000000000','22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                                     '22222222-2222-2222-2222-222222222233','22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222221')
+                                          GROUP BY 
+                                          TechnicianId										  
+                                          HAVING 
+                                          SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END) >= 0) AS Qty)-
+										 (select ISNULL(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId NOT IN
+										 ('00000000-0000-0000-0000-000000000000','22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                                     '22222222-2222-2222-2222-222222222233','22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222221') And b.IsApprove = 0 and b.IsDecline = 0)
+										  as technician,
+                                        
+                                        (select AVG(newtab.UnitPrice) from
+                                        (select TOP 3 iwin.*, pod.UnitPrice from InventoryWarehouse iwin left join PurchaseOrderDetail pod on pod.PurchaseOrderId=iwin.PurchaseOrderId
+                                        where iwin.PurchaseOrderId != '' and (UnitPrice!=0 or UnitPrice is not null) AND iwin.EquipmentId=_eqp.EquipmentId
+                                        AND pod.EquipmentId=_eqp.EquipmentId order by LastUpdatedDate desc)
+                                        newtab group by EquipmentId) as FIFO,
+                                        ([dbo].GetAssignedInventoryTechQuantityCount(null,_eqp.EquipmentId,1)) as InQueue,
+                                   ((select ISNULL(SUM(invinner.Quantity),0) from [InventoryWarehouse] invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add'  and invinner.LocationId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                              '22222222-2222-2222-2222-222222222233'))
+
+								  -
+
+                                    (select ISNULL(sum(Quantity),0) from dbo.InventoryWarehouse b where b.EquipmentId  = _eqp.EquipmentId  and Type='Release'
+			                        AND b.LocationId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                               '22222222-2222-2222-2222-222222222233'))
+								   -
+
+
+
+                                   (select ISNULL(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                               '22222222-2222-2222-2222-222222222233') And b.IsApprove = 0 and b.IsDecline = 0)) as LocQoH,
+										  ISNULL((((Select ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add')- (Select ISNULL(SUM(invinner2.Quantity),0) from InventoryWarehouse invinner2 where invinner2.EquipmentId=_eqp.EquipmentId and Type='Release'))
+										  +
+										  (select ISNULL(SUM(tech.Quantity), 0) from InventoryTech tech where _eqp.EquipmentId = tech.EquipmentId and tech.[Type] = 'Add'
+                                          AND tech.TechnicianId Not IN('22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                                     '22222222-2222-2222-2222-222222222233')  
+                                          ) 
+                                       - (select ISNULL(SUM(tech.Quantity), 0) from InventoryTech tech where _eqp.EquipmentId = tech.EquipmentId and tech.[Type] = 'Release'
+                                    AND tech.TechnicianId Not IN('22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                               '22222222-2222-2222-2222-222222222233')
+                                        )), 0) as TotalEq
+                                          
+                                          INTO #CustomerData
+                                          FROM Equipment _eqp
+                                            LEFT JOIN EquipmentClass _eqpClass
+		                                    ON _eqp.EquipmentClassId = _eqpClass.Id and _eqp.CompanyId = _eqpClass.CompanyId
+                                            left JOIN EquipmentVendor eqpv
+											ON eqpv.EquipmentId = _eqp.EquipmentId
+                                            and eqpv.IsPrimary=1
+											 LEFT JOIN EquipmentType _eqpType
+		                                    ON _eqp.EquipmentTypeId = _eqpType.Id and _eqp.CompanyId = _eqpType.CompanyId
+                                            --left join Supplier sup on sup.Id = _eqp.SupplierId
+                                            left join Supplier sup on sup.SupplierId = eqpv.SupplierId
+											left join Manufacturer manu
+											ON manu.Id = _eqp.ManufacturerId
+		                                    WHERE 
+			                                    _eqp.CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba'
+                                                and _eqp.IsActive in (1)
+                                                AND _eqp.EquipmentClassId = '1'
+                                                
+                                                
+                                
+                                           
+                                           SELECT 
+                                           Id,EquipmentId,CompanyId,Name,SKU,ManufacturerId,SupplierId,EquipmentTypeId,
+										   EquipmentClassId,Point,SupplierCost,Cost,Retail,EqOrder,Service,AsOfDate,reorderpoint,
+										   IsActive,Comments,CreatedDate,LastUpdatedDate,LastUpdatedBy,POOrder,IsKit,RepCost,RackNo,Location,
+										   Type,Model,Finish,Capacity,EquipmentPriceIsCharged,ModelNumber,Barcode,Tag,Note,IsWarrenty,IsARBEnabled,
+										   IsUpsold,IsTaxable,OverheadRate,ProfitRate,Unit,TaggedEmail,IsIncludeEstimate,LaborPrice,WarehouseReorder,
+										   EquipmentClass,Quantity,SupplierName,Category,VendorCost,ManufacturerName,technician,FIFO,InQueue,LocQoH
+										   ,TotalEq = ISNULL(Quantity,0) + ISNULL(technician,0) + ISNULL(LocQoH,0) + ISNULL(InQueue,0)
+                                           INTO #CustomerFilterData
+                                           FROM #CustomerData
+                                           
+                                
+	                                       SELECT TOP (@pagesize)
+                                           *
+                                           FROM #CustomerFilterData _cfd
+                                           where   Id NOT IN(Select TOP (@pagestart)  Id from #CustomerData _cd order by Id desc)
+                                           order by Id desc
+                                           select count(*) [TotalCount]
+                                           from #CustomerFilterData
+
+                                           DROP TABLE #CustomerData
+                                           DROP TABLE #CustomerFilterData
+|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:1575092d-c025-412e-90f2-a9bf24323315
+Error Number:-2,State:0,Class:11

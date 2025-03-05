@@ -1,0 +1,198 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<script>
+    var pagenumber = '@ViewBag.PageNumber';
+    var StartDateDatepickerPayrollBrinks;
+    var EndDateDatepickerPayrollBrinks;
+    var NavigateSalesPayListing = function (pagenumber,order) {
+        var StartDate = $("#WeeklyStartDatePayrollBrinks").val();
+        var EndDate = $("#WeeklyEndDatePayrollBrinks").val();
+        var searchText = $(".SalesPaySearchText").val();
+        var salesperson = encodeURI($("#sales_person").val());
+        var PayrollBrinksStatus = encodeURI($("#PayrollBrinksStatus").val());
+        var PayrollBrinksFunding = encodeURI($("#PayrollBrinksFunding").val());
+        $("#LoadSalesPayReport").html(LoaderDom);
+        $("#LoadSalesPayReport").load(domainurl + "/Reports/SalesPayPartial", {
+            PageNo: pagenumber,
+            SearchText: searchText,
+            StartDate: StartDate,
+            EndDate: EndDate,
+            SalesPerson:salesperson,
+            GetReport: false,
+            PayrollBrinksStatus: PayrollBrinksStatus,
+            PayrollBrinksFunding:PayrollBrinksFunding
+        });
+    }
+    var DownLoadNavigateSalesPayListing = function (pagenumber) {
+       var StartDate = $("#WeeklyStartDatePayrollBrinks").val();
+        var EndDate = $("#WeeklyEndDatePayrollBrinks").val();
+        var searchText = $(".SalesPaySearchText").val();
+        var salesperson = encodeURI($("#sales_person").val());
+        var PayrollBrinksStatus = encodeURI($("#PayrollBrinksStatus").val());
+        var PayrollBrinksFunding = encodeURI($("#PayrollBrinksFunding").val());
+
+        location.href = domainurl + "/Reports/SalesPayPartial/?GetReport=true&PageNo=1&SearchText=" + searchText + "&StartDate=" + StartDate + "&EndDate=" + EndDate + "&SalesPerson=" + salesperson + "&PayrollBrinksStatus=" + PayrollBrinksStatus + "&PayrollBrinksFunding=" + PayrollBrinksFunding ;
+    }
+    var MakeBrinksFundConfirm = function () {
+        var url = "/Reports/MakeBrinksFund";
+
+        var StartDate = $("#WeeklyStartDatePayrollBrinks").val();
+        var EndDate = $("#WeeklyEndDatePayrollBrinks").val();
+        var searchText = $(".SalesPaySearchText").val();
+        var salesperson = encodeURI($("#sales_person").val());
+        var PayrollBrinksStatus = encodeURI($("#PayrollBrinksStatus").val());
+        var PayrollBrinksFunding = encodeURI($("#PayrollBrinksFunding").val());
+        var SalesPersonList = [];
+        $(".ChkBrinksFunding:checked").each(function () {
+            SalesPersonList.push($(this).attr('data-salespersonid'));
+        });
+        var param = JSON.stringify({
+            SalesPerson: SalesPersonList,
+            SearchText: searchText,
+            StartDate: StartDate,
+            EndDate: EndDate,
+            PayrollBrinksStatus: PayrollBrinksStatus,
+            PayrollBrinksFunding:PayrollBrinksFunding
+        });
+
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result == true) {
+                    OpenSuccessMessageNew("", "", function () {
+                        NavigateSalesPayListing(1);
+                    })
+                }
+                else {
+                    OpenErrorMessageNew("", "", function () {
+                        NavigateSalesPayListing(1);
+                    });
+                }
+
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+     var MakeBrinksFund = function () {
+        if ($(".ChkBrinksFunding:checked").length == 0) {
+            OpenErrorMessageNew("", "You need to select at least one.")
+        }
+        else {
+            OpenConfirmationMessageNew("", "Are you sure you want to fund?", function () {
+                MakeBrinksFundConfirm();
+            });
+        }
+    }
+    $(document).ready(function () {
+         StartDateDatepickerPayrollBrinks = new Pikaday({
+            field: $('#WeeklyStartDatePayrollBrinks')[0],
+            format: 'MM/DD/YYYY'
+        });
+        EndDateDatepickerPayrollBrinks = new Pikaday({
+            field: $('#WeeklyEndDatePayrollBrinks')[0],
+            format: 'MM/DD/YYYY'
+        });
+        NavigateSalesPayListing(1);
+        $("#Salesbtnsearchtext").click(function () {
+            setTimeout(function () {
+                NavigateSalesPayListing(1);
+            }, 50);
+        })
+        $("#sales_person").selectpicker('val', '');
+        //$("#PayrollBrinksStatus").selectpicker('val', '');
+        $("#btnDownloadPayrollsalesPay_sales").click(function () {
+            DownLoadNavigateSalesPayListing(1);
+        });
+        $(".DateFilterContents .btn-apply-Datefilter").click(function () {
+            NavigateSalesPayListing(1);
+        });
+    });
+</script>
+
+<style>
+    #btnDownloadPayrollsalesPay_sales,
+    #BtnBrinksFund {
+        float: right;
+        background-color: #2ca01c;
+        color: white;
+        margin-left: 10px;
+    }
+
+    .payroll_funding_searchbar .SalesPaySearchText,
+    .payroll_funding_searchbar #PayrollStartDate,
+    .payroll_funding_searchbar #PayrollEndDate,
+    .payroll_funding_searchbar .Payroll_SalesPerson_div,
+    .payroll_funding_searchbar .input-group {
+        width: 140px !important;
+        float: left;
+        margin-right: -3px;
+    }
+</style>
+<link href="~/Content/Css/Report/PayrollReport.css" rel="stylesheet" />
+<div class="payroll_list_container payroll_container_main">
+    <div class="payroll_sales_report_container">
+        <div class="PayrollSales_partial_search_div payroll_funding_searchbar">
+            <span id="PayrollStartDate">
+                <input type="text" placeholder="Start Date" autocomplete="off" id="WeeklyStartDatePayrollBrinks" class="form-control border-radius-0" />
+            </span>
+            <span id="PayrollEndDate">
+                <input type="text" placeholder="End Date" autocomplete="off" id="WeeklyEndDatePayrollBrinks" class="form-control border-radius-0" />
+            </span>
+            <input class="form-control SalesPaySearchText" type="text" placeholder="Search" />
+            <div class="Payroll_SalesPerson_div">
+                <select class="form-control" id="PayrollBrinksStatus">
+                    @if (ViewBag.PayrollBrinksStatus != null)
+                    {
+                        foreach (var BrinksStatusItem in (List<HS.Entities.Lookup>)ViewBag.PayrollBrinksStatus)
+                        {
+                            <option @(BrinksStatusItem.IsDefaultItem == true ? "selected" : "") value="@BrinksStatusItem.DataValue">@BrinksStatusItem.DisplayText</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="Payroll_SalesPerson_div">
+                <select class="form-control" id="PayrollBrinksFunding">
+                    @if (ViewBag.PayrollBrinksFunding != null)
+                    {
+                        foreach (var BrinksFundingItem in (List<HS.Entities.Lookup>)ViewBag.PayrollBrinksFunding)
+                        {
+                            <option @(BrinksFundingItem.IsDefaultItem == true ? "selected" : "") value="@BrinksFundingItem.DataValue">@BrinksFundingItem.DisplayText</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="input-group add-on">
+
+                @Html.DropDownList("sales_person", ViewBag.SalesPersonList as List<SelectListItem>, new { @class = "form-control border_radius_0 TicketFor_search Payroll_SalesPerson", @multiple = "multiple", @title = "Select Sales Person" })
+
+                <div class="input-group-btn">
+                    <button class="btn search_Sales_btn green_button" id="Salesbtnsearchtext" title="Search"><i class="glyphicon glyphicon-search"></i></button>
+                </div>
+            </div>
+            <button title="Download" class="btn btnBI" id="btnDownloadPayrollsalesPay_sales"><i class="fa fa-download" aria-hidden="true"></i></button>
+            <button id="BtnBrinksFund" onclick="MakeBrinksFund()" class="btn green_button">Fund</button>
+        </div>
+        <div class="invoices-tabs">
+            <div class="nav-detail-contents">
+                <div class="tab-content">
+                    <div id="LoadSalesPayReport" class="tab-pane active">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

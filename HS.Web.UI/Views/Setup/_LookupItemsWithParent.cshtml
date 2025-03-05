@@ -1,0 +1,239 @@
+﻿@model List<HS.Entities.Lookup>
+@{
+    Layout = null;
+    var LookUpParent = Model.Where(m => m.ParentDataKey == "Parent").ToList();
+    var LookUpTop = Model.Where(m => m.DataValue == "-1").ToList();
+    var LookUpOther = Model.Where(m => string.IsNullOrEmpty(m.ParentDataKey) && m.DataValue != "-1").ToList();
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<script src="~/Content/Js/LookupItem/lookupitemwithparent.js"></script>
+<script>
+    var MaxDataOrder = '@ViewBag.MaxDataOrder';
+</script>
+<style>
+    .lookup_item_container {
+        border: 1px solid #ccc;
+        padding: 10px;
+        height: 550px;
+        position: relative;
+        overflow-y: scroll;
+        overflow-x: hidden;
+    }
+
+    .LookupItemsTable {
+        width: 100%;
+    }
+
+        .LookupItemsTable thead tr th {
+            top: -10px;
+        }
+
+        .LookupItemsTable thead {
+            border-bottom: 2px solid #ccc;
+        }
+
+        .LookupItemsTable tbody tr {
+            height: 55px;
+            border-bottom: 1px solid #ccc;
+        }
+
+            .LookupItemsTable tbody tr td {
+                text-align: center;
+            }
+
+                .LookupItemsTable tbody tr td:nth-child(1) {
+                    text-align: left;
+                    padding-left: 10px;
+                }
+
+        .LookupItemsTable thead th {
+            padding: 10px 0px;
+            text-align: center;
+        }
+
+        .LookupItemsTable tbody tr:nth-child(odd) {
+            background-color: #f4f5f8;
+        }
+
+    .NewLookupDiv {
+        margin-top: 10px;
+    }
+
+    .col_10p {
+        width: 10%;
+    }
+
+    .col_20p {
+        width: 20%;
+    }
+
+    .col_30p {
+        width: 30%;
+    }
+
+    .ChildDataValue {
+        text-align: left !important;
+        padding-left: 40px;
+    }
+
+    .ParentDataValue {
+        text-align: left !important;
+        padding-left: 20px;
+        font-weight: bold;
+    }
+</style>
+<div class="lookup_item_container">
+
+    <table class="LookupItemsTable">
+        <thead>
+            <tr>
+                <th class="hidden">@Localize.T("Data Key")</th>
+                <th class="col_30p">@Localize.T("Value")</th>
+                <th class="col_30p">@Localize.T("Display Text")</th>
+                <th class="col_10p">@Localize.T("Active")</th>
+                @*<th class="col_10p">@Localize.T("Order")</th>*@
+                @if (ViewBag.DataKey == "TicketType")
+                {
+                    <th class="DisplayColor">@Localize.T("Color")</th>
+                    <th class="DisplayColor">@Localize.T("Calendar")</th>
+                }
+                else
+                {
+                    <th class="DisplayColor">@Localize.T("Secondary Text")</th>
+                }
+                <th class="col_20p">@Localize.T("Actions")</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in LookUpTop)
+            {
+                <tr data-id="@item.Id" class='LookupItem'>
+                    <td class="DataKey hidden">@item.DataKey</td>
+                    <td class="DataValue ParentDataValue">@item.DataValue</td>
+                    <td class="DisplayText"><input type="text" value="@item.DisplayText" /></td>
+                    <td>
+                        <input class="IsActive" type="checkbox" @((item.IsActive.HasValue && item.IsActive.Value) ? "checked" : "") />
+                    </td>
+                    <td class="DataOrder hidden">@item.DataOrder</td>
+                    @if (item.DataKey == "TicketType")
+                    {
+                        <td class="DisplayColor">
+                            <input type="text" class="jscolor" id="ColorDisplay" value="@item.AlterDisplayText" />
+                        </td>
+                        <td><input class="AlterIsActive" type="checkbox" @((!string.IsNullOrWhiteSpace(item.AlterDisplayText1) && Convert.ToBoolean(item.AlterDisplayText1) == true) ? "checked" : "") /></td>
+                    }
+                    else
+                    {
+                        <td class="DisplayColor"><input type="hidden" value="@item.AlterDisplayText" />@item.AlterDisplayText</td>
+                    }
+                    <td>
+                        <a data-toggle="tooltip" title="Delete" onclick='DeleteLookup(@item.Id,"@item.DataKey", this)'><i class="fa fa-trash-o"></i></a>
+                        <a class="icon_green" data-toggle="tooltip" title="Update" onclick='UpdateLookup(this)'><i class="fa fa-floppy-o"></i></a>
+                    </td>
+                </tr>
+            }
+            @foreach (var item in LookUpParent)
+            {
+                var LookUpChild = Model.Where(m => m.ParentDataKey == item.DataValue).ToList();
+                <tr data-id="@item.Id" class='LookupItem'>
+                    <td class="DataKey hidden">@item.DataKey</td>
+                    <td class="DataValue ParentDataValue">@item.DataValue</td>
+                    <td class="DisplayText"><input type="text" value="@item.DisplayText" /></td>
+                    <td>
+                        <input class="IsActive" type="checkbox" @((item.IsActive.HasValue && item.IsActive.Value) ? "checked" : "") />
+                    </td>
+                    <td class="DataOrder hidden">@item.DataOrder</td>
+                    @if (item.DataKey == "TicketType")
+                    {
+                        <td class="DisplayColor">
+                            <input type="text" class="jscolor" id="ColorDisplay" value="@item.AlterDisplayText" />
+                        </td>
+                        <td><input class="AlterIsActive" type="checkbox" @((!string.IsNullOrWhiteSpace(item.AlterDisplayText1) && Convert.ToBoolean(item.AlterDisplayText1) == true) ? "checked" : "") /></td>
+                    }
+                    else
+                    {
+                        <td class="DisplayColor"><input type="hidden" value="@item.AlterDisplayText" />@item.AlterDisplayText</td>
+                    }
+                    <td>
+                        <a data-toggle="tooltip" title="Delete" onclick='DeleteLookupParent(@item.Id,"@item.DataKey", this)'><i class="fa fa-trash-o"></i></a>
+                        <a class="icon_green" data-toggle="tooltip" title="Update" onclick='UpdateLookup(this)'><i class="fa fa-floppy-o"></i></a>
+                    </td>
+                </tr>
+                foreach (var itemInner in LookUpChild)
+                {
+                    <tr data-id="@itemInner.Id" class='LookupItem'>
+                        <td class="DataKey hidden">@itemInner.DataKey</td>
+                        <td class="DataValue ChildDataValue"><i class="fa fa-caret-right"></i> @itemInner.DataValue</td>
+                        <td class="DisplayText"><input type="text" value="@itemInner.DisplayText" /></td>
+                        <td>
+                            <input class="IsActive" type="checkbox" @((itemInner.IsActive.HasValue && itemInner.IsActive.Value) ? "checked" : "") />
+                        </td>
+                        <td class="DataOrder hidden">@itemInner.DataOrder</td>
+                        @if (itemInner.DataKey == "TicketType")
+                        {
+                            <td class="DisplayColor">
+                                <input type="text" class="jscolor" id="ColorDisplay" value="@itemInner.AlterDisplayText" />
+                            </td>
+                            <td><input class="AlterIsActive" type="checkbox" @((!string.IsNullOrWhiteSpace(item.AlterDisplayText1) && Convert.ToBoolean(item.AlterDisplayText1) == true) ? "checked" : "") /></td>
+                        }
+                        else
+                        {
+                            <td class="DisplayColor"><input type="hidden" value="@itemInner.AlterDisplayText" />@itemInner.AlterDisplayText</td>
+                        }
+                        <td>
+                            <a data-toggle="tooltip" title="Delete" onclick='DeleteLookup(@itemInner.Id,"@itemInner.DataKey", this)'><i class="fa fa-trash-o"></i></a>
+                            <a class="icon_green" data-toggle="tooltip" title="Update" onclick='UpdateLookup(this)'><i class="fa fa-floppy-o"></i></a>
+                        </td>
+                    </tr>
+                }
+            }
+            @foreach (var item in LookUpOther)
+            {
+                <tr data-id="@item.Id" class='LookupItem'>
+                    <td class="DataKey hidden">@item.DataKey</td>
+                    <td class="DataValue ParentDataValue">@item.DataValue</td>
+                    <td class="DisplayText"><input type="text" value="@item.DisplayText" /></td>
+                    <td>
+                        <input class="IsActive" type="checkbox" @((item.IsActive.HasValue && item.IsActive.Value) ? "checked" : "") />
+                    </td>
+                    <td class="DataOrder hidden">@item.DataOrder</td>
+                    @if (item.DataKey == "TicketType")
+                    {
+                        <td class="DisplayColor">
+                            <input type="text" class="jscolor" id="ColorDisplay" value="@item.AlterDisplayText" />
+                        </td>
+                        <td><input class="AlterIsActive" type="checkbox" @((!string.IsNullOrWhiteSpace(item.AlterDisplayText1) && Convert.ToBoolean(item.AlterDisplayText1) == true) ? "checked" : "") /></td>
+                    }
+                    else
+                    {
+                        <td class="DisplayColor"><input type="hidden" value="@item.AlterDisplayText" />@item.AlterDisplayText</td>
+                    }
+                    <td>
+                        <a data-toggle="tooltip" title="Delete" onclick='DeleteLookup(@item.Id,"@item.DataKey", this)'><i class="fa fa-trash-o"></i></a>
+                        <a class="icon_green" data-toggle="tooltip" title="Update" onclick='UpdateLookup(this)'><i class="fa fa-floppy-o"></i></a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="row NewLookupDiv">
+        <div class="col-md-3">
+            @Html.DropDownList("ParentDataKey", ViewBag.ParentList as List<SelectListItem>, new { @class = "form-control" })
+        </div>
+        <div class="col-md-3">
+            <input datarequired="true" type="text" name="NewDataValue" id="NewDataValue" placeholder="Data Value" />
+        </div>
+        <div class="col-md-3">
+            <input datarequired="true" type="text" class="NewDisplayText" placeholder="Display Text" />
+        </div>
+        <div class="col-md-1">
+            <label><input type="checkbox" checked id="NewIsActive" /> @Localize.T("Active")</label>
+            <label><input type="checkbox" id="IsParent" /> @Localize.T("Parent")</label>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-default" id="AddNewLookup" style="float:right;"><i class="fa fa-save"></i> @Localize.T("Add")</button>
+        </div>
+    </div>
+</div>
+<script src="~/Content/Js/jscolor.js"></script>

@@ -1,0 +1,284 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Css/Pagination.css" rel="stylesheet" />
+<style>
+    #tblMismatcheport tbody tr td {
+        padding: 10px;
+    }
+      #tblMismatcheport thead tr th,
+     #tblMismatcheport tbody tr td {
+        border: 1px solid #ccc;
+    }
+</style>
+<script>
+    var OpenInvoice = function(id){
+        
+            OpenTopToBottomModal(domainurl + "/Invoice/AddInvoice/?InvoiceId=" + id);
+        
+    }
+    var ConvertToSolved = function (Id) {
+        OpenConfirmationMessageNew("", "Do You Want To Rsolved.", function () {
+            var url = "/Sales/ConvertUnResolvedToResolved";
+            var param = JSON.stringify({
+                Id: Id,
+                IsResolved: $('#IsResolvedRMR_'+Id).is(':checked'),
+
+            })
+
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    window.location.reload();
+                },
+
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            })
+        }, function () {
+            $('#IsResolvedRMR_'+Id).prop("checked", false)
+                
+        });
+    }
+
+    $(document).ready(function () {
+
+    });
+</script>
+
+<table id="tblMismatcheport" class="purchase_order_list_partial_table">
+    <thead class="table-head-border">
+        <tr>
+
+            <th class="th_timeclock">
+                <div> @Localize.T("Customer Name")</div>
+                <div><i data-val="ascending/pono"></i><i data-val="descending/pono"></i></div>
+            </th>
+
+
+            <th class="th_timeclock">
+                <div> @Localize.T("Transaction Id")</div>
+                <div><i data-val="ascending/cby"></i><i data-val="descending/cby"></i></div>
+            </th>
+
+
+            <th class="th_timeclock">
+                <div> @Localize.T("Invoice Id")</div>
+                <div><i data-val="ascending/cdate"></i><i data-val="descending/cdate"></i></div>
+            </th>
+
+
+            <th class="th_timeclock">
+                <div>@Localize.T("Billing Amount")</div>
+                <div><i data-val="ascending/status"></i><i data-val="descending/status"></i></div>
+            </th>
+
+
+            <th class="th_timeclock">
+                <div>@Localize.T("Charged Amount By Gateway")</div>
+                <div><i data-val="ascending/status"></i><i data-val="descending/status"></i></div>
+            </th>
+
+            <th class="th_timeclock">
+                <div>@Localize.T("IsResolved")</div>
+                <div><i data-val="ascending/status"></i><i data-val="descending/status"></i></div>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.RMRBillingMismatchList)
+        {
+            <tr>
+                <td class="table-body-td-style">
+                    <div>@Localize.T("Customer Name") <span>:</span></div>
+                    <div> <a class="cus-anchor" href="/Customer/CustomerDetail/?id=@item.CustomerIntId" target="_blank">@item.CustomerName</a></div>
+                </td>
+
+
+                <td class="table-body-td-style">
+                    <div>@Localize.T("Transaction Id") <span>:</span></div>
+                    <div>@item.TransactionId</div>
+                </td>
+
+
+                <td class="table-body-td-style">
+                    <div>@Localize.T("Invoice Id") <span>:</span></div>
+                    <div class="booking_list_partial_device_info"> <a style="cursor:pointer;color:#2ca01c;" onclick="OpenInvoice('@item.InvoiceId')">@item.InvoiceId</a></div>
+                    @*<div>@item.InvoiceId</div>*@
+                </td>
+
+
+                <td class="table-body-td-style">
+                    <div>@Localize.T("Billing Amount") <span>:</span></div>
+                    <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.BillingAmount.ToString("#,##0.00")</div>
+                </td>
+
+
+                <td class="table-body-td-style">
+                    <div>@Localize.T("Charged Amount By Gateway") <span>:</span></div>
+                    <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.ChargedAmountByGateway.ToString("#,##0.00")</div>
+                </td>
+
+                <td class="table-body-td-style">
+                    <div class="tpcr_mb_head">@Localize.T("IsResolved") <span>:</span></div>
+                    <div class="tpcr_mb_info">
+                        <input type="checkbox" id="IsResolvedRMR_@item.Id" onclick="ConvertToSolved('@item.Id')" data-id="@item.Id" />
+                    </div>
+                </td>
+            </tr>
+        }
+        <tr class="table_total_bg">
+            <td class="table-body-td-style" colspan="3">
+                <b class="float_right">
+                    @Localize.T("Total:")
+                </b>
+            </td>
+            <td class="table-body-td-style" colspan="4">
+                <div class="tpcr_mb_head">@Localize.T("Total Billing Amount") <span>:</span></div>
+                <div class="tpcr_mb_info">
+                    <b title="@Localize.T("Total Billing Amount")">$@Model.TotalAmountByPage.ToString("#,##0.00")</b>
+                </div>            
+            </td>
+        </tr>
+    </tbody>
+</table>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber), @(ViewBag.order))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="UnResolvedRecurringBillingMismatchReportLoad(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="UnResolvedRecurringBillingMismatchReportLoad(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="UnResolvedRecurringBillingMismatchReportLoad(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="UnResolvedRecurringBillingMismatchReportLoad(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="UnResolvedRecurringBillingMismatchReportLoad(3, @(ViewBag.order))">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber-2), @(ViewBag.order))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="UnResolvedRecurringBillingMismatchReportLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber + 2), @(ViewBag.order))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber - 1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="UnResolvedRecurringBillingMismatchReportLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+

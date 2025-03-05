@@ -1,0 +1,446 @@
+﻿@*@model List<HS.Entities.Equipment>*@
+
+@model HS.Entities.EquipmentListWithCountModel 
+    @using AppConfig = HS.Framework.Utils.AppConfig; 
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using UserTypes = HS.Web.UI.Helper.LabelHelper.UserTypes
+
+
+@{
+    int Count = 1;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+
+}
+
+@Styles.Render("~/styles/EquipmentList")
+
+<link href="~/Content/Css/Equipment/FilteredEquipmentList.css" rel="stylesheet" />
+<link href="~/Content/Css/Equipment/FilteredEquipmentListCustom.css" rel="stylesheet" />
+<script src="~/Content/Js/FilteredEquipmentList/FilteredEquipmentList.js"></script>
+<link href="~/Content/Css/Inventory/FilteredServiceList.css" rel="stylesheet" />
+<script>
+    var table = $("#tblserviceeq_filter").DataTable({
+        "ordering": false,
+        searching: false, paging: false, info: false
+    })
+    var ManageService = function (packageId) {
+        OpenTopToBottomModal(domainurl + "/SmartPackageSetup/SmartServiceView?id=" + packageId);
+    }
+    var pageno = '@ViewBag.PageNumber';
+    $(document).ready(function () {
+        var customerreportpopwinowwith = 600;
+        var customerreportpopwinowheight = 510;
+        var customerprintpopwinowwith = 920;
+        var customerprintpopwinowheight = 600;
+
+        if (Device.MobileGadget()) {
+            customerreportpopwinowwith = window.innerWidth;
+            customerreportpopwinowheight = window.innerHeight;
+            customerprintpopwinowwith = window.innerWidth;
+            customerprintpopwinowheight = window.innerHeight;
+        }
+        var idlist = [{ id: ".ExportEquipmentReport", type: 'iframe', width: customerreportpopwinowwith, height: customerreportpopwinowheight }];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+
+        $('.toggle-demo').bootstrapToggle();
+        $(".toggle-demo").on("change", function () {
+            var pid = $(this).attr("idval");
+
+            $.ajax({
+                url: "@(AppConfig.DomainSitePath)/Inventory/ServiceStatusChange",
+                data: { id: pid },
+                type: "Post",
+                dataType: "Json"
+            }).done(function () {
+                   InventorySearchKeyUp(1);
+            });
+        });
+
+
+
+        $("#EquipmentReport").click(function () {
+            var selectedID = [];
+            var checkboxs = $('.Export_excel_equipment');
+            for (var i = 0; i < checkboxs.length; i++) {
+                selectedID.push(parseInt($(checkboxs[i]).attr('data-id')));
+            }
+            var ColumnName = "";
+            $('.eq').each(function () {
+                if ($(this).attr('data-info') != "" && $(this).attr('data-info') != undefined && $(this).attr('data-info') != null) {
+                    ColumnName += $(this).attr('data-info').trim() + "," + $(this).text().trim() + "-";
+                }
+            });
+            $(".ExportEquipmentReport").attr('href', domainurl + "/Reports/ExportConfirm/?ColumnName=" + ColumnName + "&Ids=" + selectedID + "&ReportFor=Equipment");
+            $(".ExportEquipmentReport").click();
+        });
+        $(".icon_sort_eq").click(function () {
+            var orderval = $(this).attr('data-val');
+            $("#SortingVal").val(orderval);
+            InventorySearchKeyUp(pageno, orderval);
+        })
+    });
+</script>
+<div class="custom-table fql_container">
+    <table class="display service_list_table" id="tblserviceeq_filter">
+        <thead class="table-head-border">
+            <tr>
+
+                @foreach (var item in (List<HS.Entities.GridSetting>)ViewBag.InventoryGridSettings)
+                {
+                    if (item.SelectedColumn.Trim() == "Category")
+                    {
+                        if (ViewBag.order == "ascending/category" || ViewBag.order == "descending/category")
+                        {
+                            <th class="eq th_timeclock" data-info="Name">
+                                <div>@Localize.T("Category")</div>
+                                <div><i class="fa fa-angle-up icon_sort_eq" data-val="ascending/category"></i> <i class="fa fa-angle-down icon_sort_eq" data-val="descending/category"></i></div>
+                            </th>
+                        }
+                        else
+                        {
+                            <th class="eq th_timeclock_pre" data-info="Name">
+                                <div>@Localize.T("Category")</div>
+                                <div><i class="fa fa-angle-up icon_sort_eq" data-val="ascending/category"></i> <i class="fa fa-angle-down icon_sort_eq" data-val="descending/category"></i></div>
+                            </th>
+                        }
+
+                    }
+
+                    else if (item.SelectedColumn == "Service Name")
+                    {
+                        if (ViewBag.order == "ascending/des" || ViewBag.order == "descending/des")
+                        {
+                            <th class="th_timeclock">
+                                <div> @Localize.T("Service Name")</div>
+                                <div><i class="fa fa-angle-up icon_sort_eq" data-val="ascending/des"></i> <i class="fa fa-angle-down icon_sort_eq" data-val="descending/des"></i></div>
+                            </th>
+                        }
+                        else
+                        {
+                            <th class="th_timeclock_pre">
+                                <div>@Localize.T("Service Name")</div>
+                                <div><i class="fa fa-angle-up icon_sort_eq" data-val="ascending/des"></i> <i class="fa fa-angle-down icon_sort_eq" data-val="descending/des"></i></div>
+                            </th>
+                        }
+
+                    }
+                    else if (item.SelectedColumn == "ActiveDeactive")
+                    {
+                        if (ViewBag.order == "ascending/des" || ViewBag.order == "descending/des")
+                        {
+                            <th class="ad">
+                                <div> @Localize.T("Action")</div>
+                                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+                            </th>
+                        }
+                        else
+                        {
+                            <th class="ad">
+                                <div> @Localize.T("Action")</div>
+                                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+                            </th>
+                        }
+
+                    }
+                    else if (item.SelectedColumn == "Monthly Fee")
+                    {
+                        if (ViewBag.order == "ascending/des" || ViewBag.order == "descending/des")
+                        {
+                            <th class="th_timeclock">
+                                <div> @Localize.T("Monthly Fee")</div>
+                                <div><i class="fa fa-angle-up icon_sort_eq" data-val="ascending/monthlyfee"></i> <i class="fa fa-angle-down icon_sort_eq" data-val="descending/monthlyfee"></i></div>
+                            </th>
+                        }
+                        else
+                        {
+                            <th class="th_timeclock_pre">
+                                <div>@Localize.T("Monthly Fee")</div>
+                                <div><i class="fa fa-angle-up icon_sort_eq" data-val="ascending/monthlyfee"></i> <i class="fa fa-angle-down icon_sort_eq" data-val="descending/monthlyfee"></i></div>
+                            </th>
+                        }
+
+                    }
+
+                    else if (item.SelectedColumn == "Description")
+                    {
+                        if (ViewBag.order == "ascending/des" || ViewBag.order == "descending/des")
+                        {
+                            <th class="th_timeclock">
+                                <div>@Localize.T("Description")</div>
+                                <div><i class="fa fa-angle-up icon_sort_eq" data-val="ascending/description"></i> <i class="fa fa-angle-down icon_sort_eq" data-val="descending/description"></i></div>
+                            </th>
+                        }
+                        else
+                        {
+                            <th class="th_timeclock_pre">
+                                <div> @Localize.T("Description")</div>
+                                <div><i class="fa fa-angle-up icon_sort_eq" data-val="ascending/description"></i> <i class="fa fa-angle-down icon_sort_eq" data-val="descending/description"></i></div>
+                            </th>
+                        }
+
+                    }
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.EquipmentList)
+            {
+                <tr class="tr-style @(Count%2==0?"even-row-style":"") Export_excel_equipment" data-id="@item.Id">
+
+
+                    @foreach (var setting in (List<HS.Entities.GridSetting>)ViewBag.InventoryGridSettings)
+                {
+                    if (setting.SelectedColumn.Trim() == "Category")
+                    {
+                    <td class="table-body-td-style" valign="top">
+                        <div class="fsl_header">@Localize.T("Category")<span>:</span></div>
+                        <div class="fsl_info">
+                            @if (string.IsNullOrWhiteSpace(item.Category))
+                            {
+                                <a href="@(AppConfig.DomainSitePath)/Inventory/ServiceDetail/@item.Id" class="cus-anchor">@Localize.T("-")</a>
+                            }
+                            else
+                            {
+                                <a href="@(AppConfig.DomainSitePath)/Inventory/ServiceDetail/@item.Id" class="inventory-edit-name cus-anchor" data-id="@item.EquipmentClassId" idval="@item.Id">@item.Category</a>
+                            }
+                        </div>
+
+                    </td>
+                        }
+                        else if (setting.SelectedColumn == "Service Name")
+                        {
+                            <td class="table-body-td-style" valign="top">
+                                <div class="fsl_header">@Localize.T("Service Name")<span>:</span></div>
+                                <div class="fsl_info">
+                                    @if (string.IsNullOrWhiteSpace(item.Name))
+                                    {
+                                        <a href="@(AppConfig.DomainSitePath)/Inventory/ServiceDetail/@item.Id" class="inventory-edit-name cus-anchor" data-id="@item.EquipmentClassId" idval="@item.Id">@Localize.T("-")</a>
+                                        @*<span class="equip-delete" data-id="@item.Id" style="color:#2ca01c;cursor:pointer;float:right;"><i class="fa fa-trash-o" aria-hidden="true"></i></span>*@
+                                    }
+                                    else
+                                    {
+                                        <a href="@(AppConfig.DomainSitePath)/Inventory/ServiceDetail/@item.Id" class="inventory-edit-name cus-anchor" data-id="@item.EquipmentClassId" idval="@item.Id">@item.Name</a>
+                                        @*<span class="equip-delete" data-id="@item.Id" style="color:#2ca01c;cursor:pointer;float:right;"><i class="fa fa-trash-o" aria-hidden="true"></i></span>*@
+                                    }
+                                </div>
+
+                            </td>
+                        }
+
+                        else if (setting.SelectedColumn == "ActiveDeactive")
+                        {
+                            <td class="table-body-td-style" valign="top">
+                                <div class="fsl_header">
+                                    @Localize.T("Action") <span>:</span>
+                                </div>
+                                <div class="fsl_info">
+                                    @if (string.IsNullOrWhiteSpace(item.Name))
+                                    {
+                                        <div class="cplp_information"> <input type="checkbox" @(item.IsActive == true ? "checked" : "") class="toggle-demo" idval="@item.Id" id="editor_draw_erase_@item.Id" @*onchange="StatusChange(@item.Id)"*@ data-toggle="toggle" data-on="Activate" data-off="Deactivate" data-onstyle="success" data-offstyle="danger"></div>
+
+                                    }
+                                    else
+                                    {
+                                        <div class="cplp_information"> <input type="checkbox" @(item.IsActive == true ? "checked" : "") class="toggle-demo" idval="@item.Id" id="editor_draw_erase_@item.Id" @*onchange="StatusChange(@item.Id)"*@ data-toggle="toggle" data-on="Activate" data-off="Deactivate" data-onstyle="success" data-offstyle="danger"></div>
+
+                                    }
+                                </div>
+
+                            </td>
+                        }
+
+                        else if (setting.SelectedColumn == "Monthly Fee")
+                        {
+                <td class="table-body-td-style" valign="top">
+                    <div class="fsl_header">
+                        @Localize.T("Monthly Fee") <span>:</span>
+                    </div>
+                    <div class="fsl_info">
+                        @if (item.Retail == null || item.Retail == 0.0)
+                        {
+                            <span>-</span>
+                        }
+                        else
+                        {
+                            <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Retail.Value)</span>
+                        }
+                        </div>
+                </td>
+                        }
+                        else if (setting.SelectedColumn == "Description")
+                        {
+                <td class="table-body-td-style" valign="top">
+                    <div class="fsl_header">
+                        @Localize.T("Description") <span>:</span>
+                    </div>
+                    <div class="fsl_info">
+                        <div class="filtered_service_list_desc">
+                            @if (string.IsNullOrWhiteSpace(item.Comments))
+                            {
+                                <span>-</span>
+                                @*<span class="delete-package" onclick="ManageService('@item.EquipmentId')"><i class="fa fa-television"></i></span>*@
+                                <span class="equip-delete" title="@Localize.T("Delete")" data-id="@item.Id"><i class="fa fa-trash-o" aria-hidden="true"></i></span>
+
+                            }
+                            else
+                            {
+                                <span>@item.Comments</span>
+                                @*<span class="delete-package" onclick="ManageService('@item.EquipmentId')"><i class="fa fa-television"></i></span>*@
+                                <span class="equip-delete" title="@Localize.T("Delete")" data-id="@item.Id"><i class="fa fa-trash-o" aria-hidden="true"></i></span>
+
+                            }
+                        </div>
+                    </div>
+                </td>
+                        }
+                    }
+                </tr>
+
+                Count++;
+            }
+        </tbody>
+    </table>
+</div>
+
+
+<div class="AgentListPagination">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber), '@(ViewBag.order)')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), '@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="InventorySearchKeyUp(1, '@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="InventorySearchKeyUp(2, '@(ViewBag.order)')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""), '@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), '@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="InventorySearchKeyUp(1, '@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="InventorySearchKeyUp(2, '@(ViewBag.order)')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="InventorySearchKeyUp(3, '@(ViewBag.order)')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="EquipmentSearchKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""), '@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber-1), '@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber-2), '@(ViewBag.order)')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber-1), '@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber), '@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="InventorySearchKeyUp()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber-1), '@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber+1), '@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber + 2), '@(ViewBag.order)')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber+1), '@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber-1), '@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber + 1), '@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber-1), '@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber - 1), '@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber), '@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber + 1), '@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="InventorySearchKeyUp(@(ViewBag.PageNumber+1), '@(ViewBag.order)')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+
+@*<div class="custom-pager hidden">
+        <ul class="pager">
+            <li><a href="javascript:void(0)">@Localize.T("Previous")</a></li>
+            <li><a href="javascript:void(0)">@Localize.T("Next")</a></li>
+        </ul>
+    </div>*@
+<div class="hidden" style="display:none;">
+    <a href="" class="ExportEquipmentReport"></a>
+</div>

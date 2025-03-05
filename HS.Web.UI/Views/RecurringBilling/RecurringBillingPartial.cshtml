@@ -1,0 +1,522 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@using HS.Framework
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@Styles.Render("~/styles/EstimatePartialCS")
+
+@if (CurrentUser.UserTags == "Customer")
+{
+    <script>
+        var startTab = '@ViewBag.StartTab';
+        var date = new Date();
+        var StartDatepicker;
+        var EndDatepicker;
+        var Search = encodeURI($(".RBSearchText").val());
+        var SetLoaderText = function () {
+            $(".RMRTemplate_Load").html(TabsLoaderText);
+            $(".RMRInvoice_Load").html(TabsLoaderText);
+            $(".RMRHistory_Load").html(TabsLoaderText);
+            $(".RMRLog_Load").html(TabsLoaderText);
+        }
+        var LoadRMRTemplate = function (order, flag) {
+            LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            if (flag == true) {
+                $(LoadCustomerDiv + ".RMRTemplate").removeClass('active');
+                $(LoadCustomerDiv + ".RMRTemplate").addClass('active');
+                $(LoadCustomerDiv + ".RMRTemplate_Load").removeClass('active');
+                $(LoadCustomerDiv + ".RMRTemplate_Load").addClass('active');
+            }
+            var Type = encodeURI("RMR Template");
+            SetLoaderText();
+            $(LoadCustomerDiv + ".RMRTemplate_Load").load(domainurl + "/RecurringBilling/RecurringBillingListPartial/?CustomerId=" + CustomerLoadId + "&SearchText=" + Search + "&Order=" + order);
+            $(".btn-add-RecurringBilling").removeClass('hidden');
+        }
+        var LoadRMRInvoice = function (order) {
+            LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            var Type = encodeURI("RMR Invoice");
+            SetLoaderText();
+            $(LoadCustomerDiv + ".RMRInvoice_Load").load(domainurl + "/RecurringBilling/RecurringBillingInvoiceList/?CustomerId=" + CustomerLoadId + "&SearchText=" + Search + "&Order=" + order);
+            $(".btn-add-RecurringBilling").addClass('hidden');
+        }
+        var LoadRMRHistory = function (order) {
+            LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            var Type = encodeURI("RMR History");
+            SetLoaderText();
+            $(LoadCustomerDiv + ".RMRHistory_Load").load(domainurl + "/RecurringBilling/RecurringBillingHistoryList/?CustomerId=" + CustomerLoadId + "&SearchText=" + Search + "&Order=" + order);
+            $(".btn-add-RecurringBilling").addClass('hidden');
+        }
+        var LoadRMRLog = function (order) {
+            LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            var Type = encodeURI("RMR Log");
+            SetLoaderText();
+            $(LoadCustomerDiv + ".RMRLog_Load").load(domainurl + "/RecurringBilling/RecurringBillingLogList/?CustomerId=" + CustomerLoadId + "&SearchText=" + Search + "&Order=" + order);
+            $(".btn-add-RecurringBilling").addClass('hidden');
+        }
+        $(document).ready(function () {
+            var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            if (startTab == "RMR Template") {
+                var Type = decodeURI("RMR Template");
+                $(".RMRTemplate_Load").addClass('active');
+                $(".RMRTemplate").addClass('active');
+                $(LoadCustomerDiv + ".RMRTemplate_Load").load(domainurl + "/RecurringBilling/RecurringBillingListPartial/?CustomerId=" + CustomerLoadId + "&SearchText=" + Search);
+                $(".btn-add-RecurringBilling").removeClass('hidden');
+            }
+            else if (startTab == "RMR Invoice") {
+                var Type = decodeURI("RMR Invoice");
+                $(".RMRInvoice_Load").addClass('active');
+                $(".RMRInvoice").addClass('active');
+                $(LoadCustomerDiv + ".RMRInvoice_Load").load(domainurl + "/RecurringBilling/RecurringBillingInvoiceList/?CustomerId=" + CustomerLoadId + + "&SearchText=" + Search);
+                $(".btn-add-RecurringBilling").addClass('hidden');
+            }
+            else if (startTab == "RMR History") {
+                var Type = decodeURI("RMR History");
+                $(".RMRHistory_Load").addClass('active');
+                $(".RMRHistory").addClass('active');
+                $(LoadCustomerDiv + ".RMRHistory_Load").load(domainurl + "/RecurringBilling/RecurringBillingHistoryList/?CustomerId=" + CustomerLoadId + Search);
+                $(".btn-add-RecurringBilling").addClass('hidden');
+            }
+            else if (startTab == "RMR Log") {
+                var Type = decodeURI("RMR Log");
+                $(".RMRLog_Load").addClass('active');
+                $(".RMRLog").addClass('active');
+                $(LoadCustomerDiv + ".RMRLog_Load").load(domainurl + "/RecurringBilling/RecurringBillingLogList/?CustomerId=" + CustomerLoadId + Search);
+                $(".btn-add-RecurringBilling").addClass('hidden');
+            }
+            $(".RMRTemplate").click(function () {
+                LoadRMRTemplate(null, false);
+            });
+            $(".RMRInvoice").click(function () {
+                LoadRMRInvoice(null);
+            });
+            $(".RMRHistory").click(function () {
+                LoadRMRHistory(null);
+            });
+            $(".RMRLog").click(function () {
+                LoadRMRLog(null);
+            });
+        });
+
+    </script>
+}
+else
+{
+    <script>
+        var StartDateDatepicker;
+        var EndDateDatepicker;
+        var startTab = '@ViewBag.StartTab';
+        var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+        var FirstDayOfWeek = '@ViewBag.FirstDayOfWeek';
+        var ReportFor;
+
+        StartDateDatepicker = new Pikaday({
+            field: $(LoadCustomerDiv + '.StartDate')[0],
+            format: 'MM/DD/YYYY'
+        });
+        EndDateDatepicker = new Pikaday({
+            field: $(LoadCustomerDiv + '.EndDate')[0],
+            format: 'MM/DD/YYYY'
+        });
+
+        $("#PTOFilter").change(function () {
+            if ($(this).val() == "Today") {
+                var Today = new Date();
+                StartDateDatepicker.setDate(Today);
+                EndDateDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "Yesterday") {
+                var Today = new Date();
+                EndDateDatepicker.setDate(Today.addDays(-1));
+                StartDateDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "ThisWeek") {
+                var Today = new Date();
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDateDatepicker.setDate(StartDay);
+                EndDateDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "LastWeek") {
+                var Today = new Date();
+                Today = Today.addDays(-7);
+
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDateDatepicker.setDate(StartDay);
+                EndDateDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "ThisMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() + 1, 0);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+
+            }
+            else if ($(this).val() == "LastMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() - 1, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 0);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "ThisYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), 11, 31);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "LastYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear() - 1, 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear() - 1, 11, 31);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "Last30Days") {
+                var Today = new Date();
+
+                StartDateDatepicker.setDate(Today);
+                EndDateDatepicker.setDate(Today.addDays(-30));
+            }
+            else if ($(this).val() == "Last90Days") {
+                var Today = new Date();
+
+                StartDateDatepicker.setDate(Today);
+                EndDateDatepicker.setDate(Today.addDays(-90));
+            }
+            else if ($(this).val() == "AllTime") {
+                var Today = new Date();
+                var FirstDayOfMonth = '@ViewBag.FilterStartDate';
+                var LastDayOfMonth = '@ViewBag.FilterStartDate';
+                //var LastDayOfMonth = new Date(Today.getFullYear() + 1, 11, 31);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "-1") {
+                StartDateDatepicker.setDate("");
+                EndDateDatepicker.setDate("");
+            }
+        });
+
+
+        var SetLoaderText = function () {
+            var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            $(LoadCustomerDiv + ".RMRTemplate_Load").html(TabsLoaderText);
+            $(LoadCustomerDiv + ".RMRInvoice_Load").html(TabsLoaderText);
+            $(LoadCustomerDiv + ".RMRHistory_Load").html(TabsLoaderText);
+            $(LoadCustomerDiv + ".RMRLog_Load").html(TabsLoaderText);
+        }
+        var LoadRMRTemplate = function (order, flag) {
+            LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            if (flag == true) {
+                $(LoadCustomerDiv + ".RMRTemplate").removeClass('active');
+                $(LoadCustomerDiv + ".RMRTemplate").addClass('active');
+                $(LoadCustomerDiv + ".RMRTemplate_Load").removeClass('active');
+                $(LoadCustomerDiv + ".RMRTemplate_Load").addClass('active');
+            }
+            var Search = encodeURI($(".RBSearchText").val());
+            var Type = encodeURI("RMR Template");
+            SetLoaderText();
+            $(LoadCustomerDiv + ".RMRTemplate_Load").load(domainurl + "/RecurringBilling/RecurringBillingListPartial/?CustomerId=" + CustomerLoadId + "&SearchText=" + Search + "&Order=" + order);
+            $(".btn-add-RecurringBilling").removeClass('hidden');
+            $(".btn-add-invoice-Statement").addClass('hidden');
+        }
+        var LoadRMRInvoice = function (order) {
+            LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            var Search = encodeURI($(".RBSearchText").val());
+            var StartDate = $(".StartDate").val();
+            var EndDate = $(".EndDate").val();
+            var Type = encodeURI("RMR Invoice");
+            SetLoaderText();
+            $(LoadCustomerDiv + ".RMRInvoice_Load").load(domainurl + "/RecurringBilling/RecurringBillingInvoiceList/?CustomerId=" + CustomerLoadId + "&SearchText=" + Search + "&Order=" + order + "&Start=" + StartDate + "&End=" + EndDate);
+            $(".btn-add-RecurringBilling").addClass('hidden');
+            $(".btn-add-invoice-Statement").removeClass('hidden');
+        }
+        var LoadRMRHistory = function (order) {
+            LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            var Search = encodeURI($(".RBSearchText").val());
+            var StartDate = $(".StartDate").val();
+            var EndDate = $(".EndDate").val();
+            var Type = encodeURI("RMR History");
+            SetLoaderText();
+            $(LoadCustomerDiv + ".RMRHistory_Load").load(domainurl + "/RecurringBilling/RecurringBillingHistoryList/?CustomerId=" + CustomerLoadId + "&SearchText=" + Search + "&Order=" + order + "&Start=" + StartDate + "&End=" + EndDate);
+            $(".btn-add-RecurringBilling").addClass('hidden');
+            $(".btn-add-invoice-Statement").addClass('hidden');
+        }
+        var LoadRMRLog = function (order) {
+            LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+            var Search = encodeURI($(".RBSearchText").val());
+            var Type = encodeURI("RMR Log");
+            var StartDate = $(".StartDate").val();
+            var EndDate = $(".EndDate").val();
+            SetLoaderText();
+            $(LoadCustomerDiv + ".RMRLog_Load").load(domainurl + "/RecurringBilling/RecurringBillingLogList/?pageno=1&pagesize=10&CustomerId=" + CustomerLoadId + "&SearchText=" + Search + "&Order=" + order + "&Start=" + StartDate + "&End=" + EndDate);
+            $(".btn-add-RecurringBilling").addClass('hidden');
+            $(".btn-add-invoice-Statement").addClass('hidden');
+        }
+        $(document).ready(function () {
+            //console.log("test")
+            var Popupwidth = 920;
+            if (window.innerWidth < 920) {
+                Popupwidth = window.innerWidth;
+            }
+
+            //$("#AddRecurringBilling").hide();
+
+            var idlist = [{ id: ".input-add-invoice-Statement", type: 'iframe', width: Popupwidth, height: 600 }];
+            jQuery.each(idlist, function (i, val) {
+                magnificPopupObj(val);
+            });
+
+            LoadRMRTemplate(null, true);
+
+            $(".RMRTemplate").click(function () {
+                $(".RBSearchText").attr("placeholder", "Search by template name");
+                $(".StartDate").addClass('hidden');
+                $(".EndDate").addClass('hidden');
+                $(".PTOFilter").addClass('hidden');
+                $(".RBSearchText").val("");
+                LoadRMRTemplate(null, false);
+            });
+            $(".RMRInvoice").click(function () {
+                $(".RBSearchText").attr("placeholder", "Search by invoice id");
+                $(".StartDate").removeClass('hidden');
+                $(".EndDate").removeClass('hidden');
+                $(".PTOFilter").removeClass('hidden');
+                $(".RBSearchText").val("");
+                $(".StartDate").val("");
+                $(".EndDate").val("");
+                $("#PTOFilter").val("-1");
+                LoadRMRInvoice(null);
+            });
+            $(".RMRHistory").click(function () {
+                $(".RBSearchText").attr("placeholder", "Search by invoice id");
+                $(".StartDate").removeClass('hidden');
+                $(".EndDate").removeClass('hidden');
+                $(".PTOFilter").removeClass('hidden');
+                $(".RBSearchText").val("");
+                $(".StartDate").val("");
+                $(".EndDate").val("");
+                $("#PTOFilter").val("-1");
+                LoadRMRHistory(null);
+            });
+            $(".RMRLog").click(function () {
+                $(".RBSearchText").attr("placeholder", "Search by user");
+                $(".StartDate").removeClass('hidden');
+                $(".EndDate").removeClass('hidden');
+                $(".PTOFilter").removeClass('hidden');
+                $(".RBSearchText").val("");
+                $(".StartDate").val("");
+                $(".EndDate").val("");
+                $("#PTOFilter").val("-1");
+                LoadRMRLog(null);
+            });
+            $("#rmrsystemsetting").click(function () {
+                window.open("/rmrsystemsetting", "_blank");
+            });
+
+            $(LoadCustomerDiv + ".RBReport").click(function () {
+                if ($(".RMRTemplate").hasClass('active') == true) {
+                    ReportFor = "RMR Template";
+                }
+                else if ($(".RMRInvoice").hasClass('active') == true) {
+                    ReportFor = "RMR Invoice";
+                }
+                else if ($(".RMRHistory").hasClass('active') == true) {
+                    ReportFor = "RMR History";
+                }
+                else if ($(".RMRLog").hasClass('active') == true) {
+                    ReportFor = "RMR Log";
+                }
+                console.log(ReportFor);
+                var Search = encodeURI($(".RBSearchText").val());
+                var StartDate = $(".StartDate").val();
+                var EndDate = $(".EndDate").val();
+                window.location.href = domainurl + "/Reports/NewReport/?CustomerId=" + CustomerLoadGuid + "&ReportFor=" + ReportFor + "&FilterUser=" + Search + "&Start=" + StartDate + "&End=" + EndDate;
+            });
+
+            $(LoadCustomerDiv + "#RBSearchbtn").click(function () {
+                if ($(".RMRTemplate").hasClass('active') == true) {
+                    LoadRMRTemplate(null, false);
+                }
+                else if ($(".RMRInvoice").hasClass('active') == true) {
+                    LoadRMRInvoice(null);
+                }
+                else if ($(".RMRHistory").hasClass('active') == true) {
+                    LoadRMRHistory(null);
+                }
+                else if ($(".RMRLog").hasClass('active') == true) {
+                    LoadRMRLog(null);
+                }
+            });
+
+            $(".btn-add-invoice-Statement").click(function () {
+                var Customhtml = '', clickCount = 0;
+                Customhtml = '<div class="row rmrRow" id="rmrcustomdiv"><div class="rmrdivsingle"><div class="span-style rmrTextdiv">Include Payment Link</div><select name="IsPaymentLink" id="IsPaymentLink" class="form-control"><option value="yes">Yes</option><option value="no">No</option></select></div></div>';
+                //Customhtml = '<div class="row rmrRow" id="rmrcustomdiv"><div class="rmrdiv"><div class="span-style rmrTextdiv">Invoice Type</div><select name="InvoiceType" id="InvoiceType" class="form-control"><option value="RMR">RMR</option><option value="Others">Others</option><option value="All">All</option></select></div></div>';
+                OpenConfirmationMessageNew("Statement", Customhtml, function () {
+                    //var InvType = $("#InvoiceType").val();
+                    var PayLink = $("#IsPaymentLink").val();
+                    if (PayLink == "yes") { PayLink = true; }
+                    else { PayLink = false; }
+                    $(".input-add-invoice-Statement").attr("href", domainurl + "/Invoice/CustomerUnpaidInvoiceStatement/?CustomerId=" + encodeURI(CustomerLoadId) + "&StatementType=RMR&PaymentLink=" + PayLink);
+                    $(".input-add-invoice-Statement").click();
+                }, function () { return false; });
+            });
+        });
+    </script>
+}
+<style>
+    .RBSearchText {
+        min-width: 250px !important;
+        float:left;
+    }
+
+    .all_returns_container {
+        width: 100%;
+        float: left;
+    }
+
+    .all_returns_search_div {
+        width: 100%;
+        float: left;
+        padding: 10px 0px;
+    }
+
+        .all_returns_search_div .input-group {
+            width: 40% !important;
+            float: left;
+        }
+
+        .all_returns_search_div .mailandprintandupload {
+            float: right;
+        }
+
+    .all_returns_container .RMRTemplatesLoadDiv {
+        width: 100%;
+        float: left;
+    }
+
+    @@media(max-width:414px) {
+        .all_returns_search_div .input-group {
+            width: 100% !important;
+            margin-bottom: 10px;
+        }
+    }
+</style>
+
+<script src="~/Content/Js/RecurringBilling/RecurringBilling.js"></script>
+
+<div class="page-content-wrap cus-padding-top10p all_estimatePartial_Container">
+    <div class="invoices_tabs_header">
+        <ul class="nav nav-tabs invoices-tabs" id="myInvoicesTab">
+
+            <li class="RMRTemplate">
+                <a data-target=".RMRTemplate_Load" data-toggle="tab">@Localize.T("RMR Template")</a>
+            </li>
+
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerRMRInvoice))
+            {
+                <li class="RMRInvoice">
+                    <a data-target=".RMRInvoice_Load" data-toggle="tab">@Localize.T("RMR Invoice")</a>
+                </li>
+            }
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerRMRHistory))
+            {
+                <li class="RMRHistory">
+                    <a data-target=".RMRHistory_Load" data-toggle="tab">@Localize.T("RMR History")</a>
+                </li>
+            }
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerRMRLog))
+            {
+                <li class="RMRLog">
+                    <a data-target=".RMRLog_Load" data-toggle="tab">@Localize.T("RMR Log")</a>
+                </li>
+            }
+        <li style="float:right;border:none!important;">
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerUnpaidInvoiceStatement))
+            {
+                <button class="btn btn-primary btn-add-invoice-Statement" href="" type="button" title="@Localize.T("Customer Unpaid Invoice Statement")">
+                    <i class="fa fa-file-pdf-o" aria-hidden="true"></i> @Localize.T("Invoice Statement")
+                </button>
+                <input type="hidden" class="input-add-invoice-Statement" />
+            }
+            <button class="btn btn-primary btn-add-RecurringBilling text-right" id="AddRecurringBilling" type="button" data-toggle="modal" title="@Localize.T("Add Recurring Billing")">
+                <i class="fa fa-plus-circle" aria-hidden="true"></i> &nbsp;@Localize.T("New")
+            </button>
+            <button class="btn green_button" id="rmrsystemsetting" data-toggle="dropdown"><i class="fa fa-cog" aria-hidden="true"></i></button>
+        </li>
+
+        </ul>
+    </div>
+    <div class="estimate_partial_search_container">
+        <div class="estimator_partial_searchbar rmr_top_search_bar">
+            <span id="PayrollStartDate">
+                <input type="text" @*value="@StartDate.ToString("MM/dd/yy")"*@ placeholder="Start Date" class="form-control border-radius-0 hidden StartDate" />
+            </span>
+            <span id="PayrollEndDate">
+                <input type="text" @*value="@EndDate.ToString("MM/dd/yy")"*@ placeholder="End Date" class="form-control border-radius-0 hidden EndDate" />
+            </span>
+
+            <span id="PTO">
+                @Html.DropDownList("PTOFilter", (List<SelectListItem>)ViewBag.PTOFilter, new { @class = "form-control PTOFilter hidden" })
+            </span>
+            <div class="input-group add-on">
+                <input type="text" placeholder="Search by template name" class="form-control border-radius-0 RBSearchText" />
+                <div class="input-group-btn">
+                    <button class="btn PayrollFilterBtn green_button" id="RBSearchbtn" title="@Localize.T("Search")">
+                        <i class="glyphicon glyphicon-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="estimate_partial_other_option">
+            <div>
+
+                <button class="btn download_btn" id="RBExport" style="margin-right:5px;">
+                    <i title="Download" class="glyphicon glyphicon-download-alt RBReport"></i>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="nav-detail-contents">
+        <div class="tab-content">
+
+            <div class="tab-pane RMRTemplate_Load">
+
+            </div>
+
+            <div class="tab-pane  RMRInvoice_Load">
+
+            </div>
+
+            <div class="tab-pane RMRHistory_Load">
+
+            </div>
+
+            <div class="tab-pane RMRLog_Load">
+
+            </div>
+        </div>
+    </div>
+
+</div>

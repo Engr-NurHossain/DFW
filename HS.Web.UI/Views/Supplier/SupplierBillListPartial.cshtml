@@ -1,0 +1,353 @@
+﻿@model HS.Entities.Supplier
+@{ 
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+<script>
+    var BillSearchKeyUp = function (pageNumber) {
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var searchtext = encodeURI($("#srch-term").val());
+        $(".loadsupplierbill").load("/Supplier/SupplierBillListPartial/?id=" + CurrentSupplierId + "&order=date-desc-id-desc" + "&PageNo=" + pageNumber + "&SearchText=" + searchtext);
+    }
+
+    $(document).ready(function () {
+        $(".sup_sort").click(function () {
+            var pageno = '@ViewBag.PageNumber';
+            var searchtext = encodeURI($("#srch-term").val());
+            $(".loadsupplierbill").load("/Supplier/SupplierBillListPartial/?id=" + CurrentSupplierId + "&order=" + $(this).attr('data-val') + "&PageNo=" + pageno + "&SearchText=" + searchtext);
+        })
+        $(".custom-btn").click(function () {
+            var pageno = '@ViewBag.PageNumber';
+            var searchtext = encodeURI($("#srch-term").val());
+            $(".loadsupplierbill").load("/Supplier/SupplierBillListPartial/?id=" + CurrentSupplierId + "&order=date-desc-id-desc" + "&PageNo=" + pageno + "&SearchText=" + searchtext);
+        })
+        $("#srch-term").keyup(function (e) {
+            e.preventDefault();
+            if (e.keyCode == 13) {
+                var pageno = '@ViewBag.PageNumber';
+                var searchtext = encodeURI($("#srch-term").val());
+                $(".loadsupplierbill").load("/Supplier/SupplierBillListPartial/?id=" + CurrentSupplierId + "&order=date-desc-id-desc" + "&PageNo=" + pageno + "&SearchText=" + searchtext);
+            }
+        })
+
+    })
+</script>
+
+<style>
+    .bill_list_searchbar {
+        width:35%;
+        margin-top:0px;
+    }
+</style>
+
+@if(PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.SupplierBillListSearch))
+{
+    <div class="searchbardiv bill_list_searchbar">
+        <div class="input-group add-on">
+            <input class="form-control" placeholder="Find a Bill" name="srch-term" id="srch-term" type="text">
+            <div class="input-group-btn">
+                <button class="btn btn-default custom-btn green_button" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+            </div>
+        </div>
+    </div>
+    <br/>
+    <br/>
+}
+<div class="custom-table supd_table_container">
+    @if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.ExpneseVendorsDetail))
+    {
+        <table class="display">
+            <thead class="table-head-border supd_header_hide">
+                <tr>
+                    @*
+                        <th class="thead-th-style"></th>*@
+                    <th class="thead-th-style ">
+                        <div>@Localize.T("Order Date")</div>
+                        <div><i class="fa fa-angle-up sup_sort" data-val="date-asc"></i> <i class="fa fa-angle-down sup_sort" data-val="date-desc"></i></div>
+                    </th>
+                    <th class="thead-th-style ">
+                        <div>@Localize.T("Due Date")</div>
+                        <div><i class="fa fa-angle-up sup_sort" data-val="date-asc"></i> <i class="fa fa-angle-down sup_sort" data-val="date-desc"></i></div>
+                    </th>
+                    <th class="thead-th-style ">
+                        <div> @Localize.T("Bill No.")</div>
+                        <div><i class="fa fa-angle-up sup_sort" data-val="type-asc"></i> <i class="fa fa-angle-down sup_sort" data-val="type-desc"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Invoice No.")</div>
+                        <div><i class="fa fa-angle-up sup_sort" data-val="no-asc"></i> <i class="fa fa-angle-down sup_sort" data-val="no-desc"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div> @Localize.T("PO No.")</div>
+                        <div><i class="fa fa-angle-up sup_sort" data-val="payee-asc"></i> <i class="fa fa-angle-down sup_sort" data-val="payee-desc"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div> @Localize.T("Category")</div>
+                        <div><i class="fa fa-angle-up sup_sort" data-val="category-asc"></i> <i class="fa fa-angle-down sup_sort" data-val="category-desc"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Total Amount")</div>
+                        <div><i class="fa fa-angle-up sup_sort" data-val="amount-asc"></i> <i class="fa fa-angle-down sup_sort" data-val="amount-desc"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Due Amount")</div>
+                        <div><i class="fa fa-angle-up sup_sort" data-val="amount-asc"></i> <i class="fa fa-angle-down sup_sort" data-val="amount-desc"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Notes")</div>
+                        <div><i class="fa fa-angle-up sup_sort" data-val="amount-asc"></i> <i class="fa fa-angle-down sup_sort" data-val="amount-desc"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Actions")
+                    </th>
+                </tr>
+            </thead>
+            @if (Model.SupplierBillList.Count > 0)
+            {
+                foreach (var item in Model.SupplierBillList)
+                {
+                    <tr class="tr-style HasList" data-id="@item.Id">
+                        <td class="table-body-td-style supd_device_row" valign="top">
+                            <label class="supd_device_header">@Localize.T("Order Date")</label>
+                            <span class="supd_device_info">@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy")</span>
+                        </td>
+                        <td class="table-body-td-style supd_device_row" valign="top">
+                            <label class="supd_device_header">@Localize.T("Due Date")</label>
+                            <span class="supd_device_info">@HS.Framework.DateTimeExtension.UTCToClientTime(item.DueDate).ToString("MM/dd/yy")</span>
+                        </td>
+                        @*<td>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy")</td>
+                        <td>@HS.Framework.DateTimeExtension.UTCToClientTime(item.DueDate).ToString("MM/dd/yy")</td>*@
+                        <td class="table-body-td-style supd_device_row" valign="top">
+                            <label class="supd_device_header">@Localize.T("Bill No.")</label>
+                            <span class="supd_device_info">
+                                @if (item.Type == "Bill")
+                                {
+                                    <a class="cus-anchor" onclick="OpenBillById(@item.Id)" href="Javasicpt:Void(0)">@item.BillNo</a>
+                                }
+                                else if (item.Type == "Payment")
+                                {
+                                    <a class="cus-anchor" onclick="OpenPaymentByPaymentId(@item.PaymentId)" href="Javasicpt:Void(0)">@item.Type</a>
+                                }
+                                else
+                                {
+                                    <span>@item.Type</span>
+                                }
+                            </span>
+                            @if (!string.IsNullOrWhiteSpace(item.JobName))
+                            {
+                             <br />
+                            <span class="supd_device_info">Job Name: @item.JobName</span>
+                            }
+                        </td>
+                        <td class="table-body-td-style supd_device_row" valign="top">
+                            <label class="supd_device_header">@Localize.T("Invoice No.")</label>
+                            <span class="supd_device_info">@item.InvoiceId</span>
+                        </td>
+                        <td class="table-body-td-style supd_device_row" valign="top">
+                            <label class="supd_device_header">@Localize.T("PO No.")</label>
+                            <span class="supd_device_info">@item.PurchaseOrderId</span>
+                        </td>
+                        <td class="table-body-td-style supd_device_row" valign="top">
+                            <label class="supd_device_header">@Localize.T("Category")</label>
+                            <span class="supd_device_info">
+                                @if (item.CustomerBillAccoutType.Count > 0)
+                                {
+                                    <select class="form-control" style="width:100%">
+                                        @foreach (var item1 in item.CustomerBillAccoutType)
+                                        {
+                                            <option value="@item1.CustomerBillID">@item1.Type</option>
+                                        }
+                                    </select>
+                                }
+                            </span>
+                        </td>
+                        <td class="table-body-td-style supd_device_row" valign="top">
+                            <label class="supd_device_header">@Localize.T("Total Amount")</label>
+                            <span class="supd_device_info">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalAmount)</span>
+                        </td>
+                        <td class="table-body-td-style supd_device_row" valign="top">
+                            <label class="supd_device_header">@Localize.T("Due Amount")</label>
+                            <span class="supd_device_info">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.OpenBalance)</span>
+                        </td>
+                        <td class="table-body-td-style supd_device_row" valign="top">
+                            <label class="supd_device_header">@Localize.T("Notes")</label>
+                            <span class="supd_device_info" title="@item.Notes">
+                                @{
+                                    var fnote = "";
+                                    if(item.Notes.Length > 20)
+                                    {
+                                        fnote = item.Notes.Substring(0, 20) + ".....";
+                                    }
+                                    else
+                                    {
+                                        fnote = item.Notes;
+                                    }
+                                    @fnote
+                                }
+                            </span>
+                        </td>
+                        <td class="table-body-td-style supd_device_row" valign="top">
+                            <label class="supd_device_header">@Localize.T("Actions")</label>
+                            <span class="supd_device_info">
+                                @if (item.OpenBalance > 0 && item.Type == "Bill")
+                                {
+                                    if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.VendorsDetailMakePayment))
+                                    {
+                                        <a href="Javasicpt:Void(0)" class="cus-anchor" onclick="OpenPaymentByBillIdAndSupplierId(@item.Id,@Model.Id)">@Localize.T("Make Payment")</a>
+                                    }
+                                }
+                                else if (item.Type == "Payment" && ViewBag.CheckList != null)
+                                {
+                                    if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.VendorsDetailPrintCheque))
+                                    {
+                                        var itemList = ((List<HS.Entities.CheckPayment>
+                                        )ViewBag.CheckList).Where(x => x.PaymentId == item.PaymentId).ToList();
+                                        foreach (var i in itemList)
+                                        {
+                                            <a href="Javasicpt:Void(0)" class="cus-anchor" onclick="OpenCheck('@i.SupplierName','@i.Amount','')">@i.BillId</a>
+                                        }
+                                    }
+                                }
+                            </span>
+                        </td>
+                    </tr>
+                }
+            }
+        </table>
+    }
+</div>
+
+<div class="AgentListPagination">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+            {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+            {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="BillSearchKeyUp(@(ViewBag.PageNumber))">1</button>
+            </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="BillSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="BillSearchKeyUp(1)">1</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="BillSearchKeyUp(2)">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="BillSearchKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="BillSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="BillSearchKeyUp(1)">1</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="BillSearchKeyUp(2)">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="BillSearchKeyUp(3)">3</button>
+                </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="BillSearchKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                        </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="BillSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="BillSearchKeyUp(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="BillSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="BillSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                            <div class="paginationRightButtondv">
+                                <button class="PaginationButtons disabledBtn" onclick="BillSearchKeyUp()">Next</button>
+                            </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="BillSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="BillSearchKeyUp(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="BillSearchKeyUp(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                            <div class="paginationRightButtondv">
+                                <button class="PaginationButtons" onclick="BillSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                            </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="BillSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="BillSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="BillSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                            <div class="paginationRightButtondv">
+                                <button class="PaginationButtons" onclick="BillSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                            </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="BillSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="BillSearchKeyUp(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="BillSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="BillSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                            <div class="paginationRightButtondv">
+                                <button class="PaginationButtons" onclick="BillSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                            </div>
+            }
+        }
+    </div>
+</div>

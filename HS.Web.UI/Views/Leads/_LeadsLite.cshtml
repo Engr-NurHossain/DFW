@@ -1,0 +1,294 @@
+﻿@{
+    Layout = null;
+
+    var currentuser = ((HS.Web.UI.Helper.CustomPrincipal)(User));
+
+    var dataFile = Server.MapPath(string.Format(AppConfig.LeadTemplateFile, currentuser.CompanyId.ToString()));
+    var customertemplate = "";
+    using (StreamReader streamReader = File.OpenText(dataFile))
+    {
+        var ListFromFile = File.ReadAllLines(dataFile);
+        customertemplate = String.Join("\n", ListFromFile.ToArray());
+    }
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper
+@Styles.Render("~/styles/Leads")
+
+<link href="~/Content/Css/Customer/CustomerList.css" rel="stylesheet" />
+<link href="~/Content/Css/Lead/LeadListCustom.css" rel="stylesheet" />
+<link href="~/Content/Css/Customer/customer.css" rel="stylesheet" />
+<script src="~/Scripts/handlebars.min.js"></script>
+<script src="~/Scripts/handlebars-helper-x.js"></script>
+@Scripts.Render("~/scripts/LeadsLite")
+<script>
+    var firstdate = '@ViewBag.firstdate';
+    var lastdate = '@ViewBag.lastdate';
+    var customform = '@ViewBag.CustomFormGeneration';
+
+    var SortByCol = "Id";
+
+    var TotalRMRFilter = false;
+    var TotalOpenInvoice = false;
+    var TotalDueInvoice = false;
+    var IsActiveFilter;
+    $(document).ready(function () {
+        console.log("Lead");
+        $("#AddCustomizeForm").click(function () {
+            LoadFormGeneration(0, true);
+        })
+        if (customform == "true") {
+            $(".AddCustomizeForm").removeClass('hidden');
+        };
+        $(".fixed_header").width($(".leads_container").width());
+
+        //$(".icon_sort_customer").click(function () {
+        //    var orderval = $(this).attr('data-val');
+        //    LeadSearchKeyUp(1, null, orderval);
+        //});
+    });
+    $(window).resize(function () {
+        setTimeout(function () {
+            $(".fixed_header").width($(".leads_container").width());
+        }, 50);
+
+    })
+
+    var VersionCheck = '@PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadCreateV2)';
+    var DynamicEditLeadDetailsFunction = function (id) {
+        if (VersionCheck != 'False') {
+            LoadLeadInfov2(id);
+        }
+        else {
+            LoadLeadVerificationInfo(id);
+        }
+    };
+    var DynamicLeadSortingFunction = function (ev) {
+        var orderval = ev.currentTarget.dataset.val;
+        LeadSearchKeyUp(1, null, orderval);
+    }
+    var DynamicSmartLeadSetupFunction = function (ev) {
+        var id = ev.currentTarget.dataset.id;
+        LoadSmartLeadSetup(id, true)
+    };
+    var DynamicLeadSetupFunction = function (ev) {
+        var id = ev.currentTarget.dataset.id;
+        LoadLeadSetup(id, true)
+    };
+</script>
+
+<div class="container-fluid leads_container leads_lite">
+
+    <div class="clearfix fixed_header custom_top">
+        <div class="leads_header_left"><h2>@Localize.T("Leads")</h2></div>
+        <div class="leads_header_right">
+            <div class="AddNewBtnDiv">
+                @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadReportExport))
+                {
+                    <button class="btn lead_report_btn" id="LeadReport" title="Download">
+                        <i class="glyphicon glyphicon-download-alt"></i>
+                    </button>
+                }
+                @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadCreateV2))
+                {
+                        <button class="btn customer-new" id="AddNewCustomerv2" type="button" title="@Localize.T("Create new lead")">
+                            <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" New V2")
+                        </button>
+                }
+                @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadCreate))
+                    {
+                        <div class="btn-group">
+                            <button class="btn customer-new" id="AddNewCustomer" type="button" title="@Localize.T("Create new lead")">
+                                <i class="fa fa-plus-circle" aria-hidden="true"></i>@Localize.T(" New")
+                            </button>
+
+                            @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.ImportLeads))
+                            {
+                                <button data-toggle="dropdown" class="btn dropdown-toggle customer-btn-dropdown" type="button" title="@Localize.T("Import Leads")">
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu customer-dropdown-ul-style import_leads_dropdown">
+                                    <li><a href="javascript:void(0)" onclick="CustomerLeadImportFile()">@Localize.T("Import Leads")</a></li>
+                                    <li><a href="javascript:void(0)" onclick="AssignToUser()">@Localize.T("Assign Leads")</a></li>
+                                </ul>
+
+                            }
+
+                        </div>
+                    }
+            </div>
+            <div class="dateviewed">
+                @{Html.RenderAction("DateViewPartial", "Customer");}
+            </div>
+        </div>
+    </div>
+
+    <div class="ListContents custom-top" style="display:block;">
+
+
+        <div class="header-content">
+            <div class="money-bar width-100p List_color_div lead_list_colorfull_bar">
+                @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadGridSummary) && Model != null)
+                {
+                    <div class="money-bar-contents">
+                        <div class="money-bar-left-content">
+                            <div class="estimate active_customer_filter" onclick="LoadListLead()">
+                                <div class="sub-content">
+                                    <span>@Localize.T("Leads")</span>
+                                </div>
+                                <span class="cl_amount spnleadcount">@Model.LeadTabCount.LeadCount</span>
+                            </div>
+                        </div>
+
+                        @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadBookingCountTab))
+                        {
+                            <div class="money-bar-right-content">
+                                <div class="booking" onclick="LoadLeadBookingList()">
+                                    <div class="sub-content">
+                                        <span>@Localize.T("Booking")</span>
+                                    </div>
+                                    <span class="cl_amount bookingimatecount">@Model.LeadTabBookingCount.BookingCount</span>
+                                </div>
+                            </div>
+                        }
+                        else if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadEstimatesCountTab))
+                        {
+                            <div class="money-bar-right-content">
+                                <div class="activity totalrmr_customer_filter" onclick="LoadLeadEstimateList()">
+                                    <div class="sub-content">
+                                        <span>@Localize.T("Estimates")</span>
+                                    </div>
+                                    <span class="cl_amount spnestimatecount">@Model.LeadTabEstimateCount.EstimateCount</span>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="money-bar-left-content">
+                            <div class="overdue openinvoice_customer_filter">
+                                <div class="sub-content" onclick="LoadLeadThisMonthList()" style="cursor:pointer;">
+                                    <span>@Localize.T("Leads This Month: ")</span>
+                                    <span class="spnthiscount">@Model.LeadTabThisMonthCount.LeadThisMonthCount</span>
+                                </div>
+                                <div class="sub-content" onclick="LoadLeadLastMonthList()" style="cursor:pointer;">
+                                    <span>@Localize.T("Converted Last Month: ")</span>
+                                    <span class="spnlastcount">@Model.LeadTabLastMonthCount.LeadLastMonthCount</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadBookingCountTab))
+                        {
+                            <div class="money-bar-right-content">
+                                <div class="invoice dueinvoice_customer_filter" onclick="LoadLeadBookingList()">
+                                    <div class="sub-content">
+                                        <span>@Localize.T("Booking Amount")</span>
+                                    </div>
+                                    <span class="cl_amount spnBookingamount">@Model.LeadTabBookingAmount.LeadBookingAmount</span>
+                                </div>
+                            </div>
+                        }
+                        else if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadEstimatesAmountCountTab))
+                        {
+                            <div class="money-bar-right-content">
+                                <div class="invoice dueinvoice_customer_filter" onclick="LoadLeadEstimateList()">
+                                    <div class="sub-content">
+                                        <span>@Localize.T("Estimates Amount")</span>
+                                    </div>
+                                    <span class="cl_amount spnestimateamount">@Model.LeadTabEstimateAmount.LeadEstimateAmount</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="row modify_row">
+                <div class="col-md-8 leads_padd_left lead_list_search_filter">
+                    <div class="down_arrow_custom">
+                        <img src="~/Content/img/down_arrow.png" />
+                    </div>
+
+                    @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadFilter))
+                    {
+
+                        <div class="filter_for_lead_list">
+                            <button class="btn btn-default green_button btn-filter" title="@Localize.T("Filter")">
+                                <span class="glyphicon glyphicon-filter"></span>
+                            </button>
+                        </div>
+                    }
+                    @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.NewLeadsFilter) && ViewBag.NewLeadsList == "true")
+                    {
+                        <div class="MarkAllNewLeadAsReadDiv">
+                            <div class="input-group add-on" style="display:inline;">
+                                <button class="btn customer-new" id="MarkAllNewLeadAsRead" type="button" title="@Localize.T("Mark All New Lead As Read")">
+                                    <i class="" aria-hidden="true"></i>@Localize.T("Mark All New Lead As Read")
+                                </button>
+                            </div>
+                            <div class="input-group add-on" style="display:inline;">
+                                <button class="btn customer-new" id="DisplayNewLeadsOnly" type="button" title="@Localize.T("Show New Leads Only")">
+                                    <i class="" aria-hidden="true"></i>@Localize.T("New Leads Only") (@ViewBag.NewLeadCount)
+                                </button>
+                            </div>
+                        </div>
+                    }
+
+                </div>
+
+                <div class="col-md-4 pad_right_none lead_list_print_div">
+                    <div class="ActionsDivLeads">
+                        <div class="btn-group black-border">
+                            <ul style="min-width:inherit; margin-top:0px !important; border-radius:4px !important; border-color: #b1b4bb !important;" class="dropdown-menu customer-dropdown-ul-style">
+                                @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadEdit))
+                                {
+                                    <li class="Edit-Lead2"><a class="dropallign Edit-Lead" href="javascript:void(0)">@Localize.T("Edit")</a></li>
+                                }
+                                @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadDelete))
+                                {
+                                    <li class="Delete-Lead"><a class="dropallign" href="javascript:void(0)">@Localize.T("Delete")</a></li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="fliter-list lead_list_filter" style="display:none;">
+
+            </div>
+            <box id="boxshiner" class="shine"></box>
+            <div class="filter-Lead-List">
+
+            </div>
+
+            <div class="custom-pager hidden">
+                <ul class="pager">
+                    <li><a href="javascript:void(0)">@Localize.T("Previous")</a></li>
+                    <li><a href="javascript:void(0)">@Localize.T("Next")</a></li>
+                </ul>
+            </div>
+
+        </div>
+        <div class="hidden" style="display:none;">
+            <a href="" class="ExportLeadReport"></a>
+        </div>
+    </div>
+    <div id="lead-paging" class="AgentListPagination">
+
+    </div>
+</div>
+
+
+<div class="ListViewLoader">
+    <div>
+        <div class="lds-css ng-scope">
+            <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+        </div>
+    </div>
+    @*<div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div>*@
+</div>
+<div class="displayNone">
+    <a href="@(AppConfig.DomainSitePath)/Customer/AddCustomer?lead=true" class="addManufacturerMagnific">@Localize.T("Add New Lead")</a>
+</div>
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+@Html.Raw(customertemplate)

@@ -1,0 +1,675 @@
+﻿@model HS.Entities.CreateEquipment
+@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+    if (Model.Equipment.SupplierCost == null)
+    {
+        Model.Equipment.SupplierCost = 0;
+    }
+    if (Model.Equipment.Retail == null)
+    {
+        Model.Equipment.Retail = 0;
+    }
+    var Type = Model.Equipment.EquipmentClassId == 1 ? "Equipment" : "Service";
+    List<HS.Entities.GridSetting> UiGridSetting = (List<HS.Entities.GridSetting>)ViewBag.EquipmentUiSetting;
+
+}
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework
+@Styles.Render("~/styles/EquipmentDetailPage")
+
+<script>
+    var showall = '@ViewBag.showall';
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var EquipmentGuid = '@Model.Equipment.EquipmentId';
+    var CurrentEquipmentClassId = '@Model.Equipment.EquipmentClassId';
+    var OpenEquipmentFilsTab = function () {
+        $(".EquipmentFile_Load").html(TabsLoaderText);
+        $(".EquipmentFile_Load").load(domainurl + "/Inventory/EquipmentFilesPartial/?EquipmentId=" + EquipmentGuid);
+    }
+
+    var OpenEditEquipment = function (EditId, ClassId) {
+        EquipmentClassId = ClassId;
+        if (ClassId == 1) {
+            OpenTopToBottomModal(domainurl + "/Inventory/AddEquepment/?Id=" + EditId);
+        } else if (ClassId == 2) {
+            OpenTopToBottomModal(domainurl + "/Inventory/AddService/?Id=" + EditId);
+        }
+    }
+    var OpenServiceOptions = function (equipmentId, ClassId) {
+        OpenRightToLeftModal(domainurl + "/Inventory/OpenServiceOptions/?EquipmentId=" + equipmentId)
+    }
+    var OpenserviceOptionList = function (EquipmentId) {
+        OpenTopToBottomModal(domainurl + "/Inventory/ServiceOptionList/?EquipmentId=" + EquipmentId);
+    }
+
+    var MatchCombinations = function (EquipmentId) {
+        OpenRightToLeftModal(domainurl + "/Inventory/MatchCombinations/?EquipmentId=" + EquipmentId);
+    }
+    var ShowServiceOptionsCombinationList = function (EquipmentId) {
+        OpenTopToBottomModal(domainurl + "/Inventory/ShowCombinationList/?EquipmentId=" + EquipmentId);
+    }
+    var AddToWareHouse = function (EquipmentId) {
+        OpenRightToLeftModal("/Inventory/AddManualInventory/?EquipmentId=" + EquipmentId);
+    }
+    var LoadFavouriteEquipment = function (eqpid) {
+        OpenRightToLeftModal("/Inventory/FavouriteEquipmentPartial/?EquipmentId=" + eqpid);
+    }
+    var showallproducthistory = function (eqpid) {
+        var showall = 'yes';
+        $(".equipment_detail_page_outer").html(TabsLoaderText);
+
+        $(".equipment_detail_page_outer").load(domainurl + "/Inventory/EquipmentDetailPartial/?Id=" + eqpid +"&showall="+showall);
+    }
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide();
+        $(".EquipmentFileTab").click(function () {
+            $(".EquipmentFile_Load").html(TabsLoaderText);
+            $(".EquipmentFile_Load").load(domainurl + "/Inventory/EquipmentFilesPartial/?EquipmentId=" + EquipmentGuid);
+        });
+
+        $(".equipment_detail_page_back_btn").click(function (e) {
+            if (CurrentEquipmentClassId == 2) {
+                LoadServiceInventory(true);
+            } else {
+                LoadInventory(true);
+            }
+        });
+        if (showall == "yes") {
+            $(".showall").hide();
+        }
+        @if(Model.InventoryHistoryList.Count < 50)
+        {
+            <text>
+                $(".showall").hide();
+           </text>
+        }
+    });
+
+</script>
+
+<div class="equipment_detail_page_outer">
+    <div class="equipment_detail_page_top_header">
+        <a class="equipment_detail_page_back_btn"> <i class="fa fa-chevron-left" aria-hidden="true"> </i> </a>
+        @if (Model.Equipment.EquipmentClassId == 2)
+        {
+            <div>@Localize.T("Service")</div>
+        }
+        else
+        {
+            <div>@Localize.T("Inventory")</div>
+        }
+
+    </div>
+    <div class="invoices_tabs_header">
+        <ul class="nav nav-tabs invoices-tabs" id="myEquipmentTab">
+            <li class="active EquipmentDetailTab">
+                <a data-target=".EquipmentDetail_Load" data-toggle="tab">@Localize.T("Detail")</a>
+            </li>
+            <li class="EquipmentFileTab">
+                <a data-target=".EquipmentFile_Load" data-toggle="tab">@Localize.T("Files")</a>
+            </li>
+
+            <li style="float:right;border:none!important;">
+                @if (Model.Equipment.EquipmentClassId == 2)
+                {
+                    <button class="btn  btn_edit_equipment green_button" onclick="OpenServiceOptions('@Model.Equipment.EquipmentId','@Model.Equipment.EquipmentClassId')" type="button" title="@Localize.T("View Options For Service")">
+                        <i class="fa fa-edit" aria-hidden="true"></i> &nbsp;@Localize.T("View Options For Service")
+                    </button>
+                    <button class="btn  btn_edit_equipment green_button" onclick="OpenserviceOptionList('@Model.Equipment.EquipmentId')" type="button" title="@Localize.T("Service Options List")">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i> &nbsp;@Localize.T("Service Options List")
+                    </button>
+                    <button class="btn  btn_edit_equipment green_button" onclick="ShowServiceOptionsCombinationList('@Model.Equipment.EquipmentId')" type="button" title="@Localize.T("Service Options Combinations")">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i> &nbsp;@Localize.T("Service Options Combinations")
+                    </button>
+                }
+                @if (PermissionChekcer.IsPermitted(Permissions.MenuPermissions.EquipmentFavouritePermission))
+                {
+                    <button class="btn  btn_edit_equipment green_button" onclick="LoadFavouriteEquipment('@Model.Equipment.EquipmentId')" type="button" title="@Localize.T("Favourite")">
+                        <i class="fa fa-foursquare" aria-hidden="true"></i> &nbsp;@Localize.T("Favourite")
+                    </button>
+                }
+                @if (PermissionChekcer.IsPermitted(Permissions.MenuPermissions.InventoryEdit))
+                {
+                    <button class="btn  btn_edit_equipment green_button" title="@Localize.T("Edit")" onclick="OpenEditEquipment('@Model.Equipment.Id','@Model.Equipment.EquipmentClassId')" type="button">
+                        <i class="fa fa-edit" aria-hidden="true"></i> &nbsp;@Localize.T("Edit")
+                    </button>
+                }
+            </li>
+        </ul>
+    </div>
+    <div class="invoices-tabs">
+        <div class="nav-detail-contents">
+            <div class="tab-content">
+                <div class="tab-pane active EquipmentDetail_Load">
+                    <div class="EquipmentDetailDiv">
+                        <div class="DetailDiv">
+                            @if (Model.Equipment.EquipmentClassId == 1)
+                            {
+                                <div class="DetailDiv_heading">Equipment Detail</div>
+                            }
+                            else if (Model.Equipment.EquipmentClassId == 2)
+                            {
+                                <div class="DetailDiv_heading">Service Detail</div>
+                            }
+                        <table>
+                            @if (!string.IsNullOrWhiteSpace(Model.Equipment.ProfilePicture))
+                            {
+                                <tr class="equipment_profile_pic_container">
+                                    <td colspan="2" class="equipment_profile_pic">
+                                        <img src="@Model.Equipment.ProfilePicture" />
+
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var item in UiGridSetting)
+                            {
+                                if (item.SelectedColumn == "Name")
+                                {
+                                    <tr>
+                                        <td>Name<span>:</span></td>
+                                        <td>@Model.Equipment.Name</td>
+                                    </tr>
+                                }
+                                if (item.SelectedColumn == "Type")
+                                {
+                                    <tr>
+                                        <td>Type <span>:</span></td>
+                                        <td>@Type</td>
+                                    </tr>
+                                }
+                                if (Model.Equipment.EquipmentClassId != 2)
+                                {
+                                    if (item.SelectedColumn == "SKU")
+                                    {
+                                        <tr>
+                                            <td>SKU <span>:</span></td>
+                                            <td>@Model.Equipment.SKU</td>
+                                        </tr>
+                                    }
+                                }
+                                if (item.SelectedColumn == "Description")
+                                {
+                                    <tr>
+                                        <td>Description<span>:</span></td>
+                                        <td>@Model.Equipment.Comments</td>
+                                    </tr>
+                                }
+                                if (item.SelectedColumn == "Category")
+                                {
+                                    <tr>
+                                        <td>Category<span>:</span></td>
+                                        <td>@Model.Equipment.EquipmentType</td>
+                                    </tr>
+                                }
+                            }
+                            <tr>
+                                <td>Recurring Billing<span>:</span></td>
+                                @if (Model.Equipment.IsARBEnabled.HasValue && Model.Equipment.IsARBEnabled.Value)
+                                {
+                                    <td>Yes</td>
+                                }
+                                else
+                                {
+                                    <td>No</td>
+                                }
+
+                            </tr>
+                            @foreach (var item in UiGridSetting)
+                            {
+
+                                if (Model.Equipment.EquipmentClassId != 2)
+                                {
+                                    if (item.SelectedColumn == "Manufacturer")
+                                    {
+                                        <tr>
+                                            <td>Manufacturer<span>:</span></td>
+                                            <td>@Model.Equipment.ManufacturerName</td>
+                                        </tr>
+                                    }
+
+                                    if (item.SelectedColumn == "RepCost")
+                                    {
+                                        <tr>
+                                            <td>Rep Cost<span>:</span></td>
+                                            <td>@Currency@LabelHelper.FormatAmount(Model.Equipment.RepCost)</td>
+                                        </tr>
+                                    }
+                                    if (item.SelectedColumn == "RackNo")
+                                    {
+                                        <tr>
+                                            <td>Rack No<span>:</span></td>
+                                            <td>@Model.Equipment.RackNo</td>
+                                        </tr>
+                                    }
+                                    if (item.SelectedColumn == "AsOfDate")
+                                    {
+                                        <tr>
+                                            <td>As Of Date<span>:</span></td>
+                                            <td>@(Model.Equipment.AsOfDate.HasValue ? string.Format(Model.Equipment.AsOfDate.Value.UTCToClientTime().ToString("MM/dd/yy hh:mm tt")) : "")</td>
+                                        </tr>
+                                    }
+
+                                    if (item.SelectedColumn == "ReorderPoint")
+                                    {
+                                        <tr>
+                                            <td>Reorder Point (Tech)<span>:</span></td>
+                                            <td>@Model.Equipment.reorderpoint</td>
+                                        </tr>
+                                    }
+                                    if (item.SelectedColumn == "ReorderPoint (WH)")
+                                    {
+                                        <tr>
+                                            <td>Reorder Point (WH)<span>:</span></td>
+                                            <td>@Model.Equipment.whreorderpoint</td>
+                                        </tr>
+                                    }
+                                    if (item.SelectedColumn == "Point")
+                                    {
+
+                                        <tr>
+                                            <td>Point<span>:</span></td>
+                                            <td>@Model.Equipment.Point</td>
+                                        </tr>
+                                    }
+                                    if (item.SelectedColumn == "RetailPrice")
+                                    {
+                                        <tr>
+                                            <td>Retail Price<span>:</span></td>
+                                            <td>@Currency@LabelHelper.FormatAmount(Model.Equipment.Retail)</td>
+                                        </tr>
+                                    }
+                                    if (item.SelectedColumn == "Location")
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(Model.Equipment.Location))
+                                        {
+                                            <tr>
+                                                <td>Location<span>:</span></td>
+                                                <td>@Model.Equipment.Location</td>
+                                            </tr>
+                                        }
+                                    }
+                                    if (item.SelectedColumn == "Type")
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(Model.Equipment.Type))
+                                        {
+                                            <tr>
+                                                <td>Type<span>:</span></td>
+                                                <td>@Model.Equipment.Type</td>
+                                            </tr>
+                                        }
+                                    }
+                                    if (item.SelectedColumn == "Model")
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(Model.Equipment.Model))
+                                        {
+                                            <tr>
+                                                <td>Model<span>:</span></td>
+                                                <td>@Model.Equipment.Model</td>
+                                            </tr>
+                                        }
+                                    }
+                                    if (item.SelectedColumn == "Finish")
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(Model.Equipment.Finish))
+                                        {
+                                            <tr>
+                                                <td>Finish<span>:</span></td>
+                                                <td>@Model.Equipment.Finish</td>
+                                            </tr>
+                                        }
+                                    }
+                                    if (item.SelectedColumn == "Capacity")
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(Model.Equipment.Capacity))
+                                        {
+                                            <tr>
+                                                <td>Capacity<span>:</span></td>
+                                                <td>@Model.Equipment.Capacity</td>
+                                            </tr>
+                                        }
+                                    }
+                                    if (item.SelectedColumn == "Barcode")
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(Model.Equipment.Barcode))
+                                        {
+                                            <tr>
+                                                <td>Barcode<span>:</span></td>
+                                                <td>@Model.Equipment.Barcode</td>
+                                            </tr>
+                                        }
+                                    }
+                                    if (item.SelectedColumn == "OverheadRate")
+                                    {
+
+                                        <tr>
+                                            <td>Overhead/Markup<span>:</span></td>
+                                            <td>@Model.Equipment.OverheadRate</td>
+                                        </tr>
+
+                                    }
+                                    if (item.SelectedColumn == "ProfitRate")
+                                    {
+
+                                        <tr>
+                                            <td>Profit<span>:</span></td>
+                                            <td>@Model.Equipment.ProfitRate</td>
+                                        </tr>
+
+                                    }
+                                    if (item.SelectedColumn == "Unit")
+                                    {
+
+                                        <tr>
+                                            <td>Unit<span>:</span></td>
+                                            <td>@Model.Equipment.Unit</td>
+                                        </tr>
+
+                                    }
+                                    if (item.SelectedColumn == "IsKit")
+                                    {
+
+                                        <tr>
+                                            @{
+                                                if (Model.Equipment.IsKit == null)
+                                                {
+                                                    Model.Equipment.IsKit = false;
+                                                }
+                                            }
+                                            <td>Kit<span>:</span></td>
+                                            <td>@Model.Equipment.IsKit</td>
+                                        </tr>
+                                    }
+                                    if (item.SelectedColumn == "IsIncludeEstimate")
+                                    {
+
+                                        <tr>
+                                            @{
+                                                if (Model.Equipment.IsIncludeEstimate == null)
+                                                {
+                                                    Model.Equipment.IsIncludeEstimate = false;
+                                                }
+                                            }
+                                            <td>Include In Estimate<span>:</span></td>
+                                            <td>@Model.Equipment.IsIncludeEstimate</td>
+                                        </tr>
+                                    }
+                                    if (item.SelectedColumn == "IsUpsold")
+                                    {
+
+                                        <tr>
+                                            @{
+                                                if (Model.Equipment.IsUpsold == null)
+                                                {
+                                                    Model.Equipment.IsUpsold = false;
+                                                }
+                                            }
+                                            <td>Upsold<span>:</span></td>
+                                            <td>@Model.Equipment.IsUpsold</td>
+                                        </tr>
+                                    }
+                                    if (item.SelectedColumn == "TaggedEmail")
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(Model.Equipment.TaggedEmail))
+                                        {
+                                            <tr>
+                                                <td>Tagged Email<span>:</span></td>
+                                                <td>@Model.Equipment.TaggedEmail</td>
+                                            </tr>
+                                        }
+                                    }
+                                }
+                                else
+                                {
+
+                                    if (item.SelectedColumn == "RetailPrice")
+                                    {
+
+                                        <tr>
+                                            <td>Monthly Fee<span>:</span></td>
+                                            <td>@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.Equipment.Retail)</td>
+                                        </tr>
+                                    }
+                                }
+                            }
+                            @if (Model.Equipment.EquipmentClassId != 2)
+                            {
+                                <tr>
+                                    <td>QTY on Hand<span>:</span></td>
+                                    <td>@Model.Equipment.QtyOnHand</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                if (!string.IsNullOrEmpty(Model.Equipment.Tag) && Model.Equipment.Tag != "-1")
+                                {
+                                    <tr>
+                                        <td>Tag<span>:</span></td>
+                                        <td>@Model.Equipment.Tag</td>
+                                    </tr>
+                                }
+                            }
+                        </table>
+                            @if (Model.Equipment.EquipmentClassId != 2)
+                            {
+                                <div class="VendorPrice_heading">@Localize.T("Manufacturer list")</div>
+                                <table class="VendorPriceTable">
+                                    <thead>
+                                        <tr>
+                                            <th>@Localize.T("Manufacturer Name")</th>
+                                            @*<th>@Localize.T("Cost")</th>*@
+                                            <th>@Localize.T("Manufacturer SKU")</th>
+
+                                            <th>@Localize.T("Is Primary")</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        @foreach (var item in Model.Equipment.EquipmentManufacturerList)
+                                        {
+                                            if (!string.IsNullOrEmpty(item.ManufacturerName))
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <div>@Localize.T("Manufacturer Name") <span>:</span></div>
+                                                        <div> @item.ManufacturerName</div>
+                                                    </td>
+                                                    @*<td>
+                                                        <div>@Localize.T("Cost") <span>:</span></div>
+                                                        <div>@Currency@LabelHelper.FormatAmount(item.Cost)</div>
+                                                    </td>*@
+                                                    <td>
+                                                        <div>@Localize.T("Manufacturer SKU") <span>:</span></div>
+                                                        <div> @item.SKU</div>
+                                                    </td>
+                                                    <td>
+                                                        <div>@Localize.T("Is Primary") <span>:</span></div>
+                                                        <div>
+                                                            @if (item.IsPrimary)
+                                                            {
+                                                                <i class="fa fa-check" aria-hidden="true" style="color:green"></i>
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                            @if (Model.Equipment.EquipmentClassId != 2)
+                            {
+                                <div class="VendorPrice_heading">@Localize.T("Vendor price list")</div>
+                                <table class="VendorPriceTable">
+                                    <thead>
+                                        <tr>
+                                            <th>@Localize.T("Vendor Name")</th>
+                                            <th>@Localize.T("Cost")</th>
+                                            <th>@Localize.T("Vendor SKU")</th>
+
+                                            <th>@Localize.T("Is Primary")</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        @foreach (var item in Model.Equipment.EquipmentVendorList)
+                                        {
+                                            if (!string.IsNullOrEmpty(item.SupplierName))
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <div>@Localize.T("Vendor Name") <span>:</span></div>
+                                                        <div> @item.SupplierName</div>
+                                                    </td>
+                                                    <td>
+                                                        <div>@Localize.T("Cost") <span>:</span></div>
+                                                        <div>@Currency@LabelHelper.FormatAmount(item.Cost)</div>
+                                                    </td>
+                                                    <td>
+                                                        <div>@Localize.T("Vendor SKU") <span>:</span></div>
+                                                        <div> @item.SKU</div>
+                                                    </td>
+                                                    <td>
+                                                        <div>@Localize.T("Is Primary") <span>:</span></div>
+                                                        <div>
+                                                            @if (item.IsPrimary)
+                                                            {
+                                                                <i class="fa fa-check" aria-hidden="true" style="color:green"></i>
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                            @{
+                                if (Model.ListInventoryTech != null && Model.ListInventoryTech.Count > 0)
+                                {
+                                    <div class="VendorPrice_heading">@Localize.T("Tech Inventory List")</div>
+                                    <table class="VendorPriceTable">
+                                        <thead>
+                                            <tr>
+                                                <th>@Localize.T("Technician")</th>
+                                                <th>@Localize.T("Quantity")</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            @foreach (var item in Model.ListInventoryTech)
+                                            {
+                                                if (item.Quantity > 0)
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <div>@Localize.T("Technician")</div>
+                                                            <div>@item.empName</div>
+                                                        </td>
+                                                        <td>
+                                                            <div>@Localize.T("Quantity")</div>
+                                                            <div>@item.Quantity</div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                }
+                            }
+                        </div>
+                        <div class="HistoryDiv">
+                            @if (Model.Equipment.EquipmentClassId == 1)
+                            {
+                                <div class="HistoryDiv_heading">
+                                    <span>@Localize.T("Product History")</span>
+                                    <button class="btn add_product_history green_button" title="@Localize.T("Add product history")" onclick="AddToWareHouse('@Model.Equipment.EquipmentId')">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <td>@Localize.T("Description")</td> 
+                                            <td>@Localize.T("Quantity")</td>
+                                            <td>@Localize.T("Action By")</td>
+                                            <td>@Localize.T("Date")</td>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        @foreach (var item in Model.InventoryHistoryList)
+                                        {
+                                            <tr>
+                                                <td><div>@Localize.T("Description") <span>:</span></div>
+                                                    <div>@item.Description</div>
+                                                </td>
+                                                @*<td>@item.PurchaseOrderId</td>*@
+                                                <td>
+                                                    <div>@Localize.T("Quantity") <span>:</span></div>
+                                                    <div>@(item.Type == "Release" ? "-" : "")@item.Quantity</div>
+                                                </td>
+                                                <td>
+                                                    <div>@Localize.T("Action By") <span>:</span></div>
+                                                    <div>@item.Name</div>
+                                                </td>
+                                                <td>
+                                                    <div>@Localize.T("Date") <span>:</span></div>
+                                                    <div>@string.Format(item.LastUpdatedDate.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"))</div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+
+                                </table>
+                                <br/>
+                                <a class="showall cus-anchor" onclick="showallproducthistory('@Model.Equipment.Id')" style="float:right;">show all</a>
+                            }
+                           
+                            else if (Model.Equipment.EquipmentClassId == 2)
+                            {
+                                <div class="HistoryDiv_heading">@Localize.T("Added Equipment List")</div>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <td>@Localize.T("Equipment Name")</td>
+                                            <td>@Localize.T("Quantity")</td>
+                                            <td>@Localize.T("Price")</td>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        @foreach (var item in Model.ServiceEquipmentList)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <div>@Localize.T("Equipment Name") <span>:</span></div>
+                                                    <div> @item.EquipmentName</div>
+                                                </td>
+                                                <td>
+                                                    <div>@Localize.T("Quantity") <span>:</span></div>
+                                                    <div>@item.Quantity</div>
+                                                </td>
+                                                <td>
+                                                    <div>@Localize.T("Price") <span>:</span></div>
+                                                    <div>@Currency@LabelHelper.FormatAmount(item.RetailPrice)</div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+
+                                </table>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane EquipmentFile_Load">
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,211 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@model List<HS.Entities.DelinquentCustomerModel>
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework
+<style>
+   
+</style>
+<script>
+    var DataTablePageSize = 50;
+    var LeadsStartDatepicker;
+    var LeadsEndDatepicker;
+
+    var EditCustomer = function (CustomerId) {
+
+        OpenTopToBottomModal(domainurl + "/Customer/AddCustomer?id=" + CustomerId);
+    }
+
+    var my_date_format = function (input) {
+        console.log(input+" r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var LeadServiceEquipment = function (idval) {
+        //var idval = $(this).attr('data-id');
+        var mapLoadurl = domainurl + "/Reports/GetLeadsServiceAndEquipmentCustomer?customerid=" + idval;
+        OpenTopToBottomModal(mapLoadurl);
+    }
+    var CustomerSearchKeyUp = function (pageno,order)
+    {
+        var id = $("#transfer_cus_id").val();
+         var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        var searchtext = $("#transfer_cus_search_text").val();
+        var transfermaxdate = $("#transfer_cus_maxdate").val();
+        var transfermindate = $("#transfer_cus_mindate").val();
+        $(".leads_report_table").html(TabsLoaderText);
+        
+        $(".leads_report_table").load(domainurl + "/Reports/TransferCustomerReportList/?pageno=" + pageno + "&pagesize=" + DataTablePageSize + "&id=" + encodeURI(id) + "&searchtext=" + encodeURI(searchtext) + "&transfermaxdate=" + encodeURI(transfermaxdate) + "&transfermindate=" + encodeURI(transfermindate)+"&order="+order+"&Start="+StartDate+"&End="+EndDate);
+    }
+    var ResetFilterList = function () {
+        //$(".convert_cus_inp").val("");
+        $("#transfer_cus_id").val("");
+         $("#transfer_cus_mindate").val("");
+        $("#transfer_cus_maxdate").val("");
+
+        CustomerSearchKeyUp(1);
+    }
+    $(document).ready(function () {
+        CustomerSearchKeyUp(1);
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+
+        $(".LoaderWorkingDiv").hide();
+        $("#LeadReportTab .invoice-loader").hide();
+
+        var table = $('#LeadsReportTable').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        if (StartDate != "" && EndDate != "")
+        {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        $("#btnDownloadLeadsReport_transfercustomer").click(function () {
+            var id = $("#transfer_cus_id").val();
+            var searchtext = $("#transfer_cus_search_text").val();
+            var transfermaxdate = $("#transfer_cus_maxdate").val();
+            var transfermindate = $("#transfer_cus_mindate").val();
+            if (StartDate.trim().length == 10 && EndDate.trim().length == 10) {
+                StartDate = StartDate.replaceAll('/', '_');
+                EndDate = EndDate.replaceAll('/', '_');
+                location.href = domainurl + "/Reports/TransferCustomerReportList/?Start=" + StartDate + "&End=" + EndDate + "&GetReport=true" + "&id=" + encodeURI(id) + "&searchtext=" + encodeURI(searchtext) + "&transfermaxdate=" + encodeURI(transfermaxdate) + "&transfermindate=" + encodeURI(transfermindate);
+            } else {
+                location.href = domainurl + "/Reports/TransferCustomerReportList/?GetReport=true" + "&pageno=1&pagesize=50" + "&id=" + encodeURI(id) + "&searchtext=" + encodeURI(searchtext) + "&transfermaxdate=" + encodeURI(transfermaxdate) + "&transfermindate=" + encodeURI(transfermindate)+"&Start="+StartDate+"&End="+EndDate;
+            }
+        });
+
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var id = $("#transfer_cus_id").val();
+            var searchtext = $("#transfer_cus_search_text").val();
+            var transfermaxdate = $("#transfer_cus_maxdate").val();
+            var transfermindate = $("#transfer_cus_mindate").val();
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+
+             var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+            UpdatePtoCookie();
+            $(".leads_report_table").html(TabsLoaderText);
+            $(".leads_report_table").load(domainurl + "/Reports/TransferCustomerReportList/?Start=" + StartDateVal + "&End=" + EndDateVal);
+        });
+
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#transfer_cus_mindate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#transfer_cus_maxdate')[0] });
+        $(".transfer_cus_report_filter").hide();
+        $("#transfer_cus_filterbtn").click(function () {
+            console.log("filter");
+            if ($(".transfer_cus_report_filter").is(":visible")) {
+                $(".transfer_cus_report_filter").hide();
+
+            } else {
+                $(".transfer_cus_report_filter").show();
+
+            }
+        });
+        //$(document).click(function (e) {
+        //    if ($($(e.target).parent().parent()).hasClass('transfer_cus_div')
+        //                || $($(e.target).parent()).hasClass('transfer_cus_div')
+        //                || $($(e.target).parent().parent()).hasClass('transfer_cus_div')) {
+        //        return;
+        //    }
+        //    else if ($(".transfer_cus_report_filter").is(":visible")) {
+        //        $(".transfer_cus_report_filter").hide();
+        //    }
+        //});
+         $("#transfer_cus_search_text").keydown(function (e) {
+
+                if (e.which == 13) {
+                    CustomerSearchKeyUp(1);
+                }
+            });
+    });
+</script>
+<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
+
+
+<div class="row lrp_bottom_border">
+    <div class="lead_total_color"></div>
+</div>
+
+
+<div class="row leads_report_top_bar">
+    <div class="transfer_cus_report_left transfer_cus_div">
+        <div class="input-group add-on">
+            <input class="form-control transfer_cus_inp" placeholder="Search Text" id="transfer_cus_search_text" />
+            <div class="input-group-btn"><button class="btn green_button" id="apply_btn" onclick="CustomerSearchKeyUp(1)"><i class="fa fa-search"></i></button></div>
+        </div>
+        <button class="btn transfer_cus_div green_button" id="transfer_cus_filterbtn">
+            <span title="Filter" class="glyphicon glyphicon-filter"></span>
+        </button>
+    </div>
+    @if (PermissionChekcer.IsPermitted(Permissions.ReportsPermissions.LeadsReportDownload))
+    {
+        <button title="@Localize.T(" Download")" class="report_btn lrp_float_right" id="btnDownloadLeadsReport_transfercustomer"><i class="fa fa-download" aria-hidden="true"></i></button>
+    }
+    <div class="transfer_cus_report_filter">
+        <div class="transfer_cus_report_filte_innerr transfer_cus_div">
+            <div class="form-group clearfix">
+                <label>@Localize.T("ID")</label>
+                <input class="form-control transfer_cus_inp" placeholder="ID" id="transfer_cus_id" />
+            </div>
+            <div class="form-group clearfix">
+                <label>@Localize.T("Transfer Min Date")</label>
+                <input class="form-control transfer_cus_inp" placeholder="Transfer Min Date" id="transfer_cus_mindate" />
+            </div>
+            <div class="form-group clearfix">
+                <label>@Localize.T("Transfer Max Date")</label>
+                <input class="form-control transfer_cus_inp" placeholder="Transfer Max Date" id="transfer_cus_maxdate" />
+            </div>
+        </div>
+        <div class="transfer_cus_report_footer transfer_cus_div">
+            <button class="btn green_button" id="apply_btn_filter" onclick="CustomerSearchKeyUp(1)">@Localize.T("Apply")</button>
+            <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilterList()">@Localize.T("Reset")</button>
+        </div>
+    </div>
+</div>
+
+<div class="leads_report_table">
+    
+</div>
+
+
+

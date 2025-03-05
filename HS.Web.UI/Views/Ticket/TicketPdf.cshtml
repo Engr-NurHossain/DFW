@@ -1,0 +1,390 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+}
+@model HS.Entities.CreateTicketModel
+@using System.Collections;
+@using lbl = HS.Web.UI.Helper.LabelHelper
+@using DateTimeExt = HS.Framework.DateTimeExtension
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif;">
+    <div class="container">
+        <div class="tblCompanyInfo">
+            <table style="width:100%">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><br /></td></tr>
+                    <tr>
+                        <td style="width:150px;vertical-align:top;">
+                            @if (!string.IsNullOrWhiteSpace(Model.Company.CompanyLogo))
+                            {
+                                <img src="@ViewBag.SiteDomain@Model.Company.CompanyLogo" style="width:80px; padding-left:40px;" /><br />
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-left:40px;width:60%">
+                            @Html.Raw(Model.CompanyAddressFormat)
+                        </td>
+                        <td style="float:right; vertical-align:top;width:40%;">
+                            <span></span><br /><br />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            @if (string.IsNullOrWhiteSpace(Model.Company.Street))
+                            {
+                                <br />
+                            }
+                            <br />
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="tblEstimateInfo">
+            <table style="width:100%">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="width:30%; padding-left:40px;">
+                            <b>Customer's info</b>
+                            @Html.Raw(Model.CustomerAddressFormat)
+                        </td>
+                        <td style="width:30%"></td>
+                        <td style="width:40%">
+                            <p style="background-color:#4f90bb;height:30px;padding-top:10px;padding-left:10px; color:white"><b>@Model.Ticket.TicketTypeVal</b> # @Model.Ticket.Id</p>
+                            @if (Model.Ticket.CompletionDate != new DateTime() && Model.Ticket.CompletionDate != new DateTime(1970, 1, 1))
+                            {
+                                <p style="background-color:#4f90bb;height:30px;padding-top:10px;padding-left:10px;color:white"><b>Scheduled On</b> @Model.Ticket.CompletionDate.ToString("MM/dd/yy") @((!string.IsNullOrWhiteSpace(Model.Ticket.AppointmentStartTimeVal) && Model.Ticket.AppointmentStartTime != "-1") ? "at " + Model.Ticket.AppointmentStartTimeVal : "")</p>
+                            }
+                            @if (Model.TicketAssignedUserList != null && Model.TicketAssignedUserList.Count() > 0)
+                            {
+                                <p style="background-color:#4f90bb;min-height:30px;padding-top:10px;padding-bottom:10px;padding-left:10px;color:white"><b>Assigned To</b> @string.Join(", ", Model.TicketAssignedUserList.Select(x => x.FullName))</p>
+                            }
+                            @if (Model.TicketUserList != null && Model.TicketUserList.Count > 0)
+                            {
+                                <p style="background-color:#4f90bb;min-height:30px;padding-top:10px;padding-bottom:10px;padding-left:10px;color:white"><b>Additional Members</b> @string.Join(", ", Model.TicketUserList.Select(x => x.FullName))</p>
+                            }
+
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        @if (Model.CustomerAppointmentEquipmentList != null && Model.CustomerAppointmentEquipmentList.Count > 0)
+        {
+            <br />
+            <br />
+            <div style="margin-top:20px;width:100%;">
+                <table style="width:100%; border-collapse:collapse">
+                    <thead>
+                        <tr style="background-color:#4f90bb; color:white;width:100%; border:1px solid #4f90bb">
+                            <th style="width:30%;text-align:center; padding:5px 0px; border-right:1px solid #fff;">Products/Services</th>
+                            <th style="width:60%; text-align:center; padding:5px 0px; border-right:1px solid #fff;">Description</th>
+                            <th style="width:10%; text-align:center; padding:5px 0px;">QTY</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.CustomerAppointmentEquipmentList)
+                        {
+                            <tr style="border-bottom:1px solid #ccc;">
+                                <td style="padding: 5px 0px 5px 40px;">
+                                    @if (!string.IsNullOrEmpty(item.FileName))
+                                    {
+                                        <img src="@ViewBag.SiteDomain@item.FileName" alt="Alternate Text" style="width:25px;height:25px;border:none" /> <b>@item.EquipName</b><br />
+                                    }
+                                    else
+                                    {
+                                        <b>@item.EquipName</b><br />
+                                    }
+                                </td>
+                                <td style="padding:5px 0px;">
+                                    <span>@item.EquipDetail</span>
+                                </td>
+                                <td style="text-align:center; padding:5px 0px;">@item.Quantity</td>
+                            </tr>
+                            @*<tr><td style="width:60.666%;height:50px;border-bottom:1px solid #4f90bb;position:relative;"></td></tr>*@
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (Model.TicketBookingDetails != null && Model.TicketBookingDetails.Count > 0 || Model.TicketBookingExtraItem != null && Model.TicketBookingExtraItem.Count > 0)
+        {
+            <table style="width:100%; float:left; table-layout:fixed; border-collapse:collapse;">
+                <thead>
+                    <tr style="background-color:#4f90bb; color:white;width:100%">
+                        <th style="width:56.666%;text-align:left;padding:5px 0px 5px 40px;">
+                            ORDER DETAIL
+                        </th>
+                        <th style="width:11.111%;">AREA</th>
+                        <th style="width:11.111%;">QTY</th>
+                        <th style="width:13.111%;">RATE</th>
+                        <th style="width:15.111%;">DISCOUNT</th>
+                        <th style="width:17.111%;">AMOUNT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.TicketBookingDetails != null)
+                    {
+                        int Count = 1;
+                        foreach (var item in Model.TicketBookingDetails)
+                        {
+                            <tr>
+                                <td style="padding-left:40px;">
+                                    <b>@Count<span>.</span></b>
+                                    @if (!string.IsNullOrWhiteSpace(item.Package))
+                                    {
+                                        <b>@item.Package</b><br />
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(item.Included))
+                                    {
+                                        <b>@item.Included</b><br />
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.RugType))
+                                    {
+                                        <span>Rug shape: @item.RugType</span>
+                                        if (item.RugType == lbl.RugType.Rectangle || item.RugType == lbl.RugType.Oval || item.RugType == lbl.RugType.Square)
+                                        {
+                                            double width = item.Width.HasValue ? item.Width.Value : 0;
+                                            double widthInch = item.WidthInch.HasValue ? item.WidthInch.Value : 0;
+                                            double TotalWidth = width + widthInch / 12;
+
+                                            double length = item.Length.HasValue ? item.Length.Value : 0;
+                                            double lengthInch = item.LengthInch.HasValue ? item.LengthInch.Value : 0;
+                                            double TotalLength = length + lengthInch / 12;
+
+                                            <span>&nbsp; @(width + "'") @((widthInch + "\"")) X @((length + "'")) @((lengthInch + "\"")) (@(Math.Round(TotalWidth ,2))ft X @((Math.Round(TotalLength ,2)))ft)</span><br />
+                                        }
+                                        else
+                                        {
+                                            double Radius = item.Radius.HasValue ? item.Radius.Value : 0;
+                                            double RadiusInch = item.RadiusInch.HasValue ? item.RadiusInch.Value : 0;
+                                            double TotalRadius = Radius + RadiusInch / 12;
+
+                                            <span>@(Radius + "'" ) @(RadiusInch + "\"") (@((Math.Round(TotalRadius ,2)))ft)</span><br />
+                                        }
+
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.Included))
+                                    {
+                                        <span>Included: @item.Included</span>
+                                    }
+                                </td>
+                                <td valign="top" style="text-align:center">@item.TotalSize sf</td>
+                                <td valign="top" style="text-align:center">@item.Quantity</td>
+                                <td valign="top" style="text-align:center">@Currency@lbl.FormatAmount(item.UnitPrice)</td>
+
+                                <td valign="top" style="text-align:center">@Currency@lbl.FormatAmount(item.Discount)</td>
+
+                                <td valign="top" style="text-align:center">@Currency@lbl.FormatAmount(item.TotalPrice)</td>
+                            </tr>
+                            Count++;
+                        }
+                    }
+                    @if (Model.TicketBookingExtraItem != null)
+                    {
+                        foreach (var item in Model.TicketBookingExtraItem)
+                        {
+                            <tr>
+                                <td style="padding-left:40px;">
+                                    <b>@item.EquipName</b><br />
+                                    @if (!string.IsNullOrWhiteSpace(item.EquipDetail))
+                                    {
+                                        <span>@item.EquipDetail</span>
+                                    }
+                                </td>
+                                <td valign="top" style="text-align:center">-</td>
+                                <td valign="top" style="text-align:center;">@item.Quantity</td>
+                                <td valign="top" style="text-align:center">@Currency@lbl.FormatAmount(item.UnitPrice)</td>
+                                <td valign="top" style="text-align:center">@Currency@lbl.FormatAmount(item.Discount)</td>
+                                <td valign="top" style="text-align:center">@Currency@lbl.FormatAmount(item.TotalPrice)</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        }
+
+
+        <table style="width:100%;float:left; table-layout:fixed; border-collapse:collapse; margin-top:30px;margin-bottom:30px;">
+            <thead>
+                <tr style="background-color:#4f90bb; color:white;width:100%; border:1px solid #4f90bb;">
+                    <th style="width:40%;text-align:center; padding:5px 0px; border-right:1px solid #fff;">Action</th>
+                    <th style="width:60%;text-align:center; padding:5px 0px;">Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom:1px solid #ccc;">
+                    <td valign="top" style="padding:5px 0px 0px;">
+                        <b>
+                            <span>Created By @Model.Ticket.CreatedByVal</span>
+                            <span>on @(string.Format(DateTimeExt.UTCToClientTime(Model.Ticket.CreatedDate).ToString("MM/dd/yy hh:mm tt"))) </span>
+                        </b>
+                    </td>
+                    <td style="padding:5px 0px 0px;">
+                        @Html.Raw(Model.Ticket.Message)
+                    </td>
+                </tr>
+                @foreach (var reply in Model.TicketReplyList)
+                {
+                    if (reply.IsPrivate != true)
+                    {
+                        <tr style="border-bottom:1px solid #ccc;">
+                            <td valign="top" style="padding:5px 0px 0px;">
+                                <span>
+                                    @if (reply.ReplyType == "File")
+                                    {
+                                        <span>Uploaded by</span>
+                                    }
+                                    else if (reply.Message.IndexOf("<span>Attached an") == 0)
+                                    {
+                                        <span>Attached by</span>
+                                    }
+                                    else if (reply.Message.IndexOf("<span data='itemsremoved'>") == 0)
+                                    {
+                                        <span>Products Removed by</span>
+                                    }
+                                    else if (reply.Message.IndexOf("<span data='itemsadded'>") == 0)
+                                    {
+                                        <span>Products Added by</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Reply from</span>
+                                    }
+                                    <b>@reply.CreatedByVal</b>
+                                </span>
+                                <span>on @(string.Format(DateTimeExt.UTCToClientTime(reply.RepliedDate).ToString("MM/dd/yy hh:mm tt")))</span>
+                            </td>
+                            <td style="padding:5px 0px 0px 10px;">
+                                <p> @Html.Raw(reply.Message) </p>
+                            </td>
+                        </tr>
+                    }
+
+                }
+            </tbody>
+        </table>
+
+        @if (Model.TicketBookingDetails != null && Model.TicketBookingDetails.Count > 0)
+        {
+            int Count = 1;
+            foreach (var TicketBookingDetails in Model.TicketBookingDetails)
+            {
+                if (!string.IsNullOrWhiteSpace(TicketBookingDetails.RugConditions) || (TicketBookingDetails.RugFiles != null && TicketBookingDetails.RugFiles.Count > 0))
+                {
+                    <div style="width:100%;float:left; padding-top:10px; font-weight:800;">
+                        Rug#@Count
+                    </div>
+                }
+                if (!string.IsNullOrWhiteSpace(TicketBookingDetails.RugConditions))
+                {
+                    <h3 style="background-color:#4f90bb; color:white; margin-bottom:0px; padding:5px 10px;width:100%; float:left; box-sizing:border-box;">Rug Conditions</h3>
+                    <div class="RugCondtionsCBox" style="width:100%;float:left;border:1px solid #4f90bb; padding:10px; box-sizing:border-box;">
+                        <div style="width:100%; float:left; box-sizing:border-box;">
+                            @if (Model.RugCondtions != null && Model.RugCondtions.Count > 0)
+                            {
+                                foreach (HS.Entities.Lookup item in Model.RugCondtions)
+                                {
+                                    <div class="" style="width:33.333%;float:left;">
+                                        <label><input type="checkbox" class="Conditions" value="@item.DataValue" @(TicketBookingDetails.RugConditions.IndexOf(item.DataValue) > -1 ? "checked" : "") /> @item.DisplayText</label>
+                                    </div>
+                                }
+
+                            }
+                        </div>
+                    </div>
+                }
+                if (TicketBookingDetails.RugFiles != null && TicketBookingDetails.RugFiles.Count > 0)
+                {
+
+                    <div class="RugImages">
+                        <h3 style="background-color:#4f90bb; color:white; margin-bottom:0px; padding:5px 10px;width:100%; float:left; box-sizing:border-box;">Images</h3>
+
+                        <div class="AddImageDiv" style="width:100%;float:left;border:1px solid #4f90bb; padding:10px; box-sizing:border-box;">
+                            <div class="upload-gallary">
+                                @*<div class="project-blank-thumb" style="cursor:pointer;width:190px;float:left;">
+                                    <img id="btnProjectUpload" class="cursor-pointer blank-thumb project-blank-thumb-img" src="~/Content/Icons/blank_thumb_file.png" />
+                                </div>*@
+                                @foreach (var item in TicketBookingDetails.RugFiles)
+                                {
+                                    <div id="NewFileUp_@item.Id" class="dv-preview-pic  preview_@item.Id" style="float:left;">
+                                        <div class="dv-preview-pic-inner">
+                                            <img style="max-width:150px; max-height:150px;" class="preview-pic project-photo" src="@ViewBag.SiteDomain@item.FileLocation">
+                                        </div>
+                                        <span>@item.Description</span>
+                                        @*<input type="text" value="@item.Description" class="image-caption" placeholder="Add caption">*@
+                                    </div>
+                                }
+
+                            </div>
+                        </div>
+                    </div>
+                }
+                if (!string.IsNullOrWhiteSpace(TicketBookingDetails.Comments) && !string.IsNullOrEmpty(TicketBookingDetails.Comments))
+                {
+                    <h3 style="background-color:#4f90bb; color:white; margin-bottom:0px; padding:5px 10px;width:100%; float:left; box-sizing:border-box;">Comments</h3>
+                    <div class="RugCondtionsCBox" style="width:100%;float:left;border:1px solid #4f90bb; padding:10px; box-sizing:border-box;">
+                        <div style="width:100%; float:left; box-sizing:border-box;">
+                            <span>@TicketBookingDetails.Comments</span>
+                        </div>
+                    </div>
+                }
+
+                <br />
+                <br />
+                Count++;
+
+            }
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.Ticket.Signature))
+        {
+            <div style="width:200px; float:right; box-sizing:border-box; text-align:right;">
+                <img style="width:100%;" src="@HS.Framework.Utils.AppConfig.SiteDomain@Model.Ticket.Signature" />
+                @{
+                    if (Model.Ticket.TicketSignatureDate.HasValue && Model.Ticket.TicketSignatureDate.Value != new DateTime())
+                    {
+                        <div style="width:200px;float:right; box-sizing:border-box; border-top:1px solid #000; text-align:center;">@HS.Framework.DateTimeExtension.UTCToClientTime(Model.Ticket.TicketSignatureDate.Value).ToString("MM/dd/yy") at @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.For12Hours(HS.Framework.DateTimeExtension.UTCToClientTime(Model.Ticket.TicketSignatureDate.Value))</div>
+                    }
+                }
+            </div>
+        }
+        @if (Model.CustomerNotes != null && Model.CustomerNotes.Count() > 0)
+        {
+            <div style="page-break-after:always"></div>
+            <div>
+                <span style="font-weight:bold;">Customer Notes</span><br /><br />
+                <span style="font-weight:bold;">Note details: </span>
+                @foreach (var item in Model.CustomerNotes)
+                {
+
+                    <span>@Html.Raw(item.Notes)</span><br>
+                    <span style="font-weight:bold;">Added by: </span>
+                    <span>@item.empName</span>
+                    <span style="font-weight:bold;">Added date: </span>
+                    <span>@(string.Format(DateTimeExt.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy hh:mm tt"))) </span><br /><br />
+                }
+
+
+            </div>
+        }
+
+    </div>
+</body>
+</html>

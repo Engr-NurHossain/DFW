@@ -1,0 +1,191 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.EquipmentReturn
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<link href="~/Content/Css/PackageSettings/AddPackageDevice.css" rel="stylesheet" />
+
+<script src="~/Content/Js/Site/Validation.js"></script>
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/Js/AddEquipment/EquipmentSelect2.js"></script>
+@*<script src="~/Content/Js/PackageSetup/AddNewSmartPackageDevice.js"></script>*@
+<script>
+    var techid = "00000000-0000-0000-0000-000000000000";
+    var PurchaseDatepicker = new Pikaday({
+        field: $('#PurchaseDate')[0],
+        trigger: $('#AddBadInDate')[0],
+        format: 'MM/DD/YYYY',
+        firstDay: 1
+    });
+    var InitializeCustomerDropdown = function (dropdownitem) {
+        $(dropdownitem).select2({
+            placeholder: 'Customer',
+            allowClear: true,
+            minimumInputLength: 1,
+            ajax: {
+                url: domainurl + "/Ticket/GetCustomerList",
+                dataType: 'json',
+                type: "GET",
+                quietMillis: 50,
+                data: function (term) {
+                    return {
+                        q: term
+                    };
+                },
+                processResults: function (data, params) {
+                    return {
+                        results: $.map(data, function (item) {
+
+                            return {
+                                text: item.CustomerName + " [" + item.Street + "]",
+                                id: item.CustomerId
+                            }
+                        })
+                    };
+                }
+            }
+        });
+        $(dropdownitem).on("select2:closing", function (e) {
+
+        });
+    }
+    var saveBadInventory = function () {
+        var Id = $("#Id").val();
+        var CustomerId = $("#CustomerId").val();
+        var EquipmentId = $("#EquipmentId").val();
+        var TechnicianId = $("#TechnicianId").val();
+        var Quantity = $("#Quantity").val();
+        var InvoiceNo = $("#InvoiceNo").val();
+        var PurchaseDate = $("#PurchaseDate").val();
+        var Description = $("#Description").val();
+        var UserId = $("#TechnicianId").val();
+        var Status = $("#Status").val();
+        var url = domainurl + "/PurchaseOrder/AddBadInventory"
+        var param = {
+            Id: Id,
+            CustomerId: CustomerId,
+            EquipmentId: EquipmentId,
+            TechnicianId: TechnicianId,
+            Quantity: Quantity,
+            InvoiceNo: InvoiceNo,
+            PurchaseDate: PurchaseDate,
+            Description: Description,
+            Status: Status
+        };
+
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: JSON.stringify(param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                console.log("data" + data.message);
+                var msg = "" + data.message;
+                $(".loader-div").hide();
+                if (data.result == true) {
+                    OpenRightToLeftLgModal(false);
+                    OpenSuccessMessageNew("Success!", msg, function () {
+                        BIListLoad(1, null);
+                    });
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message, function () {
+                    });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        var BIListLoad = function (pageNo, order) {
+            if (typeof (pageNo) != "undefined") {
+                var LoadUrl = domainurl + "/PurchaseOrder/BadInventoryListPartial/?SearchText=" + encodeURI($(".BISearchText").val())
+                    + "&PageNo=" + pageNo + "&order=" + order;
+                $(".BadInventoryTable").html(TabsLoaderText);
+                $(".BadInventoryTable").load(LoadUrl);
+            }
+        }
+        
+        InitializeSuburbDropdown($('.dropdown_equipment'), "00000000-0000-0000-0000-000000000000", "1");
+        InitializeCustomerDropdown($('.dropdown_customar'));
+        $("#savebadinventory").click(function () {
+            if (CommonUiValidation()) {
+                saveBadInventory();
+            }
+        })
+    })
+
+</script>
+<div class="add_package_device_header" >
+    @Localize.T("Bad Inventory")
+</div>
+<div class="container-fluid" style="overflow-y:auto;height:85vh;">
+    @Html.HiddenFor(x => x.Id, new { Id = "Id" })
+
+    <div class="form-group clearfix">
+        <label>@Localize.T("Customer")<span class="red">*</span></label>
+        @Html.DropDownListFor(x => x.CustomerId, (List<SelectListItem>)ViewBag.CustomerList, new { @class = "form-control dropdown_customar", datarequired = "true" })
+        <label rel="PackageId" class="label hidden red position-absolute">*@Localize.T("Please Select A Customer")</label>
+    </div>
+    <div class="form-group clearfix">
+        <label>@Localize.T("Technician")<span class="red">*</span></label>
+        @Html.DropDownListFor(x => x.TechnicianId, (List<SelectListItem>)ViewBag.techlist, new { @class = "form-control", datarequired = "true" })
+        <label rel="TechnicianId" class="label hidden red position-absolute">*@Localize.T("Please select technician")</label>
+    </div>
+    <div class="form-group clearfix">
+        <label>@Localize.T("Equipment")<span class="red">*</span></label>
+        @Html.DropDownListFor(x => x.EquipmentId, (List<SelectListItem>)ViewBag.EquipmentList, new { @class = "form-control dropdown_equipment", datarequired = "true" })
+        <label rel="PackageId" class="label hidden red position-absolute">*@Localize.T("Please Select An Equipment")</label>
+    </div>
+    <div class="form-group clearfix">
+        <label>@Localize.T("Quantity")<span class="red">*</span></label>
+        @Html.TextBoxFor(x => x.Quantity, new { @class = "form-control", datarequired = "true", type = "number" })
+        <label rel="PackageId" class="label hidden red position-absolute">*@Localize.T("Please Select Number of Equipment")</label>
+    </div>
+    <div class="form-group clearfix">
+        <label>@Localize.T("Invoice No")</label>
+        @Html.TextBoxFor(x => x.InvoiceNo, new { @class = "form-control", type = "text", placeholder = "Invoice No" })
+    </div>
+
+    <div class="form-group clearfix">
+        <label>@Localize.T("Purchase Date")</label>
+        <div class="input_group_for_date add-on" id="AddBadInDate">
+            <input type="text" style="border-radius: 5px 0px 0px 5px;" id="PurchaseDate" class="form-control" value="@Model.PurchaseDate" placeholder="Purchase Date">
+            <div class="input-group-btn">
+                <btn class="btn">
+                    <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                </btn>
+            </div>
+        </div>
+        
+        <label rel="PackageId" class="label hidden red position-absolute">*@Localize.T("Please Select Purchase date")</label>
+    </div>
+    
+    <div class="form-group clearfix">
+        <label>@Localize.T("Description")<span class="red">*</span></label>
+        @Html.TextBoxFor(x => x.Description, new { @class = "form-control", datarequired = "true", type = "text", placeholder = "Description" })
+        <label rel="PackageId" class="label hidden red position-absolute">*@Localize.T("Please Select Number of Equipment")</label>
+    </div>
+    <div class="form-group clearfix">
+        <label>@Localize.T("Status")<span class="red">*</span></label>
+        @Html.DropDownListFor(x => x.Status, (List<SelectListItem>)ViewBag.badStatus, new { @class = "form-control", datarequired = "true" })
+        <label rel="Status" class="label hidden red position-absolute">*@Localize.T("Please select technician")</label>
+    </div>
+</div>
+
+<section class="footer-section">
+    <footer class="footer">
+        <div class="save-package-div">
+            <button class="btn-save-package-device" id="savebadinventory"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")</button>
+        </div>
+    </footer>
+</section>
+

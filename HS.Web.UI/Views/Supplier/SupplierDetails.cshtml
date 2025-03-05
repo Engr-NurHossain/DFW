@@ -1,0 +1,402 @@
+﻿@model HS.Entities.Supplier
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@{
+    Layout = null;
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@Styles.Render("~/styles/EquipmentList")
+
+<script src="~/Content/Js/VendorBill/VendorBillList.js"></script>
+<link href="~/Content/Css/VendorBill/VendorBillList.css" rel="stylesheet" />
+<link href="~/Content/Css/Supplier/SupplierDetails.css" rel="stylesheet" />
+
+<script>
+    var CurrentSupplierId = @Model.Id;
+    var OpenBillById = function (BillId) {
+        if (typeof (BillId) != "undefined" && BillId > 0) {
+            OpenTopToBottomModal(domainurl +"/Expense/AddVendorBill/?id=" + BillId);
+        }
+        else if (typeof (BillId) != "undefined" && BillId.indexOf("BL") == 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/AddVendorBill/?BillID=" + BillId);
+        }
+    }
+    var OpenBillBySupplierId = function (SupplierId) {
+        console.log('OpenBillById');
+        if (typeof (SupplierId) != "undefined" && SupplierId > 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/AddVendorBill/?id=0&SupplierId=" +SupplierId  );
+        }
+    }
+    var OpenPaymentByPaymentId = function (PaymentId) {
+        if (typeof (PaymentId) != "undefined" && PaymentId > 0) {
+            OpenTopToBottomModal(domainurl +"/Expense/MakePayment/?PaymentId=" + PaymentId);
+        }
+    }
+    var OpenPaymentByBillIdAndSupplierId = function (BillId,SupplierId) {
+        if (typeof (BillId) != "undefined" && BillId > 0) {
+            OpenTopToBottomModal(domainurl +"/Expense/MakePayment/?BillId=" + BillId+"&SupplierId="+CurrentSupplierId);
+        }
+    }
+    var OpenCheck = function (name, amount,memo) {
+        memo = encodeURI(memo);
+        name = encodeURI(name);
+        $("#OpenCheckPreview").attr("href", domainurl +"/Expense/CheckPreview/?Amount=" + amount + "&Name=" + name+"&Memo="+memo);
+        $("#OpenCheckPreview").click();
+    }
+    var UploadSupplierDocument = function(){
+        OpenRightToLeftModal(domainurl + "/Supplier/AddSupplierDocument?id=" + CurrentSupplierId);
+    }
+    $(document).ready(function () {
+        parent.$('.close').click(function () {
+            parent.$(".modal-body").html('');
+        });
+        $(".LoaderWorkingDiv").hide();
+        $(".btn-create-bill").click(function(){
+            OpenBillBySupplierId(CurrentSupplierId);
+        });
+        $(".edit-btn").click(function(){
+            OpenRightToLeftModal(domainurl + "/Supplier/AddSupplier?id=" + CurrentSupplierId);
+        });
+        $(".existing_supplierFile").load(domainurl + "/Supplier/SupplierDocument?id=" + CurrentSupplierId);
+        $(".loadsupplierbill").load("/Supplier/SupplierBillListPartial/?id=" + CurrentSupplierId + "&order=date-desc-id-desc" +"&PageNo=" + 0);
+        
+    });
+</script>
+@Html.HiddenFor(x => x.Id)
+<div class="supl_details_container">
+    <div class="vendor_list_top_container">
+        <div class="row">
+            <div class="col-xs-8">
+                <div class="supd_header_position">
+                    <a class="loadback back_to_vendor_list" href="@AppConfig.DomainSitePath/Expense#Vendors" style="color:#2ca01c">
+                        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+                        @*<span class="glyphicon glyphicon-chevron-left"></span>*@
+                    </a><span class="supd_header_size">&nbsp;@Localize.T("Vendor |") @Model.CompanyName</span>
+                </div>
+            </div>
+            <div class="col-xs-4 ven_top_btn">
+                @if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.VendorsDetailEditVendor))
+                {
+                    <button class="btn edit-btn green_button"><i class="fa fa-pencil-square-o" aria-hidden="true"></i>&nbsp;@Localize.T("Edit")</button>
+                }
+                @if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.VendorsDetailCreateABill))
+                {
+                    <div class="btn-group">
+                        <button class="btn btn-create-bill green_button" type="button">
+                            <i class="fa fa-plus-circle" aria-hidden="true"></i>@Localize.T(" Create a Bill")
+                        </button>
+                    </div>
+                }
+                
+            </div>
+        </div>
+        <div class="row supd_top_right">
+            <div class="col-xs-10">
+                @if (Model.Note != "")
+                {
+                    @*<div class="col-xs-6 supd_top_right de-text">
+                            @Localize.T("Note")
+                        </div>*@
+                    @*<div class="col-xs-12 supd_custom_note">
+                        @Model.Note
+                    </div>*@
+                }
+            </div>
+            <div class="col-xs-2">
+                @if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.VendorsDetailSummary))
+                {
+                    <div class="vendor_open_container">
+                        <div class="per_vendor_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.VendorBillOpen) </div>
+                        <div class="per_vendor_text">Open</div>
+                    </div>
+                    <div class="vendor_overdue_container">
+                        <div class="per_vendor_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.VendorBillOverDue)</div>
+                        <div class="per_vendor_text">Overdue</div>
+                    </div>
+                }
+            </div>
+        </div>
+        <ul class="nav nav-tabs vendor_nav">
+            <li class="active"><a class="suppl_det_menu" data-target="#Sbill" data-toggle="tab">@Localize.T("Bills")</a></li>
+            <li class=""><a class="suppl_det_menu" data-target="#Spaymet" data-toggle="tab">@Localize.T("Payment")</a></li>
+            <li class=""><a class="suppl_det_menu" data-target="#Sdetails" data-toggle="tab">@Localize.T("Vendor Detail")</a></li>
+        </ul>
+
+    </div>
+    <div class="section-tab vendor_list_bottom_container">
+        <div class="tab-content">
+            <div class="tab-pane d-pane" id="Sdetails">
+                <div class="row">
+                    <div class="col-xs-12">
+                        @if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.VendorsDetailEditVendor))
+                        {
+                            @*<button class="btn float-right EditSupplier">
+                                <i class="fa fa-pencil-square-o" aria-hidden="true"></i>@Localize.T(" Edit")
+                            </button>*@
+                        }
+                    </div>
+                </div>
+                <div class="supd_container">
+
+                    <div class="supd_left">
+                        @if (string.IsNullOrWhiteSpace(Model.Name))
+                        {
+                            <div class="row supd_custom_top">
+                                <div class="col-xs-6 de-text">
+                                    @Localize.T("Vendor:")
+                                </div>
+                                <div class="col-xs-6 des-text">
+                                    @Model.CompanyName
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row supd_custom_top">
+                                <div class="col-xs-6 de-text">
+                                    @Localize.T("Vendor:")
+                                </div>
+                                <div class="col-xs-6 des-text">
+                                    @Model.Name
+                                </div>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.EmailAddress))
+                        {
+                            <div class="row supd_custom_top">
+                                <div class="col-xs-6 de-text">
+                                    @Localize.T("Email:")
+                                </div>
+                                <div class="col-xs-6 des-text">
+                                    @Model.EmailAddress
+                                </div>
+                            </div>
+                        }
+                        @if (Model.Phone != "")
+                        {
+                            <div class="row supd_custom_top">
+                                <div class="col-xs-6 de-text">
+                                    @Localize.T("Phone:")
+                                </div>
+                                <div class="col-xs-6 des-text">
+                                    @Model.Phone
+                                </div>
+                            </div>
+                        }
+                        <div class="row supd_custom_top supd_no_border">
+                            <div class="attachment_text">
+                                <span onclick="UploadSupplierDocument()" style="cursor:pointer;"><i class="fa fa-paperclip" aria-hidden="true"></i>@Localize.T("Attachments")</span> <span class="attachment_info"> @Localize.T("( Maximum Size: 25MB )")</span>
+                            </div>
+                            @*<div class="attachment_block">
+                                @Localize.T("Drag/Drop files here or click the icon")
+                            </div>*@
+                        </div>
+                    </div>
+                    <div class="supd_right">
+
+                        <div class="row supd_custom_top">
+                            <div class="col-xs-6 de-text">
+                                @Localize.T("Billing Address:")
+                            </div>
+                            <div class="col-xs-6 des-text">
+                                @if (!string.IsNullOrWhiteSpace(Model.Street))
+                                {
+                                    <span>@Model.Street</span>
+                                }
+                                <br />
+                                @if (!string.IsNullOrWhiteSpace(Model.City) && Model.City != "-1")
+                                {
+                                    <span>@Model.City</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.State) && Model.State != "-1")
+                                {
+                                    <span>@Model.State</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.Zipcode))
+                                {
+                                    <span>@Model.Zipcode</span>
+                                }
+                            </div>
+                        </div>
+
+                        @*<div class="row supd_custom_top">
+                            <div class="col-xs-6 de-text">
+                                @Localize.T("Terms")
+                            </div>
+                            <div class="col-xs-6 des-text">
+                                @Localize.T("Terms")
+                            </div>
+                        </div>
+
+                        <div class="row supd_custom_top">
+                            <div class="col-xs-6 de-text">
+                                @Localize.T("Company")
+                            </div>
+                            <div class="col-xs-6 des-text">
+                                @Localize.T("Company")
+                            </div>
+                        </div>*@
+
+                        <div class="row supd_custom_top supd_no_border">
+                            <div class="col-xs-6 de-text">
+                                @Localize.T("Notes:")
+                            </div>
+                            <div class="col-xs-6 des-text">
+                                @Model.Note
+                            </div>
+                        </div>
+                    </div>
+                
+                </div>
+                <div class="existing_supplierFile"></div>
+            </div>
+            <div class="tab-pane active" id="Sbill">
+                <div class="loadsupplierbill"></div>
+            </div>
+            <div id="Spaymet" class="tab-pane">
+                <div class="custom-table supd_table_container">
+                    @if (PermissionChekcer.IsPermitted(Permissions.ExpensePermissions.ExpneseVendorsDetail))
+                    {
+                        <table class="display">
+                            <thead class="table-head-border supd_header_hide">
+                                <tr>
+                                    @*
+                            <th class="thead-th-style"></th>*@
+                                    <th class="thead-th-style ">
+                                        <div>@Localize.T("Date")</div>
+                                        <div><i class="fa fa-angle-up"></i> <i class="fa fa-angle-down"></i></div>
+                                    </th>
+                                    <th class="thead-th-style ">
+                                        <div> @Localize.T("Type")</div>
+                                        <div><i class="fa fa-angle-up"></i> <i class="fa fa-angle-down"></i></div>
+                                    </th>
+                                    @*<th class="thead-th-style">
+                                        <div>@Localize.T("No")</div>
+                                        <div><i class="fa fa-angle-up"></i> <i class="fa fa-angle-down"></i></div>
+                                    </th>*@
+                                    <th class="thead-th-style">
+                                        <div> @Localize.T("Amount Paid")</div>
+                                        <div><i class="fa fa-angle-up"></i> <i class="fa fa-angle-down"></i></div>
+                                    </th>
+                                    <th class="thead-th-style">
+                                        <div> @Localize.T("Payment Method")</div>
+                                        <div><i class="fa fa-angle-up"></i> <i class="fa fa-angle-down"></i></div>
+                                    </th>
+                                    <th class="thead-th-style">
+                                        <div> @Localize.T("Reference no.")</div>
+                                        <div><i class="fa fa-angle-up"></i> <i class="fa fa-angle-down"></i></div>
+                                    </th>
+                                    <th class="thead-th-style">
+                                        <div> @Localize.T("Status")</div>
+                                        <div><i class="fa fa-angle-up"></i> <i class="fa fa-angle-down"></i></div>
+                                    </th>
+                                    @*<th class="thead-th-style">
+                                        <div>@Localize.T("Total Amount")</div>
+                                        <div><i class="fa fa-angle-up"></i> <i class="fa fa-angle-down"></i></div>
+                                    </th>*@
+                                    @*
+                            <th class="thead-th-style">
+                                @Localize.T("Balance")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Due Date")
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Status")
+                            </th>*@
+
+                                    @*<th class="thead-th-style">
+                                        @Localize.T("Actions")
+                                    </th>*@
+                                </tr>
+                            </thead>
+                            @if (Model.SupplierPaymentList != null && Model.SupplierPaymentList.Count > 0)
+                            {
+                                foreach (var item in Model.SupplierPaymentList)
+                                {
+                                    <tr class="tr-style">
+                                        <td class="table-body-td-style supd_device_row" valign="top">
+                                            <label class="supd_device_header">@Localize.T("Due Date")</label>
+                                            <span class="supd_device_info">@item.Ddate.ToString("MM/dd/yy")</span>
+                                        </td>
+                                        <td class="table-body-td-style supd_device_row" valign="top">
+                                            <label class="supd_device_header">@Localize.T("Type")</label>
+                                            <span class="supd_device_info">
+                                                @if (item.BType == "Payment")
+                                                {
+                                                    <a class="cus-anchor" onclick="OpenPaymentByPaymentId(@item.BpaymentId)" href="Javasicpt:Void(0)">@item.BType</a>
+                                                }
+                                            </span>
+                                        </td>
+                                        
+                                        <td class="table-body-td-style supd_device_row" valign="top">
+                                            <label class="supd_device_header">@Localize.T("Total Amount")</label>
+                                            <span class="supd_device_info">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Tamount)</span>
+                                        </td>
+                                        <td class="table-body-td-style supd_device_row" valign="top">
+                                            <label class="supd_device_header">@Localize.T("Payment Method")</label>
+                                            @if (item.Bmethod == "-1")
+                                            {
+                                                <span class="supd_device_info"> - </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="supd_device_info">@item.Bmethod</span>
+                                            }
+
+                                        </td>
+                                        <td class="table-body-td-style supd_device_row" valign="top">
+                                            <label class="supd_device_header">@Localize.T("Reference no.")</label>
+                                            <span class="supd_device_info">@item.BReferenceNo</span>
+                                        </td>
+                                        <td class="table-body-td-style supd_device_row" valign="top">
+                                            <label class="supd_device_header">@Localize.T("Status")</label>
+                                            @if (item.Bstatus == "Closed")
+                                            {
+                                                <span class="supd_device_info">@Localize.T("Paid")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="supd_device_info">@item.Bstatus</span>
+                                            }
+                                            
+                                        </td>
+                                        @*<td class="table-body-td-style supd_device_row" valign="top">
+                                            <label class="supd_device_header">@Localize.T("Balance")</label>
+                                            <span class="supd_device_info">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.BBalance)</span>
+                                        </td>*@
+                                        @*<td class="table-body-td-style supd_device_row" valign="top">
+                                            <label class="supd_device_header">@Localize.T("Due Date")</label>
+                                            <span class="supd_device_info">@item.Ddate.ToString("MM/dd/yyyy")</span>
+                                        </td>
+                                        <td class="table-body-td-style supd_device_row" valign="top">
+                                            <label class="supd_device_header">@Localize.T("Status")</label>
+                                            <span class="supd_device_info">@item.Bstatus</span>
+                                        </td>*@
+
+                                        @*<td class="table-body-td-style supd_device_row" valign="top">
+                                            <label class="supd_device_header">@Localize.T("Actions")</label>
+                                            <span class="supd_device_info">
+                                                @if (item.Bmethod == "Check")
+                                                {
+                                                    <a href="Javasicpt:Void(0)" class="cus-anchor" onclick="OpenCheck('@item.Bname','@item.Tamount','')">@item.Bbillid</a>
+                                                }
+                                            </span>
+                                        </td>*@
+                                    </tr>
+                                }
+                            }
+                        </table>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="hidden">
+    <a id="OpenCheckPreview" href="">CheckForm</a>
+</div>

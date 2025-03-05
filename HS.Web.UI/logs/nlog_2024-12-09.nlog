@@ -1,0 +1,1403 @@
+2024-12-09 12:01:25.3404|ERROR|HS.Framework.DataAccess.BaseDataAccess|
+                                -- Transfer Inventory Tech
+
+                                    select rec.Id, rec.TechnicianId, rec.EquipmentId, rec.IsReceived, rec.ReceivedDate, rec.ReceivedBy, eq.Name as Name, rec.Quantity, rec.IsApprove, 'Transfer' as [Type], rec.IsDecline, rec.ReqSrc,
+                                    (select case when _sentby.IsLocation=1 then _sentby.UserName else _sentby.FirstName + ' ' + _sentby.LastName end from Employee _sentby where _sentby.UserId = rec.TechnicianId) as SentByName,
+                                    (select case when _recby.IsLocation=1 then _recby.UserName else _recby.FirstName + ' ' + _recby.LastName end from Employee _recby where _recby.UserId = rec.ReceivedBy) as ReceivedByName,
+                                    ISNULL((Select isnull(SUM(a.Quantity),0) from AssignedInventoryTechReceived a where a.EquipmentId = eq.EquipmentId 
+									AND a.ReceivedBy = rec.ReceivedBy 
+									and a.IsApprove = 1 
+									) - (select isnull(SUM(a.Quantity),0) from AssignedInventoryTechReceived a 
+									where  a.TechnicianId = rec.ReceivedBy 
+									and a.EquipmentId = eq.EquipmentId 
+									and a.IsApprove = 1
+									)
+									,0) AS WHStock,
+                                     ABS(((SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Add' 
+                                     AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId) - (SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Release'
+                                     AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId)
+                                   -isnull((select sum(Quantity) from dbo.AssignedInventoryTechReceived b where b.EquipmentId  = eq.EquipmentId and b.IsApprove = 0 and b.IsDecline = 0 ),0))
+                                    ) AS TotalQuantity,
+	                               --(select _sentby.UserId from Employee _sentby where _sentby.UserId = rec.TechnicianId) as SentById
+                                    (select _sentby.IsLocation from Employee _sentby where _sentby.UserId = rec.TechnicianId) as IsLocation,
+                                  --  (select  _sentby.FirstName + ' ' + _sentby.LastName from Employee _sentby where _sentby.UserId = rec.ClosedBy) as ClosedBy,
+                                        (
+                                            SELECT COALESCE(
+                                                (SELECT _sentby.FirstName + ' ' + _sentby.LastName FROM Employee _sentby WHERE _sentby.UserId = rec.ClosedBy),
+                                                CASE WHEN rec.ClosedBy IS NOT NULL THEN 'Live User' END
+                                            )
+                                        ) AS ClosedBy,
+								   (select  _sentby.FirstName + ' ' + _sentby.LastName from Employee _sentby where _sentby.UserId = rec.CreatedBy) as CreatedBy,
+                                   (CASE WHEN IsApprove!=1 AND IsDecline!=1 THEN 0 ELSE 1 END) as NeedAction,
+                                    rec.CreatedDate,
+                                    eq.SKU
+                                    INTO #TrfData
+									from AssignedInventoryTechReceived rec
+                                    left join Equipment eq on eq.EquipmentId = rec.EquipmentId
+                                    --where rec.TechnicianId='ac0ce890-bc5b-4c34-aab2-017af19bedf6'
+                                    	
+								    Delete from #TrfData where (SentByName is null OR SentByName = 'Purchase Order') AND ReceivedByName IN('Warehouse','Lost Bucket','X-Unused 02','X-Unused 01','X-Unused 03','RMA Bucket','Supplies Bucket','Correction Bucket') AND (TechnicianId = '00000000-0000-0000-0000-000000000000' Or TechnicianId = '22222222-2222-2222-2222-222222222221')
+								   select distinct  Id, t.TechnicianId, t.EquipmentId, t.ReceivedBy, CreatedDate,
+                                    Name, SKU, SentByName, Quantity, ReceivedByName, TotalQuantity, 
+                                    CASE WHEN 
+									t.ReceivedBy = '22222222-2222-2222-2222-222222222222'
+									THEN  
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryWarehouse i WHERE i.EquipmentId = t.EquipmentId AND i.LocationId = '22222222-2222-2222-2222-222222222222' AND i.Type = 'Add') -
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryWarehouse i WHERE i.EquipmentId = t.EquipmentId AND i.LocationId = '22222222-2222-2222-2222-222222222222' AND i.Type = 'Release')
+									
+									WHEN 
+									t.ReceivedBy
+									IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                                    '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226',
+                                        '22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                                    '22222222-2222-2222-2222-222222222233')
+									THEN
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryWarehouse i WHERE i.EquipmentId = t.EquipmentId AND i.LocationId = t.ReceivedBy AND i.Type = 'Add') -
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryWarehouse i WHERE i.EquipmentId = t.EquipmentId AND i.LocationId = t.ReceivedBy AND i.Type = 'Release')
+									
+									ELSE 
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryTech i WHERE i.EquipmentId = t.EquipmentId AND i.TechnicianId = t.ReceivedBy AND i.Type = 'Add') -
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryTech i WHERE i.EquipmentId = t.EquipmentId AND i.TechnicianId = t.ReceivedBy AND i.Type = 'Release')
+									End As WHStock, 
+                                    IsReceived, ReceivedDate, Type,  ReqSrc,IsLocation, CreatedBy,ClosedBy,t.IsApprove,  t.IsDecline,t.NeedAction from #TrfData t
+                                       
+                                    order by t.NeedAction, t.CreatedDate desc
+                                    OFFSET 40 ROWS FETCH NEXT 20 ROWS ONLY
+
+                                    select COUNT(*)
+									from #TrfData t
+                                       
+
+                                    select DISTINCT TechnicianId as Value, SentByName as Text from #TrfData
+                                    order by SentByName
+
+                                    select DISTINCT ReceivedBy as Value, ReceivedByName as Text from #TrfData
+                                    order by ReceivedByName asc
+                                
+                                -- Receive Inventory Tech
+
+                                   select distinct rec.Id, rec.TechnicianId, rec.EquipmentId, rec.IsReceived, rec.ReceivedDate, rec.ReceivedBy, _eq.Name as Name, rec.Quantity, rec.IsApprove, 'Approve' as [Type], rec.IsDecline, rec.ReqSrc,
+                                    (select case when _sentby.IsLocation=1 then _sentby.UserName else _sentby.FirstName + ' ' + _sentby.LastName end from Employee _sentby where _sentby.UserId = rec.TechnicianId) as SentByName,                                    
+                                    (select case when recby.IsLocation=1 then recby.UserName else recby.FirstName + ' ' + recby.LastName end from Employee recby where recby.UserId = rec.ReceivedBy) as ReceivedByName,
+                                   ISNULL((Select isnull(SUM(a.Quantity),0) from AssignedInventoryTechReceived a where a.EquipmentId = _eq.EquipmentId 
+									AND a.ReceivedBy = rec.ReceivedBy 
+									and a.IsApprove = 1 
+									) - (select isnull(SUM(a.Quantity),0) from AssignedInventoryTechReceived a 
+									where  a.TechnicianId = rec.ReceivedBy 
+									and a.EquipmentId = _eq.EquipmentId 
+									and a.IsApprove = 1
+									)
+									,0) AS WHStock,
+                                   -- isnull((select SUM(_tech.Quantity) from InventoryWarehouse _tech where _tech.[Type] = 'Add' and _tech.EquipmentId = rec.EquipmentId ), 0) - isnull((select SUM(_tech.Quantity) from InventoryWarehouse _tech where _tech.[Type] = 'Release' and _tech.EquipmentId = rec.EquipmentId), 0) as WHStock
+                                 ABS(((SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Add' 
+                                 AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId) - (SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Release'
+                                 AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId)
+                                   -isnull((select sum(Quantity) from dbo.AssignedInventoryTechReceived b where b.EquipmentId  = _eq.EquipmentId and b.IsApprove = 0 and b.IsDecline = 0),0))
+                                    )  AS TotalQuantity, 
+	                              --(select _sentby.UserId from Employee _sentby where _sentby.UserId = rec.TechnicianId) as SentById
+                                (select _sentby.IsLocation from Employee _sentby where _sentby.UserId = rec.TechnicianId) as IsLocation,
+                                --(select  _sentby.FirstName + ' ' + _sentby.LastName from Employee _sentby where _sentby.UserId = rec.ClosedBy) as ClosedBy,
+                                    (
+                                        SELECT COALESCE(
+                                            (SELECT _sentby.FirstName + ' ' + _sentby.LastName FROM Employee _sentby WHERE _sentby.UserId = rec.ClosedBy),
+                                            CASE WHEN rec.ClosedBy IS NOT NULL THEN 'Live User' END
+                                        )
+                                    ) AS ClosedBy,
+								   (select  _sentby.FirstName + ' ' + _sentby.LastName from Employee _sentby where _sentby.UserId = rec.CreatedBy) as CreatedBy,
+                                    rec.CreatedDate,
+                                    _eq.SKU,
+									(CASE WHEN IsApprove!=1 AND IsDecline!=1 THEN 0 ELSE 1 END) as NeedAction
+                                    INTO #RcvData
+									from AssignedInventoryTechReceived rec
+                                    left join Equipment _eq on _eq.EquipmentId = rec.EquipmentId
+                                    --where rec.ReceivedBy='ac0ce890-bc5b-4c34-aab2-017af19bedf6'
+                                    WHERE rec.ReceivedBy != '00000000-0000-0000-0000-000000000000' 
+                                   GROUP BY rec.Id, rec.TechnicianId,
+								   rec.EquipmentId,rec.IsReceived,rec.ReceivedDate,_eq.Name,rec.Quantity,rec.ReqSrc,rec.ClosedBy,
+								   rec.CreatedBy,rec.CreatedDate,_eq.SKU,
+								   rec.ReceivedBy, _eq.EquipmentId, rec.IsApprove, rec.IsDecline
+                                    Delete from #RcvData where (SentByName is null OR SentByName = 'Purchase Order') AND ReceivedByName IN('Warehouse','Lost Bucket','X-Unused 02','X-Unused 01','X-Unused 03','RMA Bucket','Supplies Bucket','Correction Bucket') AND (TechnicianId = '00000000-0000-0000-0000-000000000000' Or TechnicianId = '22222222-2222-2222-2222-222222222221')
+                                    select Id, TechnicianId, EquipmentId, ReceivedBy, ReceivedDate, CreatedDate,
+                                    Name, SKU, SentByName, Quantity, ReceivedByName, TotalQuantity, 
+                                    CASE WHEN 
+									r.ReceivedBy = '22222222-2222-2222-2222-222222222222'
+									THEN  
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryWarehouse i WHERE i.EquipmentId = r.EquipmentId AND i.LocationId = '22222222-2222-2222-2222-222222222222' AND i.Type = 'Add') -
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryWarehouse i WHERE i.EquipmentId = r.EquipmentId AND i.LocationId = '22222222-2222-2222-2222-222222222222' AND i.Type = 'Release')
+									
+									WHEN 
+								    r.ReceivedBy
+									IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                                    '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226',
+                                        '22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                                    '22222222-2222-2222-2222-222222222233')
+									THEN
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryWarehouse i WHERE i.EquipmentId = r.EquipmentId AND i.LocationId = r.ReceivedBy AND i.Type = 'Add') -
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryWarehouse i WHERE i.EquipmentId = r.EquipmentId AND i.LocationId = r.ReceivedBy AND i.Type = 'Release')
+									
+									ELSE 
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryTech i WHERE i.EquipmentId = r.EquipmentId AND i.TechnicianId = r.ReceivedBy AND i.Type = 'Add') -
+									(SELECT ISNULL(SUM(i.Quantity),0) from InventoryTech i WHERE i.EquipmentId = r.EquipmentId AND i.TechnicianId = r.ReceivedBy AND i.Type = 'Release')
+									End As WHStock,
+                                    IsReceived, IsApprove, Type, IsDecline,ReqSrc,IsLocation,ClosedBy,CreatedBy from #RcvData r
+                                      AND (  ReceivedBy='7e26f691-ec0c-44e9-a583-c1a9ea2f5bf6'  ) 
+                                    order by r.NeedAction, r.CreatedDate desc
+                                    OFFSET 40 ROWS FETCH NEXT 20 ROWS ONLY 
+
+                                    select COUNT(*)
+									from #RcvData
+                                      AND (  ReceivedBy='7e26f691-ec0c-44e9-a583-c1a9ea2f5bf6'  ) 
+
+                                    select DISTINCT TechnicianId as Value, SentByName as Text from #RcvData
+                                    order by SentByName
+
+                                    select DISTINCT ReceivedBy as Value, ReceivedByName as Text from #RcvData
+                                    order by ReceivedByName asc
+                                    
+                                    DROP TABLE #TrfData
+                                    DROP TABLE #RcvData
+                                    |System.Data.SqlClient.SqlException (0x80131904): Incorrect syntax near the keyword 'AND'.
+Invalid usage of the option NEXT in the FETCH statement.
+Incorrect syntax near the keyword 'AND'.
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:5ecf7c70-11ee-4a00-a12b-630888ceeec6
+Error Number:156,State:1,Class:15
+2024-12-09 14:54:02.8023|ERROR|HS.Framework.DataAccess.BaseDataAccess|declare @pagestart int
+                                declare @pageend int
+                                set @pagestart=(@pageno-1)* @pagesize 
+                                set @pageend = @pagesize
+
+                                select 
+                                distinct ul.Id as Id,
+                                ul.UserId,ul.IsDeleted,
+                                emp.Email as Email,
+                                ul.IsActive ,
+                                emp.FirstName +' '+emp.LastName as ContactName,
+                                emp.Recruited as IsRecruited,
+                                pg.Name as AccessRights,
+                                pg.Tag as Tags,
+								emp.IsCalendar,
+                                ISNULL(lkemptype.DisplayText,'') as EmployeeType,
+								emp.CalendarColor,
+                                emp.IsCurrentEmployee
+                                ,supervisor.FirstName +' '+supervisor.LastName as Supervisor
+                                --,(select top(1) FirstName +' '+LastName from Employee where CONVERT(nvarchar(50),UserId) = emp.Supervisorid) as Supervisor
+                                ,(STUFF((
+										SELECT ', '  + GR.Name + ' '
+										FROM EmployeeRoute  ER
+										left join GeeseRoute GR on GR.RouteId = ER.RouteId
+										where ER.UserId = emp.userid
+										
+										FOR XML PATH('')
+										), 1, 2, '')
+									) AS RouteList
+
+                                into #UserData
+                                from UserCompany uc
+                                 left join UserLogin ul 
+	                                on ul.UserId = uc.UserId and ul.CompanyId = uc.CompanyId
+                                 left join UserPermission up 
+	                                on up.UserId = ul.UserId
+                                left join PermissionGroup pg 
+	                                on pg.Id = up.PermissionGroupId
+                                Left Join Employee emp
+									on emp.UserId = ul.UserId
+                                Left Join LookUp lkemptype
+                                    on lkemptype.DataValue=emp.EmpType and lkemptype.DataKey='EmployeeTypeData'
+                                Left Join Employee supervisor
+									on CONVERT(nvarchar(50),supervisor.UserId) = emp.Supervisorid
+
+                                where ul.Id is not null
+                                    and ul.IsDeleted = 0
+	                                and pg.Name is not null
+                                    and emp.FirstName is not null 
+									and emp.LastName is not null
+                                    and emp.Recruited =1 
+                                    and uc.CompanyId ='c7e72006-6edf-4b5a-8589-bfd1b2dae7ba'
+                                    and emp.CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba'
+                                    
+                                    and emp.IsCurrentEmployee = 1
+                                    
+                                    
+                                select * into #UserFilterdata from #UserData
+
+								select top(@pagesize) * from #UserFilterdata
+								where Id not in (Select TOP (@pagestart)  Id from #UserData #ud order by #ud.ContactName asc) --order by #ud.ContactName asc
+                                --order by ContactName asc
+								order by ContactName asc
+
+                                select Count(Id) As TotalCount from #UserFilterdata 
+
+								drop table #UserData
+								drop table #UserFilterdata
+                                    |System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:1cf6969a-8d46-4fad-9a03-563c2dc669bc
+Error Number:-2,State:0,Class:11
+2024-12-09 15:22:21.2368|ERROR|HS.Framework.DataAccess.BaseDataAccess|DECLARE @CompanyId uniqueidentifier
+                                    DECLARE @pagestart int
+                                    DECLARE @pageend int
+                                    DECLARE @pageno int
+                                    DECLARE @pagesize int
+                                    DECLARE @SearchText nvarchar(50)
+
+                                    SET @SearchText = '%%'
+                                    SET @pageno = 1 -- default 1
+                                    SET @pagesize = 20 -- default 10
+                                    SET @CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba' -- 97BCF758 - A482 - 47EB - 82B8 - F88BF12293FF
+
+                                    SET @pagestart = (@pageno - 1) * @pagesize
+                                        SET @pageend = @pagesize
+
+                                        SELECT DISTINCT poware.Id
+                                                , poware.PurchaseOrderId
+                                                , poware.CompanyId
+                                                , poware.CreatedByUid
+                                                , poware.SuplierId
+                                                , poware.POFor
+                                                , poware.Status
+                                                , poware.CreatedDate
+                                                , poware.Description
+                                                , emp.FirstName + ' ' + emp.LastName as Name
+                                                , sp.CompanyName as VendorName
+                                                , poder.TotalPrice as TotalOrderPrice
+                                                , empPoFor.FirstName + ' ' + empPoFor.LastName as TechnicianName
+                                                , (SELECT SUM(TotalPrice) FROM PurchaseOrderDetail WHERE PurchaseOrderId = poware.PurchaseOrderId) AS TotalOrderPriceSum
+                                        INTO #DistinctPOData
+                                        FROM PurchaseOrderWarehouse poware
+                                        LEFT JOIN Employee emp on emp.UserId = poware.CreatedByUid
+                                        LEFT JOIN Supplier sp on sp.SupplierId = poware.SuplierId
+                                        LEFT JOIN Employee empPoFor on empPoFor.UserId = poware.POFor
+                                        LEFT JOIN PurchaseOrderDetail poder on poder.PurchaseOrderId = poware.PurchaseOrderId
+                                        WHERE poware.CompanyId = @CompanyId
+                                            
+                                            
+                                            
+                                            AND poware.[Status] != 'Init'
+                                            AND poware.[Status] != ''
+                                            and poware.CreatedDate between '11/8/2024 6:00:00 PM' and '12/9/2024 5:59:59 PM'
+                                            
+
+                                        ;WITH UniquePOData AS (
+                                            SELECT *,
+                                                   ROW_NUMBER() OVER (PARTITION BY Id ) AS RowNum
+                                            FROM #DistinctPOData
+                                        )
+                                        SELECT *
+                                        FROM UniquePOData
+                                        WHERE RowNum = 1
+                                        
+                                        OFFSET @pagestart ROWS FETCH NEXT @pagesize ROWS ONLY
+
+                                        SELECT COUNT(DISTINCT Id) as [TotalCount] 
+                                        FROM #DistinctPOData
+
+                                        DROP TABLE #DistinctPOData|System.Data.SqlClient.SqlException (0x80131904): The function 'ROW_NUMBER' must have an OVER clause with ORDER BY.
+Incorrect syntax near 'OFFSET'.
+Invalid usage of the option NEXT in the FETCH statement.
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:39465848-0471-45bd-a080-8cc0c58e1349
+Error Number:4112,State:1,Class:15
+2024-12-09 15:38:15.4687|ERROR|HS.Framework.DataAccess.BaseDataAccess|DECLARE @CompanyId uniqueidentifier
+                                    DECLARE @pagestart int
+                                    DECLARE @pageend int
+                                    DECLARE @pageno int
+                                    DECLARE @pagesize int
+                                    DECLARE @SearchText nvarchar(50)
+
+                                    SET @SearchText = '%%'
+                                    SET @pageno = 1 -- default 1
+                                    SET @pagesize = 20 -- default 10
+                                    SET @CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba' -- 97BCF758 - A482 - 47EB - 82B8 - F88BF12293FF
+
+                                    SET @pagestart = (@pageno - 1) * @pagesize
+                                        SET @pageend = @pagesize
+
+                                        SELECT DISTINCT poware.Id
+                                                , poware.PurchaseOrderId
+                                                , poware.CompanyId
+                                                , poware.CreatedByUid
+                                                , poware.SuplierId
+                                                , poware.POFor
+                                                , poware.Status
+                                                , poware.CreatedDate
+                                                , poware.Description
+                                                , emp.FirstName + ' ' + emp.LastName as Name
+                                                , sp.CompanyName as VendorName
+                                                , poder.TotalPrice as TotalOrderPrice
+                                                , empPoFor.FirstName + ' ' + empPoFor.LastName as TechnicianName
+                                                , (SELECT SUM(TotalPrice) FROM PurchaseOrderDetail WHERE PurchaseOrderId = poware.PurchaseOrderId) AS TotalOrderPriceSum
+                                        INTO #DistinctPOData
+                                        FROM PurchaseOrderWarehouse poware
+                                        LEFT JOIN Employee emp on emp.UserId = poware.CreatedByUid
+                                        LEFT JOIN Supplier sp on sp.SupplierId = poware.SuplierId
+                                        LEFT JOIN Employee empPoFor on empPoFor.UserId = poware.POFor
+                                        LEFT JOIN PurchaseOrderDetail poder on poder.PurchaseOrderId = poware.PurchaseOrderId
+                                        WHERE poware.CompanyId = @CompanyId
+                                            
+                                            
+                                            
+                                            AND poware.[Status] != 'Init'
+                                            AND poware.[Status] != ''
+                                            and poware.CreatedDate between '11/8/2024 6:00:00 PM' and '12/9/2024 5:59:59 PM'
+                                            
+
+                                        ;WITH UniquePOData AS (
+                                            SELECT *,
+                                                   ROW_NUMBER() OVER (PARTITION BY Id order by CreatedDate desc) AS RowNum
+                                            FROM #DistinctPOData
+                                        )
+                                        SELECT *
+                                        FROM UniquePOData
+                                        WHERE RowNum = 1
+                                        order by CreatedDate desc
+                                        OFFSET @pagestart ROWS FETCH NEXT @pagesize ROWS ONLY
+
+                                        SELECT COUNT(DISTINCT Id) as [TotalCount] 
+                                        FROM #DistinctPOData
+
+                                        DROP TABLE #DistinctPOData|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:1f9614a9-6bcc-4698-96a0-d7644fc19d7a
+Error Number:-2,State:0,Class:11
+2024-12-09 15:48:26.5823|ERROR|HS.Framework.DataAccess.BaseDataAccess|DECLARE @CompanyId uniqueidentifier
+                                    DECLARE @pagestart int
+                                    DECLARE @pageend int
+                                    DECLARE @pageno int
+                                    DECLARE @pagesize int
+                                    DECLARE @SearchText nvarchar(50)
+
+                                    SET @SearchText = '%%'
+                                    SET @pageno = 1 -- default 1
+                                    SET @pagesize = 20 -- default 10
+                                    SET @CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba' -- 97BCF758 - A482 - 47EB - 82B8 - F88BF12293FF
+
+                                    SET @pagestart = (@pageno - 1) * @pagesize
+                                        SET @pageend = @pagesize
+
+                                        SELECT DISTINCT poware.Id
+                                                , poware.PurchaseOrderId
+                                                , poware.CompanyId
+                                                , poware.CreatedByUid
+                                                , poware.SuplierId
+                                                , poware.POFor
+                                                , poware.Status
+                                                , poware.CreatedDate
+                                                , poware.Description
+                                                , emp.FirstName + ' ' + emp.LastName as Name
+                                                , sp.CompanyName as VendorName
+                                                , poder.TotalPrice as TotalOrderPrice
+                                                , empPoFor.FirstName + ' ' + empPoFor.LastName as TechnicianName
+                                                , (SELECT SUM(TotalPrice) FROM PurchaseOrderDetail WHERE PurchaseOrderId = poware.PurchaseOrderId) AS TotalOrderPriceSum
+                                        INTO #DistinctPOData
+                                        FROM PurchaseOrderWarehouse poware
+                                        LEFT JOIN Employee emp on emp.UserId = poware.CreatedByUid
+                                        LEFT JOIN Supplier sp on sp.SupplierId = poware.SuplierId
+                                        LEFT JOIN Employee empPoFor on empPoFor.UserId = poware.POFor
+                                        LEFT JOIN PurchaseOrderDetail poder on poder.PurchaseOrderId = poware.PurchaseOrderId
+                                        WHERE poware.CompanyId = @CompanyId
+                                            
+                                            
+                                            
+                                            AND poware.[Status] != 'Init'
+                                            AND poware.[Status] != ''
+                                            and poware.CreatedDate between '11/8/2024 6:00:00 PM' and '12/9/2024 5:59:59 PM'
+                                            
+
+                                        ;WITH UniquePOData AS (
+                                            SELECT *,
+                                                   ROW_NUMBER() OVER (PARTITION BY Id order by CreatedDate desc) AS RowNum
+                                            FROM #DistinctPOData
+                                        )
+                                        SELECT *
+                                        FROM UniquePOData
+                                        WHERE RowNum = 1
+                                        order by CreatedDate desc
+                                        OFFSET @pagestart ROWS FETCH NEXT @pagesize ROWS ONLY
+
+                                        SELECT COUNT(DISTINCT Id) as [TotalCount] 
+                                        FROM #DistinctPOData
+
+                                        DROP TABLE #DistinctPOData|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:5e2e94cf-4941-4dad-8707-1d9a78445031
+Error Number:-2,State:0,Class:11
+2024-12-09 15:49:24.0217|ERROR|HS.Framework.DataAccess.BaseDataAccess|DECLARE @CompanyId uniqueidentifier
+                                    DECLARE @pagestart int
+                                    DECLARE @pageend int
+                                    DECLARE @pageno int
+                                    DECLARE @pagesize int
+                                    DECLARE @SearchText nvarchar(50)
+
+                                    SET @SearchText = '%%'
+                                    SET @pageno = 1 -- default 1
+                                    SET @pagesize = 20 -- default 10
+                                    SET @CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba' -- 97BCF758 - A482 - 47EB - 82B8 - F88BF12293FF
+
+                                    SET @pagestart = (@pageno - 1) * @pagesize
+                                        SET @pageend = @pagesize
+
+                                        SELECT DISTINCT poware.Id
+                                                , poware.PurchaseOrderId
+                                                , poware.CompanyId
+                                                , poware.CreatedByUid
+                                                , poware.SuplierId
+                                                , poware.POFor
+                                                , poware.Status
+                                                , poware.CreatedDate
+                                                , poware.Description
+                                                , emp.FirstName + ' ' + emp.LastName as Name
+                                                , sp.CompanyName as VendorName
+                                                , poder.TotalPrice as TotalOrderPrice
+                                                , empPoFor.FirstName + ' ' + empPoFor.LastName as TechnicianName
+                                                , (SELECT SUM(TotalPrice) FROM PurchaseOrderDetail WHERE PurchaseOrderId = poware.PurchaseOrderId) AS TotalOrderPriceSum
+                                        INTO #DistinctPOData
+                                        FROM PurchaseOrderWarehouse poware
+                                        LEFT JOIN Employee emp on emp.UserId = poware.CreatedByUid
+                                        LEFT JOIN Supplier sp on sp.SupplierId = poware.SuplierId
+                                        LEFT JOIN Employee empPoFor on empPoFor.UserId = poware.POFor
+                                        LEFT JOIN PurchaseOrderDetail poder on poder.PurchaseOrderId = poware.PurchaseOrderId
+                                        WHERE poware.CompanyId = @CompanyId
+                                            
+                                            
+                                            
+                                            AND poware.[Status] != 'Init'
+                                            AND poware.[Status] != ''
+                                            and poware.CreatedDate between '11/8/2024 6:00:00 PM' and '12/9/2024 5:59:59 PM'
+                                            
+
+                                        ;WITH UniquePOData AS (
+                                            SELECT *,
+                                                   ROW_NUMBER() OVER (PARTITION BY Id order by CreatedDate desc) AS RowNum
+                                            FROM #DistinctPOData
+                                        )
+                                        SELECT *
+                                        FROM UniquePOData
+                                        WHERE RowNum = 1
+                                        order by CreatedDate desc
+                                        OFFSET @pagestart ROWS FETCH NEXT @pagesize ROWS ONLY
+
+                                        SELECT COUNT(DISTINCT Id) as [TotalCount] 
+                                        FROM #DistinctPOData
+
+                                        DROP TABLE #DistinctPOData|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:5e2e94cf-4941-4dad-8707-1d9a78445031
+Error Number:-2,State:0,Class:11
+2024-12-09 15:54:42.0494|ERROR|HS.Framework.DataAccess.BaseDataAccess|DECLARE @CompanyId uniqueidentifier
+                                    DECLARE @pagestart int
+                                    DECLARE @pageend int
+                                    DECLARE @pageno int
+                                    DECLARE @pagesize int
+                                    DECLARE @SearchText nvarchar(50)
+
+                                    SET @SearchText = '%%'
+                                    SET @pageno = 1 -- default 1
+                                    SET @pagesize = 20 -- default 10
+                                    SET @CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba' -- 97BCF758 - A482 - 47EB - 82B8 - F88BF12293FF
+
+                                    SET @pagestart = (@pageno - 1) * @pagesize
+                                        SET @pageend = @pagesize
+
+                                        SELECT DISTINCT poware.Id
+                                                , poware.PurchaseOrderId
+                                                , poware.CompanyId
+                                                , poware.CreatedByUid
+                                                , poware.SuplierId
+                                                , poware.POFor
+                                                , poware.Status
+                                                , poware.CreatedDate
+                                                , poware.Description
+                                                , emp.FirstName + ' ' + emp.LastName as Name
+                                                , sp.CompanyName as VendorName
+                                                , poder.TotalPrice as TotalOrderPrice
+                                                , empPoFor.FirstName + ' ' + empPoFor.LastName as TechnicianName
+                                                , (SELECT SUM(TotalPrice) FROM PurchaseOrderDetail WHERE PurchaseOrderId = poware.PurchaseOrderId) AS TotalOrderPriceSum
+                                        INTO #DistinctPOData
+                                        FROM PurchaseOrderWarehouse poware
+                                        LEFT JOIN Employee emp on emp.UserId = poware.CreatedByUid
+                                        LEFT JOIN Supplier sp on sp.SupplierId = poware.SuplierId
+                                        LEFT JOIN Employee empPoFor on empPoFor.UserId = poware.POFor
+                                        LEFT JOIN PurchaseOrderDetail poder on poder.PurchaseOrderId = poware.PurchaseOrderId
+                                        WHERE poware.CompanyId = @CompanyId
+                                            
+                                            
+                                            
+                                            AND poware.[Status] != 'Init'
+                                            AND poware.[Status] != ''
+                                            and poware.CreatedDate between '11/8/2024 6:00:00 PM' and '12/9/2024 5:59:59 PM'
+                                            
+
+                                        ;WITH UniquePOData AS (
+                                            SELECT *,
+                                                   ROW_NUMBER() OVER (PARTITION BY Id order by CreatedDate desc) AS RowNum
+                                            FROM #DistinctPOData
+                                        )
+                                        SELECT *
+                                        FROM UniquePOData
+                                        WHERE RowNum = 1
+                                        order by CreatedDate desc
+                                        OFFSET @pagestart ROWS FETCH NEXT @pagesize ROWS ONLY
+
+                                        SELECT COUNT(DISTINCT Id) as [TotalCount] 
+                                        FROM #DistinctPOData
+
+                                        DROP TABLE #DistinctPOData|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:15355d84-a3d6-4c60-80ba-17bf687618a9
+Error Number:-2,State:0,Class:11
+2024-12-09 16:07:08.7060|ERROR|HS.Framework.DataAccess.BaseDataAccess| declare @pagestart int
+                                    declare @pageend int
+                                    declare @pageno int
+                                    declare @pagesize int
+                                    set @pageno = 1
+                                    set @pagesize = 100
+
+
+                                    set @pagestart=(@pageno-1)* @pagesize 
+                                    set @pageend = @pagesize
+
+                                    SELECT 
+                                        _eqp.*,
+                                        _eqpClass.Name as EquipmentClass,
+	                                    ((Select ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add' And invinner.LocationId = '22222222-2222-2222-2222-222222222222')- (Select ISNULL(SUM(invinner2.Quantity),0) from InventoryWarehouse invinner2 where invinner2.EquipmentId=_eqp.EquipmentId and Type='Release' And invinner2.LocationId = '22222222-2222-2222-2222-222222222222')
+                                            	-(select ISNull(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId =
+	                                       '22222222-2222-2222-2222-222222222222' And b.IsApprove = 0 and b.IsDecline = 0)
+                                        ) as Quantity,
+                                         sup.CompanyName as SupplierName,
+                                          _eqpType.Name as Category,
+										  --_eqp.SupplierCost as VendorCost,
+                                          eqpv.Cost as VendorCost,
+										  manu.Name as ManufacturerName,
+                                          
+                                          (SELECT 
+                                          ISNULL(SUM(Quantity),0) AS TotalQty
+                                          FROM
+                                          (SELECT 
+                                          ISNULL(SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END),0) AS Quantity
+                                          FROM 
+                                          InventoryTech
+                                          WHERE 
+                                          EquipmentId = _eqp.EquipmentId AND
+										  TechnicianId NOT IN 
+										  ('00000000-0000-0000-0000-000000000000','22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                                     '22222222-2222-2222-2222-222222222233','22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222221')
+                                          GROUP BY 
+                                          TechnicianId										  
+                                          HAVING 
+                                          SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END) >= 0) AS Qty)-
+										 (select ISNULL(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId NOT IN
+										 ('00000000-0000-0000-0000-000000000000','22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                                     '22222222-2222-2222-2222-222222222233','22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222221') And b.IsApprove = 0 and b.IsDecline = 0)
+										  as technician,
+                                        
+                                        (select AVG(newtab.UnitPrice) from
+                                        (select TOP 3 iwin.*, pod.UnitPrice from InventoryWarehouse iwin left join PurchaseOrderDetail pod on pod.PurchaseOrderId=iwin.PurchaseOrderId
+                                        where iwin.PurchaseOrderId != '' and (UnitPrice!=0 or UnitPrice is not null) AND iwin.EquipmentId=_eqp.EquipmentId
+                                        AND pod.EquipmentId=_eqp.EquipmentId order by LastUpdatedDate desc)
+                                        newtab group by EquipmentId) as FIFO,
+                                        ([dbo].GetAssignedInventoryTechQuantityCount(null,_eqp.EquipmentId,1)) as InQueue,
+                                   ((select ISNULL(SUM(invinner.Quantity),0) from [InventoryWarehouse] invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add'  and invinner.LocationId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                              '22222222-2222-2222-2222-222222222233'))
+
+								  -
+
+                                    (select ISNULL(sum(Quantity),0) from dbo.InventoryWarehouse b where b.EquipmentId  = _eqp.EquipmentId  and Type='Release'
+			                        AND b.LocationId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                               '22222222-2222-2222-2222-222222222233'))
+								   -
+
+
+
+                                   (select ISNULL(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                               '22222222-2222-2222-2222-222222222233') And b.IsApprove = 0 and b.IsDecline = 0)) as LocQoH,
+										  ISNULL((((Select ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add')- (Select ISNULL(SUM(invinner2.Quantity),0) from InventoryWarehouse invinner2 where invinner2.EquipmentId=_eqp.EquipmentId and Type='Release'))
+										  +
+										  (select ISNULL(SUM(tech.Quantity), 0) from InventoryTech tech where _eqp.EquipmentId = tech.EquipmentId and tech.[Type] = 'Add'
+                                          AND tech.TechnicianId Not IN('22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                                     '22222222-2222-2222-2222-222222222233')  
+                                          ) 
+                                       - (select ISNULL(SUM(tech.Quantity), 0) from InventoryTech tech where _eqp.EquipmentId = tech.EquipmentId and tech.[Type] = 'Release'
+                                    AND tech.TechnicianId Not IN('22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                               '22222222-2222-2222-2222-222222222233')
+                                        )), 0) as TotalEq
+                                          
+                                          INTO #CustomerData
+                                          FROM Equipment _eqp
+                                            LEFT JOIN EquipmentClass _eqpClass
+		                                    ON _eqp.EquipmentClassId = _eqpClass.Id and _eqp.CompanyId = _eqpClass.CompanyId
+                                            left JOIN EquipmentVendor eqpv
+											ON eqpv.EquipmentId = _eqp.EquipmentId
+                                            and eqpv.IsPrimary=1
+											 LEFT JOIN EquipmentType _eqpType
+		                                    ON _eqp.EquipmentTypeId = _eqpType.Id and _eqp.CompanyId = _eqpType.CompanyId
+                                            --left join Supplier sup on sup.Id = _eqp.SupplierId
+                                            left join Supplier sup on sup.SupplierId = eqpv.SupplierId
+											left join Manufacturer manu
+											ON manu.Id = _eqp.ManufacturerId
+		                                    WHERE 
+			                                    _eqp.CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba'
+                                                and _eqp.IsActive in (1)
+                                                AND _eqp.EquipmentClassId = '1'
+                                                
+                                                
+                                
+                                           
+                                           SELECT 
+                                           Id,EquipmentId,CompanyId,Name,SKU,ManufacturerId,SupplierId,EquipmentTypeId,
+										   EquipmentClassId,Point,SupplierCost,Cost,Retail,EqOrder,Service,AsOfDate,reorderpoint,
+										   IsActive,Comments,CreatedDate,LastUpdatedDate,LastUpdatedBy,POOrder,IsKit,RepCost,RackNo,Location,
+										   Type,Model,Finish,Capacity,EquipmentPriceIsCharged,ModelNumber,Barcode,Tag,Note,IsWarrenty,IsARBEnabled,
+										   IsUpsold,IsTaxable,OverheadRate,ProfitRate,Unit,TaggedEmail,IsIncludeEstimate,LaborPrice,WarehouseReorder,
+										   EquipmentClass,Quantity,SupplierName,Category,VendorCost,ManufacturerName,technician,FIFO,InQueue,LocQoH
+										   ,TotalEq = ISNULL(Quantity,0) + ISNULL(technician,0) + ISNULL(LocQoH,0) + ISNULL(InQueue,0)
+                                           INTO #CustomerFilterData
+                                           FROM #CustomerData
+                                           
+                                
+	                                       SELECT TOP (@pagesize)
+                                           *
+                                           FROM #CustomerFilterData _cfd
+                                           where   Id NOT IN(Select TOP (@pagestart)  Id from #CustomerData _cd order by Id desc)
+                                           order by Id desc
+                                           select count(*) [TotalCount]
+                                           from #CustomerFilterData
+
+                                           DROP TABLE #CustomerData
+                                           DROP TABLE #CustomerFilterData
+|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:48f1cf58-babf-4afc-b7b7-ee1d93d50ce5
+Error Number:-2,State:0,Class:11
+2024-12-09 16:09:39.1416|ERROR|HS.Framework.DataAccess.BaseDataAccess| declare @pagestart int
+                                    declare @pageend int
+                                    declare @pageno int
+                                    declare @pagesize int
+                                    set @pageno = 1
+                                    set @pagesize = 100
+
+
+                                    set @pagestart=(@pageno-1)* @pagesize 
+                                    set @pageend = @pagesize
+
+                                    SELECT 
+                                        _eqp.*,
+                                        _eqpClass.Name as EquipmentClass,
+	                                    ((Select ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add' And invinner.LocationId = '22222222-2222-2222-2222-222222222222')- (Select ISNULL(SUM(invinner2.Quantity),0) from InventoryWarehouse invinner2 where invinner2.EquipmentId=_eqp.EquipmentId and Type='Release' And invinner2.LocationId = '22222222-2222-2222-2222-222222222222')
+                                            	-(select ISNull(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId =
+	                                       '22222222-2222-2222-2222-222222222222' And b.IsApprove = 0 and b.IsDecline = 0)
+                                        ) as Quantity,
+                                         sup.CompanyName as SupplierName,
+                                          _eqpType.Name as Category,
+										  --_eqp.SupplierCost as VendorCost,
+                                          eqpv.Cost as VendorCost,
+										  manu.Name as ManufacturerName,
+                                          
+                                          (SELECT 
+                                          ISNULL(SUM(Quantity),0) AS TotalQty
+                                          FROM
+                                          (SELECT 
+                                          ISNULL(SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END),0) AS Quantity
+                                          FROM 
+                                          InventoryTech
+                                          WHERE 
+                                          EquipmentId = _eqp.EquipmentId AND
+										  TechnicianId NOT IN 
+										  ('00000000-0000-0000-0000-000000000000','22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                                     '22222222-2222-2222-2222-222222222233','22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222221')
+                                          GROUP BY 
+                                          TechnicianId										  
+                                          HAVING 
+                                          SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END) >= 0) AS Qty)-
+										 (select ISNULL(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId NOT IN
+										 ('00000000-0000-0000-0000-000000000000','22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                                     '22222222-2222-2222-2222-222222222233','22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222221') And b.IsApprove = 0 and b.IsDecline = 0)
+										  as technician,
+                                        
+                                        (select AVG(newtab.UnitPrice) from
+                                        (select TOP 3 iwin.*, pod.UnitPrice from InventoryWarehouse iwin left join PurchaseOrderDetail pod on pod.PurchaseOrderId=iwin.PurchaseOrderId
+                                        where iwin.PurchaseOrderId != '' and (UnitPrice!=0 or UnitPrice is not null) AND iwin.EquipmentId=_eqp.EquipmentId
+                                        AND pod.EquipmentId=_eqp.EquipmentId order by LastUpdatedDate desc)
+                                        newtab group by EquipmentId) as FIFO,
+                                        ([dbo].GetAssignedInventoryTechQuantityCount(null,_eqp.EquipmentId,1)) as InQueue,
+                                   ((select ISNULL(SUM(invinner.Quantity),0) from [InventoryWarehouse] invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add'  and invinner.LocationId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                              '22222222-2222-2222-2222-222222222233'))
+
+								  -
+
+                                    (select ISNULL(sum(Quantity),0) from dbo.InventoryWarehouse b where b.EquipmentId  = _eqp.EquipmentId  and Type='Release'
+			                        AND b.LocationId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                               '22222222-2222-2222-2222-222222222233'))
+								   -
+
+
+
+                                   (select ISNULL(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                               '22222222-2222-2222-2222-222222222233') And b.IsApprove = 0 and b.IsDecline = 0)) as LocQoH,
+										  ISNULL((((Select ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add')- (Select ISNULL(SUM(invinner2.Quantity),0) from InventoryWarehouse invinner2 where invinner2.EquipmentId=_eqp.EquipmentId and Type='Release'))
+										  +
+										  (select ISNULL(SUM(tech.Quantity), 0) from InventoryTech tech where _eqp.EquipmentId = tech.EquipmentId and tech.[Type] = 'Add'
+                                          AND tech.TechnicianId Not IN('22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                                     '22222222-2222-2222-2222-222222222233')  
+                                          ) 
+                                       - (select ISNULL(SUM(tech.Quantity), 0) from InventoryTech tech where _eqp.EquipmentId = tech.EquipmentId and tech.[Type] = 'Release'
+                                    AND tech.TechnicianId Not IN('22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
+	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
+	                               '22222222-2222-2222-2222-222222222233')
+                                        )), 0) as TotalEq
+                                          
+                                          INTO #CustomerData
+                                          FROM Equipment _eqp
+                                            LEFT JOIN EquipmentClass _eqpClass
+		                                    ON _eqp.EquipmentClassId = _eqpClass.Id and _eqp.CompanyId = _eqpClass.CompanyId
+                                            left JOIN EquipmentVendor eqpv
+											ON eqpv.EquipmentId = _eqp.EquipmentId
+                                            and eqpv.IsPrimary=1
+											 LEFT JOIN EquipmentType _eqpType
+		                                    ON _eqp.EquipmentTypeId = _eqpType.Id and _eqp.CompanyId = _eqpType.CompanyId
+                                            --left join Supplier sup on sup.Id = _eqp.SupplierId
+                                            left join Supplier sup on sup.SupplierId = eqpv.SupplierId
+											left join Manufacturer manu
+											ON manu.Id = _eqp.ManufacturerId
+		                                    WHERE 
+			                                    _eqp.CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba'
+                                                and _eqp.IsActive in (1)
+                                                AND _eqp.EquipmentClassId = '1'
+                                                
+                                                
+                                
+                                           
+                                           SELECT 
+                                           Id,EquipmentId,CompanyId,Name,SKU,ManufacturerId,SupplierId,EquipmentTypeId,
+										   EquipmentClassId,Point,SupplierCost,Cost,Retail,EqOrder,Service,AsOfDate,reorderpoint,
+										   IsActive,Comments,CreatedDate,LastUpdatedDate,LastUpdatedBy,POOrder,IsKit,RepCost,RackNo,Location,
+										   Type,Model,Finish,Capacity,EquipmentPriceIsCharged,ModelNumber,Barcode,Tag,Note,IsWarrenty,IsARBEnabled,
+										   IsUpsold,IsTaxable,OverheadRate,ProfitRate,Unit,TaggedEmail,IsIncludeEstimate,LaborPrice,WarehouseReorder,
+										   EquipmentClass,Quantity,SupplierName,Category,VendorCost,ManufacturerName,technician,FIFO,InQueue,LocQoH
+										   ,TotalEq = ISNULL(Quantity,0) + ISNULL(technician,0) + ISNULL(LocQoH,0) + ISNULL(InQueue,0)
+                                           INTO #CustomerFilterData
+                                           FROM #CustomerData
+                                           
+                                
+	                                       SELECT TOP (@pagesize)
+                                           *
+                                           FROM #CustomerFilterData _cfd
+                                           where   Id NOT IN(Select TOP (@pagestart)  Id from #CustomerData _cd order by Id desc)
+                                           order by Id desc
+                                           select count(*) [TotalCount]
+                                           from #CustomerFilterData
+
+                                           DROP TABLE #CustomerData
+                                           DROP TABLE #CustomerFilterData
+|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:48f1cf58-babf-4afc-b7b7-ee1d93d50ce5
+Error Number:-2,State:0,Class:11
+2024-12-09 16:17:03.6651|ERROR|HS.Framework.DataAccess.BaseDataAccess|DECLARE @CompanyId uniqueidentifier
+                                    DECLARE @pagestart int
+                                    DECLARE @pageend int
+                                    DECLARE @pageno int
+                                    DECLARE @pagesize int
+                                    DECLARE @SearchText nvarchar(50)
+
+                                    SET @SearchText = '%%'
+                                    SET @pageno = 1 -- default 1
+                                    SET @pagesize = 20 -- default 10
+                                    SET @CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba' -- 97BCF758 - A482 - 47EB - 82B8 - F88BF12293FF
+
+                                    SET @pagestart = (@pageno - 1) * @pagesize
+                                        SET @pageend = @pagesize
+
+                                        SELECT DISTINCT poware.Id
+                                                , poware.PurchaseOrderId
+                                                , poware.CompanyId
+                                                , poware.CreatedByUid
+                                                , poware.SuplierId
+                                                , poware.POFor
+                                                , poware.Status
+                                                , poware.CreatedDate
+                                                , poware.Description
+                                                , emp.FirstName + ' ' + emp.LastName as Name
+                                                , sp.CompanyName as VendorName
+                                                , poder.TotalPrice as TotalOrderPrice
+                                                , empPoFor.FirstName + ' ' + empPoFor.LastName as TechnicianName
+                                                , (SELECT SUM(TotalPrice) FROM PurchaseOrderDetail WHERE PurchaseOrderId = poware.PurchaseOrderId) AS TotalOrderPriceSum
+                                        INTO #DistinctPOData
+                                        FROM PurchaseOrderWarehouse poware
+                                        LEFT JOIN Employee emp on emp.UserId = poware.CreatedByUid
+                                        LEFT JOIN Supplier sp on sp.SupplierId = poware.SuplierId
+                                        LEFT JOIN Employee empPoFor on empPoFor.UserId = poware.POFor
+                                        LEFT JOIN PurchaseOrderDetail poder on poder.PurchaseOrderId = poware.PurchaseOrderId
+                                        WHERE poware.CompanyId = @CompanyId
+                                            
+                                            
+                                            
+                                            AND poware.[Status] != 'Init'
+                                            AND poware.[Status] != ''
+                                            and poware.CreatedDate between '11/8/2024 6:00:00 PM' and '12/9/2024 5:59:59 PM'
+                                            
+
+                                        ;WITH UniquePOData AS (
+                                            SELECT *,
+                                                   ROW_NUMBER() OVER (PARTITION BY Id order by CreatedDate desc) AS RowNum
+                                            FROM #DistinctPOData
+                                        )
+                                        SELECT *
+                                        FROM UniquePOData
+                                        WHERE RowNum = 1
+                                        order by CreatedDate desc
+                                        OFFSET @pagestart ROWS FETCH NEXT @pagesize ROWS ONLY
+
+                                        SELECT COUNT(DISTINCT Id) as [TotalCount] 
+                                        FROM #DistinctPOData
+
+                                        DROP TABLE #DistinctPOData|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:9366c0ea-5314-4d47-b426-ac79e352d1d0
+Error Number:-2,State:0,Class:11
+2024-12-09 16:17:47.5377|ERROR|HS.Framework.DataAccess.BaseDataAccess|DECLARE @CompanyId uniqueidentifier
+                                    DECLARE @pagestart int
+                                    DECLARE @pageend int
+                                    DECLARE @pageno int
+                                    DECLARE @pagesize int
+                                    DECLARE @SearchText nvarchar(50)
+
+                                    SET @SearchText = '%%'
+                                    SET @pageno = 1 -- default 1
+                                    SET @pagesize = 20 -- default 10
+                                    SET @CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba' -- 97BCF758 - A482 - 47EB - 82B8 - F88BF12293FF
+
+                                    SET @pagestart = (@pageno - 1) * @pagesize
+                                        SET @pageend = @pagesize
+
+                                        SELECT DISTINCT poware.Id
+                                                , poware.PurchaseOrderId
+                                                , poware.CompanyId
+                                                , poware.CreatedByUid
+                                                , poware.SuplierId
+                                                , poware.POFor
+                                                , poware.Status
+                                                , poware.CreatedDate
+                                                , poware.Description
+                                                , emp.FirstName + ' ' + emp.LastName as Name
+                                                , sp.CompanyName as VendorName
+                                                , poder.TotalPrice as TotalOrderPrice
+                                                , empPoFor.FirstName + ' ' + empPoFor.LastName as TechnicianName
+                                                , (SELECT SUM(TotalPrice) FROM PurchaseOrderDetail WHERE PurchaseOrderId = poware.PurchaseOrderId) AS TotalOrderPriceSum
+                                        INTO #DistinctPOData
+                                        FROM PurchaseOrderWarehouse poware
+                                        LEFT JOIN Employee emp on emp.UserId = poware.CreatedByUid
+                                        LEFT JOIN Supplier sp on sp.SupplierId = poware.SuplierId
+                                        LEFT JOIN Employee empPoFor on empPoFor.UserId = poware.POFor
+                                        LEFT JOIN PurchaseOrderDetail poder on poder.PurchaseOrderId = poware.PurchaseOrderId
+                                        WHERE poware.CompanyId = @CompanyId
+                                            
+                                            
+                                            
+                                            AND poware.[Status] != 'Init'
+                                            AND poware.[Status] != ''
+                                            and poware.CreatedDate between '11/8/2024 6:00:00 PM' and '12/9/2024 5:59:59 PM'
+                                            
+
+                                        ;WITH UniquePOData AS (
+                                            SELECT *,
+                                                   ROW_NUMBER() OVER (PARTITION BY Id order by CreatedDate desc) AS RowNum
+                                            FROM #DistinctPOData
+                                        )
+                                        SELECT *
+                                        FROM UniquePOData
+                                        WHERE RowNum = 1
+                                        order by CreatedDate desc
+                                        OFFSET @pagestart ROWS FETCH NEXT @pagesize ROWS ONLY
+
+                                        SELECT COUNT(DISTINCT Id) as [TotalCount] 
+                                        FROM #DistinctPOData
+
+                                        DROP TABLE #DistinctPOData|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:9366c0ea-5314-4d47-b426-ac79e352d1d0
+Error Number:-2,State:0,Class:11
+2024-12-09 16:35:26.3445|ERROR|HS.Framework.DataAccess.BaseDataAccess|DECLARE @CompanyId uniqueidentifier
+                                    DECLARE @pagestart int
+                                    DECLARE @pageend int
+                                    DECLARE @pageno int
+                                    DECLARE @pagesize int
+                                    DECLARE @SearchText nvarchar(50)
+
+                                    SET @SearchText = '%%'
+                                    SET @pageno = 1 -- default 1
+                                    SET @pagesize = 20 -- default 10
+                                    SET @CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba' -- 97BCF758 - A482 - 47EB - 82B8 - F88BF12293FF
+
+                                    SET @pagestart = (@pageno - 1) * @pagesize
+                                        SET @pageend = @pagesize
+
+                                        SELECT DISTINCT poware.Id
+                                                , poware.PurchaseOrderId
+                                                , poware.CompanyId
+                                                , poware.CreatedByUid
+                                                , poware.SuplierId
+                                                , poware.POFor
+                                                , poware.Status
+                                                , poware.CreatedDate
+                                                , poware.Description
+                                                , emp.FirstName + ' ' + emp.LastName as Name
+                                                , sp.CompanyName as VendorName
+                                                , poder.TotalPrice as TotalOrderPrice
+                                                , empPoFor.FirstName + ' ' + empPoFor.LastName as TechnicianName
+                                                , (SELECT SUM(TotalPrice) FROM PurchaseOrderDetail WHERE PurchaseOrderId = poware.PurchaseOrderId) AS TotalOrderPriceSum
+                                        INTO #DistinctPOData
+                                        FROM PurchaseOrderWarehouse poware
+                                        LEFT JOIN Employee emp on emp.UserId = poware.CreatedByUid
+                                        LEFT JOIN Supplier sp on sp.SupplierId = poware.SuplierId
+                                        LEFT JOIN Employee empPoFor on empPoFor.UserId = poware.POFor
+                                        LEFT JOIN PurchaseOrderDetail poder on poder.PurchaseOrderId = poware.PurchaseOrderId
+                                        WHERE poware.CompanyId = @CompanyId
+                                            
+                                            
+                                            
+                                            AND poware.[Status] != 'Init'
+                                            AND poware.[Status] != ''
+                                            and poware.CreatedDate between '11/8/2024 6:00:00 PM' and '12/9/2024 5:59:59 PM'
+                                            
+
+                                        ;WITH UniquePOData AS (
+                                            SELECT *,
+                                                   ROW_NUMBER() OVER (PARTITION BY Id order by CreatedDate desc) AS RowNum
+                                            FROM #DistinctPOData
+                                        )
+                                        SELECT *
+                                        FROM UniquePOData
+                                        WHERE RowNum = 1
+                                        order by CreatedDate desc
+                                        OFFSET @pagestart ROWS FETCH NEXT @pagesize ROWS ONLY
+
+                                        SELECT COUNT(DISTINCT Id) as [TotalCount] 
+                                        FROM #DistinctPOData
+
+                                        DROP TABLE #DistinctPOData|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:9366c0ea-5314-4d47-b426-ac79e352d1d0
+Error Number:-2,State:0,Class:11
+2024-12-09 16:37:48.0804|ERROR|HS.Framework.DataAccess.BaseDataAccess|DECLARE @CompanyId uniqueidentifier
+                                    DECLARE @pagestart int
+                                    DECLARE @pageend int
+                                    DECLARE @pageno int
+                                    DECLARE @pagesize int
+                                    DECLARE @SearchText nvarchar(50)
+
+                                    SET @SearchText = '%%'
+                                    SET @pageno = 1 -- default 1
+                                    SET @pagesize = 20 -- default 10
+                                    SET @CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba' -- 97BCF758 - A482 - 47EB - 82B8 - F88BF12293FF
+
+                                    SET @pagestart = (@pageno - 1) * @pagesize
+                                        SET @pageend = @pagesize
+
+                                        SELECT DISTINCT poware.Id
+                                                , poware.PurchaseOrderId
+                                                , poware.CompanyId
+                                                , poware.CreatedByUid
+                                                , poware.SuplierId
+                                                , poware.POFor
+                                                , poware.Status
+                                                , poware.CreatedDate
+                                                , poware.Description
+                                                , emp.FirstName + ' ' + emp.LastName as Name
+                                                , sp.CompanyName as VendorName
+                                                , poder.TotalPrice as TotalOrderPrice
+                                                , empPoFor.FirstName + ' ' + empPoFor.LastName as TechnicianName
+                                                , (SELECT SUM(TotalPrice) FROM PurchaseOrderDetail WHERE PurchaseOrderId = poware.PurchaseOrderId) AS TotalOrderPriceSum
+                                        INTO #DistinctPOData
+                                        FROM PurchaseOrderWarehouse poware
+                                        LEFT JOIN Employee emp on emp.UserId = poware.CreatedByUid
+                                        LEFT JOIN Supplier sp on sp.SupplierId = poware.SuplierId
+                                        LEFT JOIN Employee empPoFor on empPoFor.UserId = poware.POFor
+                                        LEFT JOIN PurchaseOrderDetail poder on poder.PurchaseOrderId = poware.PurchaseOrderId
+                                        WHERE poware.CompanyId = @CompanyId
+                                            
+                                            
+                                            
+                                            AND poware.[Status] != 'Init'
+                                            AND poware.[Status] != ''
+                                            and poware.CreatedDate between '11/8/2024 6:00:00 PM' and '12/9/2024 5:59:59 PM'
+                                            
+
+                                        ;WITH UniquePOData AS (
+                                            SELECT *,
+                                                   ROW_NUMBER() OVER (PARTITION BY Id order by CreatedDate desc) AS RowNum
+                                            FROM #DistinctPOData
+                                        )
+                                        SELECT *
+                                        FROM UniquePOData
+                                        WHERE RowNum = 1
+                                        order by CreatedDate desc
+                                        OFFSET @pagestart ROWS FETCH NEXT @pagesize ROWS ONLY
+
+                                        SELECT COUNT(DISTINCT Id) as [TotalCount] 
+                                        FROM #DistinctPOData
+
+                                        DROP TABLE #DistinctPOData|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:9366c0ea-5314-4d47-b426-ac79e352d1d0
+Error Number:-2,State:0,Class:11
+2024-12-09 16:46:52.7753|ERROR|HS.Framework.DataAccess.BaseDataAccess|DECLARE @CompanyId uniqueidentifier
+                                    DECLARE @pagestart int
+                                    DECLARE @pageend int
+                                    DECLARE @pageno int
+                                    DECLARE @pagesize int
+                                    DECLARE @SearchText nvarchar(50)
+
+                                    SET @SearchText = '%%'
+                                    SET @pageno = 1 -- default 1
+                                    SET @pagesize = 20 -- default 10
+                                    SET @CompanyId = 'c7e72006-6edf-4b5a-8589-bfd1b2dae7ba' -- 97BCF758 - A482 - 47EB - 82B8 - F88BF12293FF
+
+                                    SET @pagestart = (@pageno - 1) * @pagesize
+                                        SET @pageend = @pagesize
+
+                                        SELECT DISTINCT poware.Id
+                                                , poware.PurchaseOrderId
+                                                , poware.CompanyId
+                                                , poware.CreatedByUid
+                                                , poware.SuplierId
+                                                , poware.POFor
+                                                , poware.Status
+                                                , poware.CreatedDate
+                                                , poware.Description
+                                                , emp.FirstName + ' ' + emp.LastName as Name
+                                                , sp.CompanyName as VendorName
+                                                , poder.TotalPrice as TotalOrderPrice
+                                                , empPoFor.FirstName + ' ' + empPoFor.LastName as TechnicianName
+                                                , (SELECT SUM(TotalPrice) FROM PurchaseOrderDetail WHERE PurchaseOrderId = poware.PurchaseOrderId) AS TotalOrderPriceSum
+                                        INTO #DistinctPOData
+                                        FROM PurchaseOrderWarehouse poware
+                                        LEFT JOIN Employee emp on emp.UserId = poware.CreatedByUid
+                                        LEFT JOIN Supplier sp on sp.SupplierId = poware.SuplierId
+                                        LEFT JOIN Employee empPoFor on empPoFor.UserId = poware.POFor
+                                        LEFT JOIN PurchaseOrderDetail poder on poder.PurchaseOrderId = poware.PurchaseOrderId
+                                        WHERE poware.CompanyId = @CompanyId
+                                            
+                                            
+                                            
+                                            AND poware.[Status] != 'Init'
+                                            AND poware.[Status] != ''
+                                            and poware.CreatedDate between '11/8/2024 6:00:00 PM' and '12/9/2024 5:59:59 PM'
+                                            
+
+                                        ;WITH UniquePOData AS (
+                                            SELECT *,
+                                                   ROW_NUMBER() OVER (PARTITION BY Id order by CreatedDate desc) AS RowNum
+                                            FROM #DistinctPOData
+                                        )
+                                        SELECT *
+                                        FROM UniquePOData
+                                        WHERE RowNum = 1
+                                        order by CreatedDate desc
+                                        OFFSET @pagestart ROWS FETCH NEXT @pagesize ROWS ONLY
+
+                                        SELECT COUNT(DISTINCT Id) as [TotalCount] 
+                                        FROM #DistinctPOData
+
+                                        DROP TABLE #DistinctPOData|System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:25975fe2-fdf7-46dc-9e16-82d43a1b3800
+Error Number:-2,State:0,Class:11
+2024-12-09 18:24:18.7951|ERROR|HS.Framework.DataAccess.BaseDataAccess|
+                                -- Transfer Inventory Tech
+
+                                    select rec.Id, rec.TechnicianId, rec.EquipmentId, rec.IsReceived, rec.ReceivedDate, rec.ReceivedBy, eq.Name as Name, rec.Quantity, rec.IsApprove, 'Transfer' as [Type], rec.IsDecline,
+                                    (select case when _sentby.IsLocation=1 then _sentby.UserName else _sentby.FirstName + ' ' + _sentby.LastName end from Employee _sentby where _sentby.UserId = rec.TechnicianId) as SentByName,
+                                    (select case when _recby.IsLocation=1 then _recby.UserName else _recby.FirstName + ' ' + _recby.LastName end from Employee _recby where _recby.UserId = rec.ReceivedBy) as ReceivedByName,
+                                        ((Select ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner where invinner.EquipmentId=eq.EquipmentId and Type='Add')
+										- (Select ISNULL(SUM(invinner2.Quantity),0) from InventoryWarehouse invinner2 where invinner2.EquipmentId=eq.EquipmentId and Type='Release')
+										- isnull((select sum(Quantity) from dbo.AssignedInventoryTechReceived b where b.EquipmentId  = eq.EquipmentId and b.IsApprove = 0 and b.IsDecline = 0 ),0)) as WHStock,
+                                  -- (SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Add' AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId) - (SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Release' AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId) AS TotalQuantity,
+                                      ABS(((SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Add' 
+  AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId) - (SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Release'
+  AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId)
+-isnull((select sum(Quantity) from dbo.AssignedInventoryTechReceived b where b.EquipmentId  = eq.EquipmentId and b.IsApprove = 0 and b.IsDecline = 0 ),0))
+ ) AS TotalQuantity,
+                                   -- (select _sentby.UserId from Employee _sentby where _sentby.UserId = rec.TechnicianId) as SentById,
+                                (select _sentby.IsLocation from Employee _sentby where _sentby.UserId = rec.TechnicianId) as IsLocation,
+
+                                    rec.CreatedDate,
+                                    eq.SKU
+                                    INTO #TrfData
+									from AssignedInventoryTechReceived rec
+                                    left join Equipment eq on eq.EquipmentId = rec.EquipmentId
+                                    where rec.TechnicianId='ac0ce890-bc5b-4c34-aab2-017af19bedf6'
+                                    
+
+                                    select Id, TechnicianId, EquipmentId, IsReceived, ReceivedBy, ReceivedDate, CreatedDate,
+                                    Name, SKU, Quantity, ReceivedByName, TotalQuantity, IsApprove, Type, IsDecline, WHStock ,IsLocation from #TrfData
+                                    WHERE (  ReceivedBy='null'  )
+                                    order by CreatedDate desc
+                                    OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY
+
+                                    select COUNT(*)
+									from #TrfData
+                                    WHERE (  ReceivedBy='null'  )
+
+                                    select DISTINCT ReceivedBy as Value, ReceivedByName as Text from #TrfData
+                                    order by ReceivedByName  asc
+                                
+                                -- Receive Inventory Tech
+
+                                select distinct rec.Id, rec.TechnicianId, rec.EquipmentId, rec.IsReceived, rec.ReceivedDate, rec.ReceivedBy, _eq.Name as Name, rec.Quantity, rec.IsApprove, 'Approve' as [Type], rec.IsDecline,
+                                    (select case when _sentby.IsLocation=1 then _sentby.UserName else _sentby.FirstName + ' ' + _sentby.LastName end from Employee _sentby where _sentby.UserId = rec.TechnicianId) as SentByName,                                    
+                                    (select case when recby.IsLocation=1 then recby.UserName else recby.FirstName + ' ' + recby.LastName end from Employee recby where recby.UserId = rec.ReceivedBy) as ReceivedByName,
+                                   IIF(rec.TechnicianId = '22222222-2222-2222-2222-222222222222',(Select  ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner where invinner.EquipmentId=_eq.EquipmentId and Type='Add' AND invinner.LocationId = '22222222-2222-2222-2222-222222222222')
+										- (Select ISNULL(SUM(invinner2.Quantity),0) from InventoryWarehouse invinner2 where invinner2.EquipmentId=_eq.EquipmentId and Type='Release' AND invinner2.LocationId = '22222222-2222-2222-2222-222222222222')
+										,
+										
+										(Select  ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner where invinner.EquipmentId=_eq.EquipmentId and Type='Add' AND invinner.LocationId <> '22222222-2222-2222-2222-222222222222')
+									
+										- isnull((select sum(Quantity) from dbo.AssignedInventoryTechReceived b where b.EquipmentId  = _eq.EquipmentId ),0)
+										
+										
+										) as WHStock,
+                                 ---  (SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Add' AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId) - (SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Release' AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId) AS TotalQuantity,
+ABS (((SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Add' 
+  AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId) - (SELECT ISNULL(SUM(_tech.Quantity), 0) FROM inventorytech _tech WHERE _tech.[Type] = 'Release'
+  AND _tech.EquipmentId = rec.EquipmentId AND _tech.TechnicianId = rec.TechnicianId)
+-isnull((select sum(Quantity) from dbo.AssignedInventoryTechReceived b where b.EquipmentId  = _eq.EquipmentId and b.IsApprove = 0 and b.IsDecline = 0 ),0))
+)  AS TotalQuantity,
+                                    --(select _sentby.UserId from Employee _sentby where _sentby.UserId = rec.TechnicianId) as SentById,
+                             (select _sentby.IsLocation from Employee _sentby where _sentby.UserId = rec.TechnicianId) as IsLocation,
+
+                                    rec.CreatedDate,
+                                    _eq.SKU,
+                                    (CASE WHEN IsApprove!=1 AND IsDecline!=1 THEN 0 ELSE 1 END) as NeedAction
+                                    INTO #RcvData
+									from AssignedInventoryTechReceived rec
+                                    left join Equipment _eq on _eq.EquipmentId = rec.EquipmentId
+                                    where rec.ReceivedBy='ac0ce890-bc5b-4c34-aab2-017af19bedf6'
+                                    
+
+                                    select Id, TechnicianId, EquipmentId, IsReceived, ReceivedBy, ReceivedDate, CreatedDate,
+                                    Name, SKU, Quantity, SentByName, TotalQuantity, IsApprove, Type, IsDecline , WHStock,IsLocation  from #RcvData
+                                    WHERE (  TechnicianId='null'  )
+                                    order by NeedAction, CreatedDate desc
+                                    OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY 
+
+                                    select COUNT(*)
+									from #RcvData
+                                    WHERE (  TechnicianId='null'  )
+
+                                    select DISTINCT TechnicianId as Value, SentByName as Text from #RcvData
+                                    order by SentByName asc
+                                    
+                                    DROP TABLE #TrfData
+                                    DROP TABLE #RcvData
+                                    |System.Data.SqlClient.SqlException (0x80131904): Conversion failed when converting from a character string to uniqueidentifier.
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryHasMoreRows(Boolean& moreRows)
+   at System.Data.SqlClient.SqlDataReader.TryReadInternal(Boolean setTimeout, Boolean& more)
+   at System.Data.SqlClient.SqlDataReader.Read()
+   at System.Data.Common.DataAdapter.FillLoadDataRow(SchemaMapping mapping)
+   at System.Data.Common.DataAdapter.FillFromReader(DataSet dataset, DataTable datatable, String srcTable, DataReaderContainer dataReader, Int32 startRecord, Int32 maxRecords, DataColumn parentChapterColumn, Object parentChapterValue)
+   at System.Data.Common.DataAdapter.Fill(DataSet dataSet, String srcTable, IDataReader dataReader, Int32 startRecord, Int32 maxRecords)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in D:\USA Project\DFW Security\HS.Framework\DataAccess\BaseDataAccess.cs:line 439
+ClientConnectionId:2b44fd09-83f8-41fe-811e-46800797d570
+Error Number:8169,State:2,Class:16

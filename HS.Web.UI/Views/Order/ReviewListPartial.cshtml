@@ -1,0 +1,271 @@
+﻿@model List<HS.Entities.ResturantReview>
+@{
+    Layout = null;
+    var QtyTotal = 0;
+    var CountInProg = 0;
+    var CountReject = 0;
+    var CountComplete = 0;
+    var CountCancel = 0;
+    var AmountAvg = 0.0;
+    var RevTotal = 0.0;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HtmlAgilityPack;
+<link href="~/Content/Css/Pagination.css" rel="stylesheet" />
+<link href="~/Content/Ratingbar.css" rel="stylesheet" />
+@Styles.Render("~/styles/MenuListPartial")
+@Scripts.Render("~/scripts/MenuList")
+<script src="~/Content/RatingbarNotmove.js"></script>
+<style>
+    .ieatery_isview_input {
+        width: 40px !important;
+        height: 20px;
+        color: white;
+        background-color: #2ca01c !important;
+        float: left;
+        margin-right: 5px;
+    }
+
+    .ieatery_order_customer_anchor {
+        color: #2ca01c;
+    }
+
+        .ieatery_order_customer_anchor:hover {
+            color: #2ca01c;
+            text-decoration: underline;
+        }
+
+    .filter_order_block {
+        width: 100%;
+        float: left;
+        margin-bottom: 10px;
+    }
+
+        .filter_order_block .input-group {
+            width: 20%;
+            float: left;
+        }
+
+    #btn_review_reply {
+        background-color: #2ca01c;
+        border-color: #2ca01c;
+        color: white;
+        margin-left: 10px;
+    }
+
+    .tbl_review_comment_div {
+        overflow: unset !important;
+        white-space: unset !important;
+    }
+
+    .tbl_table_review tr th {
+        width: 15%;
+    }
+
+        .tbl_table_review tr th:nth-child(4) {
+            width: 40%;
+        }
+</style>
+<script>
+    var checkrev = false;
+    var SaveReviewReply = function (id) {
+        var headermsg = "Reply";
+        var bodymsg = "<textarea class='form-control' id='text_area_reply' style='height:100px;' placeholder='Reply'></textarea>";
+        $(".message_middle_icon_div").addClass("hidden");
+        $(".modal-footer .btn-no").addClass("hidden");
+        $(".modal-footer #btn_yes").text("Save");
+        OpenConfirmationMessageNew(headermsg, bodymsg, function () {
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: "/Order/SaveReviewReply",
+                data: JSON.stringify({ id: id, reply: $("#text_area_reply").val() }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data) {
+                        LoadOrdersTab(1);
+                        $(".message_middle_icon_div").removeClass("hidden");
+                        $(".modal-footer .btn-no").removeClass("hidden");
+                        $(".modal-footer #btn_yes").text("Yes");
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+        });
+    }
+    $(document).ready(function () {
+        $('[data-role="ratingbar"]').ratingbar();
+        $('[data-role="ratingbar"]').each(function () {
+            var id = $(this).attr("data-id");
+            $("#review_rate_star_div_" + id + " ul.star-fg").attr("style", "color:orange;width:" + ((parseFloat($("#review_rate_star_div_" + id).attr("data-valu")) * 20) - 12) + "px;");
+        })
+        $(".chk_review_item").click(function () {
+            if ($(this).prop("checked") == true) {
+                checkrev = true
+            }
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: "/Order/UpdateResturantReview",
+                data: JSON.stringify({ id: $(this).attr("data-id"), checkrev: checkrev }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data) {
+                        LoadOrdersTab(1);
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+        })
+    })
+</script>
+<div class="menulist_container">
+    <div class="order_partial_block">
+        <div class="ci_block">
+            <div class="ci_header">@Localize.T("Review Details")</div>
+            <div class="ci_info">
+                <table class="display all_menu menu_list_partial_info tbl_table_review" id="tblMenu" style="width:100%;">
+                    <thead class="table-head-border">
+                        <tr>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Review For")</div>
+                                @if (ViewBag.order == "ascending/ordercustomer" || ViewBag.order == "descending/ordercustomer")
+                                {
+                                    <div>
+                                        <i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i style="color: darkred; font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i>
+                                    </div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Customer")</div>
+                                @if (ViewBag.order == "ascending/ordercustomer" || ViewBag.order == "descending/ordercustomer")
+                                {
+                                    <div>
+                                        <i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i style="color: darkred; font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i>
+                                    </div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Rating")</div>
+                                @if (ViewBag.order == "ascending/ordercustomer" || ViewBag.order == "descending/ordercustomer")
+                                {
+                                    <div>
+                                        <i style="        color: darkred;
+        font-weight: bold
+" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i style="color: darkred; font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i>
+                                    </div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Comments")</div>
+                                @if (ViewBag.order == "ascending/ordercustomer" || ViewBag.order == "descending/ordercustomer")
+                                {
+                                    <div>
+                                        <i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i style="color: darkred; font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i>
+                                    </div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                @Localize.T("Action")
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr class="tr-style CheckItems" idval="@item.Id">
+                                <td class="table-body-td-style" valign="top">
+                                    <div class="menu_list_partial_device_header">@Localize.T("Review For")<span>:</span></div>
+                                    <div class="menu_list_partial_device_info">
+                                        @if (item.ReviewFor == "Restaurant")
+                                        {
+                                            <span>@item.ReviewFor</span>
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(item.ItemName))
+                                        {
+                                            <span>@item.ItemName</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <div class="menu_list_partial_device_header">@Localize.T("Customer")<span>:</span></div>
+                                    <div class="menu_list_partial_device_info">
+                                        <span>@item.Name</span><br />
+                                        <span><b>Date: </b>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yyyy") at @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("hh:mm tt")</span>
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <div class="menu_list_partial_device_header">@Localize.T("Rating")<span>:</span></div>
+                                    <div class="menu_list_partial_device_info">
+                                        <div data-role="ratingbar" class="review_rate_star_div" id="review_rate_star_div_@item.Id" data-id="@item.Id" data-valu="@item.Rating">
+                                            <ul>
+                                                <li><span class="glyphicon glyphicon-star"></span></li>
+                                                <li><span class="glyphicon glyphicon-star"></span></li>
+                                                <li><span class="glyphicon glyphicon-star"></span></li>
+                                                <li><span class="glyphicon glyphicon-star"></span></li>
+                                                <li><span class="glyphicon glyphicon-star"></span></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <div class="menu_list_partial_device_header">@Localize.T("Comments")<span>:</span></div>
+                                    <div class="menu_list_partial_device_info tbl_review_comment_div">
+                                        <span>@Html.Raw(item.Comments)</span>
+                                        @if (!string.IsNullOrWhiteSpace(item.Reply))
+                                        {
+                                            <br><div style="border-bottom:1px solid #9e9e9eb8;padding-top: 5px;margin-bottom: 5px;"></div><span><b>Reply: </b>@Html.Raw(item.Reply)</span>
+                                        }
+
+                                    </div>
+                                </td>
+                                <td class="table-body-td-style" valign="top">
+                                    <input type="checkbox" class="chk_review_item" @(item.IsActive.HasValue && item.IsActive.Value == true ? "checked" : "") data-id="@item.Id" />
+                                    <button class="btn btn_review_reply" id="btn_review_reply" data-id="@item.Id" onclick="SaveReviewReply(@item.Id)">@Localize.T("Reply")</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+
+    </div>
+</div>    @*<div class="ticket_export_confirm"></div>*@
+

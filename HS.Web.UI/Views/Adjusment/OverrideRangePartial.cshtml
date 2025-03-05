@@ -1,0 +1,108 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@model List<HS.Entities.OverrideRange>
+@Styles.Render("~/styles/DataTableBundles")
+@Scripts.Render("~/scripts/DataTableBundles")
+<script>
+    var DataTablePageSize = 50;
+    var selectedDeleteId = 0;
+    var DeleteOverrideRange = function () {
+        var delitem = selectedDeleteId;
+        $.ajax({
+            url: "@(AppConfig.DomainSitePath)/Adjusment/DeleteOverrideRange",
+            data: { Id: delitem },
+            type: "Post",
+            dataType: "Json",
+            success: function (result) {
+                parent.$("#OverrideRangeTab").load("@(AppConfig.DomainSitePath)/Adjusment/OverrideRangePartial");
+            },
+            error: function () {
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide();
+        var table = $('#tblOrange').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        $('#tblOrange tbody').on('click', 'tr', function () {
+            if ($(this).hasClass('selected')) {
+                $(this).removeClass('selected');
+            }
+            else {
+                table.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+            }
+        });
+        $("#Overriderange-srch-term").keyup(function () {
+            $("#tblOrange_filter input").val($("#Overriderange-srch-term").val());
+            $("#tblOrange_filter input").trigger('keyup');
+        });
+        $("#AddOverrideRange").click(function () {
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/Adjusment/AddOverrideRange?id=0");
+        })
+        $(".item-deleteoverrange").click(function () {
+            selectedDeleteId = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this Override range?", DeleteOverrideRange);
+        })
+        $(".item-editoverrange").click(function () {
+            var typeval = $(this).attr('data-id');
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/Adjusment/AddOverrideRange?id=" + typeval);
+        })
+    })
+</script>
+
+<div class="override_range_partial_container">
+    <div class="override_range_partial_top_bar">
+        <div class="input-group add-on">
+            <input class="form-control" placeholder="Find a Override range" name="srch-term" id="Overriderange-srch-term" type="text">
+            <div class="input-group-btn">
+                <button class="btn custom-btn green_button" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+            </div>
+        </div>
+       
+        <button class="btn btn-primary btnCommissionType" id="AddOverrideRange"><i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T("New")</button>
+    </div>
+    
+    <div class="table-CommissionType">
+        <table id="tblOrange" class="ui celled table" cellspacing="0">
+            <thead>
+                <tr>
+                    <th class="thead-th-style">@Localize.T("Override Name")</th>
+                    <th class="thead-th-style">@Localize.T("Range Start")</th>
+                    <th class="thead-th-style">@Localize.T("Range End")</th>
+                    <th class="thead-th-style">@Localize.T("Amount")</th>
+                    <th class="thead-th-style">@Localize.T("Action")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    foreach (var item in Model)
+                    {
+                        <tr class="tr-style">
+                            <td class="table-body-td-style" valign="top">@item.OverName</td>
+                            <td class="table-body-td-style" valign="top">@item.RangeStart</td>
+                            <td class="table-body-td-style" valign="top">@item.RangeEnd</td>
+                            <td class="table-body-td-style" valign="top">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.Amount.Value.ToString("#,##0.00")</td>
+                            <td class="table-body-td-style" valign="top">
+                                <a href="javascript:void(0)" class="item-editoverrange" data-id="@item.Id"><i class="fa fa-edit" aria-hidden="true"></i>@Localize.T("Edit")</a>
+                                <a href="javascript:void(0)" class="item-deleteoverrange" data-id="@item.Id" title="@Localize.T("Delete")">
+                                    <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+

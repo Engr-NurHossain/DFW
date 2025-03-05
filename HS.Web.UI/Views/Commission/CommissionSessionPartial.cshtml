@@ -1,0 +1,128 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.CommisionSession>
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+@Styles.Render("~/styles/DataTableBundles")
+@Scripts.Render("~/scripts/DataTableBundles")
+<script>
+    var DataTablePageSize = 50;
+    var selectedDeleteId = 0;
+    var DeleteCommissionSession = function () {
+        var delitem = selectedDeleteId;
+        $.ajax({
+            url: "@(AppConfig.DomainSitePath)/Commission/DeleteCommissionSession",
+            data: { Id: delitem },
+            type: "Post",
+            dataType: "Json",
+            success: function (result) {
+                parent.$("#CommissionSessionTab").load("@(AppConfig.DomainSitePath)/Commission/CommissionSessionPartial");
+            },
+            error: function () {
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide();
+        var table = $('#tblCSession').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        $('#tblCSession tbody').on('click', 'tr', function () {
+            if ($(this).hasClass('selected')) {
+                $(this).removeClass('selected');
+            }
+            else {
+                table.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+            }
+        });
+        $("#Commission-session-srch-term").keyup(function () {
+            $("#tblCSession_filter input").val($("#Commission-srch-term").val());
+            $("#tblCSession_filter input").trigger('keyup');
+        });
+        $("#AddCommissionSession").click(function () {
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/Commission/AddCommissionSession?id=0");
+        })
+        $(".item-deletesession").click(function () {
+            selectedDeleteId = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this Commission Session?", DeleteCommissionSession);
+        })
+        $(".item-editsession").click(function () {
+            var typeval = $(this).attr('data-id');
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/Commission/AddCommissionSession?id=" + typeval);
+        })
+    })
+</script>
+<style>
+    .ctype-left-content {
+        width: 50%;
+        float: left;
+    }
+
+    .ctype-right-content {
+        width: 50%;
+        float: right;
+    }
+
+    .commission-type-wrap {
+        margin-top: 5px;
+    }
+
+    .Search-div {
+        width: 50%;
+    }
+</style>
+
+<div class="commission-type-wrap">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="ctype-left-content">
+                <div class="Search-div">
+                    <div class="input-group add-on">
+                        <input class="form-control" placeholder="Find a commission Session" name="srch-term" id="Commission-session-srch-term" type="text">
+                        <div class="input-group-btn">
+                            <button class="btn custom-btn green_button" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ctype-right-content">
+                <button class="btn btn-primary btnCommissionType" id="AddCommissionSession"><i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T("New")</button>
+            </div>
+        </div>
+    </div>
+    <div class="table-CommissionType">
+        <table id="tblCSession" class="ui celled table" cellspacing="0">
+            <thead>
+                <tr>
+                    <th class="thead-th-style">@Localize.T("Name")</th>
+                    <th class="thead-th-style">@Localize.T("Action")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    foreach (var item in Model)
+                    {
+                        <tr class="tr-style">
+                            <td class="table-body-td-style" valign="top"><a href="javascript:void(0)" class="item-editsession" data-id="@item.Id">@item.Name</a></td>
+                            <td class="table-body-td-style" valign="top">
+                                <a href="javascript:void(0)" class="item-deletesession" data-id="@item.Id">
+                                    <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                    @Localize.T("Delete")
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+

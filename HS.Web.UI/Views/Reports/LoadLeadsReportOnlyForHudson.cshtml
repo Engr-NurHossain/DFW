@@ -1,0 +1,511 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@model List<HS.Entities.Customer>
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<script>
+    var DataTablePageSize = 50;
+    var LeadsStartDatepicker;
+    var LeadsEndDatepicker;
+    var statusval = '@ViewBag.statusval';
+    @*var marketval = '@ViewBag.marketval';*@
+    var leadval = '@ViewBag.leadval';
+    var marketval = '@Html.Raw(Json.Encode(@ViewBag.valmarket))';
+    marketval = JSON.parse(marketval);
+    var statusval = '@Html.Raw(Json.Encode(@ViewBag.valstatus))';
+    statusval = JSON.parse(statusval);
+    var leadsval = '@Html.Raw(Json.Encode(@ViewBag.valleads))';
+    leadsval = JSON.parse(leadsval);
+    var salesprval = '@Html.Raw(Json.Encode(@ViewBag.valsalespr))';
+    salesprval = JSON.parse(salesprval);
+    var my_date_format = function (input) {
+        console.log(input+" r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var LeadServiceEquipment = function (idval) {
+        //var idval = $(this).attr('data-id');
+        var mapLoadurl = domainurl + "/Reports/GetLeadsServiceAndEquipment?customerid=" + idval;
+        OpenTopToBottomModal(mapLoadurl);
+    }
+    var CustomerSearchKeyUp = function (pageno,order)
+    {
+        var status = $("#lead_status").val();
+        var market = $("#lead_market").val();
+        var leads = $("#lead_source").val();
+        var salespr = $("#lead_salespr").val();
+        $("#LeadReportTab").html(TabsLoaderText);
+
+        $("#LeadReportTab").load(domainurl + "/Reports/LoadLeadsReportOnlyForHudson/?pageno=" + pageno + "&pagesize=" + DataTablePageSize + "&status=" + status + "&market=" + market + "&leads=" + encodeURI(leads)+"&order="+order +"&salesperson="+encodeURI(salespr));
+    }
+    var pageno = '@ViewBag.PageNumber';
+
+    $(document).ready(function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".LoaderWorkingDiv").hide();
+        $("#LeadReportTab .invoice-loader").hide();
+        $('.selectpicker_market').selectpicker('val', marketval);
+        $('.selectpicker_status').selectpicker('val', statusval);
+        $('.selectpicker_leads').selectpicker('val', leadsval);
+        $('.selectpicker_salespr').selectpicker('val', salesprval);
+
+        //var table = $('#LeadsReportTable').DataTable({
+        //    "pageLength": DataTablePageSize,
+        //    "destroy": true,
+        //    "language": {
+        //        "emptyTable": "No data available"
+        //    }
+        //});
+        $("#btnleadsreportsearchforhudson").click(function () {
+            console.log("search");
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            var status = $("#lead_status").val();
+            var market = $("#lead_market").val();
+            var leads = $("#lead_source").val();
+            var salespr = $("#lead_salespr").val();
+
+            $("#LeadReportTab").html(TabsLoaderText);
+            $("#LeadReportTab").load(domainurl + "/Reports/LoadLeadsReportOnlyForHudson/?Start=" + StartDateVal + "&End=" + EndDateVal +
+                "&pageno=" + pageno + "&pagesize=50" + "&status=" + status + "&market=" + market + "&leads=" + encodeURI(leads)+"&salesperson="+encodeURI(salespr));
+             console.log("searchend");
+        });
+        if (StartDate != "" && EndDate != "")
+        {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        $("#btnDownloadLeadsReportforhudson").click(function () {
+
+            var status = $("#lead_status").val();
+            var market = $("#lead_market").val();
+            var leads = $("#lead_source").val();
+             var salespr = $("#lead_salespr").val();
+
+            if (StartDate.trim().length == 10 && EndDate.trim().length == 10) {
+                StartDate = StartDate.replaceAll('/', '_');
+                EndDate = EndDate.replaceAll('/', '_');
+                location.href = domainurl + "/Reports/LoadLeadsReportOnlyForHudson/?Start=" + StartDate + "&End=" + EndDate + "&GetReport=true&pageno=" + pageno + "&pagesize=50" + "&status=" + status + "&market=" + market + "&leads=" + encodeURI(leads)+"&salesperson="+encodeURI(salespr);
+            } else {
+                location.href = domainurl + "/Reports/LoadLeadsReportOnlyForHudson/?GetReport=true&pageno=" + pageno + "&pagesize=50" + "&status=" + status + "&market=" + market + "&leads=" + encodeURI(leads)+"&salesperson="+encodeURI(salespr);
+            }
+        });
+
+
+        $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            UpdatePtoCookie();
+            var status = $("#lead_status").val();
+            var market = $("#lead_market").val();
+            var leads = $("#lead_source").val();
+            var salespr = $("#lead_salespr").val();
+
+            $("#LeadReportTab").html(TabsLoaderText);
+            $("#LeadReportTab").load(domainurl + "/Reports/LoadLeadsReportOnlyForHudson/?Start=" + StartDateVal + "&End=" + EndDateVal + "&pageno=" + pageno + "&pagesize=50" + "&status=" + status + "&market=" + market + "&leads=" + encodeURI(leads)+"&salesperson="+encodeURI(salespr));
+        });
+
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            CustomerSearchKeyUp(pageno, orderval);
+        });
+
+    });
+</script>
+<style>
+    .lead_market_width {
+        width: 200px;
+        float: left;
+        margin-right: -3px;
+    }
+</style>
+<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
+
+
+<div class="row lrp_bottom_border">
+    <div class="lead_total_color"> @Localize.T("Total Leads:") @string.Format("{0:#,##0}", ViewBag.TotalLeads)</div>
+</div>
+
+
+<div class="row leads_report_top_bar lhlr_top_bar">
+    <div class="lead_market_width">@Html.DropDownList("lead_status", ViewBag.leadstatus as List<SelectListItem>, new { @class = "form-control selectpicker_status", @multiple = "multiple", title = "Select status" })</div>
+
+    @*@Html.DropDownList("lead_status", ViewBag.leadstatus as List<SelectListItem>, new { @class = "form-control" })*@
+    <div class="lead_market_width">@Html.DropDownList("lead_market", ViewBag.leadmarket as List<SelectListItem>, new { @class = "form-control selectpicker_market", @multiple = "multiple", title = "Select market" })</div>
+    <div class="lead_market_width">@Html.DropDownList("lead_salespr", ViewBag.SalespersonList as List<SelectListItem>, new { @class = "form-control selectpicker_salespr", @multiple = "multiple", title = "Select lead owner" })</div>
+
+    <div class="input-group add-on">
+        <div class="lead_market_width">@Html.DropDownList("lead_source", ViewBag.leadsource as List<SelectListItem>, new { @class = "form-control selectpicker_leads", @multiple = "multiple", title = "Select lead source" })</div>
+
+        @*@Html.DropDownList("lead_source", ViewBag.leadsource as List<SelectListItem>, new { @class = "form-control" })*@
+        <div class="input-group-btn">
+            <button class="btn green_button" id="btnleadsreportsearchforhudson" title="@Localize.T("Search")"><i class="fa fa-search"></i></button>
+        </div>
+    </div>
+    <button title="@Localize.T(" Download")" class="report_btn lrp_float_right" id="btnDownloadLeadsReportforhudson"><i class="fa fa-download" aria-hidden="true"></i></button>
+</div>
+
+<div class="leads_report_table HudsonleadsReportTable">
+    <table id="" class="loadHudsonleadsReportTable">
+        <thead>
+            <tr>
+                <th class="lhlr_add">
+                        <div>@Localize.T(" Name")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/firstname"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/firstname"></i></div>
+
+                    </th>
+                    @*<th class="lhlr_add">
+                        <div>@Localize.T("Last Name")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/lastname"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/lastname"></i></div>
+
+                    </th>*@
+                <th class="lhlr_add">
+                    <div>@Localize.T("Doing Business As (DBA)")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/dba"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/dba"></i></div>
+
+                </th>
+                @*<th class="lhlr_add">
+                    <div>@Localize.T("Lead")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/lead"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/lead"></i></div>
+
+                </th>*@
+                <th class="lhlr_stat">
+                    <div>@Localize.T("Status")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+
+                </th>
+                <th class="lhlr_stat">
+                    <div>@Localize.T("Market")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/market"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/market"></i></div>
+
+                </th>
+                <th class="lhlr_stat">
+                    <div>@Localize.T("Lead Source")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/leadsource"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/leadsource"></i></div>
+
+                </th>
+                <th class="lhlr_name">
+                    <div>@Localize.T("Lead Owner")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/leadowner"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/leadowner"></i></div>
+                </th>
+                <th class="lhlr_name">
+                        <div>@Localize.T("Passengers")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/passengers"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/passengers"></i></div>
+                    </th>
+                    <th class="lhlr_name">
+                        <div>@Localize.T("Budget")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/budget"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/budget"></i></div>
+                    </th>
+                <th>
+                    <div>@Localize.T("Created On")</div>
+                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/createdon"></i><i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/createdon"></i></div>
+
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        <div>@Localize.T("Name") <span>:</span></div>
+                        <div>
+                            @{
+                                if (!string.IsNullOrWhiteSpace(item.FirstName))
+                                {
+                                    <span title="First Name"> @item.FirstName </span>
+                                }
+
+                                if (!string.IsNullOrWhiteSpace(item.LastName))
+                                {
+                                    <span title="Last Name"> @item.LastName</span>
+                                }
+                            }
+                        </div>
+
+                    </td>
+                    @*<td>
+                    <div>@Localize.T("Last Name") <span>:</span></div>
+                    @{
+                        if (!string.IsNullOrWhiteSpace(item.LastName))
+                        {
+                            <div>@item.LastName</div>
+                        }
+                    }
+                </td>*@
+                    <td>
+                        @{
+                            if (!string.IsNullOrWhiteSpace(item.DBA))
+                            {
+                                <div>@Localize.T("Doing Business As (DBA)") <span>:</span></div>
+                                <div><a href="/Lead/Leadsdetail/?id=@item.Id" class="lead_click_item" data-id="@item.CustomerId" target="_blank">@item.DBA</a></div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(item.BusinessName))
+                            {
+                                <div>@Localize.T("Doing Business As (DBA)") <span>:</span></div>
+                                <div><a href="/Lead/Leadsdetail/?id=@item.Id" class="lead_click_item" data-id="@item.CustomerId" target="_blank">@item.BusinessName</a></div>
+                            }
+                            else
+                            {
+                                <div>@Localize.T("Doing Business As (DBA)") <span>:</span></div>
+                                <div><a href="/Lead/Leadsdetail/?id=@item.Id" class="lead_click_item" data-id="@item.CustomerId" target="_blank">@item.FirstName @item.LastName</a></div>
+                            }
+                        }
+                    </td>
+                    @*<td>
+                    <div>@Localize.T("Lead") <span>:</span></div>
+                    <span>@Localize.T("Name: ")@item.FirstName @item.LastName</span>
+                    @{
+                        var address = "";
+                        if (!string.IsNullOrWhiteSpace(item.Street))
+                        {
+                            address += item.Street + "<br>";
+                        }
+                        if (!string.IsNullOrWhiteSpace(item.City))
+                        {
+                            address += item.City + ", ";
+                        }
+                        if (!string.IsNullOrWhiteSpace(item.State))
+                        {
+                            address += item.State + " ";
+                        }
+                        if (!string.IsNullOrWhiteSpace(item.ZipCode))
+                        {
+                            address += item.ZipCode;
+                        }
+                        <span>@Html.Raw(address)</span>
+                    }
+                </td>*@
+                    <td>
+                        <div>@Localize.T("Status") <span>:</span></div>
+                        @{
+                            if (!string.IsNullOrWhiteSpace(item.StatusVal))
+                            {
+                                <div>@item.StatusVal</div>
+                            }
+                        }
+                    </td>
+                    <td>
+                        <div>@Localize.T("Market") <span>:</span></div>
+                        @{
+                            if (!string.IsNullOrWhiteSpace(item.MarketVal))
+                            {
+                                <div>@item.MarketVal</div>
+                            }
+                        }
+                    </td>
+                    <td>
+                        <div>@Localize.T("Lead Source") <span>:</span></div>
+                        @{
+                            if (!string.IsNullOrWhiteSpace(item.LeadSourceVal))
+                            {
+                                <div>@item.LeadSourceVal</div>
+                            }
+                        }
+                    </td>
+
+                    <td>
+                        <div>@Localize.T("Lead Owner") <span>:</span></div>
+                        <div>@item.PersonSales</div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Passengers") <span>:</span></div>
+                        @if (!item.Passengers.HasValue || item.Passengers == 0)
+                        {
+                            <div></div>
+                        }
+                        else
+                        {
+                            <div>@item.Passengers</div>
+                        }
+                    </td>
+                    <td>
+                        <div>@Localize.T("Budget") <span>:</span></div>
+                        @if (!item.Budget.HasValue || item.Budget == 0)
+                        {
+                            <div>$0.00</div>
+                        }
+                        else
+                        {
+                            <div>$@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Budget)</div>
+                        }
+                    </td>
+                    <td>
+                        <div>@Localize.T("Created On") <span>:</span></div>
+                        <div>@item.CreatedName @Localize.T("on") @HS.Framework.DateTimeExtension.UTCToClientTime(item.JoinDate.Value).ToString("MM/dd/yy") @*at @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.For12Hours(item.JoinDate.Value)*@</div>
+                    </td>
+                </tr>
+            }
+            <tr class="table_total_bg">
+                <td colspan="7">
+                    <b class="float_right">
+                        @Localize.T("Total Budget:")
+                    </b>
+                </td>
+                <td colspan="2">
+                    <div>@Localize.T("Total Budget") <span>:</span></div>
+                    <div><b>$@Model.Sum(x => x.Budget).Value.ToString("#,##0.00")</b></div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="AgentListPagination">
+        <div class="paginationContainer">
+            @if (ViewBag.PageCount > 0)
+            {
+                <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+            }
+            @if (ViewBag.PageCount == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons disabledBtn">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">1</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerSearchKeyUp(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerSearchKeyUp(2)">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="CustomerSearchKeyUp(3)">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount > 3)
+            {
+                if (ViewBag.PageNumber == ViewBag.PageCount)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="CustomerSearchKeyUp()">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="CustomerSearchKeyUp(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+

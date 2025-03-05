@@ -1,0 +1,268 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using HS.Framework
+@*@model List<HS.Entities.RescheduleCommission>*@
+@model HS.Entities.RescheduleCommisionReport
+
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var ShowOpportunityDetails = function (item, e) {
+        //e.preventDefault();
+        if (cntrlIsPressed) {
+            var href = $(item).attr('href');
+            window.open(href, '_blank');
+        } else {
+            var id = $(item).attr('id');
+            var OpportunityId = $(item).attr('id-val');
+            LoadOpportunityDetail(item);
+            $(".GlobalSearchInp").val("");
+        }
+    }
+    $(document).ready(function () {
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            NavigateReschedulMemberComListing(pageno, orderval);
+        });
+    });
+</script>
+<div class="opportunity_list_container">
+    @if (ViewBag.OutOfNumber == 0)
+    {
+        @ViewBag.Message;
+    }
+    else
+    {
+
+        <div class="tech_report_table_container">
+            <table id="PayrollReportTable">
+                <thead>
+                    <tr>
+                        <th>
+                            <div>@Localize.T("Ticket Id")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ticketid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ticketid"></i></div>
+                        </th>
+
+                        <th>
+                            <div>@Localize.T("Adjustment")</div>
+                            @*<div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/totalrmr"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/totalrmr"></i></div>*@
+                        </th>
+                        <th>
+                            <div>@Localize.T("Commission")</div>
+                            @*<div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/totalcommission"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/totalcommission"></i></div>*@
+                        </th>
+                        <th>
+                            <div>@Localize.T("Unpaid Balance")</div>
+                            @*<div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/totalcollected"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/totalcollected"></i></div>*@
+                        </th>
+                        @if (!ViewBag.IsPaid)
+                        {
+
+                        }
+                        else
+                        {
+                            <th>
+                                <div>@Localize.T("Batch")</div>
+                                @*<div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/batch"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/batch"></i></div>*@
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.PayrollReportList)
+                    {
+                        <tr>
+                            <td>
+                                <div class="rpt_pr_sc_mb">@Localize.T("Ticket Id") <span>:</span></div>
+                                <div class="rpt_pr_sc_dtp">
+                                    <span onclick="OpenTicketById(@item.TicketIdValue)" class="cus-anchor">@item.TicketIdValue</span>
+                                    <br />
+                                    <a title="Customer" class="cus-anchor" href="/Customer/Customerdetail/?id=@item.CustomerIdValue">@item.CustomerName</a>
+                                    <br />
+                                    <span>@item.Technician</span>
+                                    <br />
+                                    @if (item.CompletionDate != new DateTime() && item.CompletionDate != null)
+                                    {
+                                        <span title="Completion Date">@item.CompletionDate.Value.UTCToClientTime().ToString("MM/dd/yy")</span>
+                                    }
+                                </div>
+                            </td>
+                            @*<td>
+                                    <span>@item.SalesPerson</span>
+                                    <br />
+                                    @if (item.CompletionDate != new DateTime() && item.CompletionDate != null)
+                                    {
+                                        <span title="Completion Date">@item.CompletionDate.Value.UTCToClientTime().ToString("MM/dd/yyyy")</span>
+                                    }
+                                </td>*@
+
+                            @*<td>
+                                    <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.EquipmentCommission)</span>
+                                </td>*@
+                            <td>
+                                <div class="rpt_pr_sc_mb">@Localize.T("Adjustment") <span>:</span></div>
+                                <div class="rpt_pr_sc_dtp"><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Adjustment)</span></div>
+
+                            </td>
+                            <td>
+                                <div class="rpt_pr_sc_mb">@Localize.T("Commission") <span>:</span></div>
+                                <div class="rpt_pr_sc_dtp"><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Commission)</span></div>
+
+                            </td>
+                            <td>
+                                <div class="rpt_pr_sc_mb">@Localize.T("Unpaid Balance") <span>:</span></div>
+                                <div class="rpt_pr_sc_dtp"><span><a style="color:red;" target="_blank" href="/Customer/Customerdetail/?id=@item.CustomerIdValue#InvoiceTab">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.BalanceDue)</a></span></div>
+
+                            </td>
+                            @if (!ViewBag.IsPaid)
+                            {
+
+                            }
+                            else
+                            {
+                                <td>
+                                    <div class="rpt_pr_sc_mb">@Localize.T("Batch") <span>:</span></div>
+                                    <div class="rpt_pr_sc_dtp">@item.Batch</div>
+
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+                <div>
+                    <div>@Localize.T("Total Adjustment") <span>:</span></div>
+                    <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.TotalRescheduleCommision.TotalAdjustment.ToString("#,##0.00")</div>
+
+                    <div>@Localize.T("Total Commission") <span>:</span></div>
+                    <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.TotalRescheduleCommision.TotalCommission.ToString("#,##0.00")</div>
+
+                    <div>@Localize.T("Total Unpaid Balance") <span>:</span></div>
+                    <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.TotalRescheduleCommision.TotalUnpaidBalance.ToString("#,##0.00")</div>
+                </div>
+            </table>
+        </div>
+
+        <div class="report_pagination_container">
+            <div class="report_pagination_inner">
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton activeBtn" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber),'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons disabledBtn" disabled>Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigateReschedulMemberComListing(1, '@ViewBag.order')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigateReschedulMemberComListing(2,'@ViewBag.order')">2</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons" disabled="@(ViewBag.PageNumber == 2 ? "disabled" : "")" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber != 2 ? ViewBag.PageNumber + 1 : ""),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""),'@ViewBag.order')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigateReschedulMemberComListing(1,'@ViewBag.order')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigateReschedulMemberComListing(2,'@ViewBag.order')">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 3 ? "activeBtn" : "")" onclick="NavigateReschedulMemberComListing(3,'@ViewBag.order')">3</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons" disabled="PaginationButtons @(ViewBag.PageNumber == 3 ? "disabled" : "")" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber != 3 ? ViewBag.PageNumber + 1 : ""),'@ViewBag.order')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv" id="pagination">
+                            <button class="PaginationButtons" disabled onclick="NavigateReschedulMemberComListing()">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber + 2),'@ViewBag.order')">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')" id="pagination">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber - 2),'@ViewBag.order')" id="pagination">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')" id="pagination">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber),'@ViewBag.order')" id="pagination">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" disabled onclick="NavigateReschedulMemberComListing()">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber - 1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigateReschedulMemberComListing(@(ViewBag.PageNumber + 1),'@ViewBag.order')">Next</button>
+                        </div>
+
+                    }
+                }
+            </div>
+            <div class="area_zip_code_pagination_inner">
+                @if (ViewBag.PageCount > 0)
+                {
+                    <div class="paginationtextdv">
+                        <span>Showing item @ViewBag.CurrentNumber of @ViewBag.OutOfNumber</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+</div>
+
+
+
+

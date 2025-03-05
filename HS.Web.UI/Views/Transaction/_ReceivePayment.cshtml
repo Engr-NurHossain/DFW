@@ -1,0 +1,1504 @@
+﻿
+@{
+    Layout = null;
+    bool IsCustomer = false;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+    IsCustomer = CurrentUser.UserTags == "Customer";
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(CurrentUser.CompanyId.Value);
+}
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using cs = HS.Entities.Customer
+@model HS.Entities.ReceivePaymentModel
+@using Permissions = HS.Framework.UserPermissions
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper
+<script>
+    String.prototype.replaceAll = function (search, replacement) {
+        var target = this;
+        return target.split(search).join(replacement);
+    };
+    var PaymentCustomerId = '@Model.CustomerId';
+    var PaymentCustomerGuid = '@Model.CustomerGId';
+    var TransactionId_ = parseInt('@ViewBag.TransactionId');
+    var GeneralCustomerCreditAmount = @Model.GeneralCreditAmount;
+    var RMRCustomerCreditAmount = @Model.RMRCreditAmount;
+    var PaymentMethodCC = '@HS.Web.UI.Helper.LabelHelper.PaymentMethod.CreditCard';
+    var PaymentMethodACH = '@HS.Web.UI.Helper.LabelHelper.PaymentMethod.ACH';
+
+
+    var ReceivePayment = {
+        validate_AccountName: function () {
+            var AccountName = $("#CreditAccountName").val();
+            if (AccountName == undefined || AccountName == null || ReceivePayment.isEmptyOrSpaces(AccountName)) {
+                $("#CreditAccountName").css("border-color", "red");
+                return false;
+            } else {
+                $("#CreditAccountName").css("border-color", "#ccc");
+                return true;
+            }
+        },
+        isEmptyOrSpaces: function (str) {
+            console.log(str);
+            return str === null || str.match(/^ *$/) !== null;
+        },
+        validate_CardNumber: function () {
+            var CardNumber = $("#CardNumber").val();
+            if (CardNumber == undefined || CardNumber == null || ReceivePayment.isEmptyOrSpaces(CardNumber)) {
+                $("#CardNumber").css("border-color", "red");
+                return false;
+            } else {
+                $("#CardNumber").css("border-color", "#ccc");
+                return true;
+            }
+        },
+        validate_cvv: function (cvv) {
+            if ($("#card_type_img").hasClass('AMEX')) {
+                var myRe = /^[0-9]{4,4}$/;
+                var myArray = myRe.exec(cvv);
+                if (cvv != myArray) {
+                    $("#CardSecurityCode").css("border-color", "red");
+                    return false;
+                } else {
+                    $("#CardSecurityCode").css("border-color", "#ccc");
+                    return true;
+                }
+            }
+            else {
+                var myRe = /^[0-9]{3,3}$/;
+                var myArray = myRe.exec(cvv);
+                if (cvv != myArray) {
+                    $("#CardSecurityCode").css("border-color", "red");
+                    return false;
+                } else {
+                    $("#CardSecurityCode").css("border-color", "#ccc");
+                    return true;
+                }
+            }
+        },
+        GetBankingInformationByRoutingNumber: function (number) {
+            console.log(number);
+            $.ajax({
+                type: "GET",
+                url: "/SmartLeads/GetBankingInformationByRoutingNumber",
+                data: { routingnumber: number },
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        //var resultparse = JSON.parse(data.dataObjects);
+                        var resultparse = data.dataObjects;
+                        if (resultparse.code == 200) {
+                            console.log(resultparse.BankName);
+                            $("#AchBankName").val(resultparse.BankName);
+                            $("#RoutingNo").removeClass('required');
+                            $(".routing_div label").addClass('hidden');
+
+                        }
+                        else {
+                            $("#AchBankName").val("");
+                            $("#RoutingNo").addClass('required');
+                            $(".routing_div label").removeClass('hidden');
+                        }
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+        },
+        SaveACHMethod: function () {
+             
+            var url = domainurl + "/SmartLeads/SavePaymentMethod";
+            var param = JSON.stringify({
+                //Id: $("#ACH_id").val(),
+                RoutingNo: $("#AchRouting").val(),
+                AcountNo: $("#AchAcountNo").val(),
+                BankAccountType: $("#AchBankAccountType").val(),
+                EcheckType: "WEB",
+                AccountName: $("#AchAccountName").val(),
+                BankName: $("#AchBankName").val(),
+                MethodType: PaymentMethodACH,
+                CustomerId: PaymentCustomerGuid,
+                //IsForBrinks: $("#IsForBrinks").is(":checked"),
+                //IsPartialPayment: $("#IsPartialPayment").is(":checked"),
+                //IsInitialPayment: $("#IsInitialPayment").is(":checked")
+
+            })
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        $("#btnSaveACHInfo").attr("disabled", "true");
+                        OpenSuccessMessageNew("Success", "Payment Method Saved Successfully", function () { });
+                    } else {
+                        OpenSuccessMessageNew("Success", "else block", function () { });
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+        },
+        SaveCreditCard: function () {
+            var url = domainurl + "/SmartLeads/SavePaymentMethod";
+
+            var param = JSON.stringify({
+                Id: $("#CC_id").val(),
+                CardType: $("#CardType").val(),
+                CardNumber: $("#CardNumber").val(),
+                CardExpireDate: $("#CardExpireDate").val(),
+                CardSecurityCode: $("#CardSecurityCode").val(),
+                AccountName: $("#CreditAccountName").val(),
+                MethodType: PaymentMethodCC,
+                CustomerId: PaymentCustomerGuid
+            })
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        $("#btnSaveCreditCardInfo").attr("disabled", "true");
+                        OpenSuccessMessageNew("Success", "Payment Method Saved Successfully", function () {
+
+                        });
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+        },
+        validate_RoutingNo: function() {
+            var RoutingNo = $("#AchRouting").val();
+            if (RoutingNo == undefined || RoutingNo == null || ReceivePayment.isEmptyOrSpaces(RoutingNo) || $(".routing_div label").hasClass('hidden') == false) {
+                $("#AchRouting").css("border-color", "red");
+                return false;
+            } else {
+                $("#AchRouting").css("border-color", "#ccc");
+                return true;
+            }
+        },
+        validate_AcountNo: function() {
+            var AcountNo = $("#AchAcountNo").val();
+            if (AcountNo == undefined || AcountNo == null || ReceivePayment.isEmptyOrSpaces(AcountNo)) {
+                $("#AchAcountNo").css("border-color", "red");
+                return false;
+            } else {
+                $("#AchAcountNo").css("border-color", "#ccc");
+                return true;
+            }
+        },
+        validate_BankAccountType: function() {
+            var BankAccountType = $("#AchBankAccountType").val();
+            if (BankAccountType == undefined || BankAccountType == null || ReceivePayment.isEmptyOrSpaces(BankAccountType) || BankAccountType == '-1') {
+                $("#AchBankAccountType").css("border-color", "red");
+                return false;
+            } else {
+                $("#AchBankAccountType").css("border-color", "#ccc");
+                return true;
+            }
+        },
+        validate_EcheckType: function() {
+            var EcheckType = $("#AchECheckType").val();
+            if (EcheckType == undefined || EcheckType == null || ReceivePayment.isEmptyOrSpaces(EcheckType) || EcheckType == '-1') {
+                $("#AchECheckType").css("border-color", "red");
+                return false;
+            } else {
+                $("#AchECheckType").css("border-color", "#ccc");
+                return true;
+            }
+        },
+        validate_AccountNameACH: function() {
+            var AccountName = $("#AchAccountName").val();
+            if (AccountName == undefined || AccountName == null || ReceivePayment.isEmptyOrSpaces(AccountName)) {
+                $("#AchAccountName").css("border-color", "red");
+                return false;
+            } else {
+                $("#AchAccountName").css("border-color", "#ccc");
+                return true;
+            }
+        },
+        validate_BankName: function() {
+            var BankName = $("#AchBankName").val();
+            if (BankName == undefined || BankName == null || ReceivePayment.isEmptyOrSpaces(BankName)) {
+                $("#AchBankName").css("border-color", "red");
+                return false;
+            } else {
+                $("#AchBankName").css("border-color", "#ccc");
+                return true;
+            }
+        },
+        DocumentReady: function () {
+            /*Credit Card Related*/
+            $("#btnSaveCreditCardInfo").click(function () {
+                var validate_CardNumber1 = ReceivePayment.validate_CardNumber();
+                var CardNumber = $("#CardNumber").val().split("-").join("");
+                var isCreditCard1 = isCreditCard(CardNumber);
+                var checkExp1 = checkExp();
+                var validate_cvv1 = ReceivePayment.validate_cvv($("#CardSecurityCode").val());
+                var validate_AccountName1 = ReceivePayment.validate_AccountName();
+                if (validate_CardNumber1 && isCreditCard1 && checkExp1 && validate_cvv1 && validate_AccountName1) {
+                    ReceivePayment.SaveCreditCard();
+                }
+            });
+            $("#CardSecurityCode").blur(function () {
+                ReceivePayment.validate_cvv($("#CardSecurityCode").val());
+            });
+            $("#CreditAccountName").blur(function () {
+                ReceivePayment.validate_AccountName();
+            });
+            $("#CardNumber").blur(function () {
+                var resultCheck = ReceivePayment.validate_CardNumber();
+                if (resultCheck) {
+                    $("#CardNumber").css("border-color", "#ccc");
+                    $("#CardType").val(GetCardType($("#CardNumber").val()));
+                }
+                else {
+                    $("#CardNumber").css("border-color", "red");
+                }
+            });
+
+            /*ACH RElated*/
+            $("#AchRouting").change(function () {
+                var number = $("#AchRouting").val();
+                ReceivePayment.GetBankingInformationByRoutingNumber(number);
+            });
+            $("#btnSaveACHInfo").click(function () {
+                var validate_BankName1 = ReceivePayment.validate_BankName();
+                var validate_AccountName1 = ReceivePayment.validate_AccountNameACH();
+                var validate_EcheckType1 = ReceivePayment.validate_EcheckType();
+                var validate_BankAccountType1 = ReceivePayment.validate_BankAccountType();
+                var validate_AcountNo1 = ReceivePayment.validate_AcountNo();
+                var validate_RoutingNo1 = ReceivePayment.validate_RoutingNo();
+                var validateaccno = false;
+                if ($("#AchAcountNo").val().length >= 4) {
+                    validateaccno = true
+                }
+
+                if (validate_RoutingNo1 && validate_AcountNo1 && validate_BankAccountType1 && validate_EcheckType1 && validate_AccountName1 && validate_BankName1 && validateaccno == true) {
+                    
+                    ReceivePayment.SaveACHMethod();
+                }
+            });
+        }
+    }
+
+    var PaymentDate;
+    var PaymentMethodClick = false;
+    var ClearPayments = function () {
+        $("#AmountReceived").val('0.00');
+        $(".amount_received").each(function () {
+            $(this).val('0.00');
+        });
+        $(".amount-big").text('0.00');
+        $(".inv_payment_chk").prop("checked", false);
+    }
+    var SavePayments = function () {
+        var ApplyCustomerCreditAmount = 0;
+
+        var InvoList = [];
+        $(".invoice-itm").each(function () {
+            var InvoiceId = $(this).attr('idval');
+            if ($("#checkbox_" + InvoiceId).is(":checked")) {
+                var openbalance = parseFloat($('.open_balance_amount_' + InvoiceId).text().replaceAll(',', '').replaceAll(TransCurrency,""));
+                var originalAmount = parseFloat($(".original_amount_" + InvoiceId).text().replaceAll(',', '').replaceAll(TransCurrency,""));
+                InvoList.push({
+                    Id: InvoiceId,
+                    Payment: $(".amount_received_" + InvoiceId).val().replaceAll(',', ''),
+                    Description: '',
+                    DueDate: new Date(),
+                    OriginalAmount: originalAmount,
+                    OpenBalance: openbalance,
+                    CreatedDate: new Date()
+                });
+            }
+        });
+        if (InvoList.length == 0) {
+            return;
+        }
+
+        var CardInfo = "";
+        var ACHInfo = "";
+        var OthersInfo = "";
+        if ($("#PaymentMethod").val() == "ACH") {
+            if ($("#AchRouting").val() == ""
+                || $("#AchAcountNo").val() == ""
+                || $("#AchBankAccountType").val() == ""
+                || $("#AchAccountName").val() == "") {
+                OpenErrorMessageNew("Error!", "ACH information required.");
+                return;
+            }
+            ACHInfo = {
+                "RoutingNo": $("#AchRouting").val(),
+                "AccountNo": $("#AchAcountNo").val(),
+                "AccountType": $("#AchBankAccountType").val(),
+                "ECheckType": $("#AchECheckType").val(),
+                "BankName": $("#AchBankName").val(),
+                "AccountName": $("#AchAccountName").val(),
+                "Description": $("#ACHDescription").val()
+            };
+        }
+
+        else if ($("#PaymentMethod").val() == "Debit Card") {
+            if ($("#DebitCardNo").val() == "" || $("#DebitExpireDate").val() == "" || $("#DebitCardName").val() == "" || $("#DebitSecurityCode").val() == "") {
+                OpenErrorMessageNew("Error!", "Debit card information required.");
+                return;
+            }
+            CardInfo = {
+                "CardNumber": $("#DebitCardNo").val(),
+                "ExpiredDate": $("#DebitExpireDate").val(),
+                "NameOnCard": $("#DebitCardName").val(),
+                "SecurityCode": $("#DebitSecurityCode").val(),
+                "Description": $("#DebitCardDescription").val()
+            };
+
+        }
+        else if ($("#PaymentMethod").val() == "Credit Card") {
+            var cardType = GetCardType($("#CardNumber").val());
+            if (cardType == "Visa")
+            {
+                cardType = "visa";
+            }
+            else if (cardType == "AMEX")
+            {
+                cardType = "amex";
+            }
+            else if (cardType == "Mastercard") {
+                cardType = "mast";
+            }
+            console.log("asi");
+            if ($("#CardNumber").val() == "" || $("#CardExpireDate").val() == "" || $("#CreditAccountName").val() == "" ) {
+                OpenErrorMessageNew("Error!", "Credit card information required.");
+                return;
+            }
+            CardInfo = {
+                "CardNumber": $("#CardNumber").val(),
+                "ExpiredDate": $("#CardExpireDate").val(),
+                "NameOnCard": $("#CreditAccountName").val(),
+                "SecurityCode": $("#CardSecurityCode").val(),
+                "Description": $("#CreditCardDescription").val(),
+                "CardType": cardType
+            };
+
+
+        }
+        else if ($("#PaymentMethod").val() == "Check") {
+            if ($("#CheckAccountNo").val() == "") {
+                OpenErrorMessageNew("Error!", "Check number required.")
+                return;
+            }
+            CardInfo = {
+                "CheckNo": $("#CheckAccountNo").val(),
+            };
+        }
+        else if ($("#PaymentMethod").val() == "Others") {
+            OthersInfo = {
+                "PaymentMethodOthers": $(".PaymentMethodOthers").val(),
+                "ConfirmationNumber": $("#ConfirmationNumber").val(),
+            };
+        }
+        else if ($("#PaymentMethod").val() == "General Customer Credit") {
+            ApplyCustomerCreditAmount = GeneralCustomerCreditAmount;
+        }
+        else if ($("#PaymentMethod").val() == "RMRCustomerCredit") {
+            ApplyCustomerCreditAmount = RMRCustomerCreditAmount;
+        }
+        var AmountReceived = parseFloat($("#AmountReceived").val().replaceAll(',', ''));
+        var CreditAmount = parseFloat($("#CreditAmount").val().replaceAll(',', ''));
+
+        var param = JSON.stringify({
+            CustomerGId: PaymentCustomerGuid,
+            CustomerId: PaymentCustomerId,
+            PaymentDate: PaymentDate.getDate(),
+            PaymentMethod: $("#PaymentMethod").val(),
+            RefNo: $("#ReferenceNo").val(),
+            AmoutReceived: AmountReceived,
+            CreditAmount: CreditAmount,
+            GeneralCreditAmount: ApplyCustomerCreditAmount,
+            /*DepositTo: $("#DepositTo").val(),*/
+            EmailAddress: $("#EmailAddress").val(),
+            Transactions: InvoList,
+            CardInfo: CardInfo,
+            ACHInfo: ACHInfo,
+            OthersInfo: OthersInfo
+        });
+
+        $.ajax({
+            url: domainurl + "/Transaction/ReceivePayment",
+            data: param,
+            ajaxStart: $(".ticket-loader-div").show(),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            type: "Post",
+            success: function (data) {
+
+                if (data.result) {
+                    $(".ticket-loader-div").hide();
+                    OpenSuccessMessageNew("Success!", "Payment received successfully.", function () {
+                        if (typeof (OpenTransactionTab) != "undefined" && location.href.toLowerCase().indexOf("/sales") == -1) {/*Customer*/
+                            //OpenTransactionTab();
+                            //OpenInvoiceTab();
+                            $(LoadCustomerDiv + ".InvoiceTab_Load").load(domainurl + "/Invoice/InvoicePartial/?CustomerId=" + CustomerLoadGuid+ "&InvoiceType=Paid");
+                        } else {/*Sales*/
+                            $("#AccountReceivable").html(TabsLoaderText);
+                            $("#AccountReceivable").load(domainurl + "/Sales/AllReceivePayments");
+                            $("#AllFundings").html(TabsLoaderText);
+                            $("#AllFundings").load(domainurl + "/Sales/AllFundingData");
+                        }
+                    });
+                    CloseTopToBottomModal();
+
+                } else {
+                    $(".ticket-loader-div").hide();
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+               EnableElement("#SaveTransaction");
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                  EnableElement("#SaveTransaction");
+                console.log(errorThrown);
+                $(".ticket-loader-div").hide();
+            }
+        });
+    }
+    var SaveAndendPayments = function () {
+        var ApplyCustomerCreditAmount = 0;
+        var AmountReceived = parseFloat($("#AmountReceived").val().replaceAll(',', ''));
+        console.log(AmountReceived);
+        var CreditAmount = parseFloat($("#CreditAmount").val().replaceAll(',', ''));
+        console.log(CreditAmount);
+
+        var InvoList = [];
+        $(".invoice-itm").each(function () {
+            var InvoiceId = $(this).attr('idval');
+            if ($("#checkbox_" + InvoiceId).is(":checked")) {
+                var openbalance = parseFloat($('.open_balance_amount_' + InvoiceId).text().replaceAll(',', '').replaceAll(TransCurrency, ""));
+                var originalAmount = parseFloat($(".original_amount_" + InvoiceId).text().replaceAll(',', '').replaceAll(TransCurrency, ""));
+                InvoList.push({
+                    Id: InvoiceId,
+                    Payment: $(".amount_received_" + InvoiceId).val().replaceAll(',', ''),
+                    Description: '',
+                    DueDate: new Date(),
+                    OriginalAmount: originalAmount,
+                    OpenBalance: openbalance,
+                    CreatedDate: new Date()
+                });
+            }
+        });
+        if (InvoList.length == 0) {
+            return;
+        }
+        var CardInfo = "";
+        var ACHInfo = "";
+        /*
+        RoutingNo
+        AccountNo
+        AccountType
+        ECheckType
+        BankName
+        AccountName
+        Amount*/
+        if ($("#PaymentMethod").val() == "ACH") {
+            if ($("#AchRouting").val() == ""
+                || $("#AchAcountNo").val() == ""
+                || $("#AchBankAccountType").val() == ""
+                || $("#AchAccountName").val() == "") {
+                OpenErrorMessageNew("Error!", "ACH information required.");
+                return;
+            }
+            ACHInfo = {
+                "RoutingNo": $("#AchRouting").val(),
+                "AccountNo": $("#AchAcountNo").val(),
+                "AccountType": $("#AchBankAccountType").val(),
+                "ECheckType": $("#AchECheckType").val(),
+                "BankName": $("#AchBankName").val(),
+                "AccountName": $("#AchAccountName").val(),
+            };
+
+        }
+
+        if ($("#PaymentMethod").val() == "Debit Card") {
+            if ($("#DebitCardNo").val() == "" || $("#DebitExpireDate").val() == "" || $("#DebitCardName").val() == "" || $("#DebitSecurityCode").val() == "") {
+                OpenErrorMessageNew("Error!", "Debit card information required.")
+            }
+            CardInfo = {
+                "CardNumber": $("#DebitCardNo").val(),
+                "ExpiredDate": $("#DebitExpireDate").val(),
+                "NameOnCard": $("#DebitCardName").val(),
+                "SecurityCode": $("#DebitSecurityCode").val()
+            };
+
+        } else if ($("#PaymentMethod").val() == "Credit Card") {
+            if ($("#CardNumber").val() == "" || $("#CardExpireDate").val() == "" || $("#CreditAccountName").val() == "" || $("#CardSecurityCode").val() == "") {
+                OpenErrorMessageNew("Error!", "Credit card information required.")
+            }
+            CardInfo = {
+                "CardNumber": $("#CardNumber").val(),
+                "ExpiredDate": $("#CardExpireDate").val(),
+                "NameOnCard": $("#CreditAccountName").val(),
+                "SecurityCode": $("#CardSecurityCode").val()
+            };
+        } else if ($("#PaymentMethod").val() == "Check") {
+            if ($("#CheckAccountNo").val() == "") {
+                OpenErrorMessageNew("Error!", "Check number required.")
+            }
+            CardInfo = {
+                "CheckNo": $("#CheckAccountNo").val(),
+            };
+        }
+        else if ($("#PaymentMethod").val() == "General Customer Credit") {
+            ApplyCustomerCreditAmount = GeneralCustomerCreditAmount;
+        }
+        else if ($("#PaymentMethod").val() == "RMRCustomerCredit") {
+            ApplyCustomerCreditAmount = RMRCustomerCreditAmount;
+        }
+
+
+        var param = JSON.stringify({
+            CustomerGId: PaymentCustomerGuid,
+            CustomerId: PaymentCustomerId,
+            PaymentDate: PaymentDate.getDate(),
+            PaymentMethod: $("#PaymentMethod").val(),
+            RefNo: $("#ReferenceNo").val(),
+            CreditAmount: CreditAmount,
+            AmoutReceived: AmountReceived,
+            GeneralCreditAmount: ApplyCustomerCreditAmount,
+            /*DepositTo: $("#DepositTo").val(),*/
+            EmailAddress: $("#EmailAddress").val(),
+            Transactions: InvoList,
+            SendEmail: true,
+            CardInfo: CardInfo,
+            ACHInfo: ACHInfo
+        });
+
+        $.ajax({
+            url: domainurl + "/Transaction/ReceivePayment",
+            data: param,
+            ajaxStart: $(".ticket-loader-div").show(),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            type: "Post",
+            success: function (data) {
+                $(".ticket-loader-div").hide();
+                OpenSuccessMessageNew("Success!", "Payment received successfully.", function () {
+                    if (typeof (OpenTransactionTab) != "undefined" && location.href.toLowerCase().indexOf("/sales") == -1) {/*Customer*/
+                        OpenTransactionTab();
+                    } else { /*Sales*/
+                        $("#AccountReceivable").html(TabsLoaderText);
+                        $("#AccountReceivable").load(domainurl + "/Sales/AllReceivePayments");
+                        $("#AllFundings").html(TabsLoaderText);
+                        $("#AllFundings").load(domainurl + "/Sales/AllFundingData");
+                    }
+
+                });
+                CloseTopToBottomModal();
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+                $(".ticket-loader-div").hide();
+            }
+        });
+    }
+
+    var CountPayment = function () {
+        var TotalAmount = 0;
+        $(".amount_received").each(function () {
+            var ReceivedAmount = $(this).val();
+
+            ReceivedAmount = ReceivedAmount.replaceAll(',', '');
+
+            if ($(this).val().trim() == '') {
+                $(this).val('0.00');
+            }
+            if (!isNaN(ReceivedAmount)) {
+                TotalAmount += parseFloat(ReceivedAmount);
+            }
+        });
+
+        /*TotalAmount = TotalAmount.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,");*/
+
+        $("#CreditAmount").val("0.00");
+        $("#AmountReceived").val(TotalAmount.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+        $(".amount-big").text(TotalAmount.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+    }
+
+    var OpenPrintOrPreviewEstimate = function () {
+
+    }
+
+    var InitEditReceivePayemnt = function () {
+        if (TransactionId_ > 0) {
+            console.log("transaction");
+            var TransactionDom = $(".add-invoice-container");
+            $(TransactionDom).find("input").prop("disabled", true);
+            $(TransactionDom).find("select").prop("disabled", true);
+            $(".invoice-footer .SaveaButtonsDiv #SaveTransaction").addClass('hidden');
+        }
+    }
+
+    function GetCardType(number) {
+        // visa
+        var re = new RegExp("^4");
+        if (number.match(re) != null) {
+            $(".card_type_div").removeClass('hidden');
+            $("#card_type_img").attr('src', '/Content/img/visa.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Visa";
+        }
+        // Mastercard
+        // Updated for Mastercard 2017 BINs expansion
+        if (/^(5[1-5][0-9]{14}|2(22[1-9][0-9]{12}|2[3-9][0-9]{13}|[3-6][0-9]{14}|7[0-1][0-9]{13}|720[0-9]{12}))$/.test(number)) {
+            $(".card_type_div").removeClass('hidden');
+            $("#card_type_img").attr('src', '/Content/img/mastercard.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Mastercard";
+        }
+        //Previous one
+        if (/^5[1-5][0-9]{14}$/.test(number)) {
+            $(".card_type_div").removeClass('hidden');
+            $("#card_type_img").attr('src', '/Content/img/mastercard.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Mastercard";
+        }
+        // AMEX
+        re = new RegExp("^3[47]");
+        if (number.match(re) != null) {
+            $(".card_type_div").removeClass('hidden');
+            $("#card_type_img").attr('src', '/Content/img/AmericanExpress.png');
+            $("#CardNumber").attr('maxlength', '18');
+            $("#card_type_img").addClass('AMEX');
+            return "AMEX";
+        }
+        // Discover
+        re = new RegExp("^(6011|622(12[6-9]|1[3-9][0-9]|[2-8][0-9]{2}|9[0-1][0-9]|92[0-5]|64[4-9])|65)");
+        if (number.match(re) != null) {
+            $(".card_type_div").removeClass('hidden');
+            $("#card_type_img").attr('src', '/Content/img/discover.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Discover";
+        }
+        // Diners
+        re = new RegExp("^36");
+        if (number.match(re) != null) {
+            $(".card_type_div").removeClass('hidden');
+            $("#card_type_img").attr('src', '/Content/img/diners.png');
+            $("#CardNumber").attr('maxlength', '17');
+            return "Diners";
+        }
+        // Diners - Carte Blanche
+        re = new RegExp("^30[0-5]");
+        if (number.match(re) != null) {
+            $(".card_type_div").removeClass('hidden');
+            $("#card_type_img").attr('src', '/Content/img/diners.png');
+            $("#CardNumber").attr('maxlength', '17');
+            return "Diners - Carte Blanche";
+        }
+        // JCB
+        re = new RegExp("^35(2[89]|[3-8][0-9])");
+        if (number.match(re) != null) {
+            $(".card_type_div").removeClass('hidden');
+            $("#card_type_img").attr('src', '/Content/img/jcb.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "JCB";
+        }
+        // Visa Electron
+        re = new RegExp("^(4026|417500|4508|4844|491(3|7))");
+        if (number.match(re) != null) {
+            $(".card_type_div").removeClass('hidden');
+            $("#card_type_img").attr('src', '/Content/img/visa.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Visa Electron";
+        }
+        re = new RegExp("^5");
+        if (number.match(re) != null) {
+            $(".card_type_div").removeClass('hidden');
+            $("#card_type_img").attr('src', '/Content/img/mastercard.png');
+            $("#CardNumber").attr('maxlength', '19');
+            return "Mastercard";
+        }
+        return "";
+    }
+    function isCreditCard(CC) {
+        if (CardNumber == undefined || CardNumber == null || ReceivePayment.isEmptyOrSpaces(CC)) {
+            return false;
+        }
+        else if (CC.length > 19) {
+            return (false);
+        }
+
+        sum = 0; mul = 1; l = CC.length;
+        for (i = 0; i < l; i++) {
+            digit = CC.substring(l - i - 1, l - i);
+            tproduct = parseInt(digit, 10) * mul;
+            if (tproduct >= 10)
+                sum += (tproduct % 10) + 1;
+            else
+                sum += tproduct;
+            if (mul == 1)
+                mul++;
+            else
+                mul--;
+        }
+        if ((sum % 10) == 0)
+            return (true);
+        else
+            return (false);
+    }
+    function checkExp() {
+        var match = $('#CardExpireDate').val().match(/^\s*(0?[1-9]|1[0-2])\/(\d\d|\d{4})\s*$/);
+        if (!match) {
+            $("#CardExpireDate").css("border-color", "red");
+            return false;
+        }
+        var exp = new Date(normalizeYear(1 * match[2]), 1 * match[1] - 1, 1).valueOf();
+        var now = new Date();
+        var currMonth = new Date(now.getFullYear(), now.getMonth(), 1).valueOf();
+        if (exp <= currMonth) {
+            $("#CardExpireDate").css("border-color", "red");
+            return false;
+        } else {
+            $("#CardExpireDate").css("border-color", "#ccc");
+            return true;
+        };
+    }
+    function normalizeYear(year) {
+        // Century fix
+        var YEARS_AHEAD = 20;
+        if (year < 100) {
+            var nowYear = new Date().getFullYear();
+            year += Math.floor(nowYear / 100) * 100;
+            if (year > nowYear + YEARS_AHEAD) {
+                year -= 100;
+            } else if (year <= nowYear - 100 + YEARS_AHEAD) {
+                year += 100;
+            }
+        }
+        return year;
+    }
+    $(document).ready(function () {
+        if(window.innerWidth<421){
+            $(".Transactionlist").width($(".receive_payment_top").width() - 30);
+        }
+        var WindowHeight = $(window).height();
+        var divHeight = WindowHeight - 92;
+        $(".receive_payment_container").height(divHeight);
+        PaymentDate = new Pikaday({
+            trigger: $('#PaymentDateCustom')[0],
+            field: $('.PaymentDate')[0],
+            format: 'MM/DD/YYYY'
+        });
+        if ($("#PaymentMethod").val() == "Cash" || $("#PaymentMethod").val() == "-1") {
+            $(".payment-method-div").hide();
+        } else {
+            $(".payment-method-div").show();
+        }
+        InitEditReceivePayemnt();
+        //$("#CardNumber").blur(function () {
+        //    var resultCheck = isCreditCard($(this).val().split("-").join(""));
+        //    if (resultCheck) {
+        //        $("#CardNumber").css("border-color", "#ccc");
+        //        $("#CardType").val(GetCardType($("#CardNumber").val()));
+        //    }
+        //    else {
+        //        $("#CardNumber").css("border-color", "red");
+        //    }
+        //});
+        $("#CardNumber").keyup(function (e) {
+            var foo = $(this).val().split("-").join("");
+            if (foo.length > 0) {
+                foo = foo.match(new RegExp('.{1,4}', 'g')).join("-");
+            }
+            $(this).val(foo);
+
+            if (e.keyCode == 8)
+                $("#CardNumber").attr('maxlength', '19');
+        });
+        $("#CardExpireDate").blur(function () {
+            checkExp();
+        });
+        $('#CardExpireDate').bind('keyup', 'keydown', function (event) {
+            var inputLength = event.target.value.length;
+            if (event.keyCode != 8) {
+                if (inputLength == 2) {
+                    var thisVal = event.target.value;
+                    thisVal += '/';
+                    $(event.target).val(thisVal);
+                }
+            }
+        });
+        $("#PaymentMethod").change(function () {
+            if ($(this).val() == "Cash" || $(this).val() == "-1") {
+                $(".payment-method-div").hide();
+            } else {
+                $(".PaymentMethodForms").hide();
+                //if (PaymentMethodClick) {
+                //$(".PaymentMethodForms").hide();
+                if ($("#PaymentMethod").val() == "ACH") {
+                    $("#ACHForm").show();
+                } else if ($("#PaymentMethod").val() == "Cash") {
+                    $(".PaymentMethodForms").hide();
+                } else if ($("#PaymentMethod").val() == "Check") {
+                    $("#CheckForm").show();
+                } else if ($("#PaymentMethod").val() == "Credit Card") {
+                    $("#CreditForm").show();
+                } else if ($("#PaymentMethod").val() == "Debit Card") {
+                    $("#DebitForm").show();
+                }
+                else if ($("#PaymentMethod").val() == "Invoice") {
+                    $("#InvoiceForm").show();
+                }
+                else if ($("#PaymentMethod").val() == "Others") {
+                    $("#OthersForm").show();
+                }
+                //}
+                $(".payment-method-div").show();
+            }
+        });
+
+        $("#AmountReceived").blur(function () {
+            console.log("blurred");
+            var AmountReceivedVal = $("#AmountReceived").val().trim().replaceAll(',', '');
+
+            if (!isNaN(AmountReceivedVal)) {
+                var AmountReceived = parseFloat(AmountReceivedVal);
+                $(".open_balance_amount").each(function (index, item) {
+                    var id = $(item).attr('inv-id');
+                    var amount = parseFloat($(item).text().replaceAll(",", "").replaceAll(TransCurrency, ""));
+                    /*amount Is indevidual invoice Price*/
+                    //amount = amount.replaceAll(',', '');
+                    //amount = parseFloat(amount);
+                    if (AmountReceived >= amount) {
+                        AmountReceived -= amount;
+                        $(".amount_received_" + id).val(amount.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+                        $("#checkbox_" + id).prop('checked', true);
+                    } else if (AmountReceived > 0) {
+                        $(".amount_received_" + id).val(AmountReceived.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+                        AmountReceived = 0;
+                        $("#checkbox_" + id).prop('checked', true);
+                    } else {
+                        $("#checkbox_" + id).prop('checked', false);
+                        $(".amount_received_" + id).val(0.00);
+                    }
+                });
+                var thisval = $("#AmountReceived").val().trim().replaceAll(',', '');
+                thisval = parseFloat(thisval);
+                if (thisval > 0) {
+                    /*If received extra amount*/
+                    /** extra amount is in AmountReceived
+                    * Previous code "thisval = thisval - AmountReceived;"
+                    **/
+
+                    $("#CreditAmount").val(AmountReceived.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+
+                    thisval = thisval.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,");
+
+                    $("#AmountReceived").val(thisval);
+                    $(".amount-big").text(thisval);
+                }
+            }
+        });
+
+        $(".inv_payment_chk").click(function () {
+            var InvoId = $(this).attr('idval');
+            if ($(this).is(':checked')) {
+                var ReceivedAmount = $(".open_balance_amount_" + InvoId).text();
+                ReceivedAmount =  parseFloat($(".open_balance_amount_" + InvoId).text().replaceAll(",", "").replaceAll(TransCurrency, ""));
+
+                var BalanceAmount = parseFloat(ReceivedAmount);
+                $(".amount_received_" + InvoId).val(BalanceAmount.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+            } else {
+                $(".amount_received_" + InvoId).val('0.00');
+            }
+            CountPayment();
+        });
+
+        $(".amount_received").change(function () {
+            var id = $(this).attr('idval');
+            var amount = $(this).val();
+            amount = amount.replaceAll(',', '');
+            amount = parseFloat(amount);
+
+            var open_balance_amount = $(".open_balance_amount_" + id).text();
+            open_balance_amount = open_balance_amount.replaceAll(',', '').replaceAll(TransCurrency, "");
+            open_balance_amount = parseFloat(open_balance_amount);
+
+
+            if (amount == 0) {
+                $("#checkbox_" + id).prop('checked', false);
+            } else if (isNaN(amount)) {
+                $("#checkbox_" + id).prop('checked', false);
+                $(this).val(0.00);
+            } else if (!isNaN(open_balance_amount)) {
+                open_balance_amount = parseFloat(open_balance_amount);
+                if (amount > open_balance_amount) {
+                    $(this).val(open_balance_amount.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+                    $("#checkbox_" + id).prop('checked', true);
+                } else {
+                    $("#checkbox_" + id).prop('checked', true);
+                }
+            }
+            CountPayment();
+
+        });
+
+        $("#SaveTransaction").click(function () {  /*SaveTransaction InvoiceSaveButton SaveAndSendBtn*/
+            if ($("#PaymentMethod").val() == "-1") {
+                $("#PaymentMethod").css("border-color", "red");
+            }
+            else {
+                DisableElement("#SaveTransaction");
+
+                SavePayments();
+            }
+        });
+        $("#SaveSendTransaction").click(function () {
+            //if (CommonUiValidation()) {
+            //    SaveAndendPayments();
+            //}
+            SaveAndSend();
+        });
+
+        ReceivePayment.DocumentReady();
+
+        CountPayment();
+    });
+
+    var TransactionEmailSend = function (CusId) {
+        var CustomerId = CusId;
+        $.ajax({
+            url:domainurl +  "/Transaction/TransactionSendEmail/",
+            data: { CustomerId },
+            type: "Post",
+            dataType: "Json"
+        }).done(function () {
+            OpenSuccessMessageNew("Success!", "Customer setup has been done successfully !");
+        });
+    }
+</script>
+
+<style>
+    .ticket-loader-div {
+        position: absolute;
+        height: 100%;
+        width: 100%;
+        z-index: 9;
+        display: none;
+    }
+
+    .ticketLoaderFade {
+        width: 100%;
+        background: white;
+        opacity: 0.6;
+        height: 100%;
+        position: absolute;
+    }
+</style>
+
+@Styles.Render("~/styles/AddInvoice")
+<link href="~/Content/Css/Transaction/ReceivePayment_custom.css" rel="stylesheet" />
+<script src="~/Content/Js/Transactions/Transactions.js"></script>
+
+<div class="ticket-loader-div">
+    <div class="ticketLoaderFade"></div>
+    <div class="invoice-loader">
+        <div>
+            <div class="lds-css ng-scope">
+                <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+            </div>
+        </div>
+        @*<div class="uil-squares-css" style="transform:scale(1); margin:auto;"><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div></div>*@
+    </div>
+</div>
+@*<button class="settings-invoice" data-toggle="dropdown"><i class="fa fa-cog" aria-hidden="true"></i></button>*@
+
+<div class="add-invoice-container">
+    <div class="div-header clearfix">
+        <div class="header-title">
+            <span class="custom-title-span">
+                @if (IsCustomer)
+                {
+                    @Localize.T("Make Payment")
+                }
+                else
+                {
+                    @Localize.T("Receive Payment")
+                }
+            </span>
+        </div>
+    </div>
+    <div class="receive_payment_container">
+
+        <div class="receive_payment_top">
+            <div class="width-100p">
+                <div class="invoice-info-left-60p">
+                    <div class="width-40p padding-right-5 customer_name_insert_div">
+                        <span class="span-style">@Localize.T("Customer Name")</span>
+                        <input type="text" class="form-control" value="@Model.CustomerName" id="CustomerList" />
+                        <div class='tt-menu'>
+                            <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                        </div>
+                    </div>
+                    <div class="width-40p padding-right-5">
+                        <span class="span-style">@Localize.T("Email Address")</span>
+                        @Html.TextBoxFor(x => x.EmailAddress, new { @class = "form-control" })
+                    </div>
+                </div>
+                <div class="balance-info-40p balance-info-due">
+                    <div class="width-50p">
+                        @if (!IsCustomer)
+                        {
+                            <span>&nbsp;</span>
+                            <label class="hidden @(Model.GeneralCreditAmount > 0? "" : "hidden")"><input type="checkbox" id="ChargeFromCustomerCredit" /> @Localize.T("Charge from general customer credit") [@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.GeneralCreditAmount)]</label>
+                        }
+                    </div>
+                    <div class="width-50p">
+                        <span class="span-style">@Localize.T(IsCustomer ? "Amount" : "Amount Received")</span>
+                        <span class="amount amount-span-style">@Currency<span class="amount-big">0.00</span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="width-100p">
+                <div class="width-60p" style="position:relative;">
+                    <div class="width-25p padding-right-5" style="position:relative;">
+                        <span class="span-style">@Localize.T("Payment Method")</span>
+                        @Html.DropDownListFor(x => x.PaymentMethod, (List<SelectListItem>)ViewBag.PaymentMethods, new { @class = "form-control", @id = "PaymentMethod", datarequired = "true" })
+                    </div>
+                    <div class="width-25p padding-right-5">
+                        <span class="span-style">@Localize.T("Payment Date")</span>
+                        <div class="input_group_for_date add-on" id="PaymentDateCustom">
+                            @Html.TextBoxFor(x => x.PaymentDate, "{0:MM/dd/yy}", new { @class = "PaymentDate form-control" })
+                            <div class="input-group-btn">
+                                <btn class="btn">
+                                    <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                </btn>
+                            </div>
+                        </div>
+
+                    </div>
+                    @if (PermissionChecker.IsPermitted(Permissions.CustomerPermissions.CustomerInvoiceReceivePaymentShowRefNo))
+                    {
+                        <div class="width-25p padding-right-5">
+                            <span class="span-style">@Localize.T("Reference no.")</span>
+                            @Html.TextBoxFor(x => x.RefNo, new { @class = " form-control", placeholder = "Reference no." })
+                        </div>
+                    }
+
+                </div>
+                <div class="width-20p">
+                    <div class="currency_style">
+                        <span class="span-style">@Localize.T("Amount Received")</span>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)
+                                </span>
+                            </div>
+                            <input type="text" class="form-control" value="@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.AmoutReceived)" id="AmountReceived" placeholder="Amount Received" />
+                        </div>
+                    </div>
+
+
+                </div>
+                <div class="width-20p">
+                    <div class="currency_style">
+                        <span class="span-style">@Localize.T("Credit Amount")</span>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)
+                                </span>
+                            </div>
+                            <input type="text" disabled class="form-control" value="0.00" id="CreditAmount" placeholder="Credit Amount" />
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+            <div class="width-100p payment_method_details">
+                <div class="width-50p">
+                    <div class="payment-method-div receive_payment_method_div">
+
+                        <div id="ACHForm" class="PaymentMethodForms">
+                            <div class="payment_info_field">
+
+                                <div class="width-50p">
+                                    <div class="clearfix routing_div">
+                                        <span class="span-style">@Localize.T("Routing No") </span>
+
+                                        @Html.TextBox("RoutingNo", "", new { @class = "form-control", id = "AchRouting", datarequired = "true", placeholder = "xxx xxx xxx" })
+                                        <label class="label red hidden absolute" rel="RoutingNo">*Please enter valid routing number </label>
+                                    </div>
+                                    <div class="margin_top_row clearfix">
+                                        <span class="span-style">@Localize.T("Account No") </span>
+
+                                        @Html.TextBox("AcountNo", "", new { @class = "form-control", id = "AchAcountNo", datarequired = "true", placeholder = "xxx xxx xxx xxx" })
+
+                                    </div>
+                                    <div class="margin_top_row clearfix">
+                                        <span class="span-style">@Localize.T("Bank Acc Type") </span>
+                                        @Html.DropDownList("BankAccountType", (List<SelectListItem>)ViewBag.BankAccountType, new { @class = "form-control", @id = "AchBankAccountType", datarequired = "true" })
+                                    </div>
+                                </div>
+
+                                <div class="width-50p">
+                                    <div class="clearfix">
+                                        <span class="span-style">@Localize.T("ECheck Type") </span>
+                                        @Html.DropDownList("ECheckType", (List<SelectListItem>)ViewBag.ECheckType, new { @class = "form-control", @id = "AchECheckType", datarequired = "true" })
+                                    </div>
+                                    <div class="margin_top_row clearfix">
+
+                                        <span class="span-style">@Localize.T("Account Name") </span>
+
+                                        @Html.TextBox("AccountName", "", new { @class = "form-control", id = "AchAccountName", datarequired = "true", placeholder = "Name on account" })
+
+                                    </div>
+                                    <div class="margin_top_row clearfix">
+
+                                        <span class="span-style">@Localize.T("Bank Name") </span>
+
+                                        @Html.TextBox("BankName", "", new { @class = "form-control", id = "AchBankName", datarequired = "true", placeholder = "Bank Name" })
+
+                                    </div>
+                                </div>
+                                <div class="width-100p">
+                                    <div class="clearfix margin_top_row">
+
+                                        <span class="span-style">@Localize.T("Description") </span>
+
+                                        <textarea id="ACHDescription" style="width:100%;" rows="2" maxlength="250">@(!string.IsNullOrWhiteSpace(Model.CustomerNo)?string.Format("[Customer No:{0}]",Model.CustomerNo) : "")</textarea>
+
+                                    </div>
+                                </div>
+                                <div class="width-100p text-right">
+                                    <button class="btn" id="btnSaveACHInfo">@Localize.T("Save")</button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div id="CheckForm" class="PaymentMethodForms">
+                            <div class="payment_info_field">
+                                <div class="width-100p">
+
+                                    <span class="span-style">@Localize.T("Check No") </span>
+
+                                    <input type="text" value="@Model.CardInfo.CheckNo" placeholder="Check number" class="form-control" name="CheckAccountNo" id="CheckAccountNo" datarequired="true" />
+                                    <label class="label hidden red absolute" rel="CheckAccountNo" id="CardNumberError">*@Localize.T("Please enter a valid check No."). </label>
+
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div id="CreditForm" class="PaymentMethodForms">
+                            <div class="payment_info_field">
+
+                                <div class="width-50p">
+                                    <div class="clearfix">
+                                        <span class="span-style">@Localize.T("Name on Card") </span>
+
+                                        @Html.TextBox("AccountNameCredit", "", new { @class = "form-control", placeholder = "eg.: Jhon Smith", id = "CreditAccountName", datarequired = "true" })
+                                        <label class="label hidden red absolute" rel="AccountNameCredit">*@Localize.T("Please enter name on card."). </label>
+
+                                    </div>
+                                    <div class="form-group clearfix hidden">
+                                        <span class="text-custom">@Localize.T("Card Type")</span>
+                                        @Html.TextBox("CardType", new { @class = "form-control", id = "CardType", datarequired = "true", placeholder = "Card Type" })
+                                        <label class="label hidden red absolute" id="CardNumberError">*@Localize.T("Please enter Valid No."). </label>
+                                    </div>
+                                    <div class="clearfix margin_top_row">
+                                        <span class="span-style">@Localize.T("Card Number") </span>
+                                        <div class="input-group">
+                                            @Html.TextBox("CardNumber", "", new { @class = "form-control input-card-format", id = "CardNumber", placeholder = "xxxx-xxxx-xxxx-xxxx", dataformat = "card", datarequired = "true", maxlength = "19" })
+                                            <div class="input-group-addon">
+                                                <span>
+                                                    <img src="" id="card_type_img" style="height:20px;" />
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <label class="label hidden red absolute" id="CardNumberError">*@Localize.T("Please enter Valid No."). </label>
+                                    </div>
+                                </div>
+                                <div class="width-50p">
+                                    <div class="clearfix">
+
+                                        <span class="span-style">@Localize.T("Exp Date") </span>
+
+                                        @Html.TextBox("CardExpireDate", "", new { @class = "form-control ", id = "CardExpireDate", placeholder = "MM/YY", maxlength = "5", dataformat = "cardex", datarequired = "true" })
+                                        <label class="label hidden red absolute" id="CardExpireError">*@Localize.T("Please enter Valid Date."). </label>
+
+                                    </div>
+                                    <div class="clearfix margin_top_row">
+
+                                        <span class="span-style">@Localize.T("CVV") </span>
+
+                                        @Html.TextBox("CardSecurityCode", "", new { @class = "form-control", id = "CardSecurityCode", type = "password", dataformat = "security", maxlength = "4", placeholder = "xxx", datarequired = "true" })
+                                        <label class="label hidden red absolute" rel="CardSecurityCode">*@Localize.T("Please enter Security Code."). </label>
+
+                                    </div>
+
+
+                                </div>
+                                <div class="width-100p">
+                                    <div class="clearfix margin_top_row">
+
+                                        <span class="span-style">@Localize.T("Description") </span>
+
+                                        <textarea id="CreditCardDescription" style="width:100%;" rows="2" maxlength="250">@(!string.IsNullOrWhiteSpace(Model.CustomerNo) ? string.Format("[Customer No:{0}]", Model.CustomerNo) : "")</textarea>
+
+                                    </div>
+                                </div>
+                                <div class="width-100p text-right">
+                                    <button class="btn" id="btnSaveCreditCardInfo">@Localize.T("Save")</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="DebitForm" class="PaymentMethodForms">
+                            <div class="payment_info_field">
+
+                                <div class="width-50p">
+                                    <div class="clearfix">
+                                        <span class="span-style">@Localize.T("Name on Card") </span>
+                                        @Html.TextBox("AccountName", "", new { @class = "form-control", placeholder = "eg.: Jhon Smith", id = "DebitCardName", datarequired = "true" })
+                                        <label class="label hidden red absolute" rel="AccountName" id="NameOnCardError">*@Localize.T("Please enter name on card."). </label>
+                                    </div>
+                                    <div class="clearfix margin_top_row">
+                                        <span class="span-style">@Localize.T("Card Number") </span>
+                                        @Html.TextBox("CardNumber", "", new { @class = "form-control input-card-format", id = "DebitCardNo", placeholder = "xxxx-xxxx-xxxx-xxxx", dataformat = "card", datarequired = "true", maxlength = "19" })
+                                        <label class="label hidden red absolute" rel="CardNumber" id="CardNumberError">*@Localize.T("Please enter Valid No."). </label>
+                                    </div>
+                                </div>
+                                <div class="width-50p">
+                                    <div class="clearfix">
+                                        <span class="span-style">@Localize.T("Exp Date") </span>
+                                        @Html.TextBox("CardExpireDate", "", new { @class = "form-control input-cardex-format", id = "DebitExpireDate", placeholder = "MM/YY", dataformat = "cardex", datarequired = "true" })
+                                        <label class="label hidden red absolute" rel="CardExpireDate">*@Localize.T("Please enter Valid Date."). </label>
+                                    </div>
+                                    <div class="clearfix margin_top_row">
+                                        <span class="span-style">@Localize.T("CVV") </span>
+                                        @Html.TextBox("DebitSecurityCode", "", new { @class = "form-control", id = "DebitSecurityCode", dataformat = "security", placeholder = "xxx", datarequired = "true" })
+                                        <label class="label hidden red absolute" rel="DebitSecurityCode">*@Localize.T("Please enter Security Code."). </label>
+                                    </div>
+                                </div>
+                                <div class="width-100p">
+                                    <div class="clearfix margin_top_row">
+                                        <span class="span-style">@Localize.T("Description") </span>
+                                        <textarea id="DebitCardDescription" style="width:100%;" rows="2" maxlength="250">@(!string.IsNullOrWhiteSpace(Model.CustomerNo) ? string.Format("[Customer No:{0}]", Model.CustomerNo) : "")</textarea>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div id="InvoiceForm" class="PaymentMethodForms">
+                            <div class="payment_info_field">
+                                <div class="width-100p">
+                                    <span class="span-style">@Localize.T("Invoice No") </span>
+                                    @Html.TextBox("InvoiceAccountNo", "", new { @class = "form-control", id = "InvoiceAccountNo", datarequired = "true" })
+                                    <label class="label hidden red absolute" id="CardNumberError">*@Localize.T("Please enter Valid No."). </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="OthersForm" class="PaymentMethodForms">
+                            <div class="payment_info_field">
+                                <div class="width-100p">
+                                    <div class="width-40p" style="padding-right:10px;">
+                                        <span class="span-style">@Localize.T("Payment Method") </span>
+                                        <select class="PaymentMethodOthers form-control" >
+                                            <option value="Others-Credit Card">Credit Card</option>
+                                            <option value="Others-ACH">ACH</option>
+                                            <option value="Others">Others</option>
+                                        </select>
+                                    </div>
+                                    <div class="width-60p">
+                                        <span class="span-style">@Localize.T("Confirmation Number") </span>
+                                        @Html.TextBox("ConfirmationNumber", "", new { @class = "form-control", id = "ConfirmationNumber", datarequired = "true" })
+                                        <label class="label hidden red absolute" id="CardNumberError">*@Localize.T("Please enter Valid No."). </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="EFTForm" class="PaymentMethodForms">
+                            <div class="payment_info_field">
+                                <div class="LoadEFT">
+                                    <div class="row margin_top_row">
+                                        <div class="col-md-4 payment_text">
+                                            <span class="text-custom">@Localize.T("Routing No") </span>
+                                        </div>
+                                        <div class="col-md-8 right_padding_zero">
+                                            @Html.TextBox("RoutingNo", "", new { @class = "form-control", id = "RoutingNo", datarequired = "true", placeholder = "xxx xxx xxx" })
+                                        </div>
+                                    </div>
+
+                                    <div class="row margin_top_row">
+                                        <div class="col-md-4 payment_text">
+                                            <span class="text-custom">@Localize.T("Account No") </span>
+                                        </div>
+                                        <div class="col-md-8 right_padding_zero">
+                                            @Html.TextBox("AcountNo", "", new { @class = "form-control", id = "AcountNo", datarequired = "true", placeholder = "xxx xxx xxx xxx" })
+                                        </div>
+                                    </div>
+                                    <div class="row margin_top_row">
+                                        <div class="col-md-4 payment_text">
+                                            <span class="text-custom">@Localize.T("Bank Acc Type") </span>
+                                        </div>
+                                        <div class="col-md-8 right_padding_zero">
+                                            @Html.TextBox("BankAccountType", "", new { @class = "form-control", id = "BankAccountType", datarequired = "true" })
+                                        </div>
+                                    </div>
+                                    <div class="row margin_top_row">
+                                        <div class="col-md-4 payment_text">
+                                            <span class="text-custom">@Localize.T("Account Name") </span>
+                                        </div>
+                                        <div class="col-md-8 right_padding_zero">
+                                            @Html.TextBox("AccountName", "", new { @class = "form-control", id = "AccountName", datarequired = "true", placeholder = "Account Name" })
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="width-100p OutStandingTransectionsTitle">
+                <span>@Localize.T("Outstanding Transactions")</span>
+            </div>
+        </div>
+
+        <div class="receive_payment_bottom">
+            <div class="OutStandingTransections clearfix width-100p">
+
+                <div class="width-100p Transactionlist">
+                    <table class="display dataTable" id="tblTransactions">
+                        <thead class="table-head-border">
+                            <tr>
+                                <th>
+                                </th>
+                                <th class="thead-th-style">
+                                    @Localize.T("Description")
+                                </th>
+                                <th class="thead-th-style">
+                                    @Localize.T("Due Date")
+                                </th>
+                                <th class="thead-th-style">
+                                    @Localize.T("Original Amount")
+                                </th>
+                                <th class="thead-th-style">
+                                    @Localize.T("Open Balance")
+                                </th>
+                                <th class="thead-th-style">
+                                    @Localize.T("Payment")
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Transactions)
+                            {
+                                var flag = false;
+                                if (ViewBag.InvoiceIdList != null && ((List<int>)ViewBag.InvoiceIdList).Contains(item.Id))
+                                {
+                                    if (ViewBag.InvoiceId != null && ViewBag.InvoiceId == item.Id)
+                                    {
+                                        item.Payment = item.OpenBalance;
+                                    }
+                                    flag = true;
+                                }
+                                <tr class="tr-style invoice-itm" idval="@item.Id">
+                                    <td class="table-body-td-style" valign="top">
+                                        <label for="checkbox_@item.Id" class="label-cbx">
+                                            <input id="checkbox_@item.Id" idval="@(item.Id)" type="checkbox" @(flag ? "checked" : "") class="checkbox-custom inv_payment_chk invisible" name="checkbox-@(item.Id)">
+                                            <div class="checkbox">
+                                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                                </svg>
+                                            </div>
+                                        </label>
+                                    </td>
+                                    <td class="table-body-td-style" valign="top">
+                                        <span>@item.Description (@item.CreatedDate.ToString("MM/dd/yy"))</span>
+                                    </td>
+                                    <td class="table-body-td-style" valign="top">
+                                        <span>@item.DueDate.ToString("MM/dd/yy")</span>
+                                    </td>
+                                    <td class="table-body-td-style" valign="top">
+                                        <span class="original_amount original_amount_@item.Id">
+                                            @Currency<span>@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.OriginalAmount)</span>
+                                        </span>
+                                    </td>
+                                    <td class="table-body-td-style" valign="top">
+                                        <span class="open_balance_amount open_balance_amount_@item.Id" inv-id="@item.Id">
+                                            @Currency<span>@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.OpenBalance)</span>
+
+                                            @*@item.OpenBalance*@
+                                        </span>
+                                    </td>
+                                    <td class="table-body-td-style" valign="top">
+                                        <div class="currency_style">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">
+                                                        @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)
+                                                    </span>
+                                                </div>
+                                                <input type="text" class="amount_received_@item.Id amount_received form-control" idval="@item.Id" value="@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Payment)" />
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="width-100p clearfix">
+                    <div class="table-calculation-footer">
+
+                        <div class="btn-clear-payment-div">
+                            <button onclick="ClearPayments()" class="btn-clear-payment" title="@Localize.T("Clear Payment")">@Localize.T("Clear Payment")</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<div class="invoice-footer col-md-12">
+    <div class="cancelbtnDiv">
+        <button class="btnInv InvoiceCancelButton" onclick="CloseTopToBottomModal()">@Localize.T("Cancel")</button>
+    </div>
+    <div class="InnerOptionsDiv">
+        @*<a id="PaymentEstPreview" onclick="OpenPrintOrPreviewEstimate()" class="PaymentEstPreview">@Localize.T("Print Preview")</a>*@
+    </div>
+    <div class="SaveaButtonsDiv">
+        <button id="SaveTransaction" class="btnInv InvoiceSaveButton SaveAndSendBtn">@Localize.T(IsCustomer ? "Make Payment" : "Collect payment")</button>
+        <div class="btn-group dropup">
+
+
+            <button id="SaveSendTransaction" type="button" class="btn btn-primary hidden" style="background-color:#2ca01c;border-color:#2ca01c">@Localize.T("Save and Send")</button>
+            @*<button type="button" class="btn btn-default dropdown-toggle SaveOptionsBtn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="caret"></span>
+                    <span class="sr-only">@Localize.T("Toggle Dropdown")</span>
+                </button>*@
+            <ul class="dropdown-menu">
+                <li><a onclick="SaveAndSend();">@Localize.T("Save and New")</a></li>
+                <li><a onclick="SaveAndClose();">@Localize.T("Save")</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+

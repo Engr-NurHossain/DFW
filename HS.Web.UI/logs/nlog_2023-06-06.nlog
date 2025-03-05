@@ -1,0 +1,200 @@
+2023-06-06 16:45:18.0816|ERROR|HS.Framework.DataAccess.BaseDataAccess|declare @oldticketId uniqueidentifier 
+                                set @oldticketId = 'aa4b78ad-04ed-47bd-9b1d-83d22e9b13b7'
+
+                                declare @createdbyuid uniqueidentifier
+                                set @createdbyuid = '961b983f-e762-4b62-b90e-9e2c7f9f3843'
+
+                                declare @createdby nvarchar(50)
+                                set @createdby = 'Shailesh Pisat'
+
+                                declare @datetime datetime
+                                set @datetime = '2023-06-06 04:45:17.000'
+                                
+                                declare @completionDT datetime
+                                set @completionDT = '0001-01-01'
+
+                                declare @newticketid uniqueidentifier
+                                set @newticketid = NEWID()
+
+                                --Ticket Clone
+                                INSERT INTO Ticket ([TicketId],[CompanyId],[CustomerId],[TicketType],[Subject],[Message],[CreatedBy],[CreatedDate],[CompletionDate],[Status],[Priority],[LastUpdatedBy],[LastUpdatedDate],[HasInvoice],[HasSurvey],[IsClosed],[IsAgreementTicket],[CompletedDate],[Signature],[IsDispatch],[ReferenceTicketId],[BookingId],[Reason],[RackNo],[Locations],[RescheduleTicketId],[IsImportedTicket],[TicketSignatureDate]) SELECT @newticketid,[CompanyId],[CustomerId],[TicketType],[Subject],[Message],@createdbyuid,@datetime,@completionDT,[Status],[Priority],@createdbyuid,@datetime,[HasInvoice],[HasSurvey],[IsClosed],[IsAgreementTicket],[CompletedDate],[Signature],[IsDispatch],[ReferenceTicketId],[BookingId],[Reason],[RackNo],[Locations],0,[IsImportedTicket],[TicketSignatureDate] FROM Ticket where TicketId = @oldticketId
+
+                                --Update Rescheduled Ticket
+								update Ticket
+								set [RescheduleTicketId] = (select Id from Ticket where TicketId = @newticketid)
+								where TicketId = @oldticketId
+
+                                --Ticket User Clone
+                                INSERT INTO TicketUser ([TiketId],[UserId],[IsPrimary],[AddedDate],[AddedBy],[NotificationOnly],[IsReschedulePay]) SELECT @newticketid,[UserId],[IsPrimary],@datetime,@createdbyuid,[NotificationOnly],[IsReschedulePay] FROM TicketUser where TiketId = @oldticketId
+
+                                --Customer Appointment Clocne
+                                INSERT INTO CustomerAppointment ([AppointmentId],[CompanyId],[CustomerId],[EmployeeId],[AppointmentType],[AppointmentDate],[AppointmentStartTime],[AppointmentEndTime],[IsAllDay],[Notes],[Status],[TaxType],[TaxPercent],[TaxTotal],[TotalAmount],[TotalAmountTax],[CreatedBy],[LastUpdatedBy],[LastUpdatedDate],[Address]) SELECT @newticketid,[CompanyId],[CustomerId],[EmployeeId],[AppointmentType],[AppointmentDate],[AppointmentStartTime],[AppointmentEndTime],[IsAllDay],[Notes],[Status],[TaxType],[TaxPercent],[TaxTotal],[TotalAmount],[TotalAmountTax],@createdby,@createdby,@datetime,[Address] FROM CustomerAppointment where AppointmentId = @oldticketId
+
+                                --Customer Appointment Equipment Clone
+                                INSERT INTO CustomerAppointmentEquipment ([AppointmentId],[EquipmentId],[Quantity],[UnitPrice],[TotalPrice],[CreatedDate],[CreatedBy],[EquipName],[EquipDetail],[IsEquipmentRelease],[IsService],[CreatedByUid],[IsAgreementItem],[IsBaseItem],[IsBadInventory],[IsDefaultService],[IsCheckedEquipment],[IsTransfered],[QuantityLeftEquipment],[IsEquipmentExist],[OriginalUnitPrice],[IsInvoiceCreate],[ReferenceInvoiceId],[ReferenceInvDetailId],[IsBilling]) SELECT @newticketid,[EquipmentId],[Quantity],[UnitPrice],[TotalPrice],@datetime,@createdby,[EquipName],[EquipDetail],[IsEquipmentRelease],[IsService],@createdbyuid,[IsAgreementItem],[IsBaseItem],[IsBadInventory],[IsDefaultService],[IsCheckedEquipment],[IsTransfered],[QuantityLeftEquipment],[IsEquipmentExist],[OriginalUnitPrice],[IsInvoiceCreate],[ReferenceInvoiceId],[ReferenceInvDetailId],[IsBilling] FROM CustomerAppointmentEquipment where AppointmentId = @oldticketId
+
+                                --Ticket Reply Clone
+                                INSERT INTO TicketReply ([TicketId],[UserId],[RepliedDate],[Message],[IsPrivate],[ReplyType],[LatLng]) SELECT @newticketid,[UserId],[RepliedDate],[Message],[IsPrivate],[ReplyType],[LatLng] FROM TicketReply where TicketId = @oldticketId
+
+                                --Ticket File Clone
+                                INSERT INTO TicketFile ([TicketId],[FileName],[Filesize],[FileLocation],[Description],[FileAddedBy],[FileAddedDate]) SELECT @newticketid,[FileName],[Filesize],[FileLocation],[Description],[FileAddedBy],[FileAddedDate] FROM TicketFile where TicketId = @oldticketId
+
+                                --Ticket TimeClock Clone
+                                INSERT INTO TicketTimeClock ([TicketId],[UserId],[Time],[Type],[Lat],[Lng],[Note],[CreatedBy],[ClockedInMinutes],[LastUpdateBy],[LastUpdatedDate]) SELECT @newticketid,[UserId],[Time],[Type],[Lat],[Lng],[Note],@createdbyuid,[ClockedInMinutes],@createdbyuid,@datetime FROM TicketTimeClock where TicketId = @oldticketId
+
+                                --Additional Members Appointment Clone
+                                INSERT INTO AdditionalMembersAppointment([AppointmentId],[CompanyId],[CustomerId],[EmployeeId],[AppointmentDate],[AppointmentStartTime],[AppointmentEndTime],[CreatedBy],[LastUpdatedBy],[LastUpdatedDate],[MemberAppointmentId],[IsAllDay]) SELECT @newticketid,[CompanyId],[CustomerId],[EmployeeId],[AppointmentDate],[AppointmentStartTime],[AppointmentEndTime],@createdbyuid,@createdbyuid,@datetime,[MemberAppointmentId],[IsAllDay] FROM AdditionalMembersAppointment where AppointmentId = @oldticketId
+
+                                --Sales Commission Clone
+                                INSERT INTO SalesCommission ([SalesCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[RMRSold],[RMRCommission],[NoOfEquipment],[EquipmentCommission],[TotalCommission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[Adjustment],[RMRCommissionCalculation],[EquipmentCommissionCalculation],[PaidDate]) SELECT [SalesCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[RMRSold],[RMRCommission],[NoOfEquipment],[EquipmentCommission],[TotalCommission],[IsPaid],@createdbyuid,@datetime,[Batch],[Adjustment],[RMRCommissionCalculation],[EquipmentCommissionCalculation],[PaidDate] FROM SalesCommission where TicketId = @oldticketId
+
+                                --Tech Commission Clone
+                                INSERT INTO TechCommission ([TechCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[BaseRMR],[BaseRMRCommission],[AddedRMR],[AddedRMRCommission],[TotalCommission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[Adjustment],[BaseRMRCommissionCalculation],[AddedRMRCommissionCalculation],[PaidDate]) SELECT [TechCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[BaseRMR],[BaseRMRCommission],[AddedRMR],[AddedRMRCommission],[TotalCommission],[IsPaid],@createdbyuid,@datetime,[Batch],[Adjustment],[BaseRMRCommissionCalculation],[AddedRMRCommissionCalculation],[PaidDate] FROM TechCommission where TicketId = @oldticketId
+
+                                --Reschedule Commission Clone
+                                INSERT INTO RescheduleCommission ([RescheduleCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[Adjustment],[Commission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[CommissionCalculation],[PaidDate]) SELECT [RescheduleCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[Adjustment],[Commission],[IsPaid],@createdbyuid,@datetime,[Batch],[CommissionCalculation],[PaidDate] FROM RescheduleCommission where TicketId = @oldticketId
+
+                                --Service Call Commission Clone
+                                INSERT INTO ServiceCallCommission ([ServiceCallCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[Adjustment],[Commission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[CommissionCalculation],[PaidDate],[IsManual]) SELECT [ServiceCallCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[Adjustment],[Commission],[IsPaid],@createdbyuid,@datetime,[Batch],[CommissionCalculation],[PaidDate],[IsManual] FROM ServiceCallCommission where TicketId = @oldticketId
+
+                                --Follow up Commission Clone
+                                INSERT INTO FollowUpCommission ([FollowUpCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[Adjustment],[Commission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[CommissionCalculation],[PaidDate]) SELECT [FollowUpCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[Adjustment],[Commission],[IsPaid],@createdbyuid,@datetime,[Batch],[CommissionCalculation],[PaidDate] FROM FollowUpCommission where TicketId = @oldticketId
+
+                                --Add Member Commission Clone
+                                INSERT INTO AddMemberCommission ([AddMemberCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[Adjustment],[Commission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[CommissionCalculation],[PaidDate],[IsManual]) SELECT [AddMemberCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[Adjustment],[Commission],[IsPaid],@createdbyuid,@datetime,[Batch],[CommissionCalculation],[PaidDate],[IsManual] FROM AddMemberCommission where TicketId = @oldticketId
+
+                                select Id from Ticket where TicketId = @newticketid
+|System.Data.SqlClient.SqlException (0x80131904): The conversion of a varchar data type to a datetime data type resulted in an out-of-range value.
+Cannot insert the value NULL into column 'CompletionDate', table 'DFWSec_UAT_MainDB.dbo.Ticket'; column does not allow nulls. INSERT fails.
+The statement has been terminated.
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in C:\Users\sppis\D\dnf\DG\dfw\src_hotfix\HS.Framework\DataAccess\BaseDataAccess.cs:line 434
+ClientConnectionId:ee8fe3dc-9e86-4599-81d8-bb6b16e6be59
+Error Number:242,State:3,Class:16
+2023-06-06 17:04:57.0181|ERROR|HS.Framework.DataAccess.BaseDataAccess|declare @oldticketId uniqueidentifier 
+                                set @oldticketId = '6751b916-9e0f-490c-b4b1-c6495a337921'
+
+                                declare @createdbyuid uniqueidentifier
+                                set @createdbyuid = '961b983f-e762-4b62-b90e-9e2c7f9f3843'
+
+                                declare @createdby nvarchar(50)
+                                set @createdby = 'Shailesh Pisat'
+
+                                declare @datetime datetime
+                                set @datetime = '2023-06-06 05:04:56.000'
+                                
+                                declare @completionDT datetime
+                                set @completionDT = '0001-01-01'
+
+                                declare @newticketid uniqueidentifier
+                                set @newticketid = NEWID()
+
+                                --Ticket Clone
+                                INSERT INTO Ticket ([TicketId],[CompanyId],[CustomerId],[TicketType],[Subject],[Message],[CreatedBy],[CreatedDate],[CompletionDate],[Status],[Priority],[LastUpdatedBy],[LastUpdatedDate],[HasInvoice],[HasSurvey],[IsClosed],[IsAgreementTicket],[CompletedDate],[Signature],[IsDispatch],[ReferenceTicketId],[BookingId],[Reason],[RackNo],[Locations],[RescheduleTicketId],[IsImportedTicket],[TicketSignatureDate]) SELECT @newticketid,[CompanyId],[CustomerId],[TicketType],[Subject],[Message],@createdbyuid,@datetime,@completionDT,[Status],[Priority],@createdbyuid,@datetime,[HasInvoice],[HasSurvey],[IsClosed],[IsAgreementTicket],[CompletedDate],[Signature],[IsDispatch],[ReferenceTicketId],[BookingId],[Reason],[RackNo],[Locations],0,[IsImportedTicket],[TicketSignatureDate] FROM Ticket where TicketId = @oldticketId
+
+                                --Update Rescheduled Ticket
+								update Ticket
+								set [RescheduleTicketId] = (select Id from Ticket where TicketId = @newticketid)
+								where TicketId = @oldticketId
+
+                                --Ticket User Clone
+                                INSERT INTO TicketUser ([TiketId],[UserId],[IsPrimary],[AddedDate],[AddedBy],[NotificationOnly],[IsReschedulePay]) SELECT @newticketid,[UserId],[IsPrimary],@datetime,@createdbyuid,[NotificationOnly],[IsReschedulePay] FROM TicketUser where TiketId = @oldticketId
+
+                                --Customer Appointment Clocne
+                                INSERT INTO CustomerAppointment ([AppointmentId],[CompanyId],[CustomerId],[EmployeeId],[AppointmentType],[AppointmentDate],[AppointmentStartTime],[AppointmentEndTime],[IsAllDay],[Notes],[Status],[TaxType],[TaxPercent],[TaxTotal],[TotalAmount],[TotalAmountTax],[CreatedBy],[LastUpdatedBy],[LastUpdatedDate],[Address]) SELECT @newticketid,[CompanyId],[CustomerId],[EmployeeId],[AppointmentType],[AppointmentDate],[AppointmentStartTime],[AppointmentEndTime],[IsAllDay],[Notes],[Status],[TaxType],[TaxPercent],[TaxTotal],[TotalAmount],[TotalAmountTax],@createdby,@createdby,@datetime,[Address] FROM CustomerAppointment where AppointmentId = @oldticketId
+
+                                --Customer Appointment Equipment Clone
+                                INSERT INTO CustomerAppointmentEquipment ([AppointmentId],[EquipmentId],[Quantity],[UnitPrice],[TotalPrice],[CreatedDate],[CreatedBy],[EquipName],[EquipDetail],[IsEquipmentRelease],[IsService],[CreatedByUid],[IsAgreementItem],[IsBaseItem],[IsBadInventory],[IsDefaultService],[IsCheckedEquipment],[IsTransfered],[QuantityLeftEquipment],[IsEquipmentExist],[OriginalUnitPrice],[IsInvoiceCreate],[ReferenceInvoiceId],[ReferenceInvDetailId],[IsBilling]) SELECT @newticketid,[EquipmentId],[Quantity],[UnitPrice],[TotalPrice],@datetime,@createdby,[EquipName],[EquipDetail],[IsEquipmentRelease],[IsService],@createdbyuid,[IsAgreementItem],[IsBaseItem],[IsBadInventory],[IsDefaultService],[IsCheckedEquipment],[IsTransfered],[QuantityLeftEquipment],[IsEquipmentExist],[OriginalUnitPrice],[IsInvoiceCreate],[ReferenceInvoiceId],[ReferenceInvDetailId],[IsBilling] FROM CustomerAppointmentEquipment where AppointmentId = @oldticketId
+
+                                --Ticket Reply Clone
+                                INSERT INTO TicketReply ([TicketId],[UserId],[RepliedDate],[Message],[IsPrivate],[ReplyType],[LatLng]) SELECT @newticketid,[UserId],[RepliedDate],[Message],[IsPrivate],[ReplyType],[LatLng] FROM TicketReply where TicketId = @oldticketId
+
+                                --Ticket File Clone
+                                INSERT INTO TicketFile ([TicketId],[FileName],[Filesize],[FileLocation],[Description],[FileAddedBy],[FileAddedDate]) SELECT @newticketid,[FileName],[Filesize],[FileLocation],[Description],[FileAddedBy],[FileAddedDate] FROM TicketFile where TicketId = @oldticketId
+
+                                --Ticket TimeClock Clone
+                                INSERT INTO TicketTimeClock ([TicketId],[UserId],[Time],[Type],[Lat],[Lng],[Note],[CreatedBy],[ClockedInMinutes],[LastUpdateBy],[LastUpdatedDate]) SELECT @newticketid,[UserId],[Time],[Type],[Lat],[Lng],[Note],@createdbyuid,[ClockedInMinutes],@createdbyuid,@datetime FROM TicketTimeClock where TicketId = @oldticketId
+
+                                --Additional Members Appointment Clone
+                                INSERT INTO AdditionalMembersAppointment([AppointmentId],[CompanyId],[CustomerId],[EmployeeId],[AppointmentDate],[AppointmentStartTime],[AppointmentEndTime],[CreatedBy],[LastUpdatedBy],[LastUpdatedDate],[MemberAppointmentId],[IsAllDay]) SELECT @newticketid,[CompanyId],[CustomerId],[EmployeeId],[AppointmentDate],[AppointmentStartTime],[AppointmentEndTime],@createdbyuid,@createdbyuid,@datetime,[MemberAppointmentId],[IsAllDay] FROM AdditionalMembersAppointment where AppointmentId = @oldticketId
+
+                                --Sales Commission Clone
+                                INSERT INTO SalesCommission ([SalesCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[RMRSold],[RMRCommission],[NoOfEquipment],[EquipmentCommission],[TotalCommission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[Adjustment],[RMRCommissionCalculation],[EquipmentCommissionCalculation],[PaidDate]) SELECT [SalesCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[RMRSold],[RMRCommission],[NoOfEquipment],[EquipmentCommission],[TotalCommission],[IsPaid],@createdbyuid,@datetime,[Batch],[Adjustment],[RMRCommissionCalculation],[EquipmentCommissionCalculation],[PaidDate] FROM SalesCommission where TicketId = @oldticketId
+
+                                --Tech Commission Clone
+                                INSERT INTO TechCommission ([TechCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[BaseRMR],[BaseRMRCommission],[AddedRMR],[AddedRMRCommission],[TotalCommission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[Adjustment],[BaseRMRCommissionCalculation],[AddedRMRCommissionCalculation],[PaidDate]) SELECT [TechCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[BaseRMR],[BaseRMRCommission],[AddedRMR],[AddedRMRCommission],[TotalCommission],[IsPaid],@createdbyuid,@datetime,[Batch],[Adjustment],[BaseRMRCommissionCalculation],[AddedRMRCommissionCalculation],[PaidDate] FROM TechCommission where TicketId = @oldticketId
+
+                                --Reschedule Commission Clone
+                                INSERT INTO RescheduleCommission ([RescheduleCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[Adjustment],[Commission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[CommissionCalculation],[PaidDate]) SELECT [RescheduleCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[Adjustment],[Commission],[IsPaid],@createdbyuid,@datetime,[Batch],[CommissionCalculation],[PaidDate] FROM RescheduleCommission where TicketId = @oldticketId
+
+                                --Service Call Commission Clone
+                                INSERT INTO ServiceCallCommission ([ServiceCallCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[Adjustment],[Commission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[CommissionCalculation],[PaidDate],[IsManual]) SELECT [ServiceCallCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[Adjustment],[Commission],[IsPaid],@createdbyuid,@datetime,[Batch],[CommissionCalculation],[PaidDate],[IsManual] FROM ServiceCallCommission where TicketId = @oldticketId
+
+                                --Follow up Commission Clone
+                                INSERT INTO FollowUpCommission ([FollowUpCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[Adjustment],[Commission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[CommissionCalculation],[PaidDate]) SELECT [FollowUpCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[Adjustment],[Commission],[IsPaid],@createdbyuid,@datetime,[Batch],[CommissionCalculation],[PaidDate] FROM FollowUpCommission where TicketId = @oldticketId
+
+                                --Add Member Commission Clone
+                                INSERT INTO AddMemberCommission ([AddMemberCommissionId],[TicketId],[CustomerId],[UserId],[CompletionDate],[Adjustment],[Commission],[IsPaid],[CreatedBy],[CreatedDate],[Batch],[CommissionCalculation],[PaidDate],[IsManual]) SELECT [AddMemberCommissionId],@newticketid,[CustomerId],[UserId],@completionDT,[Adjustment],[Commission],[IsPaid],@createdbyuid,@datetime,[Batch],[CommissionCalculation],[PaidDate],[IsManual] FROM AddMemberCommission where TicketId = @oldticketId
+
+                                select Id from Ticket where TicketId = @newticketid
+|System.Data.SqlClient.SqlException (0x80131904): The conversion of a varchar data type to a datetime data type resulted in an out-of-range value.
+Cannot insert the value NULL into column 'CompletionDate', table 'DFWSec_UAT_MainDB.dbo.Ticket'; column does not allow nulls. INSERT fails.
+The statement has been terminated.
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at System.Data.SqlClient.SqlDataReader.get_MetaData()
+   at System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, Boolean inRetry, SqlDataReader ds, Boolean describeParameterEncryptionRequest)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method)
+   at System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in C:\Users\sppis\D\dnf\DG\dfw\src_hotfix\HS.Framework\DataAccess\BaseDataAccess.cs:line 434
+ClientConnectionId:ee8fe3dc-9e86-4599-81d8-bb6b16e6be59
+Error Number:242,State:3,Class:16
+2023-06-06 18:45:27.5861|ERROR|HS.Framework.DataAccess.BaseDataAccess| select emp.* from  Employee emp
+                                 left join UserCompany uc
+                                 on uc.UserId = emp.UserId
+                                 where Uc.CompanyId ='c7e72006-6edf-4b5a-8589-bfd1b2dae7ba'
+                                 and emp.IsDeleted = 'false'
+                                 and emp.UserId != '961b983f-e762-4b62-b90e-9e2c7f9f3843'
+                                |System.Data.SqlClient.SqlException (0x80131904): Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server is not responding. ---> System.ComponentModel.Win32Exception (0x80004005): The wait operation timed out
+   at System.Data.SqlClient.SqlInternalConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParserStateObject.ReadSniError(TdsParserStateObject stateObj, UInt32 error)
+   at System.Data.SqlClient.TdsParserStateObject.ReadSniSyncOverAsync()
+   at System.Data.SqlClient.TdsParserStateObject.TryReadNetworkPacket()
+   at System.Data.SqlClient.TdsParserStateObject.TryPrepareBuffer()
+   at System.Data.SqlClient.TdsParserStateObject.TryReadByteArray(Byte[] buff, Int32 offset, Int32 len, Int32& totalRead)
+   at System.Data.SqlClient.TdsParserStateObject.TryReadString(Int32 length, String& value)
+   at System.Data.SqlClient.TdsParser.TryReadSqlStringValue(SqlBuffer value, Byte type, Int32 length, Encoding encoding, Boolean isPlp, TdsParserStateObject stateObj)
+   at System.Data.SqlClient.TdsParser.TryReadSqlValue(SqlBuffer value, SqlMetaDataPriv md, Int32 length, TdsParserStateObject stateObj, SqlCommandColumnEncryptionSetting columnEncryptionOverride, String columnName)
+   at System.Data.SqlClient.SqlDataReader.TryReadColumnInternal(Int32 i, Boolean readHeaderOnly)
+   at System.Data.SqlClient.SqlDataReader.TryReadColumn(Int32 i, Boolean setTimeout, Boolean allowPartiallyReadColumn)
+   at System.Data.SqlClient.SqlDataReader.GetValues(Object[] values)
+   at System.Data.ProviderBase.SchemaMapping.LoadDataRow()
+   at System.Data.Common.DataAdapter.FillLoadDataRow(SchemaMapping mapping)
+   at System.Data.Common.DataAdapter.FillFromReader(DataSet dataset, DataTable datatable, String srcTable, DataReaderContainer dataReader, Int32 startRecord, Int32 maxRecords, DataColumn parentChapterColumn, Object parentChapterValue)
+   at System.Data.Common.DataAdapter.Fill(DataSet dataSet, String srcTable, IDataReader dataReader, Int32 startRecord, Int32 maxRecords)
+   at System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior)
+   at System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, String srcTable)
+   at HS.Framework.DataAccess.BaseDataAccess.GetDataSet(SqlCommand command, String tablename) in C:\Users\sppis\D\dnf\DG\dfw\src_hotfix\HS.Framework\DataAccess\BaseDataAccess.cs:line 434
+ClientConnectionId:ae8676c3-95b4-4c11-8228-86fa048717a0
+Error Number:-2,State:0,Class:11

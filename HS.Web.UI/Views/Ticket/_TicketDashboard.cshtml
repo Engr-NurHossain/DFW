@@ -1,0 +1,1479 @@
+﻿@{
+    ViewBag.Title = "Ticket";
+    Layout = null;
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@Styles.Render("~/styles/ticketdashboard") 
+<script>
+    var firstdate = '@ViewBag.firstdate';
+    var lastdate = '@ViewBag.lastdate';
+    var minHeight = window.innerHeight - 173
+  
+
+    $(document).ready(function () {
+        if (window.innerWidth < 421) {
+            $(".fixed_header").width(window.innerWidth - 30);
+        }
+        else if (window.innerWidth < 769) {
+            $(".fixed_header").width(window.innerWidth - $(".sidebar").width() - 29);
+        }
+        else {
+            $(".fixed_header").width(window.innerWidth - $(".sidebar").width() - 52);
+        }
+        
+        $(".ember-light-table").css("min-height", minHeight);
+        $("#ticket_filter").click(function () {
+            $(".page-sidebar").toggle();
+            if ($(".page-sidebar").css('display') === 'block') {
+                $(".ember-light-table").width($(".ember-light-table").width() - 310)
+            }
+            if ($(".page-sidebar").css('display') === 'none') {
+                $(".ember-light-table").width($(".ember-light-table").width() + 310)
+            }
+          
+        });
+        $(".tick_list").click(function () {
+            $(".ticket_list_view").removeClass("tick_display_none");
+            $(".ticket_list_view").addClass("tick_display_block");
+            $(".ticket_card_view").addClass("tick_display_none");
+        });
+        $(".tick_card").click(function () {
+            $(".ticket_card_view").removeClass("tick_display_none");
+            $(".ticket_list_view").addClass("tick_display_none");
+            $(".ticket_card_view").addClass("tick_display_block");
+        });
+    });
+    $(window).resize(function () {
+        setTimeout(function () {
+            if (window.innerWidth < 421) {
+                $(".fixed_header").width(window.innerWidth - 30);
+            }
+            else if (window.innerWidth < 769) {
+                $(".fixed_header").width(window.innerWidth - $(".sidebar").width() - 29);
+            }
+            else {
+                $(".fixed_header").width(window.innerWidth - $(".sidebar").width() - 52);
+            }
+            if ($(".page-sidebar").css('display') === 'block') {
+                $(".ember-light-table").width(window.innerWidth - 580)
+            }
+           
+        }, 100);
+        setTimeout(function () {
+            if ($(".page-sidebar").css('display') === 'none') {
+                $(".ember-light-table").width(window.innerWidth - $('.navbar-default').width() - 30)
+            }
+        }, 800);
+    })
+</script>
+<div class="content-wrap custom-head">
+    <div class="container-fluid customer_container">
+        <div class="row less_padding position-relative">
+            <div class="clearfix fixed_header manual_top">
+                <div class="customer_header_left_custom">
+                    <h2 class="header_text_position">@Localize.T("Tickets")</h2>
+                </div>
+                <div class="customer_header_right_custom">
+
+                    <div class="AddNewBtnDiv customer_add_btn_div">
+
+                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ExportCustomerList))
+                        {
+                            <button id="CustomerReport" class="btn customer_report_btn" title="Download">
+                                <i class="glyphicon glyphicon-download-alt"></i>
+                            </button>
+                        }
+
+
+                        <div class="btn-group">
+                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerCreate))
+                            {
+                                <button class="btn customer-new" id="AddNewCustomerList" type="button" title="@Localize.T("Add Ticket")">
+                                    <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" Ticket")
+                                </button>
+                            }
+
+                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerImport))
+                            {
+                                <button data-toggle="dropdown" class="btn dropdown-toggle customer-btn-dropdown" type="button" aria-expanded="false" title="@Localize.T("Import Tickets")">
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu customer-dropdown-ul-style import_leads_dropdown">
+                                    <li><a href="javascript:void(0)" onclick="CustomerLeadImportFile()">@Localize.T("Import Tickets")</a></li>
+                                </ul>
+
+                            }
+                        </div>
+
+
+
+                    </div>
+                    <div class="dateviewed">
+                        @{Html.RenderAction("DateViewPartial", "Customer");}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="ListTicketContents">
+            <div class="header-secondary">
+
+                <div class="__module-tickets__tickets-list__top-navigation ember-view">
+                    <div class="page-actions__left">
+                        <span class="top-navigation--checkbox-wrapper __ui-components__gravity-loader ember-view">
+                            <div class="ember-view">
+                                <div data-test-id="select-all-tickets" class="top-navigation-checkbox input __ui-form__custom-checkbox custom-checkbox ember-view">
+                                    <input data-test-checkbox="ticket-top-navigation" id="top-navigation" class="trigger-shortcuts ember-checkbox ember-view" type="checkbox">
+                                    <label for="top-navigation">
+                                        <span class="label-field"></span>
+                                    </label>
+                                </div>
+
+                            </div>
+                        </span>
+                        <div class="pull-left sortby-dropdown ember-basic-dropdown ember-view">
+                            <div aria-owns="ember-basic-dropdown-content-ember778" tabindex="0"  role="button" class="trigger-shortcuts ember-basic-dropdown-trigger ember-basic-dropdown-trigger--in-place ember-view">
+                                <span class="muted">
+                                    Sort by:
+                                </span>
+                                <button class="btn--transparent btn--date-select scale-none" data-test-id="view-sort">
+                                    Date created
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--verysmall" data-test-dropdown="menu-sort"><path d="M8.626 9.744c-.875-.903-2.294-.903-3.17-.001s-.876 2.366-.001 3.268l8.959 9.244a2.195 2.195 0 003.171 0l8.959-9.244c.875-.903.874-2.366-.001-3.268s-2.295-.902-3.169.001L16 17.353 8.626 9.744z"></path></svg>
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="page-actions__right">
+                        <div class="pull-right">
+                            <span class="view-action">
+                                <div class="app-dropdown-group dropdown-layout ember-basic-dropdown ember-view">
+                                    <div aria-owns="ember-basic-dropdown-content-ember456" tabindex="0" role="button" class="ember-basic-dropdown-trigger ember-basic-dropdown-trigger--in-place ember-view">
+                                        <span class="muted">
+                                            Layout: &nbsp;<span class="tick_list">list</span> &nbsp; <span class="tick_card">Card</span>
+                                        </span>
+                                        @*<button data-toggle="dropdown" data-test-id="view-dropdown" class="btn--transparent btn--date-select scale-none p0">
+                                            Card view
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--verysmall" data-test-dropdown="menu-sort"><path d="M8.626 9.744c-.875-.903-2.294-.903-3.17-.001s-.876 2.366-.001 3.268l8.959 9.244a2.195 2.195 0 003.171 0l8.959-9.244c.875-.903.874-2.366-.001-3.268s-2.295-.902-3.169.001L16 17.353 8.626 9.744z"></path></svg>
+                                        </button>*@
+                                    </div>  
+
+                                </div>
+                            </span>
+                            <button class="app-icon-btn app-icon-btn app-icon-btn--text" data-test-id="ticket-list-export" aria-label="Export">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60" class="app-icon"><path fill="#183247" d="M32.395 13.222v28.84A2.403 2.403 0 0130 44.472a2.403 2.403 0 01-2.395-2.41v-28.84l-7.887 7.925a2.385 2.385 0 01-3.387-.003 2.422 2.422 0 01.003-3.41l11.974-12.03a2.384 2.384 0 013.384 0l11.974 12.03c.936.941.938 2.467.003 3.41a2.384 2.384 0 01-3.387.003l-7.887-7.925zM10.27 7.818a2.384 2.384 0 013.387.012c.932.945.927 2.47-.012 3.409A23.355 23.355 0 006.79 27.817c0 12.902 10.39 23.362 23.21 23.362s23.21-10.46 23.21-23.362c0-6.293-2.48-12.185-6.82-16.541a2.422 2.422 0 01-.003-3.409 2.384 2.384 0 013.386-.004A28.19 28.19 0 0158 27.817C58 43.382 45.464 56 30 56S2 43.382 2 27.817a28.19 28.19 0 018.271-20z"></path></svg> Export
+                            </button>
+                            <div class="fresh-pagination __ui-components__fresh-pagination ember-view">
+                                <span class="text__content muted ml-10 mr-5" data-test-pagination="pagination-details">
+                                    <span data-test-id="pagination-details">1 - 9 of 9</span>
+                                </span>
+                                <button class="cursor-pointer app-icon-btn app-pagination-left app-icon-btn--oval-left " disabled="" aria-label="Previous ( Alt+left )" data-test-id="previous-btn" type="button">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--small"><path d="M22.789 8.626c.903-.875.903-2.294.001-3.17s-2.366-.876-3.268-.001l-9.244 8.959a2.195 2.195 0 000 3.171l9.244 8.959c.903.875 2.366.874 3.268-.001s.902-2.295-.001-3.169L15.18 16l7.609-7.374z"></path></svg>
+                                </button>
+                                <button class="cursor-pointer app-icon-btn app-pagination-right app-icon-btn--oval-right " disabled="" aria-label="Next ( Alt+right )" data-test-id="next-btn" type="button">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--small"><path d="M10.277 8.626c-.903-.875-.903-2.294-.001-3.17s2.366-.876 3.268-.001l9.244 8.959a2.195 2.195 0 010 3.171l-9.244 8.959c-.903.875-2.366.874-3.268-.001s-.902-2.295.001-3.169L17.886 16l-7.609-7.374z"></path></svg>
+                                </button>
+                                <!---->
+                            </div>
+                            <button id="ticket_filter" data-test-link="filter-view" aria-label="Hide filters" class="app-icon-btn hint--rounded hint--bottom-left app-icon-btn--active">
+                                <span class="sidebar-expanded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--small icon-detail-right"><path d="M20.038 4.29H4.895a.606.606 0 00-.606.606v22.21c0 .335.271.606.606.606h15.143V4.291zm2.423 0v23.421h4.644a.606.606 0 00.606-.606V4.895a.606.606 0 00-.606-.606h-4.644zM4.895 1.867h22.21a3.029 3.029 0 013.029 3.029v22.21a3.029 3.029 0 01-3.029 3.029H4.895a3.029 3.029 0 01-3.029-3.029V4.896a3.029 3.029 0 013.029-3.029zM13.479 16l-4.191-4.191a1.211 1.211 0 011.713-1.713l5.048 5.048c.473.473.473 1.24 0 1.713l-5.048 5.048a1.211 1.211 0 01-1.713-1.713l4.191-4.191z"></path></svg>
+                                </span>
+                            </button>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="ember-view">
+                <div class="__page-layout__page-wrapper sidebar-present ember-view">
+                    <div class="page-content ember-view">
+                        <div class="responsive">
+                            <!---->                   
+                            <div class="ember-view">
+                                <div  class="ember-view"><div class="ember-view"></div></div>
+
+                                <div class="ember-view">
+                                    <!----><div class="ember-view"></div>
+
+                                </div>
+                            </div>
+
+
+
+                            <div class="ember-view"></div>
+                            <!---->                <div class="ember-view"><div class="__ui-components__refresh-notification ember-view"><!----></div></div>
+
+
+
+                            <!---->
+                            <div class="fresh-table __module-tickets__tickets-list__tickets-table ember-view">
+                                <div style="" class="ember-light-table ember-view">
+                                    <div class="card-view lt-body-wrap can-select multi-select ember-view ticket_card_view">
+                                        <div class="lt-inline lt-head"></div>
+
+                                        <table class="">
+                                            <tbody class="lt-body">
+                                                <!---->
+                                                <tr class="lt-row is-selectable current__item--active ember-view">
+                                                    <td style="" class="lt-cell align-left ember-view">
+                                                        <div class="tickets__list row-fluid __module-tickets__tickets-list__tickets-table__ticket-item ember-view">
+                                                            <div class="col-md-9 list-content list-content--main   " data-test-ticket-content="9">
+                                                                <div class="list-check-wrap">
+                                                                    <span class="list-checkbox __ui-components__gravity-loader ember-view">
+                                                                        <div class="ember-view">
+                                                                            <div data-test-id="ticket-checkbox" class="input __ui-form__custom-checkbox custom-checkbox ember-view">
+                                                                                <input data-test-checkbox="ticket-9" id="9" class="trigger-shortcuts ember-checkbox ember-view" type="checkbox">
+                                                                                <label for="9">
+                                                                                    <span class="label-field"></span>
+                                                                                </label>
+                                                                            </div>
+
+                                                                        </div>
+                                                                    </span>      <div class="app-user-photo pull-left">
+                                                                        <div class="avatar-overlay"></div>
+                                                                        <figure data-test-user-avatar="" class="profilepic app-user-photo--normal avatar-icon avatar-icon--large avatar-icon--circle ember-view">
+                                                                            <span data-test-avatar-text="profile_font_text" class="avatar-block avatar__initial avatar__initial--6 ember-view">
+                                                                                <span class="avatar__initial--icon-wrapper">
+                                                                                    P
+                                                                                </span>
+                                                                            </span>
+
+                                                                            <!---->
+                                                                        </figure>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="list-content-wrap ">
+                                                                    <div class="ticket-tag-wrap clearfix" data-test-ticket-label="9">
+                                                                        <div class="status-tag-wrap status-wrapper">
+                                                                            <span data-test-id="overdue-tag" class="tag--overdue tag ellipsis ember-view">
+                                                                                <!---->Overdue
+                                                                            </span>
+                                                                            <!----><!---->
+                                                                        </div>
+
+                                                                        <div class="show-more-list-wrapper __ui-components__list-with-show-more ember-view">
+                                                                            <!---->
+                                                                            <!----><!---->
+                                                                        </div>
+
+                                                                        <!---->
+                                                                    </div>
+                                                                    <div>
+                                                                        <div class="text--default ticket-listview-hover __module-tickets__tickets-list__tickets-table__ticket-subject-popover ember-view">
+                                                                            <div class="ember-view">
+                                                                                <div data-test-id="ticket-subject-hover-9" tabindex="-1" role="button" class="trigger-shortcuts ember-basic-dropdown-trigger ember-view">
+                                                                                    <a data-test-link="tickets-subject-9" href="https://piistech.freshdesk.com/a/tickets/9" class="link-on-hover link-no-underline wordbreak-fix ember-view">
+                                                                                        I cannot login rmr
+                                                                                        <span data-test-ticket-id="9" class="muted">
+                                                                                            #9
+                                                                                        </span>
+                                                                                    </a>
+                                                                                </div>
+
+
+
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <p class="text__content text__infotext text--antialias ticket-info" data-test-ticket-timestamp="9">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" data-test-icon="portal" class="app-icon app-icon--small app-icon--topalign"><path d="M21.723 27.732a40.861 40.861 0 001.137-4.777 40.711 40.711 0 004.835-1.154 13.099 13.099 0 01-5.971 5.93zm-7.799 1.154a13.176 13.176 0 01-1.755-.399c.032-.009.065-.013.097-.021a39.958 39.958 0 01-1.35-5.242c1.637.202 3.295.338 4.986.338 1.693 0 3.351-.136 4.988-.336-.342 1.788-.78 3.662-1.35 5.361.069.021-2.236.48-3.541.48-.707 0-1.398-.071-2.076-.181zm-9.585-7.019c1.505.442 3.037.819 4.607 1.088a41.057 41.057 0 001.107 4.67 13.085 13.085 0 01-5.714-5.759zm-.855-9.518a40.371 40.371 0 015.193-1.337c-.2 1.639-.336 3.297-.336 4.988s.136 3.349.336 4.986a39.72 39.72 0 01-5.193-1.335c-.34-1.161-.551-2.38-.551-3.651s.211-2.488.551-3.651zm6.569-7.976a41.158 41.158 0 00-1.107 4.67c-1.57.271-3.102.646-4.607 1.088a13.12 13.12 0 015.714-5.759zm3.871-1.26A13.156 13.156 0 0116 2.934c1.305 0 2.563.196 3.752.553-.069.021-.142.026-.211.049a40.247 40.247 0 011.35 5.24c-1.639-.202-3.295-.338-4.988-.338-1.691 0-3.349.136-4.986.338a39.812 39.812 0 011.35-5.24c-.032-.009-.065-.013-.097-.022a13.261 13.261 0 011.755-.399zm13.771 7.084a40.86 40.86 0 00-4.835-1.154 40.829 40.829 0 00-1.137-4.775 13.092 13.092 0 015.971 5.929zM10.208 16c0-1.803.157-3.563.398-5.299 1.734-.241 3.496-.398 5.298-.398 1.803 0 3.563.157 5.299.398.241 1.736.398 3.496.398 5.299 0 1.801-.157 3.563-.398 5.298-1.736.243-3.496.398-5.299.398-1.801 0-3.563-.155-5.299-.398-.239-1.734-.396-3.496-.396-5.298zm12.921 4.986c.202-1.637.338-3.295.338-4.986s-.136-3.349-.338-4.988c1.788.342 5.257 1.234 5.286 1.124.399 1.253.651 2.477.651 3.864s-.162 2.529-.564 3.784c-.03-.11-3.586.861-5.374 1.202zM13.288 1.324a15.03 15.03 0 00-1.854.459C5.421 3.713 1.067 9.345 1.067 16c0 6.653 4.355 12.286 10.367 14.217a15.03 15.03 0 001.854.459c.881.161 1.785.258 2.712.258 8.247 0 14.933-6.686 14.933-14.933 0-8.249-6.686-14.933-14.933-14.933-.928 0-1.831.097-2.712.258z"></path></svg>
+                                                                        <!---->
+                                                                    </p><div class="user-link requester-hover ember-view">
+                                                                        <div class="ember-view">
+                                                                            <a href="https://piistech.freshdesk.com/a/contacts/67013502981" data-test-id="user-name" class="user">
+                                                                                Parves
+                                                                            </a>
+
+
+                                                                        </div>
+                                                                    </div>
+                                                                    <!---->        <span>
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--micro"><path d="M27.733 16c0 6.48-5.253 11.733-11.733 11.733S4.267 22.48 4.267 16 9.52 4.267 16 4.267 27.733 9.52 27.733 16z"></path></svg>
+                                                                        <span data-test-id="sla-status-text">
+                                                                            Agent responded 7 days ago
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--micro"><path d="M27.733 16c0 6.48-5.253 11.733-11.733 11.733S4.267 22.48 4.267 16 9.52 4.267 16 4.267 27.733 9.52 27.733 16z"></path></svg>
+                                                                            Overdue by 6 days
+
+                                                                            <!---->
+                                                                        </span>
+
+
+
+                                                                    </span>
+                                                                    <p></p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-3 list-content list-content--info " data-test-dropdown="ticket-dropdown-content-9">
+                                                                <!---->      <div class="list-filter-wrap">
+                                                                    <div class="col-md-12 list-filter">
+                                                                        <div class="list-filter__priority text__content list-filter__item clearfix ember-view">
+                                                                            <div class="list-filter__item--icon-overlay">
+                                                                                <div class="pull-left list-filter__icon list-filter__icon- ember-view">
+                                                                                    <!---->  <div>
+                                                                                        <span class="tickets__list--low tickets__list--dropdown"></span>
+
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="text__content list-filter__label list-filter__priority__label drop-small">
+                                                                                <div data-test-id="priority-hover" class="ember-view">
+                                                                                    <div class="list-priority--before-hover" data-test-id="list-priority-before-hover">
+                                                                                        <div class="list-filter__label">
+                                                                                            <span class="tickets__list--low tickets__list--dropdown"></span>
+                                                                                            Low
+                                                                                            <span class="ember-power-select-status-icon priority-icon list-filter__label__pointer"></span>
+                                                                                        </div>
+
+                                                                                    </div>
+
+                                                                                </div>
+                                                                            </div>
+
+                                                                        </div><div class="text__content list-filter__item clearfix ember-view">
+                                                                            <div class="pull-left list-filter__icon list-filter__icon-assignto ember-view">
+                                                                                <!---->  <div>
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--small"><path d="M23.922 23.085h2.638a1.203 1.203 0 110 2.406h-2.638v2.638a1.203 1.203 0 11-2.406 0v-2.638h-2.638a1.203 1.203 0 110-2.406h2.638v-2.638a1.203 1.203 0 112.406 0v2.638zm-8.209-5.961c-3.822 0-6.92-3.117-6.92-6.962S11.891 3.2 15.713 3.2s6.92 3.117 6.92 6.962-3.098 6.962-6.92 6.962zm0-2.421c2.492 0 4.513-2.033 4.513-4.541s-2.02-4.541-4.513-4.541c-2.492 0-4.513 2.033-4.513 4.541s2.02 4.541 4.513 4.541zm-9.04 12.612c0 .669-.539 1.211-1.203 1.211s-1.203-.542-1.203-1.211c0-4.589 3.924-8.274 8.725-8.274h5.014c.665 0 1.203.542 1.203 1.211s-.539 1.211-1.203 1.211h-5.014c-3.507 0-6.318 2.64-6.318 5.852z"></path></svg>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="pull-left list-filter__label">
+                                                                                <div class="ticket-list-assign-to">
+                                                                                    <div data-test-id="assign-to-hover" class="ember-view">
+                                                                                        <div class="assignto-filter-wrap" data-test-id="assign-to-before-hover">
+                                                                                            Escalation... /
+                                                                                            Md Parves ...
+                                                                                            <span class="ember-power-select-status-icon list-filter__label__pointer"></span>
+                                                                                        </div>
+
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                        </div>
+                                                                        <div class="list-filter__status text__content list-filter__item clearfix ember-view">
+                                                                            <div class="pull-left list-filter__icon list-filter__icon-status ember-view">
+                                                                                <!---->  <div>
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--small"><path d="M19.167 26.693a1.168 1.168 0 002.173.019l3.854-9.248h4.963c.65 0 1.176-.536 1.176-1.197s-.527-1.197-1.176-1.197h-5.742c-.472 0-.898.287-1.083.73l-3.049 7.316-6.856-17.275a1.168 1.168 0 00-2.149-.074L6.847 15.07H1.842c-.65 0-1.176.536-1.176 1.197s.527 1.197 1.176 1.197h5.742c.451 0 .862-.262 1.058-.675l3.596-7.55 6.927 17.454z"></path></svg>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div data-test-id="status-hover" class="ember-view">
+                                                                                <div class="pull-left list-filter__label" data-test-id="status-before-hover">
+                                                                                    Open
+                                                                                    <span class="ember-power-select-status-icon list-filter__label__pointer"></span>
+                                                                                </div>
+
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <!---->
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+
+                                                <tr class="lt-row is-selectable ember-view">
+                                                    <td style="" class="lt-cell align-left ember-view">
+                                                        <div class="tickets__list row-fluid __module-tickets__tickets-list__tickets-table__ticket-item ember-view">
+                                                            <div class="col-md-9 list-content list-content--main   " data-test-ticket-content="8">
+                                                                <div class="list-check-wrap">
+                                                                    <span class="list-checkbox __ui-components__gravity-loader ember-view">
+                                                                        <div class="ember-view">
+                                                                            <div data-test-id="ticket-checkbox" class="input __ui-form__custom-checkbox custom-checkbox ember-view">
+                                                                                <input data-test-checkbox="ticket-8" id="8" class="trigger-shortcuts ember-checkbox ember-view" type="checkbox">
+                                                                                <label for="8">
+                                                                                    <span class="label-field"></span>
+                                                                                </label>
+                                                                            </div>
+
+                                                                        </div>
+                                                                    </span>      <div class="app-user-photo pull-left">
+                                                                        <div class="avatar-overlay"></div>
+                                                                        <figure data-test-user-avatar="" class="profilepic app-user-photo--normal avatar-icon avatar-icon--large avatar-icon--circle ember-view">
+                                                                            <span data-test-avatar-text="profile_font_text" class="avatar-block avatar__initial avatar__initial--2 ember-view">
+                                                                                <span class="avatar__initial--icon-wrapper">
+                                                                                    V
+                                                                                </span>
+                                                                            </span>
+
+                                                                            <!---->
+                                                                        </figure>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="list-content-wrap ">
+                                                                    <div class="ticket-tag-wrap clearfix" data-test-ticket-label="8">
+                                                                        <div class="status-tag-wrap status-wrapper">
+                                                                            <span data-test-id="overdue-tag" class="tag--overdue tag ellipsis ember-view">
+                                                                                <!---->Overdue
+                                                                            </span>
+                                                                            <!----><!---->
+                                                                        </div>
+
+                                                                        <div class="show-more-list-wrapper __ui-components__list-with-show-more ember-view">
+                                                                            <!---->
+                                                                            <!----><!---->
+                                                                        </div>
+
+                                                                        <!---->
+                                                                    </div>
+                                                                    <div>
+                                                                        <div class="text--default ticket-listview-hover __module-tickets__tickets-list__tickets-table__ticket-subject-popover ember-view">
+                                                                            <div class="ember-view">
+                                                                                <div data-test-id="ticket-subject-hover-8" aria-owns="ember-basic-dropdown-content-ember769" tabindex="-1" role="button" class="trigger-shortcuts ember-basic-dropdown-trigger ember-view">
+                                                                                    <a data-test-link="tickets-subject-8" href="https://piistech.freshdesk.com/a/tickets/8" class="link-on-hover link-no-underline wordbreak-fix ember-view">
+                                                                                        fresh desk test
+                                                                                        <span data-test-ticket-id="8" class="muted">
+                                                                                            #8
+                                                                                        </span>
+                                                                                    </a>
+                                                                                </div>
+
+
+
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <p class="text__content text__infotext text--antialias ticket-info" data-test-ticket-timestamp="8">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" data-test-icon="outbound" class="app-icon app-icon--small app-icon--topalign"><path d="M31.191 24.859a2.802 2.802 0 00-.602-.827l-1.798-1.707V6.58H3.208v18.307h10.386a2.8 2.8 0 00-.261 1.186c0 .435.098.846.274 1.214H3.075A2.267 2.267 0 01.808 25.02V6.446a2.267 2.267 0 012.267-2.267h25.849a2.267 2.267 0 012.267 2.267v18.413zM7.288 10.377l8.445 5.657 8.445-5.657c.559-.374 1.314-.223 1.686.339s.222 1.32-.337 1.694l-9.12 6.109a1.21 1.21 0 01-1.349 0l-9.12-6.109c-.559-.374-.71-1.133-.337-1.694s1.128-.713 1.686-.339zm8.862 14.479h9.445l-2.062-1.958c-.488-.463-.507-1.234-.042-1.72s1.237-.505 1.725-.042l4.271 4.056c.505.48.505 1.283 0 1.762l-4.271 4.056c-.488.463-1.26.445-1.725-.042s-.446-1.257.042-1.72l2.062-1.958H16.15a1.217 1.217 0 010-2.434z"></path></svg>
+                                                                        <!---->
+                                                                    </p><div data-test-link="contact" class="user-link requester-hover ember-view">
+                                                                        <div class="ember-view">
+                                                                            <a href="https://piistech.freshdesk.com/a/contacts/67013502882" data-test-id="user-name" class="user">
+                                                                                Vvifile2006
+                                                                            </a>
+
+
+                                                                        </div>
+                                                                    </div>
+                                                                    <!---->        <span>
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--micro"><path d="M27.733 16c0 6.48-5.253 11.733-11.733 11.733S4.267 22.48 4.267 16 9.52 4.267 16 4.267 27.733 9.52 27.733 16z"></path></svg>
+                                                                        <span data-test-id="sla-status-text">
+                                                                            Agent responded 12 days ago
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--micro"><path d="M27.733 16c0 6.48-5.253 11.733-11.733 11.733S4.267 22.48 4.267 16 9.52 4.267 16 4.267 27.733 9.52 27.733 16z"></path></svg>
+                                                                            Overdue by 6 days
+
+                                                                            <!---->
+                                                                        </span>
+
+
+
+                                                                    </span>
+                                                                    <p></p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-3 list-content list-content--info " data-test-dropdown="ticket-dropdown-content-8">
+                                                                <!---->      <div class="list-filter-wrap">
+                                                                    <div class="col-md-12 list-filter">
+                                                                        <div class="list-filter__priority text__content list-filter__item clearfix ember-view">
+                                                                            <div class="list-filter__item--icon-overlay">
+                                                                                <div class="pull-left list-filter__icon list-filter__icon- ember-view">
+                                                                                    <!---->  <div>
+                                                                                        <span class="tickets__list--low tickets__list--dropdown"></span>
+
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="text__content list-filter__label list-filter__priority__label drop-small">
+                                                                                <div data-test-id="priority-hover" class="ember-view">
+                                                                                    <div class="list-priority--before-hover" data-test-id="list-priority-before-hover">
+                                                                                        <div class="list-filter__label">
+                                                                                            <span class="tickets__list--low tickets__list--dropdown"></span>
+                                                                                            Low
+                                                                                            <span class="ember-power-select-status-icon priority-icon list-filter__label__pointer"></span>
+                                                                                        </div>
+
+                                                                                    </div>
+
+                                                                                </div>
+                                                                            </div>
+
+                                                                        </div><div class="text__content list-filter__item clearfix ember-view">
+                                                                            <div class="pull-left list-filter__icon list-filter__icon-assignto ember-view">
+                                                                                <!---->  <div>
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--small"><path d="M23.922 23.085h2.638a1.203 1.203 0 110 2.406h-2.638v2.638a1.203 1.203 0 11-2.406 0v-2.638h-2.638a1.203 1.203 0 110-2.406h2.638v-2.638a1.203 1.203 0 112.406 0v2.638zm-8.209-5.961c-3.822 0-6.92-3.117-6.92-6.962S11.891 3.2 15.713 3.2s6.92 3.117 6.92 6.962-3.098 6.962-6.92 6.962zm0-2.421c2.492 0 4.513-2.033 4.513-4.541s-2.02-4.541-4.513-4.541c-2.492 0-4.513 2.033-4.513 4.541s2.02 4.541 4.513 4.541zm-9.04 12.612c0 .669-.539 1.211-1.203 1.211s-1.203-.542-1.203-1.211c0-4.589 3.924-8.274 8.725-8.274h5.014c.665 0 1.203.542 1.203 1.211s-.539 1.211-1.203 1.211h-5.014c-3.507 0-6.318 2.64-6.318 5.852z"></path></svg>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="pull-left list-filter__label">
+                                                                                <div class="ticket-list-assign-to">
+                                                                                    <div data-test-id="assign-to-hover" class="ember-view">
+                                                                                        <div class="assignto-filter-wrap" data-test-id="assign-to-before-hover">
+                                                                                            Escalation... /
+                                                                                            Md Parves ...
+                                                                                            <span class="ember-power-select-status-icon list-filter__label__pointer"></span>
+                                                                                        </div>
+
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                        </div>
+                                                                        <div class="list-filter__status text__content list-filter__item clearfix ember-view">
+                                                                            <div class="pull-left list-filter__icon list-filter__icon-status ember-view">
+                                                                                <!---->  <div>
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="app-icon app-icon--small"><path d="M19.167 26.693a1.168 1.168 0 002.173.019l3.854-9.248h4.963c.65 0 1.176-.536 1.176-1.197s-.527-1.197-1.176-1.197h-5.742c-.472 0-.898.287-1.083.73l-3.049 7.316-6.856-17.275a1.168 1.168 0 00-2.149-.074L6.847 15.07H1.842c-.65 0-1.176.536-1.176 1.197s.527 1.197 1.176 1.197h5.742c.451 0 .862-.262 1.058-.675l3.596-7.55 6.927 17.454z"></path></svg>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div data-test-id="status-hover" class="ember-view">
+                                                                                <div class="pull-left list-filter__label" data-test-id="status-before-hover">
+                                                                                    Open
+                                                                                    <span class="ember-power-select-status-icon list-filter__label__pointer"></span>
+                                                                                </div>
+
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <!---->
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                            </tbody>
+                                        </table>
+
+                                        <!---->
+
+
+                                    </div>
+
+                                    <div data-test-id="table" class="list lt-body-wrap can-select multi-select ember-view ticket_list_view">
+                                        <div class="lt-inline lt-head">
+                                            <table class="">
+                                                <thead class="lt-head">
+
+                                                    <!---->
+                                                    <tr>
+                                                        <th rowspan="2" colspan="1" style="width: 50px" draggable="false" class="lt-column align-left is-hideable ember-view">
+                                                            <!---->
+                                                            <!---->
+                                                        </th>
+                                                        <th rowspan="2" colspan="1" style="width: 12vw" draggable="false" class="lt-column align-left is-hideable ember-view">
+                                                            Contact
+                                                            <!---->
+                                                            <!---->
+                                                        </th>
+                                                        <th rowspan="2" colspan="1" style="width: 30px" draggable="false" class="lt-column align-left is-hideable ember-view">
+                                                            <!---->
+                                                            <!---->
+                                                        </th>
+                                                        <th rowspan="2" colspan="1" style="width: 24vw" draggable="false" class="lt-column align-left is-hideable ember-view">
+                                                            Subject
+                                                            <!---->
+                                                            <!---->
+                                                        </th>
+                                                        <th rowspan="2" colspan="1" style="width: 160px" draggable="false"  class="lt-column align-left is-hideable ember-view">
+                                                            State
+                                                            <!---->
+                                                            <!---->
+                                                        </th>
+                                                        <th rowspan="2" colspan="1" style="width: 400px" draggable="false" class="lt-column align-left is-hideable ember-view">
+                                                            <div class="__module-tickets__tickets-list__tickets-table__group-agent-column-renderer ember-view">
+                                                                <div class="header-text pl-10">
+                                                                    Group
+                                                                </div>
+                                                                <div class="header-text pl-5">
+                                                                    Agent
+                                                                </div>
+                                                            </div>
+
+                                                            <!---->
+                                                        </th>
+                                                        <th rowspan="2" colspan="1" style="width: 120px" draggable="false" class="lt-column align-left is-hideable ember-view">
+                                                            Priority
+                                                            <!---->
+                                                            <!---->
+                                                        </th>
+                                                        <th rowspan="2" colspan="1" style="width: 120px" draggable="false"  class="lt-column align-left is-hideable ember-view">
+                                                            Status
+                                                            <!---->
+                                                            <!---->
+                                                        </th>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <!---->
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
+
+                                        <table class="">
+                                            <tbody class="lt-body">
+                                                <!---->
+                                                <tr data-test-id="ticket-row-9" colspan="1" class="lt-row is-selectable current__item--active ember-view">
+                                                    <td style="width: 50px" class="lt-cell align-left ember-view">
+                                                        <div class="ember-view">
+                                                            <div data-test-id="table-checkbox" class="input __ui-form__custom-checkbox custom-checkbox ember-view">
+                                                                <input data-test-checkbox="ticket-checkbox-ember3620" id="checkbox-ember3620" class="trigger-shortcuts ember-checkbox ember-view" type="checkbox">
+                                                                <label for="checkbox-ember3620">
+                                                                    <span class="label-field"></span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 12vw" class="lt-cell align-left ember-view">
+                                                        <div data-test-id="customer_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div class="avatar-info-cell">
+                                                                <div class="avatar-image">
+                                                                    <figure data-test-user-avatar="" class="profilepic  avatar-icon avatar-icon--small avatar-icon--circle ember-view">
+                                                                        <span data-test-avatar-text="profile_font_text" class="avatar-block avatar__initial avatar__initial--6 ember-view">
+                                                                            <span class="avatar__initial--icon-wrapper">
+                                                                                P
+                                                                            </span>
+                                                                        </span>
+
+                                                                        <!---->
+                                                                    </figure>
+                                                                </div>
+                                                                <div data-test-id="table-view-contact" class="avatar-text text__content requester-hover ember-view">
+                                                                    <div class="ember-view">
+                                                                        <a href="/a/contacts/67013502981" data-test-id="user-name" class="user">
+                                                                            Parves
+                                                                        </a>
+
+
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 30px" class="lt-cell align-left lt-cell-autorefresh ember-view">
+                                                        <!---->
+                                                    </td>
+                                                    <td style="width: 24vw" class="lt-cell align-left ember-view">
+                                                        <div data-test-id="subject_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div class="pr-12 ticket-listview-hover __module-tickets__tickets-list__tickets-table__ticket-subject-popover ember-view">
+                                                                <div class="ember-view">
+                                                                    <a data-test-link="tickets-subject-9" href="/a/tickets/9" class="link-on-hover link-no-underline wordbreak-fix ember-view">
+                                                                        I cannot login rmr
+                                                                        <span data-test-ticket-id="9" class="muted">
+                                                                            #9
+                                                                        </span>
+                                                                    </a>
+
+                                                                </div>
+                                                            </div>
+                                                            <!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 160px" class="lt-cell align-left lt-cell-ticket-states ember-view">
+                                                        <div class="status-tag-wrap status-wrapper">
+                                                            <span data-test-id="overdue-tag" class="tag--overdue tag ellipsis ember-view">
+                                                                <!---->Overdue
+                                                            </span>
+                                                            <!----><!---->
+                                                        </div>
+
+                                                    </td>
+                                                    <td style="width: 400px" class="lt-cell align-left lt-cell-truncate ember-view">
+                                                        <div data-test-id="_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div data-test-id="assign-to-hover" class="group-agent ember-view">
+                                                                <div data-test-id="group-agent" class="__module-tickets__assign-to ember-view">
+                                                                    <div class="group-field  pr-5 mb-0">
+                                                                        <div data-test-id="group-select" class="assign-to-select hcell-template hint hint--left pl-10 pr-10" aria-label="Group">
+
+                                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4048" tabindex="0" role="button" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                                <span class="ember-power-select-selected-item">
+                                                                                    Escalations
+
+                                                                                </span>
+                                                                                <!----><span class="ember-power-select-status-icon"></span>
+                                                                            </div>  <div id="ember-basic-dropdown-content-ember4048" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                                        </div>
+                                                                        <div class="agent-field border-left--none">
+                                                                            <div class="agent-filter pl-0 mt-0">
+                                                                                <div data-test-id="agent-select" class="assign-to-select hcell-template hint hint--left pl-10 pr-10" aria-label="Agent">
+
+                                                                                    <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4054" tabindex="0" role="button" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                                        <!---->
+                                                                                        <span class="ember-power-select-status-icon"></span>
+                                                                                    </div>
+
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <!---->
+                                                            </div><!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 120px" class="lt-cell align-left lt-cell-truncate ember-view">
+                                                        <div data-test-id="priority_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div data-test-id="priority-hover" class="priority ember-view">
+                                                                <div aria-label="Priority" class="ticket-list-dropselect hint hint--left select-priority" data-test-dropdown="dropdown-priority">
+                                                                    <div data-test-id="priority" class="__ui-form__select-field ember-view">
+                                                                        <!---->
+
+                                                                        <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4042" tabindex="0" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                            <div data-test-id="trigger-power-select" class="ellipsis ember-view">
+                                                                                <span class="ember-power-select-selected-item">
+                                                                                    <span class="tickets__list--low tickets__list--dropdown"></span>
+                                                                                    Low
+
+
+                                                                                </span>
+                                                                                <!----><span class="ember-power-select-status-icon"></span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <!---->
+                                                                    </div>
+                                                                </div>
+
+
+                                                            </div><!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 120px" class="lt-cell align-left ember-view">
+                                                        <div data-test-id="statusTranslatedLabel_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div data-test-id="status-hover" class="status-select ember-view">
+                                                                <div aria-label="Status" class="ticket-list-dropselect dropdown-status hint hint--left" data-test-id="dropdown-status" data-test-div="dropdown-status-9">
+
+                                                                    <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4086" tabindex="0" role="button" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                        <span class="ember-power-select-selected-item">
+                                                                            Open
+
+                                                                        </span>
+                                                                        <!----><span class="ember-power-select-status-icon"></span>
+                                                                    </div>  <div id="ember-basic-dropdown-content-ember4086" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                                </div>
+
+                                                            </div><!---->
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr data-test-id="ticket-row-9" colspan="1" class="lt-row is-selectable current__item--active ember-view">
+                                                    <td style="width: 50px" class="lt-cell align-left ember-view">
+                                                        <div class="ember-view">
+                                                            <div data-test-id="table-checkbox" class="input __ui-form__custom-checkbox custom-checkbox ember-view">
+                                                                <input data-test-checkbox="ticket-checkbox-ember3620" id="checkbox-ember3620" class="trigger-shortcuts ember-checkbox ember-view" type="checkbox">
+                                                                <label for="checkbox-ember3620">
+                                                                    <span class="label-field"></span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 12vw" class="lt-cell align-left ember-view">
+                                                        <div data-test-id="customer_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div class="avatar-info-cell">
+                                                                <div class="avatar-image">
+                                                                    <figure data-test-user-avatar="" class="profilepic  avatar-icon avatar-icon--small avatar-icon--circle ember-view">
+                                                                        <span data-test-avatar-text="profile_font_text" class="avatar-block avatar__initial avatar__initial--6 ember-view">
+                                                                            <span class="avatar__initial--icon-wrapper">
+                                                                                P
+                                                                            </span>
+                                                                        </span>
+
+                                                                        <!---->
+                                                                    </figure>
+                                                                </div>
+                                                                <div data-test-id="table-view-contact" class="avatar-text text__content requester-hover ember-view">
+                                                                    <div class="ember-view">
+                                                                        <a href="/a/contacts/67013502981" data-test-id="user-name" class="user">
+                                                                            Parves
+                                                                        </a>
+
+
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 30px" class="lt-cell align-left lt-cell-autorefresh ember-view">
+                                                        <!---->
+                                                    </td>
+                                                    <td style="width: 24vw" class="lt-cell align-left ember-view">
+                                                        <div data-test-id="subject_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div class="pr-12 ticket-listview-hover __module-tickets__tickets-list__tickets-table__ticket-subject-popover ember-view">
+                                                                <div class="ember-view">
+                                                                    <a data-test-link="tickets-subject-9" href="/a/tickets/9" class="link-on-hover link-no-underline wordbreak-fix ember-view">
+                                                                        I cannot login rmr
+                                                                        <span data-test-ticket-id="9" class="muted">
+                                                                            #9
+                                                                        </span>
+                                                                    </a>
+
+                                                                </div>
+                                                            </div>
+                                                            <!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 160px" class="lt-cell align-left lt-cell-ticket-states ember-view">
+                                                        <div class="status-tag-wrap status-wrapper">
+                                                            <span data-test-id="overdue-tag" class="tag--overdue tag ellipsis ember-view">
+                                                                <!---->Overdue
+                                                            </span>
+                                                            <!----><!---->
+                                                        </div>
+
+                                                    </td>
+                                                    <td style="width: 400px" class="lt-cell align-left lt-cell-truncate ember-view">
+                                                        <div data-test-id="_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div data-test-id="assign-to-hover" class="group-agent ember-view">
+                                                                <div data-test-id="group-agent" class="__module-tickets__assign-to ember-view">
+                                                                    <div class="group-field  pr-5 mb-0">
+                                                                        <div data-test-id="group-select" class="assign-to-select hcell-template hint hint--left pl-10 pr-10" aria-label="Group">
+
+                                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4048" tabindex="0" role="button" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                                <span class="ember-power-select-selected-item">
+                                                                                    Escalations
+
+                                                                                </span>
+                                                                                <!----><span class="ember-power-select-status-icon"></span>
+                                                                            </div>  <div id="ember-basic-dropdown-content-ember4048" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                                        </div>
+                                                                        <div class="agent-field border-left--none">
+                                                                            <div class="agent-filter pl-0 mt-0">
+                                                                                <div data-test-id="agent-select" class="assign-to-select hcell-template hint hint--left pl-10 pr-10" aria-label="Agent">
+
+                                                                                    <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4054" tabindex="0" role="button" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                                        <!---->
+                                                                                        <span class="ember-power-select-status-icon"></span>
+                                                                                    </div>
+
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <!---->
+                                                            </div><!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 120px" class="lt-cell align-left lt-cell-truncate ember-view">
+                                                        <div data-test-id="priority_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div data-test-id="priority-hover" class="priority ember-view">
+                                                                <div aria-label="Priority" class="ticket-list-dropselect hint hint--left select-priority" data-test-dropdown="dropdown-priority">
+                                                                    <div data-test-id="priority" class="__ui-form__select-field ember-view">
+                                                                        <!---->
+
+                                                                        <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4042" tabindex="0" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                            <div data-test-id="trigger-power-select" class="ellipsis ember-view">
+                                                                                <span class="ember-power-select-selected-item">
+                                                                                    <span class="tickets__list--low tickets__list--dropdown"></span>
+                                                                                    Low
+
+
+                                                                                </span>
+                                                                                <!----><span class="ember-power-select-status-icon"></span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <!---->
+                                                                    </div>
+                                                                </div>
+
+
+                                                            </div><!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 120px" class="lt-cell align-left ember-view">
+                                                        <div data-test-id="statusTranslatedLabel_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div data-test-id="status-hover" class="status-select ember-view">
+                                                                <div aria-label="Status" class="ticket-list-dropselect dropdown-status hint hint--left" data-test-id="dropdown-status" data-test-div="dropdown-status-9">
+
+                                                                    <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4086" tabindex="0" role="button" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                        <span class="ember-power-select-selected-item">
+                                                                            Open
+
+                                                                        </span>
+                                                                        <!----><span class="ember-power-select-status-icon"></span>
+                                                                    </div>  <div id="ember-basic-dropdown-content-ember4086" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                                </div>
+
+                                                            </div><!---->
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr data-test-id="ticket-row-9" colspan="1" class="lt-row is-selectable current__item--active ember-view">
+                                                    <td style="width: 50px" class="lt-cell align-left ember-view">
+                                                        <div class="ember-view">
+                                                            <div data-test-id="table-checkbox" class="input __ui-form__custom-checkbox custom-checkbox ember-view">
+                                                                <input data-test-checkbox="ticket-checkbox-ember3620" id="checkbox-ember3620" class="trigger-shortcuts ember-checkbox ember-view" type="checkbox">
+                                                                <label for="checkbox-ember3620">
+                                                                    <span class="label-field"></span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 12vw" class="lt-cell align-left ember-view">
+                                                        <div data-test-id="customer_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div class="avatar-info-cell">
+                                                                <div class="avatar-image">
+                                                                    <figure data-test-user-avatar="" class="profilepic  avatar-icon avatar-icon--small avatar-icon--circle ember-view">
+                                                                        <span data-test-avatar-text="profile_font_text" class="avatar-block avatar__initial avatar__initial--6 ember-view">
+                                                                            <span class="avatar__initial--icon-wrapper">
+                                                                                P
+                                                                            </span>
+                                                                        </span>
+
+                                                                        <!---->
+                                                                    </figure>
+                                                                </div>
+                                                                <div data-test-id="table-view-contact" class="avatar-text text__content requester-hover ember-view">
+                                                                    <div class="ember-view">
+                                                                        <a href="/a/contacts/67013502981" data-test-id="user-name" class="user">
+                                                                            Parves
+                                                                        </a>
+
+
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 30px" class="lt-cell align-left lt-cell-autorefresh ember-view">
+                                                        <!---->
+                                                    </td>
+                                                    <td style="width: 24vw" class="lt-cell align-left ember-view">
+                                                        <div data-test-id="subject_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div class="pr-12 ticket-listview-hover __module-tickets__tickets-list__tickets-table__ticket-subject-popover ember-view">
+                                                                <div class="ember-view">
+                                                                    <a data-test-link="tickets-subject-9" href="/a/tickets/9" class="link-on-hover link-no-underline wordbreak-fix ember-view">
+                                                                        I cannot login rmr
+                                                                        <span data-test-ticket-id="9" class="muted">
+                                                                            #9
+                                                                        </span>
+                                                                    </a>
+
+                                                                </div>
+                                                            </div>
+                                                            <!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 160px" class="lt-cell align-left lt-cell-ticket-states ember-view">
+                                                        <div class="status-tag-wrap status-wrapper">
+                                                            <span data-test-id="overdue-tag" class="tag--overdue tag ellipsis ember-view">
+                                                                <!---->Overdue
+                                                            </span>
+                                                            <!----><!---->
+                                                        </div>
+
+                                                    </td>
+                                                    <td style="width: 400px" class="lt-cell align-left lt-cell-truncate ember-view">
+                                                        <div data-test-id="_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div data-test-id="assign-to-hover" class="group-agent ember-view">
+                                                                <div data-test-id="group-agent" class="__module-tickets__assign-to ember-view">
+                                                                    <div class="group-field  pr-5 mb-0">
+                                                                        <div data-test-id="group-select" class="assign-to-select hcell-template hint hint--left pl-10 pr-10" aria-label="Group">
+
+                                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4048" tabindex="0" role="button" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                                <span class="ember-power-select-selected-item">
+                                                                                    Escalations
+
+                                                                                </span>
+                                                                                <!----><span class="ember-power-select-status-icon"></span>
+                                                                            </div>  <div id="ember-basic-dropdown-content-ember4048" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                                        </div>
+                                                                        <div class="agent-field border-left--none">
+                                                                            <div class="agent-filter pl-0 mt-0">
+                                                                                <div data-test-id="agent-select" class="assign-to-select hcell-template hint hint--left pl-10 pr-10" aria-label="Agent">
+
+                                                                                    <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4054" tabindex="0" role="button" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                                        <!---->
+                                                                                        <span class="ember-power-select-status-icon"></span>
+                                                                                    </div>
+
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <!---->
+                                                            </div><!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 120px" class="lt-cell align-left lt-cell-truncate ember-view">
+                                                        <div data-test-id="priority_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div data-test-id="priority-hover" class="priority ember-view">
+                                                                <div aria-label="Priority" class="ticket-list-dropselect hint hint--left select-priority" data-test-dropdown="dropdown-priority">
+                                                                    <div data-test-id="priority" class="__ui-form__select-field ember-view">
+                                                                        <!---->
+
+                                                                        <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4042" tabindex="0" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                            <div data-test-id="trigger-power-select" class="ellipsis ember-view">
+                                                                                <span class="ember-power-select-selected-item">
+                                                                                    <span class="tickets__list--low tickets__list--dropdown"></span>
+                                                                                    Low
+
+
+                                                                                </span>
+                                                                                <!----><span class="ember-power-select-status-icon"></span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <!---->
+                                                                    </div>
+                                                                </div>
+
+
+                                                            </div><!---->
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 120px" class="lt-cell align-left ember-view">
+                                                        <div data-test-id="statusTranslatedLabel_test_label" class="hcell-template __module-tickets__tickets-list__tickets-table__cell-renderer ember-view">
+                                                            <div data-test-id="status-hover" class="status-select ember-view">
+                                                                <div aria-label="Status" class="ticket-list-dropselect dropdown-status hint hint--left" data-test-id="dropdown-status" data-test-div="dropdown-status-9">
+
+                                                                    <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember4086" tabindex="0" role="button" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                        <span class="ember-power-select-selected-item">
+                                                                            Open
+
+                                                                        </span>
+                                                                        <!----><span class="ember-power-select-status-icon"></span>
+                                                                    </div>  <div id="ember-basic-dropdown-content-ember4086" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                                </div>
+
+                                                            </div><!---->
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+
+                                        <!---->
+                                        <div id="ember3157_inline_foot" class="lt-inline lt-foot"></div>
+
+                                    </div>
+
+
+
+
+
+
+
+
+
+
+
+                                    <!---->
+                                </div><!---->
+                            </div>
+
+
+
+                        </div>
+                    </div>
+                    <div class="page-sidebar ember-view" id="side_filter_ticket">
+                        <div class="sidebar">
+                            <!---->    <div>
+                                <div data-test-div="ticket-filter-section" class="scroll-wrap__right ticket-filter filter-view scroll filter-list filter-list--fixed-footer ember-view">
+                                    <div class="sidebar__title text--uppercase" data-test-id="filter-title">
+                                        FILTERS
+                                    </div>
+
+                                    <div class="filter-items-container ember-view">
+                                        <button data-test-id="filter-view-search" class="app-icon-btn app-icon-btn--filter-search ">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" class="app-icon app-icon--small"><path fill="#183247" d="M11.015 11.95c-2.641 2.17-6.557 2.013-9.033-.464-2.635-2.635-2.644-6.898-.019-9.523s6.888-2.616 9.523.019c2.477 2.476 2.633 6.392.464 9.033l3.855 3.855c.26.26.26.679.002.937a.662.662 0 01-.937-.002l-3.855-3.855zM2.902 2.902C.793 5.01.8 8.435 2.917 10.552c2.116 2.116 5.541 2.123 7.65.015 2.108-2.109 2.101-5.534-.015-7.65C8.435.8 5.01.793 2.902 2.902z"></path></svg>
+                                        </button>
+                                        <!----><form class="app-form ember-view">
+                                            <div class="ember-view">
+                                                <occluded-content class="occluded-content" style="height: 0px;"></occluded-content>        <div data-test-item="Agents" data-test-id="filter-item" class="filter-item ember-view">
+                                                    <div title="Agents" class="filter-field-title" data-test-filter-label="Agents">
+                                                        Agents
+                                                    </div>
+
+                                                    <div class="ember-view">
+                                                        <div class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember792" tabindex="0" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-controls="ember-power-select-options-ember792" placeholder="Any" aria-activedescendant="-1" aria-label="Agents combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Groups" data-test-id="filter-item" class="filter-item group-filter-item ember-view">
+                                                    <div title="Groups" class="filter-field-title" data-test-filter-label="Groups">
+                                                        Groups
+                                                    </div>
+
+                                                    <div class="ember-view">
+                                                        <div class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember801" tabindex="0" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-controls="ember-power-select-options-ember801" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="Groups combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Created" data-test-id="filter-item" class="filter-item ember-view">
+                                                    <div title="Created" class="filter-field-title" data-test-filter-label="Created">
+                                                        Created
+                                                    </div>
+
+                                                    <div class="ember-view">
+                                                        <div class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember809" tabindex="0" class="ember-power-select-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div data-test-id="trigger-power-select" class="ellipsis ember-view">
+                                                                    <span class="ember-power-select-selected-item">
+                                                                        <span class="ember-view">
+                                                                            <!---->  <span class="label" data-test-id="Last 30 days">Last 30 days</span>
+
+
+                                                                            <!---->
+                                                                        </span>
+
+
+                                                                    </span>
+                                                                    <!----><span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+
+                                                        <!---->
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Resolution due by" data-test-id="filter-item"  class="filter-item ember-view">
+                                                    <div title="Resolution due by" class="filter-field-title" data-test-filter-label="Resolution due by">
+                                                        Resolution due by
+                                                    </div>
+
+                                                    <div class="ember-view">
+                                                        <div class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember819" tabindex="0" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"  aria-controls="ember-power-select-options-ember819" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="Resolution due by combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div> 
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="First response due by" data-test-id="filter-item" class="filter-item ember-view">
+                                                    <div title="First response due by" class="filter-field-title" data-test-filter-label="First response due by">
+                                                        First response due by
+                                                    </div>
+
+                                                    <div class="ember-view">
+                                                        <div class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember828" tabindex="0" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"  aria-controls="ember-power-select-options-ember828" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="First response due by combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Next response due by" data-test-id="filter-item" class="filter-item ember-view">
+                                                    <div title="Next response due by" class="filter-field-title" data-test-filter-label="Next response due by">
+                                                        Next response due by
+                                                    </div>
+
+                                                    <div class="ember-view">
+                                                        <div class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember837" tabindex="0" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-controls="ember-power-select-options-ember837" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="Next response due by combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Skill" data-test-id="filter-item" class="filter-item ember-view">
+                                                    <div title="Skill" class="filter-field-title" data-test-filter-label="Skill">
+                                                        Skill
+                                                    </div>
+
+                                                    <div class="ember-view">
+                                                        <div class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember846" tabindex="0" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-controls="ember-power-select-options-ember846" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="Skill combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Status" data-test-id="filter-item" class="filter-item ember-view">
+                                                    <div title="Status" class="filter-field-title" data-test-filter-label="Status">
+                                                        Status
+                                                    </div>
+
+                                                    <div class="ember-view">
+                                                        <div class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember855" tabindex="0" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-controls="ember-power-select-options-ember855" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="Status combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Priority" data-test-id="filter-item" class="filter-item ember-view">
+                                                    <div title="Priority" class="filter-field-title" data-test-filter-label="Priority">
+                                                        Priority
+                                                    </div>
+
+                                                    <div class="ember-view">
+                                                        <div class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember864" tabindex="0" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul id="ember-power-select-multiple-options-ember864" class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="ember-power-select-trigger-multiple-input-ember864" aria-controls="ember-power-select-options-ember864" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="Priority combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div id="ember-basic-dropdown-content-ember864" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Type" data-test-id="filter-item" id="ember868" class="filter-item ember-view">
+                                                    <div title="Type" class="filter-field-title" data-test-filter-label="Type">
+                                                        Type
+                                                    </div>
+
+                                                    <div id="ember869" class="ember-view">
+                                                        <div id="ember870" class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember873" tabindex="0" data-ebd-id="ember873-trigger" role="" id="ember874" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div id="ember875" class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul id="ember-power-select-multiple-options-ember873" class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="ember-power-select-trigger-multiple-input-ember873" aria-controls="ember-power-select-options-ember873" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="Type combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div id="ember-basic-dropdown-content-ember873" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Source" data-test-id="filter-item" id="ember877" class="filter-item ember-view">
+                                                    <div title="Source" class="filter-field-title" data-test-filter-label="Source">
+                                                        Source
+                                                    </div>
+
+                                                    <div id="ember878" class="ember-view">
+                                                        <div id="ember879" class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember882" tabindex="0" data-ebd-id="ember882-trigger" role="" id="ember883" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div id="ember884" class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul id="ember-power-select-multiple-options-ember882" class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="ember-power-select-trigger-multiple-input-ember882" aria-controls="ember-power-select-options-ember882" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="Source combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div id="ember-basic-dropdown-content-ember882" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Tags" data-test-id="filter-item" id="ember886" class="filter-item ember-view">
+                                                    <div title="Tags" class="filter-field-title" data-test-filter-label="Tags">
+                                                        Tags
+                                                    </div>
+
+                                                    <div id="ember887" class="ember-view">
+                                                        <div id="ember888" class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember891" tabindex="0" data-ebd-id="ember891-trigger" role="" id="ember892" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div id="ember893" class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul id="ember-power-select-multiple-options-ember891" class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="ember-power-select-trigger-multiple-input-ember891" aria-controls="ember-power-select-options-ember891" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="Tags combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div id="ember-basic-dropdown-content-ember891" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Companies" data-test-id="filter-item" id="ember895" class="filter-item ember-view">
+                                                    <div title="Companies" class="filter-field-title" data-test-filter-label="Companies">
+                                                        Companies
+                                                    </div>
+
+                                                    <div id="ember896" class="ember-view">
+                                                        <div id="ember897" class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember900" tabindex="0" data-ebd-id="ember900-trigger" role="" id="ember901" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div id="ember902" class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul id="ember-power-select-multiple-options-ember900" class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="ember-power-select-trigger-multiple-input-ember900" aria-controls="ember-power-select-options-ember900" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="Companies combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div id="ember-basic-dropdown-content-ember900" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div data-test-item="Contacts" data-test-id="filter-item" id="ember904" class="filter-item ember-view">
+                                                    <div title="Contacts" class="filter-field-title" data-test-filter-label="Contacts">
+                                                        Contacts
+                                                    </div>
+
+                                                    <div id="ember905" class="ember-view">
+                                                        <div id="ember906" class="__ui-form__select-field ember-view">
+                                                            <!---->
+
+                                                            <div aria-activedescendant="-1" aria-owns="ember-basic-dropdown-content-ember909" tabindex="0" data-ebd-id="ember909-trigger" role="" id="ember910" class="ember-power-select-trigger ember-power-select-multiple-trigger ember-basic-dropdown-trigger ember-view">
+                                                                <div id="ember911" class="__ui-form__select-field__trigger__power-select-multiple ember-view">
+                                                                    <ul id="ember-power-select-multiple-options-ember909" class="ember-power-select-multiple-options ">
+                                                                        <!---->
+                                                                        <input class="ember-power-select-trigger-multiple-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="ember-power-select-trigger-multiple-input-ember909" aria-controls="ember-power-select-options-ember909" style="width: 100%;" placeholder="Any" aria-activedescendant="-1" aria-label="Contacts combo box" data-test-id="trigger-power-select-multiple" type="search">
+                                                                    </ul>
+
+                                                                    <span class="ember-power-select-status-icon"></span>
+                                                                </div>
+                                                            </div>  <div id="ember-basic-dropdown-content-ember909" class="ember-basic-dropdown-content-placeholder" style="display: none;"></div>
+
+                                                            <!---->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <occluded-content class="occluded-content" style="height: 0px;"></occluded-content>
+                                                <!---->
+                                            </div>
+                                        </form><!----><!---->
+                                    </div>
+                                    <div class="filter-list-footer" data-test-id="filter-list-footer">
+                                        <button data-test-id="filter-apply" class="btn btn--primary filter-list-btn disabled" disabled="">
+                                            Apply
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+
+
+                        </div>
+                    </div>
+                </div>
+                <!---->
+                <!---->
+                <!---->
+                <!---->
+                <!---->
+                <!---->
+                <!---->
+            </div>
+
+
+
+
+
+        </div>
+    </div>
+</div>
+
+@*<div class="ListViewLoader">
+    <div>
+        <div class="lds-css ng-scope">
+            <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+        </div>
+    </div>
+ </div>*@
+<div class="displayNone">
+    <a href="@(AppConfig.DomainSitePath)/Customer/AddCustomer" class="addManufacturerMagnific">@Localize.T("Add New Customer")</a>
+</div>

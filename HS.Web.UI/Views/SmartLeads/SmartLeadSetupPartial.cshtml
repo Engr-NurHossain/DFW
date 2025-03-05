@@ -1,0 +1,386 @@
+﻿@model HS.Entities.Customer
+@{
+    Layout = null;
+    string Address = HS.Web.UI.Helper.AddressHelper.MakeAddress(Model);
+    HS.Facade.GlobalSettingsFacade globalSettings = new HS.Facade.GlobalSettingsFacade();
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+    int emergencyrequired = globalSettings.GetEmergencyContactRequired(CurrentUser.CompanyId.Value);
+    bool oneServicerequired = globalSettings.GetSmartSetupOneServiceRequired(CurrentUser.CompanyId.Value);
+
+    string ConvertMessage = ViewBag.IsLead == 1 ? "Do you want to convert lead to customer?": "Do you want to update the contract? All data of previous contract will be removed.";
+    
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+
+<script>
+    var ConvertLeadToCustomerMsg = "@(Localize.T(ConvertMessage))";
+    var ConvertLeadToCustomerErrorMsg = "@(Localize.T("For converting lead to customer name and email required."))!";
+    var LeadIdVal = '@ViewBag.LeadSetupId';
+    var LeadId = '@ViewBag.LeadSetupId';
+    var LeadGuid = '@ViewBag.LeadGuid';
+    var setupClick = '@ViewBag.setupClick';
+    var FirstSetup = '@ViewBag.FirstSetup';
+    var SecondSetup = '@ViewBag.SecondSetup';
+    var ThirdSetup = '@ViewBag.ThirdSetup';
+    var FourthSetup = '@ViewBag.FourthSetup';
+    var FifthSetup = '@ViewBag.FifthSetup';
+    var IsLead = '@ViewBag.IsLead';
+    var HasCreditCheck = '@ViewBag.HasCreditCheck';
+    var contactreq = '@emergencyrequired';
+    var oneServicerequired = '@oneServicerequired';
+    var DefaultDate = '@DateTime.Now.ToString("MM/dd/yyyy")';
+    var DefaultPayEffectiveDate = '@DateTime.Now.AddMonths(1).ToString("MM/dd/yyyy")';
+</script>
+
+@Styles.Render("~/styles/SmartLeadSetupParialCS")
+@Scripts.Render("~/scripts/SmartLeadSetupParialJS")
+
+<div class="custom_container container lead_setup_partial_loader">
+
+</div>
+<div class="custom_container container lead_setup_partial_outer">
+    <div class="lead_details_title_div">
+        <div class="slsp_top_header lead_detail_title_left">
+            <a class="bak_lead_list bk-btn" href="javascript:void(0)" id-val="@ViewBag.IsLead"><i class="fa fa-chevron-left" aria-hidden="true"></i></a>
+            
+            <div class="lead_detail_name_title left">
+                @{
+                    if (Model.TransferCustomerId != null && Model.TransferCustomerId.HasValue && Model.TransferCustomerId.Value > 0)
+                    {
+                        if (Model.Type == "Commercial")
+                        {
+                            if (!string.IsNullOrWhiteSpace(Address))
+                            {
+                               
+                                <span class="cus_name_style">@Model.DisplayName (@Localize.T("Transferred From ")<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)" target="_blank">@(!string.IsNullOrWhiteSpace(Model.TransferCustomerName) ? Model.TransferCustomerName : "")</a>)(<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)" target="_blank">@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)</a>)</span><img class="leadMapPopup green-tooltip" data-id="@Model.Id" src="~/Content/img/location.png" style="cursor:pointer;padding: 5px;" data-toggle="tooltip" title="View Map" /><span class="lead_detail_title_address">@Html.Raw(Address)</span>
+                                    <span title="@Localize.T("Commercial")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="hospital-alt" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-hospital-alt fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M544 96H416V32c0-17.7-14.3-32-32-32H192c-17.7 0-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32v368c0 8.8 7.2 16 16 16h544c8.8 0 16-7.2 16-16V128c0-17.7-14.3-32-32-32zM160 436c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm160 128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm16-170c0 3.3-2.7 6-6 6h-26v26c0 3.3-2.7 6-6 6h-20c-3.3 0-6-2.7-6-6v-26h-26c-3.3 0-6-2.7-6-6v-20c0-3.3 2.7-6 6-6h26V86c0-3.3 2.7-6 6-6h20c3.3 0 6 2.7 6 6v26h26c3.3 0 6 2.7 6 6v20zm144 298c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40z" class=""></path></svg></span>
+                              
+
+                            }
+                            else
+                            {
+                              
+            <span class="cus_name_style">@Model.DisplayName (@Localize.T("Transferred From ")<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)" target="_blank">@(!string.IsNullOrWhiteSpace(Model.TransferCustomerName) ? Model.TransferCustomerName : "")</a>)(<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)" target="_blank">@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)</a>)</span>
+                                    <span title="@Localize.T("Commercial")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="hospital-alt" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-hospital-alt fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M544 96H416V32c0-17.7-14.3-32-32-32H192c-17.7 0-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32v368c0 8.8 7.2 16 16 16h544c8.8 0 16-7.2 16-16V128c0-17.7-14.3-32-32-32zM160 436c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm160 128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm16-170c0 3.3-2.7 6-6 6h-26v26c0 3.3-2.7 6-6 6h-20c-3.3 0-6-2.7-6-6v-26h-26c-3.3 0-6-2.7-6-6v-20c0-3.3 2.7-6 6-6h26V86c0-3.3 2.7-6 6-6h20c3.3 0 6 2.7 6 6v26h26c3.3 0 6 2.7 6 6v20zm144 298c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40z" class=""></path></svg></span>
+                             
+
+                            }
+                        }
+                        else
+                        {
+                            string TitleName = Model.FirstName + " " + Model.LastName;
+                            if (Model.MiddleName != null)
+                            {
+                                TitleName = Model.FirstName + " " + Model.MiddleName + " " + Model.LastName;
+                            }
+                            if (!string.IsNullOrWhiteSpace(Address))
+                            {
+            <span class="cus_name_style">@TitleName (@Localize.T("Transferred From ")<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)" target="_blank">@(!string.IsNullOrWhiteSpace(Model.TransferCustomerName) ? Model.TransferCustomerName : "")</a>)(<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)" target="_blank">@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)</a>)</span><img class="leadMapPopup green-tooltip" data-id="@Model.Id" src="~/Content/img/location.png" style="cursor:pointer;padding: 5px;" data-toggle="tooltip" title="View Map" /><span class="lead_detail_title_address">@Html.Raw(Address)</span>
+                                <span title="@Localize.T("Residential")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="house-damage" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-house-damage fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M288 114.96L69.47 307.71c-1.62 1.46-3.69 2.14-5.47 3.35V496c0 8.84 7.16 16 16 16h149.23L192 439.19l104.11-64-60.16-119.22L384 392.75l-104.11 64L319.81 512H496c8.84 0 16-7.16 16-16V311.1c-1.7-1.16-3.72-1.82-5.26-3.2L288 114.96zm282.69 121.32L512 184.45V48c0-8.84-7.16-16-16-16h-64c-8.84 0-16 7.16-16 16v51.69L314.75 10.31C307.12 3.45 297.56.01 288 0s-19.1 3.41-26.7 10.27L5.31 236.28c-6.57 5.91-7.12 16.02-1.21 22.6l21.4 23.82c5.9 6.57 16.02 7.12 22.6 1.21L277.42 81.63c6.05-5.33 15.12-5.33 21.17 0L527.91 283.9c6.57 5.9 16.69 5.36 22.6-1.21l21.4-23.82c5.9-6.57 5.36-16.69-1.22-22.59z" class=""></path></svg></span>
+
+
+                            }
+                            else
+                            {
+            <span class="cus_name_style">@TitleName (@Localize.T("Transferred From ")<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)" target="_blank">@(!string.IsNullOrWhiteSpace(Model.TransferCustomerName) ? Model.TransferCustomerName : "")</a>)(<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)" target="_blank">@(Model.TransferCustomerId.HasValue ? Model.TransferCustomerId.Value : 0)</a>)</span>
+                                <span title="@Localize.T("Residential")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="house-damage" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-house-damage fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M288 114.96L69.47 307.71c-1.62 1.46-3.69 2.14-5.47 3.35V496c0 8.84 7.16 16 16 16h149.23L192 439.19l104.11-64-60.16-119.22L384 392.75l-104.11 64L319.81 512H496c8.84 0 16-7.16 16-16V311.1c-1.7-1.16-3.72-1.82-5.26-3.2L288 114.96zm282.69 121.32L512 184.45V48c0-8.84-7.16-16-16-16h-64c-8.84 0-16 7.16-16 16v51.69L314.75 10.31C307.12 3.45 297.56.01 288 0s-19.1 3.41-26.7 10.27L5.31 236.28c-6.57 5.91-7.12 16.02-1.21 22.6l21.4 23.82c5.9 6.57 16.02 7.12 22.6 1.21L277.42 81.63c6.05-5.33 15.12-5.33 21.17 0L527.91 283.9c6.57 5.9 16.69 5.36 22.6-1.21l21.4-23.82c5.9-6.57 5.36-16.69-1.22-22.59z" class=""></path></svg></span>
+
+
+                            }
+                        }
+                    }
+                    else if (Model.MoveCustomerId != new Guid())
+                    {
+                        if (Model.Type == "Commercial")
+                        {
+                            if (!string.IsNullOrWhiteSpace(Address))
+                            {
+                           
+            <span class="cus_name_style">@Model.DisplayName (@Localize.T("Moved From ")<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)" target="_blank">@(!string.IsNullOrWhiteSpace(Model.MovedCustomerName) ? Model.MovedCustomerName : "")</a>)(<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)" target="_blank">@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)</a>)</span><img class="leadMapPopup green-tooltip" data-id="@Model.Id" src="~/Content/img/location.png" style="cursor:pointer;padding: 5px;" data-toggle="tooltip" title="View Map" /><span class="lead_detail_title_address">@Html.Raw(Address)</span>
+                                    <span title="@Localize.T("Commercial")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="hospital-alt" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-hospital-alt fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M544 96H416V32c0-17.7-14.3-32-32-32H192c-17.7 0-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32v368c0 8.8 7.2 16 16 16h544c8.8 0 16-7.2 16-16V128c0-17.7-14.3-32-32-32zM160 436c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm160 128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm16-170c0 3.3-2.7 6-6 6h-26v26c0 3.3-2.7 6-6 6h-20c-3.3 0-6-2.7-6-6v-26h-26c-3.3 0-6-2.7-6-6v-20c0-3.3 2.7-6 6-6h26V86c0-3.3 2.7-6 6-6h20c3.3 0 6 2.7 6 6v26h26c3.3 0 6 2.7 6 6v20zm144 298c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40z" class=""></path></svg></span>
+                            
+
+                            }
+                            else
+                            {
+                               
+            <span class="cus_name_style">@Model.DisplayName (@Localize.T("Moved From ")<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)" target="_blank">@(!string.IsNullOrWhiteSpace(Model.MovedCustomerName) ? Model.MovedCustomerName : "")</a>)(<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)" target="_blank">@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)</a>)</span>
+                                    <span title="@Localize.T("Commercial")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="hospital-alt" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-hospital-alt fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M544 96H416V32c0-17.7-14.3-32-32-32H192c-17.7 0-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32v368c0 8.8 7.2 16 16 16h544c8.8 0 16-7.2 16-16V128c0-17.7-14.3-32-32-32zM160 436c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm160 128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm16-170c0 3.3-2.7 6-6 6h-26v26c0 3.3-2.7 6-6 6h-20c-3.3 0-6-2.7-6-6v-26h-26c-3.3 0-6-2.7-6-6v-20c0-3.3 2.7-6 6-6h26V86c0-3.3 2.7-6 6-6h20c3.3 0 6 2.7 6 6v26h26c3.3 0 6 2.7 6 6v20zm144 298c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40z" class=""></path></svg></span>
+                          
+
+                            }
+                        }
+                        else
+                        {
+                            string TitleName = Model.FirstName + " " + Model.LastName;
+                            if (Model.MiddleName != null)
+                            {
+                                TitleName = Model.FirstName + " " + Model.MiddleName + " " + Model.LastName;
+                            }
+                            if (!string.IsNullOrWhiteSpace(Address))
+                            {
+            <span class="cus_name_style">@TitleName (@Localize.T("Moved From ")<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)" target="_blank">@(!string.IsNullOrWhiteSpace(Model.MovedCustomerName) ? Model.MovedCustomerName : "")</a>)(<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)" target="_blank">@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)</a>)</span><img class="leadMapPopup green-tooltip" data-id="@Model.Id" src="~/Content/img/location.png" style="cursor:pointer;padding: 5px;" data-toggle="tooltip" title="View Map" /><span class="lead_detail_title_address">@Html.Raw(Address)</span>
+                                <span title="@Localize.T("Residential")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="house-damage" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-house-damage fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M288 114.96L69.47 307.71c-1.62 1.46-3.69 2.14-5.47 3.35V496c0 8.84 7.16 16 16 16h149.23L192 439.19l104.11-64-60.16-119.22L384 392.75l-104.11 64L319.81 512H496c8.84 0 16-7.16 16-16V311.1c-1.7-1.16-3.72-1.82-5.26-3.2L288 114.96zm282.69 121.32L512 184.45V48c0-8.84-7.16-16-16-16h-64c-8.84 0-16 7.16-16 16v51.69L314.75 10.31C307.12 3.45 297.56.01 288 0s-19.1 3.41-26.7 10.27L5.31 236.28c-6.57 5.91-7.12 16.02-1.21 22.6l21.4 23.82c5.9 6.57 16.02 7.12 22.6 1.21L277.42 81.63c6.05-5.33 15.12-5.33 21.17 0L527.91 283.9c6.57 5.9 16.69 5.36 22.6-1.21l21.4-23.82c5.9-6.57 5.36-16.69-1.22-22.59z" class=""></path></svg></span>
+
+
+                            }
+                            else
+                            {
+            <span class="cus_name_style">@TitleName (@Localize.T("Moved From ")<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)" target="_blank">@(!string.IsNullOrWhiteSpace(Model.MovedCustomerName) ? Model.MovedCustomerName : "")</a>)(<a class="cus-anchor" href="/Customer/Customerdetail/?id=@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)" target="_blank">@(Model.MovedCustomerId > 0 ? Model.MovedCustomerId : 0)</a>)</span>
+                                <span title="@Localize.T("Residential")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="house-damage" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-house-damage fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M288 114.96L69.47 307.71c-1.62 1.46-3.69 2.14-5.47 3.35V496c0 8.84 7.16 16 16 16h149.23L192 439.19l104.11-64-60.16-119.22L384 392.75l-104.11 64L319.81 512H496c8.84 0 16-7.16 16-16V311.1c-1.7-1.16-3.72-1.82-5.26-3.2L288 114.96zm282.69 121.32L512 184.45V48c0-8.84-7.16-16-16-16h-64c-8.84 0-16 7.16-16 16v51.69L314.75 10.31C307.12 3.45 297.56.01 288 0s-19.1 3.41-26.7 10.27L5.31 236.28c-6.57 5.91-7.12 16.02-1.21 22.6l21.4 23.82c5.9 6.57 16.02 7.12 22.6 1.21L277.42 81.63c6.05-5.33 15.12-5.33 21.17 0L527.91 283.9c6.57 5.9 16.69 5.36 22.6-1.21l21.4-23.82c5.9-6.57 5.36-16.69-1.22-22.59z" class=""></path></svg></span>
+
+
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (Model.Type == "Commercial")
+                        {
+                            if (!string.IsNullOrWhiteSpace(Address))
+                            {
+                               
+                                    <span class="cus_name_style">@Model.DisplayName</span><img class="leadMapPopup green-tooltip" data-id="@Model.Id" src="~/Content/img/location.png" style="cursor:pointer;padding: 5px;" data-toggle="tooltip" title="View Map" /><span class="lead_detail_title_address">@Html.Raw(Address)</span>
+                                    <span title="@Localize.T("Commercial")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="hospital-alt" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-hospital-alt fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M544 96H416V32c0-17.7-14.3-32-32-32H192c-17.7 0-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32v368c0 8.8 7.2 16 16 16h544c8.8 0 16-7.2 16-16V128c0-17.7-14.3-32-32-32zM160 436c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm160 128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm16-170c0 3.3-2.7 6-6 6h-26v26c0 3.3-2.7 6-6 6h-20c-3.3 0-6-2.7-6-6v-26h-26c-3.3 0-6-2.7-6-6v-20c0-3.3 2.7-6 6-6h26V86c0-3.3 2.7-6 6-6h20c3.3 0 6 2.7 6 6v26h26c3.3 0 6 2.7 6 6v20zm144 298c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40z" class=""></path></svg></span>
+                          
+
+                            }
+                            else
+                            {
+                           
+                                    <span class="cus_name_style">@Model.DisplayName</span>
+                                    <span title="@Localize.T("Commercial")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="hospital-alt" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-hospital-alt fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M544 96H416V32c0-17.7-14.3-32-32-32H192c-17.7 0-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32v368c0 8.8 7.2 16 16 16h544c8.8 0 16-7.2 16-16V128c0-17.7-14.3-32-32-32zM160 436c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm160 128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm16-170c0 3.3-2.7 6-6 6h-26v26c0 3.3-2.7 6-6 6h-20c-3.3 0-6-2.7-6-6v-26h-26c-3.3 0-6-2.7-6-6v-20c0-3.3 2.7-6 6-6h26V86c0-3.3 2.7-6 6-6h20c3.3 0 6 2.7 6 6v26h26c3.3 0 6 2.7 6 6v20zm144 298c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40zm0-128c0 6.6-5.4 12-12 12h-40c-6.6 0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v40z" class=""></path></svg></span>
+                        
+
+                            }
+                        }
+                        else
+                        {
+                            string TitleName = Model.FirstName + " " + Model.LastName;
+                            if (Model.MiddleName != null)
+                            {
+                                TitleName = Model.FirstName + " " + Model.MiddleName + " " + Model.LastName;
+                            }
+                            if (!string.IsNullOrWhiteSpace(Address))
+                            {
+                                <span class="cus_name_style">@TitleName</span><img class="leadMapPopup green-tooltip" data-id="@Model.Id" src="~/Content/img/location.png" style="cursor:pointer;padding: 5px;" data-toggle="tooltip" title="View Map" /><span class="lead_detail_title_address">@Html.Raw(Address)</span>
+                                <span title="@Localize.T("Residential")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="house-damage" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-house-damage fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M288 114.96L69.47 307.71c-1.62 1.46-3.69 2.14-5.47 3.35V496c0 8.84 7.16 16 16 16h149.23L192 439.19l104.11-64-60.16-119.22L384 392.75l-104.11 64L319.81 512H496c8.84 0 16-7.16 16-16V311.1c-1.7-1.16-3.72-1.82-5.26-3.2L288 114.96zm282.69 121.32L512 184.45V48c0-8.84-7.16-16-16-16h-64c-8.84 0-16 7.16-16 16v51.69L314.75 10.31C307.12 3.45 297.56.01 288 0s-19.1 3.41-26.7 10.27L5.31 236.28c-6.57 5.91-7.12 16.02-1.21 22.6l21.4 23.82c5.9 6.57 16.02 7.12 22.6 1.21L277.42 81.63c6.05-5.33 15.12-5.33 21.17 0L527.91 283.9c6.57 5.9 16.69 5.36 22.6-1.21l21.4-23.82c5.9-6.57 5.36-16.69-1.22-22.59z" class=""></path></svg></span>
+
+
+                            }
+                            else
+                            {
+                                <span class="cus_name_style">@TitleName</span>
+                                <span title="@Localize.T("Residential")"><svg style="margin-top:10px; cursor:pointer;" height="15px" width="15px" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="house-damage" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" class="svg-inline--fa fa-house-damage fa-w-18 fa-fw fa-2x"><path fill="currentColor" d="M288 114.96L69.47 307.71c-1.62 1.46-3.69 2.14-5.47 3.35V496c0 8.84 7.16 16 16 16h149.23L192 439.19l104.11-64-60.16-119.22L384 392.75l-104.11 64L319.81 512H496c8.84 0 16-7.16 16-16V311.1c-1.7-1.16-3.72-1.82-5.26-3.2L288 114.96zm282.69 121.32L512 184.45V48c0-8.84-7.16-16-16-16h-64c-8.84 0-16 7.16-16 16v51.69L314.75 10.31C307.12 3.45 297.56.01 288 0s-19.1 3.41-26.7 10.27L5.31 236.28c-6.57 5.91-7.12 16.02-1.21 22.6l21.4 23.82c5.9 6.57 16.02 7.12 22.6 1.21L277.42 81.63c6.05-5.33 15.12-5.33 21.17 0L527.91 283.9c6.57 5.9 16.69 5.36 22.6-1.21l21.4-23.82c5.9-6.57 5.36-16.69-1.22-22.59z" class=""></path></svg></span>
+
+
+                            }
+                        }
+                    }
+                }
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Model.EmailAddress))
+            {
+                <span class="btn green_button fa fa-envelope  custom-envelope btn-envelope" style="cursor:pointer;" data-toggle="tooltip" title="@Model.EmailAddress"></span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.PrimaryPhone))
+            {
+                <span class="btn green_button fa fa-phone  custom-envelope btn-envelope" style="cursor:pointer;" data-toggle="tooltip" title="@Model.PrimaryPhone"></span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.SecondaryPhone))
+            {
+                <span class="btn green_button fa fa-phone  custom-envelope btn-envelope" style="cursor:pointer;" data-toggle="tooltip" title="@Model.SecondaryPhone"></span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.CellNo))
+            {
+        <span class="btn green_button left custom_phone_icon_style btn-envelope" style="cursor:pointer;" data-toggle="tooltip" title="@Model.CellNo">
+            <svg xmlns="" x="0px" y="0px"
+                 width="25" height="25"
+                 viewBox="0 0 172 172"
+                 style=" fill:#000000;">
+                <g fill="none" fill-rule="nonzero" stroke="none" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" stroke-dasharray="" stroke-dashoffset="0" font-family="none" font-weight="none" font-size="none" text-anchor="none" style="mix-blend-mode: normal"><path d="M0,172v-172h172v172z" fill="none"></path><g fill="#ffffff"><path d="M126.04375,-0.07839c-3.16203,0.04943 -5.68705,2.6496 -5.64375,5.81172v5.73333h-68.8c-6.33533,0 -11.46667,5.13133 -11.46667,11.46667v126.13333c0,6.33533 5.13133,11.46667 11.46667,11.46667h68.8c6.33533,0 11.46667,-5.13133 11.46667,-11.46667v-126.13333v-11.46667v-5.73333c0.02122,-1.54972 -0.58581,-3.04203 -1.68279,-4.1369c-1.09698,-1.09487 -2.59045,-1.69903 -4.14013,-1.67482zM51.6,22.93333h68.8v34.4h-68.8zM63.06667,80.26667c3.1648,0 5.73333,2.56853 5.73333,5.73333c0,3.1648 -2.56853,5.73333 -5.73333,5.73333c-3.1648,0 -5.73333,-2.56853 -5.73333,-5.73333c0,-3.1648 2.56853,-5.73333 5.73333,-5.73333zM86,80.26667c3.1648,0 5.73333,2.56853 5.73333,5.73333c0,3.1648 -2.56853,5.73333 -5.73333,5.73333c-3.1648,0 -5.73333,-2.56853 -5.73333,-5.73333c0,-3.1648 2.56853,-5.73333 5.73333,-5.73333zM108.93333,80.26667c3.1648,0 5.73333,2.56853 5.73333,5.73333c0,3.1648 -2.56853,5.73333 -5.73333,5.73333c-3.1648,0 -5.73333,-2.56853 -5.73333,-5.73333c0,-3.1648 2.56853,-5.73333 5.73333,-5.73333zM63.06667,103.2c3.1648,0 5.73333,2.56853 5.73333,5.73333c0,3.1648 -2.56853,5.73333 -5.73333,5.73333c-3.1648,0 -5.73333,-2.56853 -5.73333,-5.73333c0,-3.1648 2.56853,-5.73333 5.73333,-5.73333zM86,103.2c3.1648,0 5.73333,2.56853 5.73333,5.73333c0,3.1648 -2.56853,5.73333 -5.73333,5.73333c-3.1648,0 -5.73333,-2.56853 -5.73333,-5.73333c0,-3.1648 2.56853,-5.73333 5.73333,-5.73333zM108.93333,103.2c3.1648,0 5.73333,2.56853 5.73333,5.73333c0,3.1648 -2.56853,5.73333 -5.73333,5.73333c-3.1648,0 -5.73333,-2.56853 -5.73333,-5.73333c0,-3.1648 2.56853,-5.73333 5.73333,-5.73333zM63.06667,126.13333c3.1648,0 5.73333,2.56853 5.73333,5.73333c0,3.1648 -2.56853,5.73333 -5.73333,5.73333c-3.1648,0 -5.73333,-2.56853 -5.73333,-5.73333c0,-3.1648 2.56853,-5.73333 5.73333,-5.73333zM86,126.13333c3.1648,0 5.73333,2.56853 5.73333,5.73333c0,3.1648 -2.56853,5.73333 -5.73333,5.73333c-3.1648,0 -5.73333,-2.56853 -5.73333,-5.73333c0,-3.1648 2.56853,-5.73333 5.73333,-5.73333zM108.93333,126.13333c3.1648,0 5.73333,2.56853 5.73333,5.73333c0,3.1648 -2.56853,5.73333 -5.73333,5.73333c-3.1648,0 -5.73333,-2.56853 -5.73333,-5.73333c0,-3.1648 2.56853,-5.73333 5.73333,-5.73333z"></path></g></g>
+            </svg>
+        </span>
+            }
+           
+        </div>
+    </div> 
+    <div class="breadcrumbs">
+        <div class="inner">
+            <nav>
+                <ul class="cf cd-breadcrumb triangle custom-icons">
+                    <li class="current lilist LoadPackage PackagedisableClick" id="LoadPackage" data-url="@(AppConfig.DomainSitePath)/SmartLeads/SmartPackagePartial?id=@ViewBag.LeadSetupId">
+                        <a href="javascript:void(0)">
+                            <span class="number_hide back_function">@Localize.T("1")</span>
+                            <span class="back_function">@Localize.T("Package Options")</span>
+                        </a>
+                    </li>
+                    <li class="lilist LoadService ServicedisableClick" id="LoadService" data-url="@(AppConfig.DomainSitePath)/SmartLeads/SmartServicePartial?LeadId=@ViewBag.LeadSetupId">
+                        <a href="javascript:void(0)">
+                            <span class="number_hide">@Localize.T("2")</span>
+                            <span>@Localize.T("Services")</span>
+                        </a>
+                    </li>
+                    <li class="lilist LoadEquipment EquipmentdisableClick" id="LoadEquipment" data-url="@(AppConfig.DomainSitePath)/SmartLeads/SmartEquipmentPartial?LeadId=@ViewBag.LeadSetupId">
+                        <a href="javascript:void(0)">
+                            <span class="number_hide">@Localize.T("3")</span>
+                            <span>@Localize.T("Equipment")</span>
+                        </a>
+                    </li>
+                    <li class="lilist LoadEmergency EmergencydisableClick" id="LoadEmergency" data-url="@(AppConfig.DomainSitePath)/SmartLeads/SmartAgreementDetails?id=@ViewBag.LeadSetupId">
+                        <a href="javascript:void(0)">
+                            <span class="number_hide">@Localize.T("4")</span>
+                            <span>@Localize.T("Agreement Details")</span>
+                        </a>
+                    </li>
+                    <li class="lilist LoadFinalize FinalizedisableClick" id="LoadFinalize" data-url="@(AppConfig.DomainSitePath)/SmartLeads/SmartAgreementSummary?id=@ViewBag.LeadSetupId&IsSummary=true" data-url-prev="/SmartLeads/SmartAgreementFinalize?id=@ViewBag.LeadSetupId" >
+                        <a href="javascript:void(0)">
+                            <span class="number_hide">@Localize.T("5")</span>
+                            <span>@Localize.T("Summary")</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <div class="tab-content" id="LoadLeadDetail">
+    </div>
+
+
+    <div class="row btn-top">
+        <div class="lead_setup_bottom_btn_container">
+            @if (ViewBag.DisableBtnCheck == "true" && ViewBag.IsLead == 0)
+            {
+                <button type="button" class="btn green_button" id="btnSavandNex" disabled>
+                    <i class="fa fa-floppy-o" aria-hidden="true"></i> <span>@Localize.T("Save & Next")</span>
+                </button>
+                <button onclick="ReceivePayments()" type="button" class="btn hidden" id="btnPayNow" disabled>
+                    <span>@Localize.T("Capture Payment")</span>
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn green_button" id="btnSavandNex">
+                    <i class="fa fa-floppy-o" aria-hidden="true"></i> <span>@Localize.T("Save & Next")</span>
+                </button>
+                <button onclick="ReceivePayments()" type="button" class="btn hidden" id="btnPayNow">
+                    <span>@Localize.T("Capture Payment")</span>
+                </button>
+            }
+
+
+
+            @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadSmartSetupConvertToSale))
+            {
+                if (ViewBag.IsLead == 1)
+                {
+                    string ButtonText = (ViewBag.IsLead == 1) ? "Convert To Sale" : "Update Contract";
+
+                    if (ViewBag.ConvertToSaleGlobal == false)
+                    {
+                        <button title="**All payment will be captured." type="button" class="btn hidden leadToCustomerConvert green_button" id="leadToCustomerConvert" data-id="@Model.Id" idval="@Model.CustomerId" idval1="@Model.FirstName @Model.LastName" idval2="@Model.EmailAddress">
+                            <i class="fa fa-copy" aria-hidden="true"></i> <span>@Localize.T(ButtonText)</span>
+                        </button>
+                    }
+                    else if (Model.IsAgreementSend == true)
+                    {
+                        <button title="**All payment will be captured." type="button" class="btn hidden leadToCustomerConvert green_button" id="leadToCustomerConvert" data-id="@Model.Id" idval="@Model.CustomerId" idval1="@Model.FirstName @Model.LastName" idval2="@Model.EmailAddress">
+                            <i class="fa fa-copy" aria-hidden="true"></i> <span>@Localize.T(ButtonText)</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="leadToCustomerConvertForAgreement hidden">
+                            <button title="**All payment will be captured." type="button" class="btn hidden leadToCustomerConvert green_button" id="leadToCustomerConvert" data-id="@Model.Id" idval="@Model.CustomerId" idval1="@Model.FirstName @Model.LastName" idval2="@Model.EmailAddress">
+                                <i class="fa fa-copy" aria-hidden="true"></i> <span>@Localize.T(ButtonText)</span>
+                            </button>
+                        </div>
+                    }
+                }
+            }
+            @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.SendISPCContract))
+            {
+                if (!string.IsNullOrEmpty(ViewBag.IsPcAppId))
+                {
+                    if (ViewBag.DisableBtnCheck == "true" && ViewBag.IsLead == 0)
+                    {
+                        <button onclick="SendEcontractISPC()" type="button" class="btn green_button hidden" id="btnsendIsPccontract" disabled>
+                            <span>@Localize.T("Send Econtract (ISPC)")</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <button onclick="SendEcontractISPC()" type="button" class="btn green_button hidden" id="btnsendIsPccontract">
+                            <span>@Localize.T("Send Econtract (ISPC)")</span>
+                        </button>
+                    }
+
+
+                }
+            }
+            @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.SendEcontractToBrinks))
+            {
+                if (ViewBag.DisableBtnCheck == "true" && ViewBag.IsLead == 0)
+                {
+
+                    <button onclick="SendEcontractSurvey()" type="button" class="btn green_button hidden" id="btnsendEcontract" disabled>
+                        <span>@Localize.T("Send Econtract")</span>
+                    </button>
+                }
+                else
+                {
+
+                    <button onclick="SendEcontractSurvey()" type="button" class="btn green_button hidden" id="btnsendEcontract">
+                        <span>@Localize.T("Send Econtract")</span>
+                    </button>
+                }
+
+
+
+            }
+
+            <span class="total_captured_amount"></span><span class="calculateAmount"></span>
+            <button type="button" class="btn green_button hidden" id="btnSavandClose">
+                <i class="fa fa-close" aria-hidden="true"></i> <span>@Localize.T("Save & Close")</span>
+            </button>
+            <div class="ContractTypeDiv hidden">
+                <div class="form-group clearfix">
+                    <span class="text-custom"><b>@Localize.T("Contract Type")</b></span>
+
+                    @* "Saved Contract Type was not displaying Saved Type" :: Old*@
+
+                    @*  @Html.DropDownList("ContractType", ViewBag.ContractType as List<SelectListItem>, new { @class = "form-control setfirstvalue", id = "ContractType", datarequired = "true" })*@
+
+                    @* "Saved Contract Type must display change" :: Start*@
+                    <select id="ContractType" name="ContractType" class="form-control setfirstvalue" datarequired="true">
+
+                        @foreach (SelectListItem option in ViewBag.ContractType)
+                        {
+                            <option value="@option.Value" @(option.Value == ViewBag.ContractType_customer ? "selected='selected'" : "")>@option.Text </option>
+
+                        }
+
+                    </select>
+                    @* "Saved Contract Type must display change" :: End*@
+
+                </div>
+               
+            </div>
+
+
+
+        </div>
+    
+    </div>
+</div>
+<div class="hidden">
+    <a class="LoadAgreementPopUp" style="display:none;" id="InstallationAgreement" href="@(AppConfig.DomainSitePath)/SmartLeads/GetSmartLeadsForPopUp?LeadId=@ViewBag.LeadSetupId&grant=false">@Localize.T("Save & Done ")</a>
+    <a class="LoadAgreementPopUp1" href="@(AppConfig.DomainSitePath)/Leads/GetLeadsForIpad?LeadId=@ViewBag.LeadSetupId" target="_blank">@Localize.T("Save & Done ")</a>
+</div>
+<div class="displayNone">
+    <a href="" class="MapManufacturerMagnific"></a>
+</div>

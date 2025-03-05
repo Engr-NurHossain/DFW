@@ -1,0 +1,245 @@
+﻿
+@model HS.Entities.UserProfile
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@{
+    Layout = null;
+    var profileUrl = HS.Framework.Utils.AppConfig.DomainSitePath + "/Content/Icons/blank_thumb_file_without_border.png";
+    if (!string.IsNullOrEmpty(Model.Employee.ProfilePicture))
+    {
+        profileUrl = Model.Employee.ProfilePicture;
+    }
+}
+<link href="~/Content/Css/CustomerDetails/CustomerDetailsCustom.css" rel="stylesheet" />
+<link href="~/Content/Css/UserManagement/UserProfile.css" rel="stylesheet" />
+<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>
+<script src="~/Content/Js/AddUser/userprofileupload.js"></script>
+<script>
+    var CustomerId = 0;
+    var IsUserPasswordMatched = function () {
+        if ($("#ProfileConfirmPassword").val() != $("#ProfilePassword").val()) {
+            $("#errConfirmPass").removeClass('hidden');
+            return false;
+        } else {
+            $("#errConfirmPass").addClass('hidden');
+            return true;
+        }
+    }
+    var empid = '@ViewBag.empid';
+    $(document).ready(function () {
+        $("#UploadedPath").val('@Model.Employee.ProfilePicture');
+        if ($("#UploadedPath").val() != "") {
+            $(".chooseFilebtn").addClass("hidden");
+            $(".changeFilebtn").removeClass("hidden");
+            $(".deleteDoc").removeClass("hidden");
+        }
+        $("#ProfileConfirmPassword").blur(function () {
+            IsUserPasswordMatched();
+        });
+        $(".LoaderWorkingDiv").hide();
+        $("#saveProfile").click(function () {
+            var url = domainurl + "/UserMgmt/SaveUserProfileInfo";
+            var param;
+            if ($("#ProfilePassword").val() != "" && $("#ProfileConfirmPassword").val() != "") {
+                if (IsUserPasswordMatched()) {
+                    param = JSON.stringify({
+                        empid: empid,
+                        fnum: $("#Employee_FirstName").val(),
+                        lnum: $("#Employee_LastName").val(),
+                        email: $("#Employee_Email").val(),
+                        street: $("#Employee_Street").val(),
+                        city: $("#City").val(),
+                        state: $("#State").val(),
+                        zip: $("#ZipCode").val(),
+                        phn: $("#Employee_Phone").val(),
+                        ssn: $("#Employee_SSN").val(),
+                        pass: $("#ProfileConfirmPassword").val(),
+                        profilepicture: $("#UploadedPath").val()
+                    })
+                }
+            }
+            else {
+                param = JSON.stringify({
+                    empid: empid,
+                    fnum: $("#Employee_FirstName").val(),
+                    lnum: $("#Employee_LastName").val(),
+                    email: $("#Employee_Email").val(),
+                    street: $("#Employee_Street").val(),
+                    city: $("#City").val(),
+                    state: $("#State").val(),
+                    zip: $("#ZipCode").val(),
+                    phn: $("#Employee_Phone").val(),
+                    ssn: $("#Employee_SSN").val(),
+                    profilepicture: $("#UploadedPath").val()
+                })
+            }
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result == true) {
+                        OpenSuccessMessageNew("Success!", data.message, function () {
+                            LoadUserProfile(true);
+                        });
+                    } else {
+                        OpenErrorMessageNew("Error!", data.message);
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $(".loader-div").hide();
+                    console.log(errorThrown);
+                }
+            });
+        })
+    })
+</script>
+<div class="user_profile_container">
+    <div class="user_profile_header">@Localize.T("User Profile")</div>
+    <div class="width-100p">
+        <ul class="nav nav-tabs user_profile_nav">
+            <li class="active"><a data-toggle="tab" href="#ProfileTab">@Localize.T("Profile")</a></li>
+            @*<li><a data-toggle="tab" href="#SecurityTab">@Localize.T("Security") </a></li>*@
+        </ul>
+
+        <div class="tab-content user_profile_body">
+
+            <div id="ProfileTab" class="tab-pane fade in active">
+                <div class="ci_block ci_margin_top">
+                    <div class="ci_header clearfix">
+                        <div>@Localize.T("User Profile Information")</div>
+                    </div>
+                    <div class="user_profile_info">
+                        <div class="user_profile_info_left">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label>@Localize.T("First Name")</label>
+                                    @Html.TextBoxFor(x => x.Employee.FirstName, new { @class = "form-control", placeholder = "First Name" })
+                                </div>
+                                <div class="col-md-3">
+                                    <label>@Localize.T("Last Name")</label>
+                                    @Html.TextBoxFor(x => x.Employee.LastName, new { @class = "form-control", placeholder = "Last Name" })
+                                </div>
+                                <div class="col-md-3">
+                                    <label>@Localize.T("User Name")</label>
+                                    @Html.TextBoxFor(x => x.Employee.UserName, new { @class = "form-control", @readonly = "read-only", placeholder = "User Name" })
+                                </div>
+                                <div class="col-md-3">
+                                    <label>@Localize.T("Email")</label>
+                                    @Html.TextBoxFor(x => x.Employee.Email, new { @class = "form-control", placeholder = "Email" })
+                                </div>
+                              
+                            </div>
+                            <div class="row user_profile_margin_top">
+                                <div class="col-md-3">
+                                    <label>@Localize.T("Street")</label>
+                                    @Html.TextBoxFor(x => x.Employee.Street, new { @class = "form-control", placeholder = "Street" })
+                                </div>
+                                <div class="col-md-3 CityState_insert_div">
+                                    <label>@Localize.T("Zip Code")</label>
+                                    <input type="text" class="form-control" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" value="@Model.Employee.ZipCode" id="ZipCode" placeholder="Zip Code" tabindex=10 />
+                                    <div class='tt-menu'>
+                                        <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                        <label>@Localize.T("City")</label>
+                                        @Html.TextBoxFor(x => x.Employee.City, new { @class = "form-control", style = "text-transform:capitalize", id = "City", placeholder = "City" })
+                                   
+                                </div>
+                                <div class="col-md-3">
+                                        <label>@Localize.T("State")</label>
+                                        @Html.TextBoxFor(x => x.Employee.State, new { @class = "form-control", id = "State", placeholder = "State" })
+                                  
+                                </div>
+                                
+                            </div>
+                            <div class="row user_profile_margin_top">
+                                
+                                <div class="col-md-3">
+                                    <label>@Localize.T("Phone")</label>
+                                    @Html.TextBoxFor(x => x.Employee.Phone, new { @class = "form-control", placeholder = "xxx-xxx-xxxx" })
+                                </div>
+                                <div class="col-md-3">
+                                    <label>@Localize.T("SSN")</label>
+                                    @Html.TextBoxFor(x => x.Employee.SSN, new { @class = "form-control", placeholder = "xxx-xx-xxxx" })
+                                </div>
+                                <div class="col-md-3">
+                                    <label>@Localize.T("Password")</label>
+                                    <input class="form-control" id="ProfilePassword" type="password" placeholder = "Password" />
+                                    <label class="hidden red label position-absolute" rel="ProfilePassword">@Localize.T("Minimum 6 characters required")</label>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>@Localize.T("Confirm Password")</label>
+                                    <input class="form-control" id="ProfileConfirmPassword" type="password" placeholder = "Confirm Password" />
+                                    <label class="hidden red label position-absolute" rel="ProfileConfirmPassword">@Localize.T("Minimum 6 characters required")</label>
+                                    <label id="errConfirmPass" class="label hidden red position-absolute"> @Localize.T("Password not matched.")</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="user_profile_info_right">
+                            <div class="">
+                                <label>
+                                    @Localize.T("Profile Picture")
+                                </label>
+
+                                <div class="txt-form Upload_Doc">
+                                    <div>
+                                        <div class="fileborder">
+                                            <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="@profileUrl" />
+                                        </div>
+                                        @*<input class="deleteDoc" type="image" src="~/Content/Icons/cross_update.png" />*@
+                                        <div class="deleteDoc cursor-pointer hidden" style="top:12px;right:12px">
+                                            <img src="~/Content/Icons/cross-image-delete.png" />
+                                        </div>
+                                        <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                                            <span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                                            <span class="changeFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                                        </div>
+                                        @*<div class="" style="margin-top: 15px;">
+                            <span id="UploadSuccessMessage" class="hidden">@Localize.T("File Uploaded Successfully..!")</span>
+                        </div>*@
+                                        <div class="LoadPreviewDocument hidden">
+                                            <div class="show-image PropertyLogoPreviewPic">
+                                                <div class="image-delete" data-id="">
+                                                    <img src="~/Content/Icons/cross-image-delete.png" />
+                                                </div>
+                                                <img class="Preview_Doc T360image-photo T360image" src="" />
+                                            </div>
+                                            <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                                                <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+                                        <div class="progress progress-striped active">
+                                            <div class="progress-bar progress-bar-success" style="width:0%">
+                                                <span> 0%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <label class="label red position-relative hidden" id="uploadfileerror">*@Localize.T("File upload required")</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <button class="btn" id="saveProfile"><i class="fa fa-floppy-o"></i> @Localize.T("Save")</button>
+                    </div>
+                </div>
+            </div>
+            @*<div id="SecurityTab" class="tab-pane fade">
+                    @*&nbsp;&nbsp;&nbsp;@Model..Name
+                    ViewBag.RoleName
+                </div>*@
+            <div class="">
+                <input type="hidden" id="UploadedPath" value="" />
+                <input type="file" name="CustomerFile" class="hidden" id="UploadedFile" accept="image/*" />
+            </div>
+        </div>
+    </div>
+</div>

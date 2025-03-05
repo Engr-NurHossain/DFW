@@ -1,0 +1,665 @@
+﻿@model HS.Entities.Custom.NMCOverview
+@{
+    Layout = null;
+}
+<link href="~/Content/Css/API/UCCCustomerDetails.css" rel="stylesheet" />
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<script src="~/Content/PikDay/js/pikaday.js"></script>
+<link href="~/Content/PikDay/css/pikaday.css" rel="stylesheet" />
+<script>
+    var NmcRefId = '@Model.SiteInfo.Cs_no';
+    var RemoveUnassociateCus = function (syncid) {
+    var url = domainurl + '/API/RemoveUnassociateCus';
+         var param = JSON.stringify({
+             CustomerGuidId: CustomerLoadGuid,
+             Platform: "NMC"
+         });
+    $.ajax({
+        type: "POST",
+        ajaxStart: $(".loader-div").show(),
+        url: url,
+        data: param,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+        success: function (data) {
+            if (data.result == true) {
+                OpenSuccessMessageNew("", data.message, function () {
+                         $(".NMCConnectTab").click();
+                })
+            }
+            else {
+                OpenErrorMessageNew("", data.message, function () {
+
+                })
+
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(errorThrown);
+        }
+    });
+    }
+    var TerminateAccount = function () {
+    var url = domainurl + '/API/PlaceNmcAccountOutOfService';
+         var param = JSON.stringify({
+             CsNo: NmcRefId,
+     
+         });
+    $.ajax({
+        type: "POST",
+        ajaxStart: $(".loader-div").show(),
+        url: url,
+        data: param,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+        success: function (data) {
+            if (data.result == true) {
+                OpenSuccessMessageNew("", data.message, function () {
+                         $(".NMCConnectTab").click();
+                })
+            }
+            else {
+                OpenErrorMessageNew("", data.message, function () {
+
+                })
+
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(errorThrown);
+        }
+    });
+}
+  var PlaceAccountOnTestConfirm = function () {
+    OpenConfirmationMessageNew("", "Do you want to place this account on test?", function () {
+        PlaceAccountOnTest();
+    });
+    }
+  
+var PlaceAccountOnTest = function () {
+
+    var url = domainurl + '/API/PlaceAccountOnTestNmc';
+    var param = JSON.stringify({
+        CustomerGuidId: CustomerLoadGuid,
+        CsNo:NmcRefId,
+        TestHour: $("#testHours").val(),
+        TestMinute: $("#testMinute").val()
+
+    })
+    $.ajax({
+        type: "POST",
+        ajaxStart: $(".loader-div").show(),
+        url: url,
+        data: param,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+        success: function (data) {
+            if (data.result == true) {
+                OpenSuccessMessageNew("", data.message, function () { });
+         
+            }
+            else {
+                OpenErrorMessageNew("", data.message, function () {
+
+                })
+
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(errorThrown);
+        }
+    });
+}
+     $("#editSite").click(function () {
+        OpenTopToBottomModal(String.format("/API/AddNMCCustomer?CustomerId={0}", CustomerLoadGuid))
+    });
+  
+    $(document).ready(function () {
+
+           var StartDate = new Pikaday(
+            {
+                field: $('#HistoryStartDatepicker')[0],
+                firstDay: 1,
+                maxDate: new Date('2030-12-31'),
+                format: 'MM/DD/YYYY',
+                yearRange: [2017, 2030],
+                bound: true,
+         
+      
+               });
+            var EndDate = new Pikaday(
+            {
+                field: $('#HistoryEndDatepicker')[0],
+                firstDay: 1,
+                maxDate: new Date('2030-12-31'),
+                format: 'MM/DD/YYYY',
+                yearRange: [2017, 2030],
+                bound: true,
+            
+      
+            });
+        $("#PlaceTest").click(function () {
+
+            PlaceAccountOnTestConfirm();
+        });
+        $(".Unassociate").click(function () {
+           
+            OpenConfirmationMessageNew("", "Do you want to remove this site?", function () {
+                RemoveUnassociateCus();
+            })
+        })
+       $(".Terminate").click(function () {
+           
+            OpenConfirmationMessageNew("", "Do you want to Terminate this Account?", function () {
+                TerminateAccount();
+            })
+        })
+
+        $("#HistoryData").click(function () {
+            var StartDate = $("#HistoryStartDatepicker").val();
+            var EndDate = $("#HistoryEndDatepicker").val();
+            if (StartDate != "" && EndDate != "") {
+                window.open('/API/GetAccountSignalHistory?CSNumber=' + NmcRefId + '&StartDate=' + StartDate + '&EndDate=' + EndDate, '_blank');
+            }
+            else {
+                OpenErrorMessageNew("","Start Date and End Date required.");
+            }
+             
+        })
+    })
+</script>
+<div class="nmc_cust_detail_container">
+
+
+
+
+    @if (Model != null && Model.SiteInfo.Site_name != null)
+    {
+        <div class="nmc_detail_top_bar">
+            <div class="brinks_top_bar_inner">
+                <select class="form-control" id="testHours">
+                    <option value="-1">Select Hour</option>
+                    @for (int i = 0; i < 25; i++)
+                    {
+                        <option value="@i">@i</option>
+                    }
+                </select>
+
+                <div class="input-group add-on">
+                    <select class="form-control" id="testMinute">
+                        <option value="-1">Select Minute</option>
+                        @for (int i = 0; i < 61; i++)
+                        {
+                            <option value="@i">@i</option>
+                        }
+                    </select>
+
+                    <div class="input-group-btn"> <button class="btn green_button" id="PlaceTest">Place On Test</button></div>
+                </div>
+                <input type="text" id="HistoryStartDatepicker" name="HistoryDatepicker" class="form-control" value="" placeholder="Start Date" />
+
+                <div class="input-group add-on">
+
+                    <input placeholder="End Date" type="text" id="HistoryEndDatepicker" name="HistoryDatepicker" class="form-control" value="" />
+                    <div class="input-group-btn"> <button class="btn green_button" id="HistoryData">Signal Histories</button></div>
+                </div>
+            </div>
+
+            @if ((Model != null && Model.SiteInfo.Site_name != null) && Model.SiteInfo.Sitestat_id.Replace(" ", "") == "A")
+            {
+                <button class="btn Terminate green_button" style="float: right;margin-left: 10px;" @*id="TerminateCustomer"*@>@Localize.T("Terminate Account")</button>
+            }
+
+            <button class="btn Unassociate green_button" @*id="TerminateCustomer"*@>@Localize.T("Unassociate Data")</button>
+
+        </div>
+
+        <div style="display:none" class="HasTerminate">This account is <span class="terminated">terminated</span></div>
+        <div class="ucc_info_holder">
+            <div class="ucc_info_block">
+                <div class="ucc_info_block_header">
+                    @Localize.T("General Information")
+                    <button class="btn edit-button editUccCustomer green-tooltip green_button" id="editSite" title="@Localize.T("Edit information")"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></button>
+                </div>
+
+                <div class="ucc_info_block_info">
+                    <table class="table">
+                        <tbody>
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.Cs_no))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Cs No")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.Cs_no</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.Site_name))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Site Name")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.Site_name</div>
+                                    </td>
+                                </tr>
+                            }
+
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.Sitestat_id))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Sitestat Id")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.Sitestat_id</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.Site_addr1))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Site Address1")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.Site_addr1</div>
+                                    </td>
+                                </tr>
+                            }
+
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.City_name))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("City Name")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.City_name</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.Country_name))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("County Name")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.Country_name</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.State_id))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("State Id")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.State_id</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.zip_code))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Zip Code")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.zip_code</div>
+                                    </td>
+                                </tr>
+                            }
+
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.Timezone_descr))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Timezone Description")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.Timezone_descr</div>
+                                    </td>
+                                </tr>
+                            }
+
+
+                            @if (Model.SiteInfo.Orig_install_date != null)
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Orig Install Date")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.Orig_install_date</div>
+                                    </td>
+                                </tr>
+                            }
+
+
+                            @*@if (!string.IsNullOrEmpty(Model.SiteInfo.Opt_2))
+                                {
+                                    <tr>
+                                        <td>
+                                            <div><label>@Localize.T("opt 2")</label></div>
+                                        </td>
+                                        <td>
+                                            <div>@Model.SiteInfo.Opt_2</div>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.SiteInfo.Opt_3))
+                                {
+                                    <tr>
+                                        <td>
+                                            <div><label>@Localize.T("opt 3")</label></div>
+                                        </td>
+                                        <td>
+                                            <div>@Model.SiteInfo.Opt_3</div>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.SiteInfo.Opt_4))
+                                {
+                                    <tr>
+                                        <td>
+                                            <div><label>@Localize.T("opt 4")</label></div>
+                                        </td>
+                                        <td>
+                                            <div>@Model.SiteInfo.Opt_4</div>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.SiteInfo.Opt_5))
+                                {
+                                    <tr>
+                                        <td>
+                                            <div><label>@Localize.T("opt 5")</label></div>
+                                        </td>
+                                        <td>
+                                            <div>@Model.SiteInfo.Opt_5</div>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.SiteInfo.Opt_6))
+                                {
+                                    <tr>
+                                        <td>
+                                            <div><label>@Localize.T("opt 6")</label></div>
+                                        </td>
+                                        <td>
+                                            <div>@Model.SiteInfo.Opt_6</div>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.SiteInfo.Opt_7))
+                                {
+                                    <tr>
+                                        <td>
+                                            <div><label>@Localize.T("opt 7")</label></div>
+                                        </td>
+                                        <td>
+                                            <div>@Model.SiteInfo.Opt_7</div>
+                                        </td>
+                                    </tr>
+                                }*@
+
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.Country_name))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("County Name")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.Country_name</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.Street_name))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Street Name")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.Street_name</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.Street_no))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Street No")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.Street_no</div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.SiteInfo.Timezone_no))
+                            {
+                                <tr>
+                                    <td>
+                                        <div><label>@Localize.T("Timezone No")</label></div>
+                                    </td>
+                                    <td>
+                                        <div>@Model.SiteInfo.Timezone_no</div>
+                                    </td>
+                                </tr>
+                            }
+
+                        </tbody>
+                    </table>
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+        <div class="ucc_info_holder">
+            <div class="ucc_info_block">
+                <div class="ucc_info_block_header">
+                    @Localize.T("Emergency Contacts")
+                    @*<button class="btn" id="UpdateSiteContact">Update</button>*@
+                </div>
+                <div class="ucc_info_block_info">
+                    <table>
+                        <thead>
+                            @if (Model.ContactList != null && Model.ContactList.GetAccountContacts_Response != null && Model.ContactList.GetAccountContacts_Response.Count > 0)
+                            {
+                                <tr>
+
+                                    <th>@Localize.T("First Name")</th>
+                                    <th>@Localize.T("Last Name")</th>
+                                    <th>@Localize.T("Phone")</th>
+                                    <th>@Localize.T("Email")</th>
+                                    <th>@Localize.T("Relation")</th>
+                                </tr>
+                            }
+                        </thead>
+                        <tbody>
+                            @if (Model.ContactList != null && Model.ContactList.GetAccountContacts_Response != null && Model.ContactList.GetAccountContacts_Response.Count > 0)
+                            {
+                                foreach (var item in Model.ContactList.GetAccountContacts_Response)
+                                {
+                                    <tr>
+
+                                        <td>
+                                            @item.First_name
+                                        </td>
+
+                                        <td>
+                                            @item.Last_name
+                                        </td>
+
+                                        <td>
+                                            @item.Phone1
+
+                                        </td>
+                                        <td>
+                                            @item.Email_address
+
+                                        </td>
+                                        <td>
+                                            @item.relation_id
+
+                                        </td>
+                                    </tr>
+
+                                }
+                            }
+                            else
+                            {
+                                <span>No record found.</span>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="ucc_info_holder">
+            <div class="ucc_info_block">
+                <div class="ucc_info_block_header">@Localize.T("Security Zones")</div>
+                <div class="ucc_info_block_info">
+                    <table class="ucc_cust_equipment_table">
+                        <thead>
+                            @if (Model.ZoneList != null && Model.ZoneList.GetAccountZones_Response != null && Model.ZoneList.GetAccountZones_Response.Count > 0)
+                            {
+                                <tr>
+                                    <th>@Localize.T("Zone Number")</th>
+                                    <th>@Localize.T("Event Code")</th>
+                                    <th>@Localize.T("Equiptype Type")</th>
+                                    <th>@Localize.T("Equiptype Location")</th>
+                                    <th>@Localize.T("Description")</th>
+                                </tr>
+                            }
+                        </thead>
+                        <tbody>
+
+                            @if (Model.ZoneList != null && Model.ZoneList.GetAccountZones_Response != null && Model.ZoneList.GetAccountZones_Response.Count > 0)
+                            {
+
+                                foreach (var Zone in Model.ZoneList.GetAccountZones_Response)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div>@Localize.T("Zone Number") <span>:</span> </div>
+                                            <div> @Zone.Zone_id</div>
+                                        </td>
+                                        <td>
+                                            <div>@Localize.T("Event Code") <span>:</span> </div>
+                                            <div> @Zone.Event_id</div>
+                                        </td>
+                                        <td>
+                                            <div>@Localize.T("Equiptype Type") <span>:</span> </div>
+                                            <div> @Zone.Equiptype_id</div>
+                                        </td>
+                                        <td>
+                                            <div>@Localize.T("Equiptype Location") <span>:</span> </div>
+                                            <div> @Zone.Equiploc_id</div>
+                                        </td>
+                                        <td>
+                                            <div>@Localize.T("Description") <span>:</span> </div>
+                                            <div> @Zone.Comment</div>
+                                        </td>
+
+                                    </tr>
+                                }
+
+                            }
+                            else
+                            {
+
+                                <div style="padding-left: 20px;">
+                                    <span>No records found...</span>
+                                </div>
+                            }
+
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="ucc_info_holder">
+            <div class="ucc_info_block">
+                <div class="ucc_info_block_header">@Localize.T("Agencies")</div>
+                <div class="ucc_info_block_info">
+                    <table class="ucc_cust_equipment_table">
+                        <thead>
+                            @if (Model.AccAgencyList != null && Model.AccAgencyList.GetAccountAgency_Response != null && Model.AccAgencyList.GetAccountAgency_Response.Count > 0)
+                            {
+                                <tr>
+                                    <th>@Localize.T("Agency No")</th>
+                                    <th>@Localize.T("Agency Name")</th>
+                                    <th>@Localize.T("Agency Type")</th>
+                                    <th>@Localize.T("Phone")</th>
+
+                                </tr>
+                            }
+                        </thead>
+                        <tbody>
+
+                            @if (Model.AccAgencyList != null && Model.AccAgencyList.GetAccountAgency_Response != null && Model.AccAgencyList.GetAccountAgency_Response.Count > 0)
+                            {
+
+                                foreach (var agency in Model.AccAgencyList.GetAccountAgency_Response)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div>@Localize.T("Agency No") <span>:</span> </div>
+                                            <div> @agency.Agency_no</div>
+                                        </td>
+                                        <td>
+                                            <div>@Localize.T("Agency Name") <span>:</span> </div>
+                                            <div> @agency.Agency_name</div>
+                                        </td>
+                                        <td>
+                                            <div>@Localize.T("Agency Type") <span>:</span> </div>
+                                            <div> @agency.Agencytype_id</div>
+                                        </td>
+                                        <td>
+                                            <div>@Localize.T("Phone") <span>:</span> </div>
+                                            <div> @agency.Phone1</div>
+                                        </td>
+                                    </tr>
+                                }
+
+                            }
+                            else
+                            {
+
+                                <div style="padding-left: 20px;">
+                                    <span>No records found...</span>
+                                </div>
+                            }
+
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <button class="btn Unassociate green_button" @*id="TerminateCustomer"*@>@Localize.T("Unassociate Data")</button>
+        <div style="padding-left: 20px;">
+            <span>Access to this account has been denied</span>
+        </div>
+    }
+</div>

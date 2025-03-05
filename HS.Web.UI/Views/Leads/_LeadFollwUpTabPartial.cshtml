@@ -1,0 +1,499 @@
+﻿@model List<HS.Entities.CustomerNote>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+<script src="~/Content/Js/Lead/LeadFollowUpTab/LeadFollowUpTab.js"></script>
+<link href="~/Content/Css/Lead/LeadFollowUpTab/LeadFollowUpTab.css" rel="stylesheet" />
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+<style>
+
+</style>
+<script>
+    var selectedDeletedId;
+    var selectedcustomerid;
+    var DeleteLNote = function () {
+        var dellead = selectedDeletedId;
+        console.log(dellead);
+        $.ajax({
+            url: domainurl + "/Leads/DeleteLeadNote",
+            data: { id: dellead, CustomerId: $('#AddReminderLeadId').val() },
+            type: "Post",
+            dataType: "Json",
+            success: function (result) {
+                if (result) {
+                    openLeadNoteTab();
+                }
+            },
+            error: function () {
+            }
+        });
+
+    }
+    var AssignEmployeeFollowSendEmail = function () {
+        var url = domainurl + "/Notes/AssignEmployeeFollowSendEmail";
+        $.ajax({
+            url: url,
+            data: { employee: assEmp, id: assid },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data == true) {
+                    OpenSuccessMessageNew("Success!", "Assign employee customer follow up sent email successfully", "");
+                }
+            },
+            error: function () {
+            }
+        });
+    }
+     var ChangeReminderStatus = function (id, IsShedule) {
+        console.log("hlw");
+
+
+        if ($(this).prop("checked")) {
+            IsShedule = true;
+        }
+        $.ajax({
+            url: domainurl + "/Notes/ChangeReminderStatus",
+            data: {
+                id: id,
+                IsShedule: IsShedule
+            },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result == true) {
+                    openLeadNoteTab();
+                }
+            },
+
+            error: function () {
+            }
+        });
+    }
+    $(document).ready(function () {
+
+        $(".StatusToogle").bootstrapToggle({
+            on: 'Active',
+            off: 'Inactive'
+        });
+        $(".StatusToogle").unbind("onchange");
+
+        var IsShedule = false;
+
+        $(".lessContent").hide();
+        $(".nt_text_st").attr("style", "max-height: 100px !important;");
+        $(".nt_text_st").each(function () {
+            console.log($($(this).find("div")[0]).height())
+            var idval = $(this).attr('data-id');
+            if (parseInt($($(this).find("div")[0]).height()) > 100) {
+                $(".moreContent_" + idval).show();
+            }
+            else {
+                $(".moreContent_" + idval).hide();
+            }
+        })
+        $(".moreContent").click(function () {
+            var IdVal = $(this).attr('id-val');
+            $(".moreContent_" + IdVal).hide();
+            $(".lessContent_" + IdVal).show();
+            $(".nt_text_st_" + IdVal).attr("style", "max-height: unset !important;");
+        })
+        $(".lessContent").click(function () {
+            var IdVal = $(this).attr('id-val');
+            $(".moreContent_" + IdVal).show();
+            $(".lessContent_" + IdVal).hide();
+            $(".nt_text_st_" + IdVal).attr("style", "max-height: 100px !important;");
+        })
+
+        StartDatepicker = new Pikaday({
+            field: $('#StartDate')[0],
+            format: 'MM/DD/YYYY'
+        });
+
+        EndDatepicker = new Pikaday({
+            field: $('#EndDate')[0],
+            format: 'MM/DD/YYYY'
+        });
+
+        $(".applySearch").click(function () {
+            var StartDate = $("#StartDate").val();
+            var EndDate = $("#EndDate").val();
+            var SearchText = encodeURI($("#Searchtxt").val());
+
+            $(".FollowUpTabContent").load(domainurl + "/Leads/LoadLeadFollowUpTabPartial/?CustomerId=" + CustomerLoadGuid + "&pagesize=50" + "&StartDate=" + StartDate + "&EndDate=" + EndDate + "&SearchText=" + SearchText);
+        })
+
+
+        $("#tblFollowUpNotes_wrapper").find('.row').css("margin-left", "0");
+        $("#tblFollowUpNotes_wrapper").find('.row').css("margin-right", "0");
+        $("#tblFollowUpNotes_wrapper").find('.col-sm-12').css("padding-left", "0");
+        $("#tblFollowUpNotes_wrapper").find('.col-sm-12').css("padding-right", "0");
+        $("#tblFollowUpNotes_wrapper").find('.col-sm-7').css("padding-right", "0");
+        $(".lead-note-edit").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenRightToLeftModal(domainurl + "/Leads/AddLeadNotes?id=" + idval);
+        })
+        $(".lead-note-delete").click(function () {
+            selectedDeletedId = $(this).attr('data-id');
+            selectedcustomerid = $(this).attr('data-customerid');
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this item?", DeleteLNote);
+        })
+        $(".btn-follow-envelope").click(function () {
+            assEmp = $(this).attr('data-id').toString().split(',');
+            assid = $(this).attr('idval');
+            AssignEmployeeFollowSendEmail();
+        });
+
+    })
+</script>
+<input type="hidden" id="AddReminderLeadId" value="@ViewBag.LeadFollowUpPartialCustomerId" />
+<div class="page-content-wrap">
+    <div>
+        <div class="header-section">
+            <div class="note_top_search_bar">
+                <div class="note_top_search_bar_inner">
+                    <input type="text" class="form-control" value="@ViewBag.SearchText" id="Searchtxt" placeholder="Search" />
+                    <input type="datetime" class="form-control" value="@ViewBag.StartDate" id="StartDate" placeholder="Start Date" />
+                    <div class="input-group add-on">
+                        <input type="datetime" class="form-control" value="@ViewBag.EndDate" id="EndDate" placeholder="End Date" />
+                        <div class="input-group-btn"> <button class="btn applySearch green_button"><i class="glyphicon glyphicon-search"></i></button></div>
+                    </div>
+                </div>
+                <div class="row custom-row">
+                    @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadFollowUpAdd))
+                    {
+                        <div class="col-md-12 custom-col-followup">
+                            <button class="btn" id="AddReminder" type="button" title="@Localize.T("Add reminder")">
+                                <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" Reminder")
+                            </button>
+                            <button class="btn" id="AddNotes" type="button" title="@Localize.T("Add notes")">
+                                <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" Notes")
+                            </button>
+                            @if (PermissionChecker.IsPermitted(PermissionList.CustomerPermissions.CustomerMessageAdd))
+                            {
+                                <button class="btn green_button" id="AddMessage" type="button" title="@Localize.T("Add Message")">
+                                    <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" Message")
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadFollowUpList))
+            {
+                <div class="notes-table">
+                    <table class="display lead_note_reminder_table" id="">
+                        <thead class="table-head-border">
+                            <tr>
+                                <th class="thead-th-style sorting">
+                                    @Localize.T("Note")
+                                </th>
+                                <th class="thead-th-style sorting">
+                                    @Localize.T("Note Details")
+                                </th>
+                                <th class="thead-th-style sorting">
+                                    @Localize.T("Created")
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                <tr class="tr-style @(item.IsPin.Value?"PinnedNote":"")">
+                                    <td class="table-body-td-style " valign="top">
+                                        <div class="lfut_head">@Localize.T("Note") <span>:</span></div>
+                                        <div class="lfut_info">
+                                            @if (item.IsShedule == true)
+                                            {
+                                                if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadFollowUpEdit))
+                                                {
+                                                    <div class="nt_text_st nt_text_st_@item.Id" data-id="@item.Id"> 
+                                                        <div>
+                                                            <a href="javascript:void(0)" class="follow-up-edit" data-id="@item.Id" data-val="@item.ReminderDate.Value.ToString("HH:mm")" data-val1="@item.IsClose" style="text-decoration:none;">
+                                                                <span><i class="fa fa-clock-o"></i> @Html.Raw(item.Notes)</span>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                    <span class="nt_text_btn moreContent moreContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show More")">@Localize.T("Show More >>")</span>
+                                                    <span class="nt_text_btn lessContent lessContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show Less")">@Localize.T("<< Show Less")</span>
+                                                }
+                                                else
+                                                { 
+                                                    <div class="nt_text_st nt_text_st_@item.Id" data-id="@item.Id">
+
+                                                        <div><i class="fa fa-clock-o"></i> @Html.Raw(item.Notes)</div>
+                                                    </div> 
+                                                    <span class="nt_text_btn moreContent moreContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show More")">@Localize.T("Show More >>")</span>
+                                                    <span class="nt_text_btn lessContent lessContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show Less")">@Localize.T("<< Show Less")</span>
+
+                                                }
+                                                if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadFollowUpDelete))
+                                                {
+                                                    <a href="javascript:void(0)" class="follow-up-delete" data-id="@item.Id" data-customerid="@item.CustomerId" style="float:right; color:black !important;" title="@Localize.T("Delete")">
+                                                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                                    </a>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadFollowUpEdit))
+                                                {
+                                                    <div class="nt_text_st nt_text_st_@item.Id" data-id="@item.Id">
+                                                        <div>
+                                                            <a href="javascript:void(0)" class="note-edit" data-id="@item.Id" data-val="@item.ReminderDate.Value.ToString("HH:mm")" data-val1="@item.IsClose" style="text-decoration:none;">
+                                                                <span><i class="fa fa-sticky-note-o"></i> @Html.Raw(item.Notes)</span>
+                                                            </a>
+                                                        </div> 
+                                                    </div> 
+                                                    <span class="nt_text_btn moreContent moreContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show More")">@Localize.T("Show More >>")</span>
+                                                    <span class="nt_text_btn lessContent lessContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show Less")">@Localize.T("<< Show Less")</span>
+
+                                                }
+                                                else
+                                                {
+                                                    <div class="nt_text_st nt_text_st_@item.Id" data-id="@item.Id">
+                                                        <div><i class="fa fa-sticky-note-o"></i> @Html.Raw(item.Notes)</div>
+                                                    </div>  
+                                                    <span class="nt_text_btn moreContent moreContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show More")">@Localize.T("Show More >>")</span>
+                                                    <span class="nt_text_btn lessContent lessContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show Less")">@Localize.T("<< Show Less")</span>
+
+                                                }
+                                                if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadNotesDelete))
+                                                {
+                                                    <a href="javascript:void(0)" class="lead-note-delete" data-id="@item.Id" data-customerid="@item.CustomerId" style="color:#2ca01c;float:right;color:black;" title="@Localize.T("Delete")">
+                                                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                                    </a>
+                                                }
+                                            }
+                                        </div>
+                                    </td>
+
+                                    <td class="table-body-td-style " valign="top">
+                                        @if (!string.IsNullOrEmpty(item.NoteTypeValue))
+                                        {
+                                            <div class="width-100p">
+                                                <div class="lfut_head">@Localize.T("Note Type") <span>:</span></div>
+
+                                                <div class="lfut_info">
+                                                    <span class="lfut_head_custom">@Localize.T("Note Type:")</span>
+                                                    <div class="note-color" style="background-color:#@item.Color">
+
+                                                    </div>
+                                                    @item.NoteTypeValue
+                                                </div>
+                                            </div>
+                                        }
+                                       
+                                        <div class="width-100p">
+                                            <div class="lfut_head">@Localize.T("Reminder On") <span>:</span></div>
+                                            <div class="lfut_info">
+                                                <span class="lfut_head_custom">@Localize.T("Reminder On:")</span>
+                                                  
+                                                    <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.ReminderDate.Value).ToString("MM/dd/yy") @HS.Framework.DateTimeExtension.UTCToClientTime(item.ReminderDate.Value).ToString("hh:mm tt")</span>
+                                                    @if (item.IsEmail == true)
+                                                    {
+                                                        <span class="glyphicon glyphicon-envelope btn-follow-envelope" id="btn-follow-envelope" data-id="@item.AssignName" idval="@item.Id" style="cursor: pointer;float:right;"></span>
+                                                    }
+                                                    @if (item.IsText == true)
+                                                    {
+                                                        <span class="glyphicon glyphicon-phone" id="btn-phn" data-id="@item.Id" style="float:right;padding-right:10px;"></span>
+                                                        <a href="" class="phnClick"></a>
+                                                    }
+                                                      
+                                                  
+                                            </div>
+                                        </div>
+                                            @if (PermissionChecker.IsPermitted(PermissionList.CustomerPermissions.ShowReminderCompletedDateOnAddReminder))
+                                            {
+                                                <div class="width-100p">
+                                                    <div class="notes_device_info">
+                                                        <span class="notes_header_custom">@Localize.T("Completed By"):</span>
+                                                        <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.ReminderEndDate.Value).ToString("MM/dd/yy")</span>
+                                                    </div>
+                                                </div>
+                                            }
+                                     
+                                        @if (!string.IsNullOrEmpty(item.AssignName))
+                                        {
+                                            <div class="width-100p">
+                                                <div class="lfut_head">@Localize.T("Assign User") <span>:</span></div>
+                                                <div class="lfut_info">
+                                                    <span class="lfut_head_custom">@Localize.T("Assign User:")</span>
+                                                    <span>@item.AssignName</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td class="table-body-td-style " valign="top">
+                                        <div class="width-100p">
+                                            <div class="lfut_head">@Localize.T("Created On") <span>:</span></div>
+                                            <div class="lfut_info">
+                                                <span class="lfut_head_custom">@Localize.T("Created On:")</span>
+                                                @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy") @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("hh:mm tt")
+                                            </div>
+                                        </div>
+                                        <div class="width-100p">
+                                            <div class="lfut_head">@Localize.T("Created By") <span>:</span></div>
+                                            <div class="lfut_info" title="@item.empName">
+                                                <span class="lfut_head_custom">@Localize.T("Created By:")</span>
+                                                <div class="user_profile_pic_div">
+                                                    <img src="/EmpShow/W50H50X@(item.CreatedByUid)" />
+                                                </div>
+                                                <span>@item.empName</span>
+                                            </div>
+                                        </div>
+                                        @if (item.ReminderDate != null && item.ReminderDate != new DateTime())
+                                        {
+                                            <div>
+                                                @if (item.IsShedule == true)
+                                                {
+                                                    <input type="checkbox" @(item.IsShedule == true ? "checked" : "unchecked") class="StatusToogle" onchange="ChangeReminderStatus('@item.Id',false)" data-toggle="toggle" data-on="Open" data-off="Closed" data-onstyle="success" data-offstyle="danger" data-value="@item.Id">
+
+                                                }
+                                                else
+                                                {
+                                                    <input type="checkbox" @(item.IsShedule == false ? "unchecked" : "checked") class="StatusToogle" onchange="ChangeReminderStatus('@item.Id',false)" data-toggle="toggle" data-on="Open" data-off="Closed" data-onstyle="success" data-offstyle="danger" data-value="@item.Id">
+
+                                                }
+
+
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="AgentListPagination inv1">
+        <div class="paginationContainer">
+            @if (ViewBag.PageCount > 0)
+            {
+                <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+            }
+            @if (ViewBag.PageCount == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons disabledBtn">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="openLeadNoteTab(@(ViewBag.PageNumber))">1</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="openLeadNoteTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="openLeadNoteTab(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="openLeadNoteTab(2)">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="openLeadNoteTab(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="openLeadNoteTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="openLeadNoteTab(1)">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="openLeadNoteTab(2)">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="openLeadNoteTab(3)">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="openLeadNoteTab(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageCount > 3)
+            {
+                if (ViewBag.PageNumber == ViewBag.PageCount)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="openLeadNoteTab(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="openLeadNoteTab(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="openLeadNoteTab(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="openLeadNoteTab(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="openLeadNoteTab()">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="openLeadNoteTab(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="openLeadNoteTab(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="openLeadNoteTab(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="openLeadNoteTab(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageNumber == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="openLeadNoteTab(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="openLeadNoteTab(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="openLeadNoteTab(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="openLeadNoteTab(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons" onclick="openLeadNoteTab(@(ViewBag.PageNumber-1))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="openLeadNoteTab(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="openLeadNoteTab(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="openLeadNoteTab(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="openLeadNoteTab(@(ViewBag.PageNumber+1))">Next</button>
+                    </div>
+                }
+            }
+        </div>
+    </div>

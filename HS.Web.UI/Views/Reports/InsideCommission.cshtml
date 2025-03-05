@@ -1,0 +1,132 @@
+﻿@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Report/RecurringBillingReportPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<script>
+    var pageno = '@ViewBag.PageNumber';
+        var OpenTicketById = function(ticketId){
+        OpenTopToBottomModal(domainurl + "/Ticket/AddTicket/?Id=" + ticketId);
+    }
+    var FilterInsideCommission = function (pageno) {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        var searchtext = encodeURI($("#txtInsideCommission").val());
+        var SalesRep = encodeURI($("#SalesRep").val());
+        var FinRep = encodeURI($("#FinRep").val());
+        var payrollmindate = $("#PayrollMinDate").val();
+        var payrollmaxdate = $("#PayrollMaxDate").val();
+        $(".InsideCommissionReport").html(TabsLoaderText);
+        $(".InsideCommissionReport").load(domainurl + "/Reports/InsideCommissionPartialList", {
+                    pageno: pageno,
+                    pagesize: 20,
+                    Start: encodeURI(StartDate),
+                    End: encodeURI(EndDate),
+                    searchtext: encodeURI(searchtext),
+                    SalesRep: SalesRep,
+                    FinRep: FinRep,
+                    PayrollStartDate: payrollmindate,
+                    PayrollEndDate: payrollmaxdate
+                });
+    }
+    var ResetFilterSalesPerson = function () {
+        $('.SalesPerson').selectpicker("val", "");
+        $("#PayrollMinDate").val("");
+        $("#PayrollMaxDate").val("");
+        FilterInsideCommission(1);
+    }
+    $(document).ready(function () {
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#PayrollMinDate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#PayrollMaxDate')[0] });
+
+        $(".convert_cus_report_filter").hide();
+        $("#filterbtn").click(function () {
+            console.log("filter");
+            if ($(".convert_cus_report_filter").is(":visible")) {
+                $(".convert_cus_report_filter").hide();
+
+            } else {
+                $(".convert_cus_report_filter").show();
+
+            }
+        });
+        $("#SalesRep").selectpicker();
+        $("#FinRep").selectpicker();
+        FilterInsideCommission(1);
+        $("#btnInsideCommission").click(function () {
+            var StartDate = $(".min-date").val();
+            var EndDate = $(".max-date").val();
+            var searchtext = encodeURI($("#txtInsideCommission").val());
+            var SalesRep = encodeURI($("#SalesRep").val());
+            var FinRep = encodeURI($("#FinRep").val());
+            var payrollmindate = $("#PayrollMinDate").val();
+            var payrollmaxdate = $("#PayrollMaxDate").val();
+
+            window.location.href = domainurl + "/Reports/InsideCommissionPartialList?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&GetReport=true" + "&searchtext=" + encodeURI(searchtext) + "&pageno=" + pageno + "&pagesize=20" + "&SalesRep=" + SalesRep + "&FinRep=" + FinRep + "&PayrollStartDate=" + payrollmindate + "&PayrollEndDate=" + payrollmaxdate;
+        })
+        $("#new_sales_search_text").keydown(function (e) {
+            if (e.which == 13) {
+                FilterInsideCommission(1);
+            }
+        });
+    });
+    $(window).resize(function () {
+    });
+</script>
+
+<div class="sales_summery_report_top_bar">
+    <div class="input-group add-on">
+        <input class="form-control" placeholder="Search Text" value="" id="txtInsideCommission" />
+        <div class="input-group-btn"> <button class="btn green_button" onclick="FilterInsideCommission(1)" id="btn_new_sales" title="@Localize.T("Search")"><i class="fa fa-search"></i></button></div>
+    </div>
+
+    <button class="btn convert_cus_div lilrp_filter_btn" id="filterbtn">
+        <span title="Filter" class="glyphicon glyphicon-filter"></span>
+    </button>
+
+    <button title="@Localize.T(" Download")" class="btn btn-primary" id="btnInsideCommission"><i class="fa fa-download"></i></button>
+
+    <div class="convert_cus_report_filter">
+        <div class="convert_cus_report_filte_innerr convert_cus_div">
+            <div class="form-group clearfix">
+                <label>@Localize.T("Sales Rep")</label>
+                @Html.DropDownList("SalesRep", (List<SelectListItem>)ViewBag.EmployeeList, new { @class = "form-control  SalesRep", id = "SalesRep", @multiple = "multiple", @title = "Select Sales Rep" })
+            </div>
+            <div class="form-group clearfix">
+                <label>@Localize.T("Fin Rep")</label>
+                @Html.DropDownList("FinRep", (List<SelectListItem>)ViewBag.EmployeeList, new { @class = "form-control  FinRep", id = "FinRep", @multiple = "multiple", @title = "Select Fin Rep" })
+            </div>
+            <div class="form-group clearfix">
+                <label>@Localize.T("Payroll Min Date")</label>
+                <input class="form-control convert_cus_inp" placeholder="Payroll Min Date" id="PayrollMinDate" />
+            </div>
+            <div class="form-group clearfix">
+                <label>@Localize.T("Payroll Max Date")</label>
+                <input class="form-control convert_cus_inp" placeholder="Payroll Max Date" id="PayrollMaxDate" />
+            </div>
+        </div>
+
+        <div class="convert_cus_report_footer convert_cus_div">
+            <button class="btn green_button" id="apply_btn_filter" onclick="FilterInsideCommission(1)">@Localize.T("Apply")</button>
+            <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilterSalesPerson()">@Localize.T("Reset")</button>
+        </div>
+    </div>
+</div>
+<div class="InsideCommissionReport">
+
+
+</div>
+
+
+
+
+
+

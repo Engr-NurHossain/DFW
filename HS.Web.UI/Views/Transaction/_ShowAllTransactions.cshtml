@@ -1,0 +1,441 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+    DateTime EndDate = (DateTime)ViewBag.EndDate;
+    DateTime StartDate = (DateTime)ViewBag.StartDate;
+   
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework
+<script src="~/Content/Js/Transactions/Transactions.js"></script>
+<link href="~/Content/Css/Transaction/ShowAllTransactions.css" rel="stylesheet" />
+
+<script>
+    var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+    var pagenum = '@ViewBag.PageNumber';
+    var StatusCheck = "Funding";
+    var StartDatepicker;
+    var EndDatepicker;
+    var FirstDayOfWeek = '@ViewBag.FirstDayOfWeek';
+    var ExpPaging = function (pageNumber, order) {
+        StatusCheck = "Expense";
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var StartDayVal = $(LoadCustomerDiv + '.FundingFilterStartDate').val();
+        var EndDayval = $(LoadCustomerDiv + '.FundingFilterEndDate').val();
+        var SearchText = $(".searchtext").val();
+        if (SearchText == "undefined" || typeof (SearchText) == "undefined") {
+            SearchText = "";
+        } else {
+            SearchText = encodeURI(SearchText)
+        }
+        $(LoadCustomerDiv + ".AllExpense_Load").load(domainurl + "/Transaction/ExpenseListPartial/?CustomerId=" + CustomerLoadId + "&SearchText=" + SearchText + "&PageNo=" + pageNumber + "&order=" + order + "&StrStartDate=" + StartDayVal + "&StrEndDate=" + EndDayval);
+        $(LoadCustomerDiv + ".funding_table").hide();
+        $(LoadCustomerDiv + ".inv1").hide();
+    }
+    var FilterExpense = function (pageNumber) {
+        StatusCheck = "Expense";
+        $(".AllExpense_Load").html("");
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var SearchText = $(".searchtext").val();
+        if (SearchText == "undefined" || typeof (SearchText) == "undefined") {
+            SearchText = "";
+        } else {
+            SearchText = encodeURI(SearchText)
+        }
+        $(LoadCustomerDiv + ".AllExpense_Load").html(TabsLoaderText);
+        $(LoadCustomerDiv + ".AllExpense_Load").load(domainurl + "/Transaction/ExpenseListPartial/?CustomerId=" + CustomerLoadId + "&SearchText=" + SearchText + "&PageNo=" + pageNumber);
+    }
+    var FundPaging = function (pageNumber, order) {
+        StatusCheck = "Funding";
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var StartDayVal = $(LoadCustomerDiv + '.FundingFilterStartDate').val();
+        var EndDayval = $(LoadCustomerDiv + '.FundingFilterEndDate').val();
+
+        var SearchText = $(".searchtext").val();
+        if (SearchText == "undefined" || typeof (SearchText) == "undefined") {
+            SearchText = "";
+        } else {
+            SearchText = encodeURI(SearchText)
+        }
+
+        $(LoadCustomerDiv + ".AllFunding_Load").load(domainurl + "/Transaction/FundingListPartial/?CustomerId=" + CustomerLoadId + "&SearchText=" + SearchText + "&PageNo=" + pageNumber + "&order=" + order + "&StrStartDate=" + StartDayVal + "&StrEndDate=" + EndDayval);
+        $(LoadCustomerDiv + ".funding_table").hide();
+        $(LoadCustomerDiv + ".inv1").hide();
+    }
+    var UpdatePtoCookie = function () {
+        var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+        var FirstDayStr = $(LoadCustomerDiv + ".FundingFilterStartDate").val();
+        var EndDayStr = $(LoadCustomerDiv + ".FundingFilterEndDate").val();
+        var FilterWeeksStr = $(LoadCustomerDiv + ".FilterWeeks").val();
+        var PTOFilterStr = "";
+        var NewCookie = String.format("{0},{1},{2},{3}", FirstDayStr, EndDayStr, FilterWeeksStr, PTOFilterStr);
+
+        $.cookie("_PtoFilter", NewCookie, { expires: 1 * 60 * 24, path: '/' });
+    }
+    var PaidCommissionReportLoad = function (pageNumber) {
+        StatusCheck = "Commission";
+        $(".Commission_Load").html("");
+        if (typeof (pageNumber) == "undefined") {
+            return;
+        }
+        var StartDayVal = $(LoadCustomerDiv + '.FundingFilterStartDate').val();
+        var EndDayval = $(LoadCustomerDiv + '.FundingFilterEndDate').val();
+        var SearchText = $(".searchtext").val();
+        if (SearchText == "undefined" || typeof (SearchText) == "undefined") {
+            SearchText = "";
+        } else {
+            SearchText = encodeURI(SearchText)
+        }
+        $(LoadCustomerDiv + ".Commission_Load").html(TabsLoaderText);
+        $(LoadCustomerDiv + ".Commission_Load").load(domainurl + "/Reports/PaidCommissionPartial/?SearchText=" + encodeURI(SearchText) + "&Start=" + StartDayVal + "&End=" + EndDayval
+                    + "&PageNo=" + pageNumber + "&pagesize=20");
+    }
+    $(document).ready(function () {
+
+        var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+
+        var Popupwidth = 920;
+        if (window.innerWidth < 920) {
+            Popupwidth = window.innerWidth;
+        }
+
+        var idlist = [{ id: LoadCustomerDiv + ".InvoicePrint", type: 'iframe', width: Popupwidth, height: 600 }
+        ];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+
+        $(LoadCustomerDiv + ".FundingFilterStartDate").val("");
+        $(LoadCustomerDiv + '.FundingFilterEndDate').val("");
+
+        $(LoadCustomerDiv + '.FilterWeeks').val('-1');
+
+        console.log(StatusCheck);
+        StartDatepicker = new Pikaday({
+            field: $(LoadCustomerDiv + '.FundingFilterStartDate')[0],
+            format: 'MM/DD/YYYY'
+        });
+        EndDatepicker = new Pikaday({
+            field: $(LoadCustomerDiv + '.FundingFilterEndDate')[0],
+            format: 'MM/DD/YYYY'
+        });
+        $(LoadCustomerDiv +  ".PayrollFilterBtn").click(function (){
+            console.log(StatusCheck);
+            if (StatusCheck == "Funding")
+            {
+                FundPaging(1);
+                //UpdatePtoCookie();
+            }
+            else if (StatusCheck == "Expense") {
+                ExpPaging(1);
+                //UpdatePtoCookie();
+            }
+            else {
+                PaidCommissionReportLoad(1);
+            }
+
+        });
+        $(LoadCustomerDiv + ".FilterWeeks").change(function () {
+            if ($(this).val().split('/').length == 2) {
+                var StartingDay = getDateOfISOWeek($(this).val().split('/')[1], $(this).val().split('/')[0]);
+                StartDatepicker.setDate(StartingDay);
+                var EndingDay = StartingDay.addDays(6);
+                EndDatepicker.setDate(EndingDay);
+            }
+        });
+
+
+        $(LoadCustomerDiv + ".FundingReport").click(function () {
+
+            var ids = "";
+            var idsAll = "";
+            var flag = 0;
+            if (StatusCheck == "Funding") {
+                $(LoadCustomerDiv + ".CheckItems").each(function () {
+                    idsAll += $(this).attr("data-id") + ",";
+                    if ($(this).is(':checked')) {
+                        flag = 1;
+                        ids += $(this).attr("data-id") + ","
+                    }
+
+                });
+                var ColumnName = "FundingDate,ReceivedBy,InvoiceNo,Description,PMTMethod,CheckNo,TransactionId,Amount";
+
+                if (flag == 0) {
+                    if (idsAll != "") {
+                        window.location.href = domainurl + "/Reports/NewReport/?ColumnNames=" + ColumnName + "&ReportFor=Funding&SelectAllIds=" + idsAll;
+                    }
+                    else {
+                        OpenErrorMessageNew("", "Funding List are empty.");
+                    }
+                }
+                else {
+                    window.location.href = domainurl + "/Reports/NewReport/?ColumnNames=" + ColumnName + "&ReportFor=Funding&SelectAllIds=" + ids;
+                }
+            }
+            else if (StatusCheck == "Expense") {
+                $(LoadCustomerDiv + ".exp_check_item").each(function () {
+                    idsAll += $(this).attr("data-id") + ",";
+                    if ($(this).is(':checked')) {
+                        flag = 1;
+                        ids += $(this).attr("data-id") + ","
+                    }
+
+                });
+                var ColumnName = "ExpenseDate,Description,PMTMethod,CheckNo,PMTMethod,CheckNo,Amount";
+
+                if (flag == 0) {
+                    if (idsAll != "") {
+                        window.location.href = domainurl + "/Reports/NewReport/?ColumnNames=" + ColumnName + "&ReportFor=Expense&SelectAllIds=" + idsAll;
+                    }
+                    else {
+                        OpenErrorMessageNew("", "Expense List are empty.");
+                    }
+                }
+                else {
+                    window.location.href = domainurl + "/Reports/NewReport/?ColumnNames=" + ColumnName + "&ReportFor=Expense&SelectAllIds=" + ids;
+                }
+            }
+        else{
+                var StartDayVal = $(LoadCustomerDiv + '.FundingFilterStartDate').val();
+                var EndDayval = $(LoadCustomerDiv + '.FundingFilterEndDate').val();
+                var SearchText = $(".searchtext").val();
+                if (SearchText == "undefined" || typeof (SearchText) == "undefined") {
+                    SearchText = "";
+                } else {
+                    SearchText = encodeURI(SearchText)
+                }
+                
+                location.href = domainurl + "/Reports/GetPaidCommissionReportListForDownload/?SearchText=" + encodeURI(SearchText) + "&Start=" + StartDayVal + "&End=" + EndDayval;
+            }
+        });
+
+        $(LoadCustomerDiv + ".InvPrint").click(function () {
+
+            var ids = "";
+            var idsAll = "";
+            var flag = 0;
+            if (StatusCheck == "Funding") {
+                $(LoadCustomerDiv + ".CheckItems").each(function () {
+                    idsAll += $(this).attr("data-inv") + ",";
+                    if ($(this).is(':checked')) {
+                        flag = 1;
+                        ids += $(this).attr("data-inv") + ","
+                    }
+
+                });
+
+
+                if (flag == 0) {
+                    if (idsAll != "")
+                    {
+                        $(LoadCustomerDiv + ".InvoicePrint").attr("href", domainurl + "/Invoice/GetInvoiceListPartial/?Ids=" + idsAll);
+                        $(LoadCustomerDiv + ".InvoicePrint").click();
+                    }
+                    else {
+                        OpenErrorMessageNew("", "Funding List are empty.");
+                    }
+
+                    // window.location.href = "/Invoice/GetInvoiceListPartial/?Ids=" + idsAll ;
+                }
+                else {
+                    $(LoadCustomerDiv + ".InvoicePrint").attr("href", domainurl + "/Invoice/GetInvoiceListPartial/?Ids=" + ids);
+                    $(LoadCustomerDiv + ".InvoicePrint").click();
+                    //window.location.href = "/Invoice/GetInvoiceListPartial/?Ids=" + ids;
+                }
+
+            }
+            else {
+
+            }
+        });
+        FundPaging(1);
+        if ($(LoadCustomerDiv + ".PTOFilter").val() == "AllTime") {
+            var Today = new Date();
+            //$("#PayrollFilterStartDate").val("");
+            //$("#PayrollFilterEndDate").val("");
+            var FirstDayOfMonth = '@ViewBag.FilterStartDate';
+            var LastDayOfMonth = new Date(Today.getFullYear() + 1, 11, 31);
+
+            StartDatepicker.setDate(FirstDayOfMonth);
+            EndDatepicker.setDate(LastDayOfMonth);
+
+
+        }
+        $(LoadCustomerDiv + ".PTOFilter").change(function () {
+            if ($(this).val() == "Today") {
+                var Today = new Date();
+                StartDatepicker.setDate(Today);
+                EndDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "Yesterday") {
+                var Today = new Date();
+                EndDatepicker.setDate(Today.addDays(-1));
+                StartDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "ThisWeek") {
+                var Today = new Date();
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDatepicker.setDate(StartDay);
+                EndDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "LastWeek") {
+                var Today = new Date();
+                Today = Today.addDays(-7);
+
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDatepicker.setDate(StartDay);
+                EndDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "ThisMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() + 1, 0);
+
+                StartDatepicker.setDate(FirstDayOfMonth);
+                EndDatepicker.setDate(LastDayOfMonth);
+
+            }
+            else if ($(this).val() == "LastMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() - 1, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 0);
+
+                StartDatepicker.setDate(FirstDayOfMonth);
+                EndDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "ThisYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), 11, 31);
+
+                StartDatepicker.setDate(FirstDayOfMonth);
+                EndDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "LastYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear() - 1, 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear() - 1, 11, 31);
+
+                StartDatepicker.setDate(FirstDayOfMonth);
+                EndDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "AllTime") {
+                var Today = new Date();
+                //$("#PayrollFilterStartDate").val("");
+                //$("#PayrollFilterEndDate").val("");
+                var FirstDayOfMonth = '@ViewBag.FilterStartDate';
+                var LastDayOfMonth = new Date(Today.getFullYear() + 1, 11, 31);
+
+                StartDatepicker.setDate(FirstDayOfMonth);
+                EndDatepicker.setDate(LastDayOfMonth);
+            }
+        });
+
+
+    })
+</script>
+<div class="page-content-wrap cus-padding-top10p">
+    <div class="header-section">
+        
+    </div>
+
+    <div class="invoices_tabs_header">
+        <ul class="nav nav-tabs invoices-tabs" id="myFundingTab">
+          <li class="active AllFunding" onclick="FundPaging(1)">
+                <a data-target=".AllFunding_Load" data-toggle="tab">
+                    @Localize.T("Funding")
+                <span class="InternalFundingCounter">@(ViewBag.FundingCount > 0 ? string.Format("({0})", ViewBag.FundingCount) : "")</span>
+            </a>
+        </li>
+        <li class="AllExpense" onclick="FilterExpense(1)">
+            <a data-target=".AllExpense_Load" data-toggle="tab">
+                @Localize.T("Expense")
+                <span class="ExpenseCounter">@(ViewBag.ExpenseCount > 0 ? string.Format("({0})", ViewBag.ExpenseCount) : "")</span>
+
+            </a>
+        </li>
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerFundingCommission))
+        {
+            <li class="Commission" onclick="PaidCommissionReportLoad(1)">
+                <a data-target=".Commission_Load" data-toggle="tab">@Localize.T("Commission")</a>
+            </li>
+        }
+        </ul>
+    </div>
+
+    <div class="show_all_transaction_searchbar">
+       
+            <span id="PayrollStartDate">
+                <input type="text" value="@StartDate.ToString("MM/dd/yy")" placeholder="Start Date"  class="form-control border-radius-0 FundingFilterStartDate" />
+            </span>
+            <span id="PayrollEndDate">
+                <input type="text" value="@EndDate.ToString("MM/dd/yy")" placeholder="End Date" class="form-control border-radius-0 FundingFilterEndDate" />
+            </span>
+
+        <span id="PTO">
+            @Html.DropDownList("PTOFilter", (List<SelectListItem>)ViewBag.PTOFilterOptions, new { @class = "form-control PTOFilter" })
+        </span>
+        <div class="input-group add-on shaTrans_srch_text">
+            <span>
+                <input class="form-control filterinput searchtext" @*id="searchtext"*@ placeholder="Search by text" />
+            </span>
+            <div class="input-group-btn time_clock_filter_btn">
+
+                <button class="btn PayrollFilterBtn green_button" title="@Localize.T("Search")">
+                    <i class="glyphicon glyphicon-search"></i>
+                </button>
+            </div>
+        </div>
+       
+    </div>
+    <div class="show_all_transaction_other_option">
+        <button class="btn download_btn InvExport">
+            <i title="Download" class="glyphicon glyphicon-download-alt FundingReport"></i>
+        </button>
+        @*<span class="InvExport">
+            <a title="Download"  href="javascript:void(0)"><i class="fa fa-file-excel-o FundingReport" aria-hidden="true"></i></a>
+        </span>*@
+        @*<span class="InvPrint">
+            <a title="Print" class="InvoicePrint" href=""><i class="fa fa-print" aria-hidden="true"></i></a>
+        </span>*@
+    </div>
+
+
+
+    <div class="invoices-tabs">
+        <div class="nav-detail-contents">
+            <div class="tab-content">
+                <div class="tab-pane active AllFunding_Load" @*id="AllUnPaidInvoice"*@>
+
+                </div>
+                <div class="tab-pane AllExpense_Load" @*id="AllPaidInvoice"*@>
+                    ex
+                </div>
+                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerFundingCommission))
+                {
+                    <div class="tab-pane Commission_Load" @*id="PaidCommission"*@>
+                        exx
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

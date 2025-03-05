@@ -1,0 +1,203 @@
+﻿@model HS.Entities.Customer
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@{
+    Layout = null;
+}
+@using System.Collections;
+<html>
+<head>
+    @Styles.Render("~/styles/GetEstimate")
+    @Scripts.Render("~/scripts/GetInvoice")
+    <script src="~/Content/Js/Login/domainurl.js"></script>
+    <script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+    <script src="~/Content/Tiny/tinymce.min.js"></script>
+    <script src="~/Content/Tiny/tiny.js"></script>
+    <link href="~/Content/Css/Invoice/SendEmailInvoice.css" rel="stylesheet" />
+
+    <script>
+        var PdfLocation = '@ViewBag.PdfLocation';
+        var CustomerGuid = '@Model.CustomerId';
+        var Invoiceid = '@Model.Invoice.Id';
+        var sendSMSfunction = function () {
+            var url = domainurl + "/SMS/SendInvoiceText";
+            var param = JSON.stringify({
+                CustomerId: CustomerGuid,
+                InvoiceId: Invoiceid,
+                ContactNumber: $(".ContactNumber").val(),
+                Message: $("#SMSDescription").val()
+            });
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    if (data.result) {
+                        parent.OpenSuccessMessageNew("Success!", data.message, function () {
+                            parent.ClosePopup();
+                        });
+                    } else {
+                        parent.OpenErrorMessageNew("Error!", data.message, function () {
+
+                        });
+                    }
+                }
+            });
+        }
+        var BothSMSAndEmailFunction = function () {
+            var url = domainurl + "/SMS/SendInvoiceText";
+            var param = JSON.stringify({
+                CustomerId: CustomerGuid,
+                InvoiceId: Invoiceid,
+                ContactNumber: $(".ContactNumber").val(),
+                Message: $("#SMSDescription").val(),
+
+            });
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    if (data.result) {
+                        var EmailDes = tinyMCE.get('Description').getContent();
+                        var EmailSub = $("#EmailSubject").val();
+                        var ccEmail =   $("#CCEmail").val()
+                        parent.SaveInvoice(true, false, "", EmailDes, null, EmailSub, ccEmail);
+                        parent.ClosePopup();
+                    } else {
+                        parent.OpenErrorMessageNew("Error!", data.message, function () {
+
+                        });
+                    }
+                }
+            });
+        }
+        var SendBothEmailAndSMS = function () {
+            if ($(".ContactNumber").val().trim() == ""
+               || $("#SMSDescription").val().trim() == "") {
+                parent.OpenErrorMessageNew("Error!", "Contact number and SMS body can't be empty.");
+            }
+            else {
+                BothSMSAndEmailFunction();
+            }
+        }
+        $(document).ready(function () {
+            if ($(window).width() < 700) {
+                $("#pdfView").addClass("hidden");
+            }
+            else {
+                $("#pdfView").removeClass("hidden");
+            }
+        $(".btnSaveAndClose").click(function () {
+            //parent.SaveAndClose();
+            var EmailDes = tinyMCE.get('Description').getContent();
+            var EmailSub = $("#EmailSubject").val();
+            var ccEmail = $("#CCEmail").val();
+            console.log(ccEmail);
+            parent.SaveInvoice(true, false, "", EmailDes, null, EmailSub, ccEmail);
+            parent.ClosePopup();
+
+        });
+        $(".btnSaveAndNew").click(function () {
+            parent.SaveAndNew();
+            parent.ClosePopup();
+        });
+        $(".btnSendEmailAndClose").click(function () {
+            if ($(".ContactNumber").val().trim() == ""
+               || $("#SMSDescription").val().trim() == "") {
+                parent.OpenErrorMessageNew("Error!", "Contact number and SMS body can't be empty.");
+            }
+            else {
+                sendSMSfunction()
+            }
+        });
+        $(".btnSendToBoth").click(function () {
+            SendBothEmailAndSMS();
+        })
+    });
+    </script>
+</head>
+@{
+    Hashtable datatemplate = new Hashtable();
+    datatemplate.Add("CustomerName", Model.FirstName+" "+Model.LastName);
+    datatemplate.Add("ExpirationDate", Model.Invoice.DueDate);
+    datatemplate.Add("SalesPhone Number", ViewBag.SalesPhone);
+    datatemplate.Add("CompanyName", Model.CompanyName);
+    datatemplate.Add("SalesGuy", ViewBag.SalesGuy);
+    datatemplate.Add("url", ViewBag.url);
+    string emailtemplate = HS.Web.UI.Helper.LabelHelper.ParserHelper(Model.EmailTemplate.BodyContent, datatemplate);
+}
+<body>
+    <div class="send_mail_invoice_container">
+        <div class="send_mail_invoice_header">
+            @Localize.T("Send email")
+            <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+                <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+            </div>
+        </div>
+        <div class="width_50p_firstdiv">
+            <div class="row">
+                <div class="col-md-6">
+                    @Localize.T("Email")
+                </div>
+                <div class="col-md-6">
+                    @Model.CustomerEmailAddress
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    @Localize.T("Cc")
+                </div>
+                <div class="col-md-6">
+                    <input type="text" value="" class="EmailSubject" placeholder="Add cc email by ';' separator" id="CCEmail">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    @Localize.T("Subject")
+                </div>
+                <div class="col-md-6">
+                    <input type="text" value="New Invoice from @Model.CompanyName: @Model.Invoice.InvoiceId" class="EmailSubject" placeholder="Subject" id="EmailSubject">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="emailbody" style="font-weight:600">@Localize.T("Body")</div>
+                    <textarea class="txtEmailbody tinymce" id="Description" name="Description">@emailtemplate</textarea>
+                </div>
+            </div>
+            <div class="">
+                <h4>@Localize.T("Send TEXT MSG")</h4>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    @Localize.T("Contact Number")
+                </div>
+                <div class="col-md-6">
+                    <input class="ContactNumber" type="text" value="@Model.CustomerContactNumber" placeholder="Contact Number" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="emailbody">@Localize.T("TEXT MSG Body")</div>
+                    <textarea rows="3" id="SMSDescription" name="SMSDescription">@Model.SMSBody</textarea>
+                    <label class="label black">*@Localize.T("'##url##' will be replaced by actual url.")</label>
+                </div>
+            </div>
+        </div>
+        <div class="width_50p_pdf" id="pdfView">
+            <iframe class="pdf_styles_send_mail_invoice @(string.IsNullOrWhiteSpace(ViewBag.PdfLocation)?"hidden":"")" id="iframePdf" src="@ViewBag.PdfLocation"></iframe>
+        </div>
+        <div class="send_email_invoice_footerContents">
+            <button onclick="parent.ClosePopup()" class="btnCancel">@Localize.T("Cancel")</button>
+            <button class="btn btnSaveAndClose">@Localize.T("Send Email")</button>
+            <button class="btn btnSendEmailAndClose">@Localize.T("Send TEXT MSG")</button>
+            <button class="btn btnSendToBoth">@Localize.T("Send To Both")</button>
+        </div>
+    </div>
+</body>
+</html>
+

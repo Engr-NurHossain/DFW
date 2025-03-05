@@ -1,0 +1,146 @@
+﻿@{
+    ViewBag.Title = "Opportunity";
+    Layout = null;
+    int i = 1;
+    int j = 1;
+    string SitePath = HS.Framework.Utils.AppConfig.DomainSitePath;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.OpportunityTabModel>
+<style>
+    .nav-tabs > li.active > a {
+        color: black !important;
+    }
+    .bak_lead_list {
+       font-size: 20px;
+    font-weight: 600;
+    color: #777;
+    float: left;
+    padding-top: 3px;
+    margin-right: 5px;
+    margin-top: 5px;
+    margin-left: 10px;
+    cursor: pointer;
+}
+    .bak_lead_list:hover {
+        color:#2ca01c;
+    }
+    .opportunity_details_main_nav .opp_li a {
+        border:1px solid #ddd !important;
+    }
+</style>
+<script>
+    var OpportunityLoadId;
+    var OpportunityLoadGuid;
+    var TabLink = '@ViewBag.tablink';
+    var NoteId = '@ViewBag.noteid';
+    var TimeVal = '@ViewBag.time';
+    var complete = '@ViewBag.complete';
+
+
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide();
+        OpportunityLoadId = $(".opportunity_tabs_container .tab-list.active").attr('data-id');
+        OpportunityLoadGuid = $(".opportunity_tabs_container .tab-list.active").attr('data-Guid');
+
+        $(".opportunity_tabs_container .tab-pane.active").load(domainurl + String.format("/Opportunity/OpportunityDetails/?id={0}&tab={1}&noteid={2}&timeval={3}&IsComplete={4}", OpportunityLoadId, TabLink, NoteId, TimeVal, complete));
+
+        $(".opportunity_tabs_container .tab-list a").click(function (e) {
+            e.preventDefault();
+            if (cntrlIsPressed) {
+                var href = $(e.target).attr('href');
+                window.open(href, '_blank');
+            }
+        });
+
+        $(".opportunity_tabs_container .tab-list").click(function (e) {
+            //$(".customer_tabs_container .tab-pane").html("");
+            console.log(e);
+            OpportunityLoadId = $(this).attr('data-id');
+            OpportunityLoadGuid = $(this).attr('data-Guid');
+            console.log(OpportunityLoadId);
+
+            history.pushState(null, null, domainurl + String.format("/Opportunity/OpportunityDetail/?id={0}", OpportunityLoadId));
+            if ($("#opportunity_tab_" + OpportunityLoadId).html().trim() == "") {
+                $("#opportunity_tab_" + OpportunityLoadId).load(domainurl + String.format("/Opportunity/OpportunityDetails/?id={0}", OpportunityLoadId));
+            }
+        });
+
+        $(".tabCloseOpportunity").click(function () {
+            if ($(".opportunity_tabs_container li.tab-list").length == 1) {
+                /*If cookie length ==1 just remove cookie*/
+                $.cookie("__Opportunity", "", { expires: -1, path: '/' });
+                location.href = "/Opportunities";
+            }
+            else {
+                /*Remove DOM*/
+                if ($(this).parent().parent().hasClass('active')) {
+                    $(this).parent().parent().removeClass('active');
+                    $(".opportunity_tabs_container .tab-content .tab-pane").removeClass('active');
+
+                    $(".opportunity_tabs_container li.tab-list:first-child").addClass('active');
+
+                    OpportunityLoadId = $(".opportunity_tabs_container .tab-list.active").attr('data-id');
+                    OpportunityLoadGuid = $(".opportunity_tabs_container .tab-list.active").attr('data-Guid');
+
+                    $("#opportunity_tab_" + OpportunityLoadId).addClass('active');
+
+                    history.pushState(null, null, domainurl + String.format("/Opportunity/OpportunityDetail/?id={0}&tab={1}&noteid={2}&timeval={3}&IsComplete={4}", OpportunityLoadId, TabLink, NoteId, TimeVal, complete));
+                    $(".opportunity_tabs_container .tab-pane.active").load(domainurl + String.format("/Opportunity/OpportunityDetails/?id={0}&tab={1}&noteid={2}&timeval={3}&IsComplete={4}", OpportunityLoadId, TabLink, NoteId, TimeVal, complete));
+                }
+                var ClosedOpportunityId = $(this).attr('data-id');
+
+                $(this).parent().parent().remove();
+                $("#opportunity_tab_" + ClosedOpportunityId).remove();
+
+                /*Remove Opportunity Data From Cookie*/
+                if ($.cookie('__Opportunity') != null && $.cookie('__Opportunity') != '' && $.cookie('__Opportunity') != 'null')
+                {
+                    var cookie = $.cookie('__Opportunity');
+                    cookie = cookie.split('|');
+                    var NewCookie = "";
+                    $(cookie).each(function () {
+                        if (this.indexOf(ClosedOpportunityId + ',') > -1) {
+                            /*dont add to new cookie*/
+                        } else {
+                            if (this != '') {
+                                NewCookie += this + "|";
+                            }
+                        }
+                    });
+                    $.cookie("__Opportunity", NewCookie, { expires: 2, path: '/' });
+                }
+            }
+
+        });
+    });
+</script>
+<div class="opportunity_tabs_container">
+    <a class="bak_lead_list back-to-OpportunityList"> <i class="fa fa-chevron-left" aria-hidden="true"> </i> </a>
+
+    @if (Model.Count() > 0)
+    {
+        <ul class="nav nav-tabs opportunity_details_main_nav">
+            @foreach (var item in Model)
+            {
+                <li class="opp_li tab-list @(i==1?"active":"")" data-id="@item.OpportunityId" data-Guid="@item.OpportunityGuid">
+                    <a href="@(SitePath)/Opportunity/OpportunityDetail/?id=@item.OpportunityId" data-target="#opportunity_tab_@item.OpportunityId" data-id="@item.OpportunityId" data-Guid="@item.OpportunityGuid" data-toggle="tab">
+
+                        <span style="color:black"><i class="fa fa-user fa-fw"></i>@item.OpportunityName</span>
+                        <div class="tab_close_style tabCloseOpportunity" data-id="@item.OpportunityName"></div>
+                    </a>
+                </li>
+                i++;
+            }
+        </ul>
+        <div class="tab-content">
+            @foreach (var item in Model)
+            {
+                <div class="tab-pane @(j == 1 ? "active" : "")" data-id="@item.OpportunityId" data-Guid="@item.OpportunityGuid" id="opportunity_tab_@item.OpportunityId"></div>
+                j++;
+            }
+        </div>
+    }
+</div>
+
+

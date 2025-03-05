@@ -1,0 +1,361 @@
+﻿@model IEnumerable<HS.Entities.PaymentInfo>
+@{
+    Layout = null;
+    var count = 0;
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using HS.Framework
+<link href="~/Content/Css/CustomerDetails/CustomerAccountActivityDetails.css" rel="stylesheet" />
+
+<script>
+    @*var customerid = '@ViewBag.customerid';*@
+    var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+    var DeletePaymentInfo = function (paymentinfoID) {
+        $.ajax({
+        type: "POST",
+        url: domainurl + "/SmartLeads/DeletePaymentInfo",
+        data: JSON.stringify({ PaymentInfoId: paymentinfoID }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+            success: function (data) {
+                console.log("hlww");
+                if (data == true) {
+                    OpenSuccessMessageNew("", "Payment info deleted successfully.", function () {
+                         $(LoadCustomerDiv + ".CustomerCCTab").load(domainurl + "/Customer/LoadCustomerCCPaymentInfo?customerid=" + CustomerLoadGuid);
+                        $(LoadCustomerDiv +".CustomerACHTab").load(domainurl + "/Customer/LoadCustomerACHPaymentInfo?customerid=" + CustomerLoadGuid);
+                        $(LoadCustomerDiv +"#CustomerACHQATab").load(domainurl + "/Customer/LoadCustomerACHPaymentInfo?customerid=" + CustomerLoadGuid);
+                       
+                        $(LoadCustomerDiv +"#CustomerCCQATab").load(domainurl + "/Customer/LoadCustomerCCPaymentInfo?customerid=" + CustomerLoadGuid);
+                        $(LoadCustomerDiv +"#ACHTab").load(domainurl + "/Customer/LoadCustomerACHPaymentInfo?customerid=" + CustomerLoadGuid);
+                        $(LoadCustomerDiv +"#CCTab").load(domainurl + "/Customer/LoadCustomerCCPaymentInfo?customerid=" + CustomerLoadGuid);
+                    })
+                }
+         
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            $(".loader-div").hide();
+            console.log(errorThrown);
+        }
+    });
+
+    }
+    var editcc = function (Id) {
+     //   console.log(CardNumber);
+          OpenRightToLeftModal("/SmartLeads/CCEditViewPaymentMethod?customerid=" + CustomerLoadGuid + "&type=Customer"+"&Id="+Id);
+      }
+    $(document).ready(function () {
+     
+        //$("#btn_addccpaymentcustomer").click(function () {
+        //    OpenRightToLeftModal("/SmartLeads/CCAddViewPaymentMethod?customerid=" + CustomerLoadGuid + "&type=Customer");
+
+        //});
+        $(".p_info_delete_btn_CC").click(function () {
+            var PaymentInfoId = $(this).attr('id-val');
+            
+            OpenConfirmationMessageNew("Confirmation", "Are you sure you want to delete this item?", function () {
+                DeletePaymentInfo(PaymentInfoId);
+            });
+        });
+    });
+
+    var CopyTitelInCopyBord = function (text) {
+        console.log("sdasd");
+        var dummy = document.createElement("textarea");
+        // to avoid breaking orgain page when copying more words
+        // cant copy when adding below this code
+        // dummy.style.display = 'none'
+        document.body.appendChild(dummy);
+        //Be careful if you use texarea. setAttribute('value', value), which works with "input" does not work with "textarea". – Eduard
+        dummy.value = text;
+        dummy.select();
+        document.execCommand("copy");
+        document.body.removeChild(dummy);
+        $("#SuccessMessaegeForCopy" + text).removeClass('hidden');
+
+        setTimeout(function () {
+            $("#SuccessMessaegeForCopy" + text).addClass('hidden');
+        }, 2000);
+
+
+    }
+
+
+</script>
+
+<div class="payment_container">
+   
+    <div class="ci_info_payment">
+        @{
+            if (Model != null && Model.Count() > 0)
+            {
+                foreach (var item in Model)
+                {
+                    if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowPaymentProfileInformation))
+                    {
+                        if (count % 2 == 0)
+                        {
+                <div class="payment_info_overview_container">
+
+                    @*@if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowLeadDetailsCreditCardDeleteButton))
+                    {*@
+                        <button id-val="@item.Id" class="btn p_info_delete_btn_CC" title="@Localize.T("Delete")"><i class="fa fa-trash-o"></i></button>
+                    @*}*@
+
+
+
+                    <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Account Name")<span>:</span></div><div class="payment_info_overview_info" onclick="editcc('@item.Id')"> @item.AccountName</div></div>
+
+                    <div class="width-100p">
+
+                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaymentOptionCCEdit))
+                        {
+                            <div class="payment_info_overview_header" onclick="editcc('@item.Id')"><a class="cus-anchor">@Localize.T("Card Number")</a><span>:</span></div>
+
+                        }
+                        else
+                        {
+                            <div class="payment_info_overview_header"><label>@Localize.T("Card Number")</label><span>:</span></div>
+                        }
+
+                        @{
+                            var cardNumber = item.CardNumber.Replace('-', ' ').Replace(" ", "");
+                            if (cardNumber.Length == 16)
+                            {
+                                <div class="payment_info_overview_info">
+                                    @string.Concat("".PadLeft(12, '*'), cardNumber.Substring(cardNumber.Length - 4)) <strong>(@item.CardType.ToUpper())</strong>
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowPaymentMathodInformation))
+                                    {
+                                        <span class="successmessaegeforcopy_cont">
+                                            <i class="fa fa-id-card hover_details_icon" onclick="CopyTitelInCopyBord('@item.CardNumber')" title="@item.CardNumber"></i>
+                                            <span id="@("SuccessMessaegeForCopy"+item.CardNumber)" class="alert alert-success hidden">
+                                                @Localize.T("Copied.")
+                                            </span>
+                                        </span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="payment_info_overview_info">
+                                    @string.Concat("".PadLeft(11, '*'), cardNumber.Substring(cardNumber.Length - 4))  <strong>(@item.CardType.ToUpper())</strong>
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowPaymentMathodInformation))
+                                    {
+                                        <span class="successmessaegeforcopy_cont">
+                                            <i class="fa fa-id-card hover_details_icon" onclick="CopyTitelInCopyBord('@item.CardNumber')" title="@item.CardNumber"></i>
+                                            <span id="@("SuccessMessaegeForCopy"+item.CardNumber)" class="alert alert-success hidden">
+                                                @Localize.T("Copied.")
+                                            </span>
+                                        </span>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Expire Date")<span>:</span></div> <div class="payment_info_overview_info">@item.CardExpireDate</div></div>
+                        <div class="width-100p">
+                            <div class="payment_info_overview_header">@Localize.T("Security Code")<span>:</span></div> <div class="payment_info_overview_info">
+                                @string.Concat("".PadLeft(2, '*'), item.CardSecurityCode.Substring(item.CardSecurityCode.Length - 1))
+                                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowPaymentMathodInformation))
+                                {
+                                    <span class="successmessaegeforcopy_cont">
+                                        <i class="fa fa-user-secret hover_details_icon" onclick="CopyTitelInCopyBord('@item.CardSecurityCode')" title="@item.CardSecurityCode"></i>
+                                        <span id="@("SuccessMessaegeForCopy"+item.CardSecurityCode)" class="alert alert-success hidden">
+                                            @Localize.T("Copied.")
+                                        </span>
+                                    </span>
+                                }
+
+                            </div>
+                        </div>
+                    </div>
+                            }
+                            else
+                            {
+        <div class="payment_info_overview_container">
+
+            @*@if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowLeadDetailsCreditCardDeleteButton))
+                        {*@
+                        <button id-val="@item.Id" class="btn p_info_delete_btn_CC" title="@Localize.T("Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i></button>
+                        @*}*@
+
+                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Account Name")<span>:</span></div> <div class="payment_info_overview_info" onclick="editcc('@item.Id')">@item.AccountName</div></div>
+
+                        <div class="width-100p">
+                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaymentOptionCCEdit))
+                            {
+                                <div class="payment_info_overview_header" onclick="editcc('@item.Id')"><a class="cus-anchor">@Localize.T("Card Number")</a><span>:</span></div>
+
+                            }
+                            else
+                            {
+                                <div class="payment_info_overview_header"><label>@Localize.T("Card Number")</label><span>:</span></div>
+                            }
+                            @*<div class="payment_info_overview_header" onclick="editcc('@item.Id')"><a class="cus-anchor">@Localize.T("Card Number")</a><span>:</span></div>*@
+                            @{
+                                var cardNumber = item.CardNumber.Replace('-', ' ').Replace(" ", "");
+                                if (cardNumber.Length == 16)
+                                {
+                                    <div class="payment_info_overview_info">
+                                        @string.Concat("".PadLeft(12, '*'), cardNumber.Substring(cardNumber.Length - 4)) <strong>(@item.CardType.ToUpper())</strong>
+                                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowPaymentMathodInformation))
+                                        {
+                                            <span class="successmessaegeforcopy_cont">
+                                                <i class="fa fa-id-card hover_details_icon" onclick="CopyTitelInCopyBord('@item.CardNumber')" title="@item.CardNumber"></i>
+                                                <span id="@("SuccessMessaegeForCopy"+item.CardNumber)" class="alert alert-success hidden">
+                                                    @Localize.T("Copied.")
+                                                </span>
+                                            </span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="payment_info_overview_info">
+                                        @string.Concat("".PadLeft(11, '*'), cardNumber.Substring(cardNumber.Length - 4)) <strong>(@item.CardType.ToUpper())</strong>
+                                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowPaymentMathodInformation))
+                                        {
+                                            <span class="successmessaegeforcopy_cont">
+                                                <i class="fa fa-id-card hover_details_icon" onclick="CopyTitelInCopyBord('@item.CardNumber')" title="@item.CardNumber"></i>
+                                                <span id="@("SuccessMessaegeForCopy"+item.CardNumber)" class="alert alert-success hidden">
+                                                    @Localize.T("Copied.")
+                                                </span>
+                                            </span>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Expire Date")<span>:</span></div> <div class="payment_info_overview_info">@item.CardExpireDate</div></div>
+                        <div class="width-100p">
+                            <div class="payment_info_overview_header">@Localize.T("Security Code")<span>:</span></div> <div class="payment_info_overview_info">
+                                @string.Concat("".PadLeft(2, '*'), item.CardSecurityCode.Substring(item.CardSecurityCode.Length - 1))
+                                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowPaymentMathodInformation))
+                                {
+                                    <span class="successmessaegeforcopy_cont">
+                                        <i class="fa fa-user-secret hover_details_icon" onclick="CopyTitelInCopyBord('@item.CardSecurityCode')" title="@item.CardSecurityCode"></i>
+                                        <span id="@("SuccessMessaegeForCopy"+item.CardSecurityCode)" class="alert alert-success hidden">
+                                            @Localize.T("Copied.")
+                                        </span>
+                                    </span>
+
+                                }
+
+
+                            </div>
+                        </div>
+                    </div>
+                        }
+                    }
+                    else
+                    {
+                        if (count % 2 == 0)
+                        {
+    <div class="payment_info_overview_container">
+
+
+        @*@if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowLeadDetailsCreditCardDeleteButton))
+        {*@
+            <button id-val="@item.Id" class="btn p_info_delete_btn_CC" title="@Localize.T("Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i></button>
+        @*}*@
+
+
+
+    <div class="width-100p">
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaymentOptionCCEdit))
+        {
+            <div class="payment_info_overview_header" onclick="editcc('@item.Id')"><a class="cus-anchor">@Localize.T("Card Number")</a><span>:</span></div>
+
+        }
+        else
+        {
+            <div class="payment_info_overview_header"><label>@Localize.T("Card Number")</label><span>:</span></div>
+        }
+        @*<div class="payment_info_overview_header" onclick="editcc('@item.Id')"><a class="cus-anchor">@Localize.T("Card Number")</a><span>:</span></div>*@
+        @{
+            var cardNumber = item.CardNumber.Replace('-', ' ').Replace(" ", "");
+            if (cardNumber.Length == 16)
+            {
+                <div class="payment_info_overview_info">
+                    @string.Concat("".PadLeft(12, '*'), cardNumber.Substring(cardNumber.Length - 4)) <strong>(@item.CardType.ToUpper())</strong>
+                </div>
+            }
+            else if(cardNumber.Length > 4)
+            {
+                <div class="payment_info_overview_info">
+                    @string.Concat("".PadLeft(11, '*'), cardNumber.Substring(cardNumber.Length - 4)) <strong>(@item.CardType.ToUpper())</strong>
+                </div>
+            }
+        }
+    </div>
+        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Expire Date")<span>:</span></div> <div class="payment_info_overview_info">@item.CardExpireDate</div></div>
+        @if (!string.IsNullOrEmpty(item.CardSecurityCode))
+        {
+            <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Security Code")<span>:</span></div> <div class="payment_info_overview_info">@string.Concat("".PadLeft(2, '*'), item.CardSecurityCode.Substring(item.CardSecurityCode.Length - 1))</div></div>
+        }
+
+        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Account Name")<span>:</span></div><div class="payment_info_overview_info"> @item.AccountName</div></div>
+        @if (item.IsForBrinks == true)
+        {
+            <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is For Brinks")<span>:</span></div> <div class="payment_info_overview_info">@item.IsForBrinks</div></div>
+            <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Partial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsPartialPayment</div></div>
+            <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Initial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsInitialPayment</div></div>
+        }
+    </div>
+                        }
+                        else
+                        {
+    <div class="payment_info_overview_container">
+        @*@if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowLeadDetailsCreditCardDeleteButton))
+        {*@
+            <button id-val="@item.Id" class="btn p_info_delete_btn_CC" title="@Localize.T("Delete")"><i class="fa fa-trash-o" aria-hidden="true"></i></button>
+        @*}*@
+    <div class="width-100p">
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.PaymentOptionCCEdit))
+        {
+            <div class="payment_info_overview_header" onclick="editcc('@item.Id')"><a class="cus-anchor">@Localize.T("Card Number")</a><span>:</span></div>
+
+        }
+        else
+        {
+            <div class="payment_info_overview_header"><label>@Localize.T("Card Number")</label><span>:</span></div>
+        }
+        @*<div class="payment_info_overview_header" onclick="editcc('@item.Id')"><a class="cus-anchor">@Localize.T("Card Number")</a><span>:</span></div>*@
+        @{
+            var cardNumber = item.CardNumber.Replace('-', ' ').Replace(" ", "");
+            if (cardNumber.Length == 16)
+            {
+                <div class="payment_info_overview_info">
+                    @string.Concat("".PadLeft(12, '*'), cardNumber.Substring(cardNumber.Length - 4)) <strong>(@item.CardType.ToUpper())</strong>
+                </div>
+            }
+            else
+            {
+                <div class="payment_info_overview_info">
+                    @string.Concat("".PadLeft(11, '*'), cardNumber.Substring(cardNumber.Length - 4)) <strong>(@item.CardType.ToUpper())</strong>
+                </div>
+            }
+        }
+    </div>
+        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Expire Date")<span>:</span></div> <div class="payment_info_overview_info">@item.CardExpireDate</div></div>
+        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Security Code")<span>:</span></div> <div class="payment_info_overview_info">@string.Concat("".PadLeft(2, '*'), item.CardSecurityCode.Substring(item.CardSecurityCode.Length - 1))</div></div>
+        <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Account Name")<span>:</span></div> <div class="payment_info_overview_info">@item.AccountName</div></div>
+        @if (item.IsForBrinks == true)
+        {
+            <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is For Brinks")<span>:</span></div> <div class="payment_info_overview_info">@item.IsForBrinks</div></div>
+            <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Partial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsPartialPayment</div></div>
+            <div class="width-100p"><div class="payment_info_overview_header">@Localize.T("Is Initial Payment")<span>:</span></div> <div class="payment_info_overview_info">@item.IsInitialPayment</div></div>
+        }
+    </div>
+                        }
+                    }
+                    count = count + 1;
+                }
+            }
+        }
+    </div>
+</div>
+
+

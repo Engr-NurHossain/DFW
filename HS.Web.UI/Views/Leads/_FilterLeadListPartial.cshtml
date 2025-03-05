@@ -1,0 +1,1421 @@
+﻿
+@model HS.Entities.CustomerListWithCountModel
+@{
+    //List<HS.Entities.GlobalSetting> globalSetting = (List<HS.Entities.GlobalSetting>)ViewBag.CustomerUiSetting;
+    List<HS.Entities.GridSetting> gridSetting = (List<HS.Entities.GridSetting>)ViewBag.LeadGridSettings;
+    List<HS.Entities.GridSetting> LeadGridSettingList = (List<HS.Entities.GridSetting>)ViewBag.LocationGroup;
+    var busname = "";
+    var CurrentLoggedInUser = ((HS.Web.UI.Helper.CustomPrincipal)(User));
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+@using HS.Framework
+
+@Scripts.Render("~/scripts/_FilterLeadListPartialJS")
+@Styles.Render("~/scripts/_FilterLeadListPartialJS")
+
+@*<script src="~/Content/Js/LeadList/_FilterLeadListPartial.js"></script>*@
+<script>
+    //var tableLead;
+    var LeadGuidID;
+    var pageno = '@ViewBag.PageNumber';
+
+    var leadcount = '@HS.Web.UI.Helper.LabelHelper.NumberFormat(Model.LeadTabCount.LeadCount)';
+        var LeadFilterCount = '@ViewBag.OutOfNumber';
+
+    @*var estcount = '@HS.Web.UI.Helper.LabelHelper.NumberFormat(Model.LeadTabEstimateCount.EstimateCount)';*@
+    @*var bookingcount = '@Model.LeadTabBookingCount.BookingCount';
+    var leadthiscount = '@Model.LeadTabThisMonthCount.LeadThisMonthCount';
+    var leadlastcount = '@Model.LeadTabLastMonthCount.LeadLastMonthCount';
+    var estamount = '@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.LeadTabEstimateAmount.LeadEstimateAmount)';
+    var Bookingamount = '@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.LeadTabBookingAmount.LeadBookingAmount)';*@
+    var LoadRequestTechnician = function (id) {
+        OpenRightToLeftModal(domainurl + "/Leads/LeadRequestTechnician?LeadId=" + id);
+    }
+    var LoadLeadDocumentCenter = function (id) {
+        LoadDocumentCenter(id, true);
+    }
+    var LeadVerify = function (id) {
+        LoadVerifyLeads(id, true);
+    }
+    $(document).ready(function () {
+        /*parent.$(".spnleadcount").html(leadcount);
+        parent.$(".spnestimatecount").html(estcount);
+        parent.$(".bookingimatecount").html(bookingcount);
+        parent.$(".spnthiscount").html(leadthiscount);
+        parent.$(".spnlastcount").html(leadlastcount);
+        parent.$(".spnestimateamount").html(estamount);
+        parent.$(".spnBookingamount").html(Bookingamount);*/
+        $(".btnLeadSetup").click(function () {
+            var valid = $(this).attr('data-id');
+            LoadLeadSetup(valid, true)
+        })
+        $(".btnSmartLeadSetup").click(function () {
+            var valid = $(this).attr('data-id');
+            LoadSmartLeadSetup(valid, true)
+        })
+        $(".addressMapPopup").click(function () {
+            LeadGuidID = $(this).attr('data-id');
+            var mapLoadUrl = domainurl + "/Leads/LeadAddressMap?LeadId=" + LeadGuidID;
+            $(".MapManufacturerMagnific").attr("href", mapLoadUrl);
+            $(".MapManufacturerMagnific").click();
+        });
+        $("#SelectAll").change(function () {
+            if ($(this).is(':checked')) {
+                $(".CheckItems").each(function () {
+                    $(this).prop('checked', true);
+                });
+            } else {
+                $(".CheckItems").each(function () {
+                    $(this).prop('checked', false);
+                });
+            }
+        });
+        $("#SelectAllIds").change(function () {
+            if ($(this).is(':checked')) {
+                $(".CheckItems").each(function () {
+                    $(this).prop('checked', true);
+                });
+            } else {
+                $(".CheckItems").each(function () {
+                    $(this).prop('checked', false);
+                });
+            }
+        });
+        $(".icon_sort_lead").click(function () {
+            var orderval = $(this).attr('data-val');
+            SortByCol = orderval;
+            CustomerFilterQuery(pageno);
+        });
+
+            console.log(LeadFilterCount);
+        $(".spnleadcount").html(LeadFilterCount);
+        //$('[data-toggle="tooltip"]').tooltip();
+    });
+</script>
+<style>
+    .header-content {
+        padding: 0;
+    }
+
+    .addressMapPopup:hover {
+        cursor: pointer;
+    }
+
+    .displayNone {
+        display: none;
+    }
+
+    #tblCustomerList thead .thead-th-style {
+        cursor: pointer;
+    }
+
+    #tblCustomerList thead tr th div:nth-child(1) {
+        width: 94%;
+        float: left;
+        padding-top: 2px;
+    }
+
+    #tblCustomerList thead tr th div:nth-child(2) {
+        width: 6%;
+        float: left;
+    }
+
+        #tblCustomerList thead tr th div:nth-child(2) i {
+            float: right;
+            cursor: pointer;
+            width: 100%;
+            text-align: right;
+            color: #bdbdbd;
+        }
+
+            #tblCustomerList thead tr th div:nth-child(2) i:nth-child(2) {
+                margin-top: -5px;
+            }
+
+    #tblCustomerList thead tr th {
+        padding: 0px 10px 0px 10px;
+    }
+
+    .green-tooltip + .tooltip > .tooltip-inner {
+        background-color: #2ca01c;
+    }
+
+    #tblCustomerList thead tr .ld_ph_no {
+        width: 145px;
+    }
+
+    @@media (max-width:768px) {
+        .fllp_sp_head {
+            display: none;
+        }
+    }
+</style>
+
+<div class="header-content">
+    <table class="data-table display lead_list_view" id="tblCustomerList">
+        <thead class="table-head-border header_hide">
+            <tr>
+                <th class="eq th_timeclock customer_list_checkbox">
+                    <label for="SelectAll" class="label-cbx">
+                        <input id="SelectAll" idval="SelectAll" type="checkbox" name="SelectAll" class="invisible">
+                        <div class="checkbox">
+                            <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                <polyline points="4 11 8 15 16 6"></polyline>
+                            </svg>
+                        </div>
+                    </label>
+                </th>
+                @foreach (var item in (List<HS.Entities.GridSetting>)ViewBag.LeadGroupGridSettings)
+                {
+                    if (item.GridActive == true)
+                    {
+                        if (Localize.T(item.SelectedColumn) == Localize.T("Phone No"))
+                        {
+                            <th class="eq th_timeclock ld_ph_no" data-info="@item.SelectedColumn">
+                                <div>@Localize.T(item.SelectedColumn)</div>
+                                <div><i class="fa fa-angle-up icon_sort_lead" data-val="ascending/@item.SelectedColumn.ToLower().Replace(" ","")"></i><i class="fa fa-angle-down icon_sort_lead" data-val="descending/@item.SelectedColumn.ToLower().Replace(" ","")"></i></div>
+                            </th>
+                        }
+                        else
+                        {
+                            <th class="eq th_timeclock" data-info="@item.SelectedColumn">
+                                <div>@Localize.T(item.SelectedColumn)</div>
+                                <div><i class="fa fa-angle-up icon_sort_lead" data-val="ascending/@item.SelectedColumn.ToLower().Replace(" ","")"></i><i class="fa fa-angle-down icon_sort_lead" data-val="descending/@item.SelectedColumn.ToLower().Replace(" ","")"></i></div>
+                            </th>
+                        }
+
+                    }
+
+                }
+                <th class="eq th_timeclock custom_action_allign">
+                    @Localize.T("Actions")
+                </th>
+                <th class="th hidden" data-info="Name">@Localize.T("Name")</th>
+                <th class="th hidden" data-info="Email">@Localize.T("Email Address")</th>
+                <th class="th hidden" data-info="BussinessName">@Localize.T("Business Name")</th>
+                <th class="th hidden" data-info="Type">@Localize.T("Type")</th>
+                <th class="th hidden" data-info="Sales">@Localize.T("Sales Person")</th>
+                <th class="th hidden" data-info="Phone">@Localize.T("Primary Phone")</th>
+                <th class="th hidden" data-info="City">@Localize.T("City")</th>
+                <th class="th hidden" data-info="State">@Localize.T("State")</th>
+                <th class="th hidden" data-info="ZipCode">@Localize.T("Zip Code")</th>
+                <th class="th hidden" data-info="Contract">@Localize.T("Contract Term")</th>
+                <th class="th hidden" data-info="MMR">@Localize.T("Monthly Monitoring Fee")</th>
+                <th class="th hidden" data-info="BillAmount">@Localize.T("Bill Amount")</th>
+                <th class="th hidden" data-info="BillCycle">@Localize.T("Bill Cycle")</th>
+                <th class="th hidden" data-info="Payment">@Localize.T("Payment Method")</th>
+                <th class="th hidden" data-info="Tax">@Localize.T("Tax")</th>
+                <th class="th hidden" data-info="CustomerNo">@Localize.T("Customer No")</th>
+                <th class="th hidden" data-info="SSN">@Localize.T("SSN")</th>
+                <th class="th hidden" data-info="DateofBirth">@Localize.T("Date of Birth")</th>
+                <th class="th hidden" data-info="SecondaryPhone">@Localize.T("Secondary Phone")</th>
+                <th class="th hidden" data-info="CreditScore">@Localize.T("Credit Score")</th>
+                <th class="th hidden" data-info="FundingCompany">@Localize.T("Funding Company")</th>
+                <th class="th hidden" data-info="LeadSource">@Localize.T("Lead Source")</th>
+                <th class="th hidden" data-info="LeadSourceType">@Localize.T("Lead Source Type")</th>
+                <th class="th hidden" data-info="CellularBackup">@Localize.T("Cellular Backup")</th>
+                <th class="th hidden" data-info="CustomerFunded">@Localize.T("Customer Funded")</th>
+                <th class="th hidden" data-info="Maintenance">@Localize.T("Maintenance")</th>
+                <th class="th hidden" data-info="Note">@Localize.T("Note")</th>
+                <th class="th hidden" data-info="SalesDate">@Localize.T("Sales Date")</th>
+                <th class="th hidden" data-info="InstallDate">@Localize.T("Install Date")</th>
+                <th class="th hidden" data-info="CutInDate">@Localize.T("Cut In Date")</th>
+                <th class="th hidden" data-info="Installer">@Localize.T("Installer")</th>
+                <th class="th hidden" data-info="FundingDate">@Localize.T("Funding Date")</th>
+                <th class="th hidden" data-info="JoinDate">@Localize.T("Join Date")</th>
+                <th class="th hidden" data-info="QA1">@Localize.T("QA1")</th>
+                <th class="th hidden" data-info="QA1Date">@Localize.T("QA1 Date")</th>
+                <th class="th hidden" data-info="QA2">@Localize.T("QA2")</th>
+                <th class="th hidden" data-info="QA2Date">@Localize.T("QA2 Date")</th>
+                <th class="th hidden" data-info="Status">@Localize.T("Status")</th>
+                <th class="th hidden" data-info="Note">@Localize.T("Note")</th>
+                <th class="th hidden" data-info="BillDay">@Localize.T("Bill Day")</th>
+                <th class="th hidden" data-info="StreetType">@Localize.T("Street Type")</th>
+                <th class="th hidden" data-info="Appartment">@Localize.T("Appartment")</th>
+                <th class="th hidden" data-info="SecondCustomerNo">@Localize.T("Second Customer No")</th>
+                <th class="th hidden" data-info="AdditionalCustomerNo">@Localize.T("Additional Customer No")</th>
+                <th class="th hidden" data-info="Passcode">@Localize.T("Passcode")</th>
+                <th class="th hidden" data-info="ActivationFee">@Localize.T("Activation Fee")</th>
+                <th class="th hidden" data-info="FirstBilling">@Localize.T("First Billing")</th>
+                <th class="th hidden" data-info="CrossStreet">@Localize.T("Cross Street")</th>
+                <th class="th hidden" data-info="DBA">@Localize.T("DBA")</th>
+                <th class="th hidden" data-info="IsAgreement">@Localize.T("Agreement")</th>
+                <th class="th hidden" data-info="BranchId">@Localize.T("Branch Id")</th>
+                <th class="th hidden" data-info="LastUpdatedDate">@Localize.T("Last Updated Date")</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (HS.Entities.Customer item in Model.CustomerList)
+            {
+                <tr class="tr-style Export_excel_lead" data-id="@item.Id">
+                    <td class="table-body-td-style lead_list_device_row customer_list_checkbox" valign="middle">
+                        <label for="@item.Id" class="label-cbx">
+                            <input id="@item.Id" idval="@item.Id" type="checkbox" class="CheckItems invisible" value="@item.Id">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                    </td>
+                    @foreach (var Cols in (List<HS.Entities.GridSetting>)ViewBag.LeadGroupGridSettings)
+                    {
+                        var isNew = false;
+                        List<HS.Entities.GridSetting> tempGridSettings = gridSetting.Where(x => x.ColumnGroup == Cols.SelectedColumn).ToList();
+                        var SelectStreetType = gridSetting.Where(x => x.SelectedColumn == Localize.T("StreetType")).FirstOrDefault();
+                        var SelectAppartment = gridSetting.Where(x => x.SelectedColumn == Localize.T("Appartment")).FirstOrDefault();
+                <td class="lead_list_device_row">
+                    @{
+                        foreach (var cellcol in tempGridSettings)
+                        {
+                            if (Localize.T(cellcol.SelectedColumn) == "DisplayName" && !string.IsNullOrWhiteSpace(item.DisplayName))
+                            {
+                                <div class="heading_for_mobile">@Localize.T("Name")</div>
+                                <div class="content_for_mobile">
+                                    <a href="/Lead/Leadsdetail/?id=@item.Id" class="name-anchor-style leads-name-anchor-style" id="@(item.Id)">
+                                        <span href="/Lead/Leadsdetail/?id=@item.Id" title="@item.Note">@item.DisplayName</span>
+                                    </a>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BusinessName") && !string.IsNullOrWhiteSpace(item.BusinessName)
+                                && item.Type == "Commercial" && item.BusinessName != item.DisplayName)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@item.BusinessName</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("FirstName") && !string.IsNullOrWhiteSpace(item.FirstName) && (item.FirstName + " " + item.LastName != item.DisplayName))
+                            {
+                                <span class="content_for_mobile"><span class="cus_first_name_mobile">@Localize.T("First Name: ")</span>@item.FirstName </span>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("LastName") && !string.IsNullOrWhiteSpace(item.LastName) && (item.FirstName + " " + item.LastName != item.DisplayName))
+                            {
+                                <span class="content_for_mobile"><span class="cus_first_name_mobile">@Localize.T("Last Name: ")</span>@item.LastName</span>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PlatformId") && !string.IsNullOrWhiteSpace(item.PlatformId))
+                            {
+                                <span class="tr-title">@Localize.T("Platform ID") <span>:</span></span>
+                                <span class="content_for_mobile">@item.PlatformId</span>
+                            }
+                            else if ((Localize.T(cellcol.SelectedColumn) == Localize.T("LeadSource") || Localize.T(cellcol.SelectedColumn) == Localize.T("Lead Source")) && !string.IsNullOrWhiteSpace(item.LeadSource) && item.LeadSource != "-1")
+                            {
+                                <div class="heading_for_mobile">@Localize.T("Lead Source")</div>
+                                <span class="content_for_mobile">@Localize.T("Lead Source: ") @(string.IsNullOrWhiteSpace(item.LeadSourceVal) ? item.LeadSource : item.LeadSourceVal)</span>
+                            }
+                            else if ((Localize.T(cellcol.SelectedColumn) == Localize.T("LeadSourceType") || Localize.T(cellcol.SelectedColumn) == Localize.T("Lead Source Type")) && !string.IsNullOrWhiteSpace(item.LeadSourceType) && item.LeadSourceType != "-1")
+                            {
+                                <div class="content_for_mobile"><span>@Localize.T("Lead Source Type: ") @item.LeadSourceType</span></div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PrimaryPhone") && !string.IsNullOrWhiteSpace(item.PrimaryPhone))
+                            {
+                                <div class="heading_for_mobile">@Localize.T("Phone No")</div>
+                                <div class="content_for_mobile"><i class="fa fa-phone"></i> @item.PrimaryPhone</div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SecondaryPhone") && !string.IsNullOrWhiteSpace(item.SecondaryPhone))
+                            {
+                                <div class="content_for_mobile"><i class="fa fa-mobile-phone"></i> @item.SecondaryPhone</div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("JoinDate"))
+                            {
+                                <div class="content_for_mobile">@Localize.T("Customer Since: ") @HS.Framework.DateTimeExtension.UTCToClientTime(item.JoinDate.Value).ToString("MM/dd/yy")</div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Lead Status"))
+                            {
+                                <div class="heading_for_mobile">@Localize.T("Status")</div>
+                                <div class="content_for_mobile">
+                                    @if (!string.IsNullOrWhiteSpace(item.Status) && item.Status != "-1" && item.Status != "Select One")
+                                    {
+
+                                        <span>@Localize.T("Status: ") @item.StatusVal</span><br>
+                                    }
+                                    @if (!PermissionChecker.IsPermitted(UserPermissions.CustomerPermissions.CustomerBillingDisplay))
+                                    {
+                                        if (item.MonthlyMonitoringFee != "-1" && item.PaymentMethod != "-1" && item.MonthlyMonitoringFee != "" && item.PaymentMethod != "")
+                                        {
+                                            <span>@Localize.T("Billing: ") @Localize.T("Yes")</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@Localize.T("Billing: ") @Localize.T("No")</span>
+                                        }
+                                    }
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn).ToLower() == Localize.T("isactive"))
+                            {
+                                if (item.IsActive == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span> @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile red">
+                                        <span>@Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("EstCloseDate") && item.EstCloseDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Estimate Close Date: ") @item.EstCloseDate.Value.ToString("MM/dd/yy") </span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ProjectWalkDate") && item.ProjectWalkDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Project Walk Date: ") @item.ProjectWalkDate.Value.ToString("MM/dd/yy") </span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("DBA") && !string.IsNullOrEmpty(item.DBA))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Doing Business As: ") @item.DBA</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Soldby") && !string.IsNullOrEmpty(item.PersonSales))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Sales Person: ") @item.PersonSales</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BranchId") && !string.IsNullOrEmpty(item.BranchName))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Branch Name: ") @item.BranchName</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("InstallType") && (!string.IsNullOrEmpty(item.InstallType) || item.InstallType != "-1"))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Install Type: ") @item.InstallType</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("County") && !string.IsNullOrEmpty(item.County))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("County: ") @item.County</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("EmailAddress") && !string.IsNullOrEmpty(item.EmailAddress))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Email Address: ") @item.EmailAddress</span>
+                                </div>
+                            }
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PhoneType") && !string.IsNullOrEmpty(item.PhoneType) && item.PhoneType != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Phone Type: ") @item.PhoneType</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Carrier") && !string.IsNullOrEmpty(item.Carrier) && item.Carrier != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Carrier: ") @item.Carrier</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ReferringCustomer") && item.ReferringCustomer != new Guid())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Referring Customer: ") @item.ReferringCustomer</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("DateofBirth") && item.DateofBirth != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Date of Birth: ") @item.DateofBirth.Value.ToString("MM/dd/yy") </span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SSN") && !string.IsNullOrEmpty(item.SSN))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("SSN: ") @item.SSN</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Note") && !string.IsNullOrEmpty(item.Note))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Note: ") @item.Note</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CustomerNo") && !string.IsNullOrWhiteSpace(item.CustomerNo))
+                            {
+                                <div class="content_for_mobile"><span><b>@Localize.T("Acct: ")</b> @item.CustomerNo</span></div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Title") && !string.IsNullOrWhiteSpace(item.Title))
+                            {
+                                <div class="content_for_mobile"><span>@Localize.T("Title: ") @item.Title</span></div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Type") && !string.IsNullOrWhiteSpace(item.Type) && item.Type != "-1")
+                            {
+                                <div class="content_for_mobile"><span>@Localize.T("Type: ") @item.Type</span></div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CellNo") && !string.IsNullOrWhiteSpace(item.CellNo))
+                            {
+                                <div class="content_for_mobile"><span>@Localize.T("Cell No: ") @item.CellNo</span></div>
+                            }
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Fax") && !string.IsNullOrWhiteSpace(item.Fax))
+                            {
+                                <div class="content_for_mobile"><span>@Localize.T("Fax: ") @item.Fax</span></div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CallingTime") && !string.IsNullOrWhiteSpace(item.CallingTime) && item.CallingTime != "-1")
+                            {
+                                <div class="content_for_mobile"><span>@Localize.T("Calling Time") @item.CallingTime</span></div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Address") && !string.IsNullOrWhiteSpace(item.Address))
+                            {
+                                <div class="content_for_mobile"><span>@(Html.Raw(HS.Web.UI.Helper.AddressHelper.MakeCustomerAddressForList(item, LeadGridSettingList)))</span></div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Address2") && !string.IsNullOrWhiteSpace(item.Address2))
+                            {
+
+                                <div class="content_for_mobile"><span>@(Html.Raw(HS.Web.UI.Helper.AddressHelper.MakeCustomerAddress2ForList(item, LeadGridSettingList)))</span></div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Country") && !string.IsNullOrEmpty(item.Country))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Country: ") @item.Country</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CountryPrevious") && !string.IsNullOrEmpty(item.CountryPrevious))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Country Previous: ") @item.CountryPrevious</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AccountNo") && !string.IsNullOrEmpty(item.AccountNo))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Account No: ") @item.AccountNo</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("IsAlarmCom"))
+                            {
+                                if (item.IsAlarmCom == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Alarming: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Alarming: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CreditScore") && !string.IsNullOrWhiteSpace(item.CreditScore))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Credit Score: ") @item.CreditScore</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CreditScoreValue") && item.CreditScoreValue > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Credit Score Value: ") @item.CreditScoreValue</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("FundingCompany") && !string.IsNullOrWhiteSpace(item.FundingCompany))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Funding Company: ") @item.FundingCompany</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("MonthlyMonitoringFee") && !string.IsNullOrWhiteSpace(item.MonthlyMonitoringFee))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Monitoring Fee: ") @item.MonthlyMonitoringFee</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CellularBackup"))
+                            {
+                                if (item.CellularBackup == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Cellular Backup: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Cellular Backup: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CustomerFunded"))
+                            {
+                                if (item.CustomerFunded == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Customer Funded: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Customer Funded: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Maintenance"))
+                            {
+                                if (item.Maintenance == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Maintenance: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Maintenance: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SalesDate") && item.SalesDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Sales Date: ") @item.SalesDate.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("InstallDate") && item.InstallDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Install Date: ") @item.InstallDate.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CutInDate") && item.CutInDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Cut In Date: ") @item.CutInDate.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Installer") && !string.IsNullOrWhiteSpace(item.Installer))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Installer: ") @item.InstallerName</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("FundingDate") && item.FundingDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Funding Date: ") @item.FundingDate.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ReminderDate") && item.ReminderDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Reminder Date: ") @item.ReminderDate.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("QA1") && !string.IsNullOrWhiteSpace(item.QA1))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("QA1: ") @item.QA1</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("QA1Date") && item.QA1Date != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("QA1 Date: ") @item.QA1Date.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("QA2") && !string.IsNullOrWhiteSpace(item.QA2))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("QA2: ") @item.QA2</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("QA2Date") && item.QA2Date != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("QA2 Date: ") @item.QA2Date.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillAmount") && item.BillAmount > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Bill Amount: ") @item.BillAmount</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PaymentMethod") && !string.IsNullOrWhiteSpace(item.PaymentMethod) && item.PaymentMethod != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Payment Method: ") @item.PaymentMethod</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillCycle") && !string.IsNullOrWhiteSpace(item.BillCycle) && item.BillCycle != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Bill Cycle: ") @item.BillCycle</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillDay") && item.BillDay > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Bill Day: ") @item.BillDay</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillNotes") && !string.IsNullOrWhiteSpace(item.BillNotes))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Bill Notes: ") @item.BillNotes</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillTax") && item.BillTax == true)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Bill Tax: ") @Localize.T("Yes")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BillOutStanding") && item.BillOutStanding > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Bill OutStanding: ") @item.BillOutStanding</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ServiceDate") && item.ServiceDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Service Date: ") @item.ServiceDate.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Area") && !string.IsNullOrWhiteSpace(item.Area))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Area: ") @item.Area</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Latlng") && !string.IsNullOrWhiteSpace(item.Latlng))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Latlng: ") @item.Latlng</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SecondCustomerNo") && !string.IsNullOrWhiteSpace(item.SecondCustomerNo))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Second Customer No: ") @item.SecondCustomerNo</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AdditionalCustomerNo") && !string.IsNullOrWhiteSpace(item.AdditionalCustomerNo))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Additional Customer No: ") @item.AdditionalCustomerNo</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("IsTechCallPassed"))
+                            {
+                                if (item.IsTechCallPassed == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Tech Call: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Tech Call: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("IsDirect"))
+                            {
+                                if (item.IsDirect == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Direct: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Direct: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Passcode") && !string.IsNullOrWhiteSpace(item.Passcode))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Passcode: ") @item.Passcode</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("MapscoNo") && !string.IsNullOrWhiteSpace(item.MapscoNo) && PermissionChecker.IsPermitted(PermissionList.CustomerPermissions.MapscoNoPermission))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Mapsco Number: ") @item.MapscoNo</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ActivationFee") && item.ActivationFee > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Activation Fee: ") @item.ActivationFee</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("FirstBilling") && item.FirstBilling != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("First Billing: ") @item.FirstBilling.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ActivationFeePaymentMethod") && !string.IsNullOrWhiteSpace(item.ActivationFeePaymentMethod) && item.ActivationFeePaymentMethod != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("ActivationFee Payment Method: ") @item.ActivationFeePaymentMethod</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("LastGeneratedInvoice") && item.LastGeneratedInvoice != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Last Generated Invoice: ") @item.LastGeneratedInvoice.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Singature") && !string.IsNullOrWhiteSpace(item.Singature))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Singature: ") @item.Singature</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CrossStreet") && !string.IsNullOrWhiteSpace(item.CrossStreet))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Cross Street: ") @item.CrossStreet</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PreferedEmail"))
+                            {
+                                if (item.PreferedEmail == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Prefered Email: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Prefered Email: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PreferedSms"))
+                            {
+                                if (item.PreferedSms == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Prefered Sms: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Prefered Sms: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("IsAgreement"))
+                            {
+                                if (item.IsAgreement == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Sign Agreement: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Sign Agreement: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("IsFireAccount"))
+                            {
+                                if (item.IsFireAccount == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Fire Account: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Fire Account: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CreatedByUid") && !string.IsNullOrWhiteSpace(item.CreatedByVal))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Created By: ") @item.CreatedByVal</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CreatedDate") && item.CreatedDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Created Date: ") @item.CreatedDate.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("LastUpdatedBy") && !string.IsNullOrWhiteSpace(item.LastUpdatedBy))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Updated By: ") @item.LastUpdatedBy</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("LastUpdatedByUid") && !string.IsNullOrWhiteSpace(item.LastUpdatedBy))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Updated By: ") @item.LastUpdatedBy</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("LastUpdatedDate") && item.LastUpdatedDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Updated Date: ") @item.LastUpdatedDate.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BusinessAccountType") && !string.IsNullOrWhiteSpace(item.BusinessAccountType) && item.BusinessAccountType != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Business Account Type: ") @item.BusinessAccountType</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("EsistingPanel") && !string.IsNullOrWhiteSpace(item.EsistingPanel))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Esisting Panel: ") @item.EsistingPanel</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Ownership") && !string.IsNullOrWhiteSpace(item.Ownership))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Ownership: ") @item.Ownership</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PurchasePrice") && item.PurchasePrice > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Purchase Price: ") @item.PurchasePrice</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ContractValue") && !string.IsNullOrWhiteSpace(item.ContractValue))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Contract Value: ") @item.ContractValue</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ChildOf") && item.ChildOf != new Guid())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Child Of: ") @item.ChildOf</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("EmailVerified"))
+                            {
+                                if (item.EmailVerified == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Verified Email: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Verified Email: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("HomeVerified"))
+                            {
+                                if (item.HomeVerified == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Home Verified: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Home Verified: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CustomerToken") && !string.IsNullOrWhiteSpace(item.CustomerToken))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Customer Token: ") @item.CustomerToken</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PaymentToken") && !string.IsNullOrWhiteSpace(item.PaymentToken))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Payment Token: ") @item.PaymentToken</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ScheduleToken") && !string.IsNullOrWhiteSpace(item.ScheduleToken))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Schedule Token: ") @item.ScheduleToken</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SubscriptionStatus") && !string.IsNullOrWhiteSpace(item.SubscriptionStatus))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Subscription Status: ") @item.SubscriptionStatus</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AnnualRevenue") && item.AnnualRevenue > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Annual Revenue: ") @item.AnnualRevenue</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Website") && !string.IsNullOrWhiteSpace(item.Website))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Website: ") @item.Website</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Market") && !string.IsNullOrWhiteSpace(item.Market) && item.Market != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Market: ") @item.Market</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Passengers") && item.Passengers > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Passengers: ") @item.Passengers</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Budget") && item.Budget > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Budget: ") @item.Budget</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SmartSetUpStep") && item.SmartSetUpStep > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Smart SetUp Step: ") @item.SmartSetUpStep</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("CustomerAccountType") && !string.IsNullOrWhiteSpace(item.CustomerAccountType))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Customer Account Type: ") @item.CustomerAccountType</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("IsPrimaryPhoneVerified"))
+                            {
+                                if (item.IsPrimaryPhoneVerified == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Primary Phone Verified: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Primary Phone Verified: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("IsSecondaryPhoneVerified"))
+                            {
+                                if (item.IsSecondaryPhoneVerified == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Secondary Phone Verified: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Secondary Phone Verified: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("IsCellNoVerified"))
+                            {
+                                if (item.IsCellNoVerified == true)
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Cell No Verified: ") @Localize.T("Yes")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span>@Localize.T("Cell No Verified: ") @Localize.T("No")</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("MiddleName") && !string.IsNullOrWhiteSpace(item.MiddleName))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Middle Name: ") @item.MiddleName</span>
+                                </div>
+                            }
+
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Id"))
+                            {
+                                <div class="heading_for_mobile">@Localize.T(Localize.T(cellcol.SelectedColumn))</div>
+                                if (string.IsNullOrWhiteSpace(item.DisplayName))
+                                {
+                                    <div class="content_for_mobile">
+                                        <span class="fllp_sp_head">@Localize.T("ID: ")</span><a href="/Customer/Customerdetail/?id=@item.Id" class="name-anchor-style leads-name-anchor-style" id="@(item.Id)">
+                                            <span href="/Lead/Leadsdetail/?id=@item.Id" title="@item.Note"> @item.Id</span>
+                                        </a>
+                                    </div>
+                                }
+
+                                else
+                                {
+                                    <div class="content_for_mobile">
+                                        <span><span class="fllp_sp_head">@Localize.T("ID: ")</span> @item.Id</span>
+                                    </div>
+                                }
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("UnpaidAmount") && item.UnpaidInvoiceTotal > 0)
+                            {
+                                <div class="content_for_mobile red unpaidamount_click" data-id="@item.Id">
+                                    <span>@Localize.T("Unpaid Amount: ") @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@string.Format("{0:#,###.00}", item.UnpaidInvoiceTotal)</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ContractTeam") && !string.IsNullOrWhiteSpace(item.ContractTeam) && item.ContractTeam != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Contract Term: ") @item.ContractTeam</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("HomeOwner") && !string.IsNullOrWhiteSpace(item.HomeOwner))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("HomeOwner: ") @item.HomeOwner</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AccessGivenTo") && item.AccessGivenTo != new Guid())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Access Given: ") @item.AccessGivenTo</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("DoNotCall") && item.DoNotCall != null && item.DoNotCall != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Do Not Call: ") @item.DoNotCall.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("PreferredContactMethod") && !string.IsNullOrWhiteSpace(item.PreferredContactMethod))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Preferred Contact Method: ") @item.PreferredContactMethod</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("MovingDate") && item.MovingDate != null && item.MovingDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Moving Date: ") @item.MovingDate.Value.UTCToClientTime().ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("InstalledStatus") && !string.IsNullOrWhiteSpace(item.InstalledStatus) && item.InstalledStatus != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Installed Status: ") @item.InstalledStatus</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AcquiredFrom") && !string.IsNullOrWhiteSpace(item.AcquiredFrom))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Acquired From: ") @item.AcquiredFrom</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BuyoutAmountByADS") && item.BuyoutAmountByADS > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Buyout Amount By ADS: ") @HS.Web.UI.Helper.LabelHelper.FormatAmount(item.BuyoutAmountByADS)</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("BuyoutAmountBySalesRep") && item.BuyoutAmountBySalesRep > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Buyout Amount By SalesRep: ") @HS.Web.UI.Helper.LabelHelper.FormatAmount(item.BuyoutAmountBySalesRep)</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("FinancedTerm") && item.FinancedTerm > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Financed Term: ") @HS.Web.UI.Helper.LabelHelper.FormatAmount(item.FinancedTerm)</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("FinancedAmount") && item.FinancedAmount > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Financed Amount: ") @HS.Web.UI.Helper.LabelHelper.FormatAmount(item.FinancedAmount)</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("Levels") && item.Levels > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Levels: ") @HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Levels)</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("SoldAmount") && item.SoldAmount > 0)
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Sold Amount: ") @HS.Web.UI.Helper.LabelHelper.FormatAmount(item.SoldAmount)</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AgreementEmail") && !string.IsNullOrWhiteSpace(item.AgreementEmail) && item.AgreementEmail != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Agreement Email: ") @item.AgreementEmail</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AgreementPhoneNo") && !string.IsNullOrWhiteSpace(item.AgreementPhoneNo) && item.AgreementPhoneNo != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Agreement PhoneNo: ") @item.AgreementPhoneNo</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("TaxExemption") && !string.IsNullOrWhiteSpace(item.TaxExemption) && item.TaxExemption != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    @{
+                                        if (item.TaxExemption == "1")
+                                        {
+                                            <span>@Localize.T("Tax Exemption: Yes")</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@Localize.T("Tax Exemption: No")</span>
+                                        }
+                                    }
+
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AppoinmentSet") && !string.IsNullOrWhiteSpace(item.AppoinmentSet) && item.AppoinmentSet != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Appoinment Set: ") @item.AppoinmentSet</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("AppoinmentSetBy") && !string.IsNullOrWhiteSpace(item.AppoinmentSetByValue))
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("Appoinment Set By: ") @item.AppoinmentSetByValue</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("FollowUpDate") && item.FollowUpDate != null && item.FollowUpDate != new DateTime())
+                            {
+                                <div class="content_for_mobile">
+                                    <span>@Localize.T("FollowUp Date: ") @item.FollowUpDate.Value.ToString("MM/dd/yy")</span>
+                                </div>
+                            }
+                            else if (Localize.T(cellcol.SelectedColumn) == Localize.T("ContactedPerviously") && !string.IsNullOrWhiteSpace(item.ContactedPerviously) && item.ContactedPerviously != "-1")
+                            {
+                                <div class="content_for_mobile">
+                                    @{
+                                        if (@item.ContactedPerviously == "1")
+                                        {
+                                            <span>@Localize.T("Contacted: Yes")</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@Localize.T("Contacted: No")</span>
+                                        }
+
+                                    }
+                                </div>
+                            }
+                        }
+                    }
+                </td>
+                    }
+                    <td class="table-body-td-style lead_list_device_row" valign="middle">
+                        @if (!PermissionChecker.IsPermitted(PermissionList.UserMgmtPermissions.CustomerViewOnly) || item.Soldby == CurrentLoggedInUser.UserId.ToString())
+                        {
+                            <div class="heading_for_mobile">@Localize.T("Actions")</div>
+                            <div class="ActionsDivLeads ActionsDivLeads_custom">
+                                <div class="btn-group">
+                                    <button class="btn green_button" onclick="LoadLeadVerificationInfo(@item.Id)" data-id="@item.Id" title="@Localize.T("Edit")">
+                                        <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                                    </button>
+                                    @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadSmartSetup))
+                                    {
+                                        <button data-toggle="dropdown" class="btn dropdown-toggle green_button" type="button" title="@Localize.T("Smart setup")">
+                                            <span class="caret"></span>
+                                        </button>
+                                    }
+                                    <ul style="min-width:inherit;width:100px; margin-top:0px !important; border-radius:4px !important; border-color: #b1b4bb !important; left:unset;" class="dropdown-menu customer-dropdown-ul-style">
+
+                                        @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadSmartSetup))
+                                        {
+                                            <li>
+                                                <a class="dropallign btnSmartLeadSetup" href="javascript:void(0)" data-id="@item.Id">
+                                                    <i class="fa fa-cog" aria-hidden="true"></i> @Localize.T("Smart Setup")
+                                                </a>
+                                            </li>
+                                        }
+                                        @*else
+                                            {
+                                                <li>
+                                                    <a class="dropallign btnLeadSetup" href="javascript:void(0)" data-id="@item.Id">
+                                                        <i class="fa fa-cog" aria-hidden="true"></i> @Localize.T("Setup")
+                                                    </a>
+                                                </li>
+                                            }*@
+                                    </ul>
+                                </div>
+                            </div>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+
+    </table>
+</div>
+
+<div class="AgentListPagination">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="CustomerFilterQuery(@(ViewBag.PageNumber))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerFilterQuery(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerFilterQuery(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerFilterQuery(2)">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="CustomerFilterQuery(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="CustomerFilterQuery(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="CustomerFilterQuery(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="CustomerFilterQuery(2)">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="CustomerFilterQuery(3)">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="CustomerFilterQuery(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerFilterQuery(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CustomerFilterQuery(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CustomerFilterQuery(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="CustomerFilterQuery(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="CustomerFilterQuery()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerFilterQuery(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CustomerFilterQuery(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CustomerFilterQuery(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="CustomerFilterQuery(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerFilterQuery(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CustomerFilterQuery(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CustomerFilterQuery(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="CustomerFilterQuery(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="CustomerFilterQuery(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CustomerFilterQuery(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="CustomerFilterQuery(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="CustomerFilterQuery(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="CustomerFilterQuery(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+
+<div class="displayNone">
+    <a href="" class="MapManufacturerMagnific">@Localize.T("Address in Map")</a>
+</div>

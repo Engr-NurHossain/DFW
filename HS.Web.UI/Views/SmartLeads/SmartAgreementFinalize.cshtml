@@ -1,0 +1,558 @@
+﻿@model HS.Entities.LeadServiceSetupCustomModel
+@{ 
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency();
+    bool IsActivationFee = Model.PaymentInfoList.Where(m => m.PayFor == "Activation Fee").Count() > 0;
+    bool IsEquipment = Model.PaymentInfoList.Where(m => m.PayFor == "Equipment").Count() > 0;
+    bool IsFirstMonth = Model.PaymentInfoList.Where(m => m.PayFor == "First Month").Count() > 0;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+
+@Styles.Render("~/styles/LeadVerifyInfo")
+@Scripts.Render("~/scripts/LeadVerifyInfo")
+
+<script src="~/Content/Js/NumberFormet/NumberFormat.js"></script>
+<script src="~/Content/Js/Card/CardValidation.js"></script>
+<link href="~/Content/Css/Lead/ContactTermPartial.css" rel="stylesheet" />
+<script src="~/Content/Js/LeadSetup/SmartContractTermPartialSetup.js"></script>
+<link href="~/Content/Css/CustomerDetails/CustomerDetailsCustom.css" rel="stylesheet" />
+<link href="~/Content/Css/Lead/EmergencyContactPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Lead/PackagePartial.css" rel="stylesheet" />
+<script>
+    var LeadIdEmgList = '@ViewBag.LeadCustomerID';
+    $(document).ready(function () {
+        $("#ACH_addView").click(function () {
+            OpenRightToLeftModal(domainurl + "/SmartLeads/ACHAddViewPaymentMethod?customerid=" + LeadIdEmgList);
+        })
+        $("#CC_addView").click(function () {
+            OpenRightToLeftModal(domainurl + "/SmartLeads/CCAddViewPaymentMethod?customerid=" + LeadIdEmgList);
+        })
+        $(".list_View_method").click(function () {
+            OpenTopToBottomModal(domainurl + "/SmartLeads/ListViewPaymentMethod?customerid=" + LeadIdEmgList);
+        })
+        $(".loadPaymentFor").html("Please wait until to load.....");
+        $(".loadPaymentFor").load(domainurl + "/Leads/LoadPaymentForPartial?customerid=" + LeadIdEmgList);
+        Asofdatepicker = new Pikaday({ format: 'MM/DD/YYYY', field: $('#AsOfDate')[0] });
+        $('#btnaddNewPayment').click(function () {
+            $('.divaddnewpayment').removeClass('hidden');
+            $('#btnPaymentClose').removeClass('hidden');
+        });
+        $('#btnPaymentClose').click(function () {
+            $('.divaddnewpayment').addClass('hidden');
+            $('#btnPaymentClose').addClass('hidden');
+        });
+        $("#btnPaymentSave").click(function () {
+            if ($("#payment_profile").val() != "") {
+                AddNewSavePaymentInfo();
+            }
+            else {
+                OpenErrorMessageNew("Error", "Please select payment profile");
+            }
+        });
+        $(".delete_payment_method").click(function () {
+            var id = $(this).attr('dataid');
+            var paymentinfoCusId = $(this).attr('paymentinfoCusId');
+            OpenConfirmationMessageNew("Confirm?", "Do you want to delete this payment method?", function () {
+                DeleteLeadPaymentMethod(id, paymentinfoCusId);
+            });
+        });
+        $("#btn_card_info_save").click(function () {
+            if (AddLeadPaymentMethod != "-1") {
+                if (!PaymentMethodValidation(AddLeadPaymentMethod)) {
+                    OpenErrorMessageNew("Error!", "Please fillup all data to add payment method.");
+                    return false;
+                }
+                var PaymentInfoFromJs1 = MakePaymentMethodParam(AddLeadPaymentMethod);
+                var url = domainurl + "/Leads/AddPaymentProfileWithInfo";
+                var param = JSON.stringify({
+                    PaymentInfo: PaymentInfoFromJs1,
+                    customerid: $("#LeadContractCustomerID").val(),
+                    paymentmethod: AddLeadPaymentMethod
+                })
+                $.ajax({
+                    type: "POST",
+                    ajaxStart: $(".loader-div").show(),
+                    url: url,
+                    data: param,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    cache: false,
+                    success: function (data) {
+                        if (data) {
+                            OpenSuccessMessageNew("Success", "Payment profile save successfully", function () {
+                                $("#ACH_PaymentInfo_AccountName").val("");
+                                $("#ACH_PaymentInfo_BankAccountType").val("-1");
+                                $("#ACH_PaymentInfo_EcheckType").val("-1");
+                                $("#ACH_PaymentInfo_RoutingNo").val("");
+                                $("#ACH_PaymentInfo_AcountNo").val("");
+                                $("#CreditCard_PaymentInfo_CardNumber").val("");
+                                $("#CreditCard_PaymentInfo_CardExpireDate").val("");
+                                $("#CreditCard_PaymentInfo_CardSecurityCode").val("");
+                                $("#CreditCard_PaymentInfo_AccountName").val("");
+                                $(".loadPaymentFor").html("Please wait until to load......");
+                                $(".loadPaymentFor").load(domainurl + "/Leads/LoadPaymentForPartial?customerid=" + LeadIdEmgList);
+                            });
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    }
+                });
+            }
+            else {
+                OpenErrorMessageNew("Error", "Please select payment method");
+            }
+        })
+    });
+</script>
+<div class="smart_lead_summery_container">
+    <div class="dropdown">
+        <button class="btn addView_button dropdown-toggle" data-toggle="dropdown"><i class="fa fa-plus"></i></button>
+        <ul class="dropdown-menu">
+            <li>
+                <button class="btn" id="ACH_addView">@Localize.T("ACH")</button>
+            </li>
+            <li style="padding-top:10px;">
+                <button class="btn" id="CC_addView">@Localize.T("Credit Card")</button>
+            </li>
+        </ul>
+    </div>
+    <div class="list_payment_method">
+        <button class="btn list_View_method"><i class="fa fa-list"></i></button>
+    </div>
+    <input id="step" type="hidden" value="5" />
+    <input type="hidden" value="@ViewBag.LeadCustomerID" id="LeadCustomerID" />
+    <input type="hidden" value="@ViewBag.leadcontractid" id="LeadContractId" />
+    <input type="hidden" value="@ViewBag.leadcontractcustomerid" id="LeadContractCustomerID" />
+    <input type="hidden" value="@ViewBag.leadcontractfirstname" id="LeadContractFirstName" />
+    <input type="hidden" value="@ViewBag.leadcontractlastname" id="LeadContractLastName" />
+    <input type="hidden" value="@ViewBag.leadcontractstreet" id="LeadContractStreet" />
+    <input type="hidden" value="@ViewBag.leadcontractZipCode" id="LeadContractZip" />
+    @Html.HiddenFor(x => x.CustomerModel.PaymentMethod)
+    @Html.HiddenFor(x => x.CustomerModel.ActivationFeePaymentMethod)
+
+    <div class="smart_payment_list_container">
+        <div class="smart_payment_list_header">
+            <div> @Localize.T("Payment Information")</div>
+        </div>
+        @if (Model.PaymentInfoList.Count() > 0)
+        {
+            <table id="TblPaymetList" class="smart_payment_list_table">
+                <thead class="table-head-border eg_contact_hide">
+                    <tr>
+                        <th class="thead-th-style">
+                            @Localize.T("Payment Method")
+                        </th>
+                        <th class="thead-th-style">
+                            @Localize.T("Payment For")
+                        </th>
+                        <th class="thead-th-style">
+                            @Localize.T("Attachment")
+                        </th>
+                        <th>
+                            @Localize.T("Action")
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.PaymentInfoList.Count() > 0)
+                    {
+                        foreach (var item in Model.PaymentInfoList)
+                        {
+                            <tr class="tr-style">
+                                <td class="table-body-td-style eg_contact_header_row" valign="top">
+                                    <span>@item.PaymentMethod</span>
+                                </td>
+                                <td class="table-body-td-style eg_contact_header_row" valign="top">
+
+                                    <span>@item.PayFor</span>
+                                </td>
+
+                                <td class="table-body-td-style eg_contact_header_row" valign="top">
+                                    @if (!string.IsNullOrWhiteSpace(item.FileName))
+                                    {
+                                        @*<img style="max-height:100px;max-width:100px;" src="@item.FileName" />*@
+
+                                        <a target="_blank" class="cus-anchor" href="@item.FileName">@Localize.T("Attachment")</a>
+                                    }
+                                </td>
+                                <td>
+                                    <button class="style_btn_delete btn-danger delete_payment_method" dataid="@item.Id" paymentinfoCusId="@item.PaymentInfoCustomerId" title="Delete">
+                                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        }
+        @if (!IsActivationFee || !IsEquipment || !IsFirstMonth)
+        {
+            <div class="smart_lead_summery_payment_for">
+                <div class="ci_block">
+                    <div class="ci_header clearfix">
+                       @Localize.T("Payment For")
+                    </div>
+                    <div class="ci_info">
+                        <div class="smart_payment_div_right">
+                            <div class="loadPaymentFor"></div>
+                            <div class="txt_form_add_file">
+                                <div class="col-md-12 padding-left-0">
+                                    <img id="UploadCustomerFileBtn" class="cursor-pointer" src="~/Content/Icons/blank_thumb_file.png" />
+                                    <div class="" style="margin-top: 15px;">
+                                        <span id="UploadSuccessMessage" class="hidden">@Localize.T("File Uploaded Successfully..!")</span>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+                                    <div class="progress progress-striped active">
+                                        <div class="progress-bar progress-bar-success" style="width:0%">
+                                            <span> 0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="hidden">
+                                <input type="hidden" id="UploadedPath" value="" />
+                                <input type="file" name="CustomerFile" class="hidden" id="UploadedFile" />
+                            </div>
+                            <button type="button" class="btn right" id="btnPaymentSave">
+                                <i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")
+                            </button>
+                            @*<button type="button" id="btnPaymentClose" class="btn close hidden" aria-label="Close"><span aria-hidden="true"></span><i class="fa fa-times"></i> @Localize.T("Close")</button>*@
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        }
+        <div class="smart_lead_summery_payment">
+            <div class="ci_block">
+                <div class="ci_header clearfix">
+                    @Localize.T("Add Payment Profile")
+                </div>
+                <div class="ci_info">
+                        <div class="smart_payment_div_left">
+                            <ul class="nav nav-tabs invoices-tabs" id="myInvoicesTab">
+                                @foreach (var item in ViewBag.PaymentMethodList as IEnumerable<HS.Entities.Lookup>)
+                                {
+                                    <li data-type="@item.DataValue" class="PaymentMethodType">
+                                        <a data-toggle="tab">@item.DisplayText</a>
+                                    </li>
+                                }
+                            </ul>
+
+                                @*@Html.DropDownList("AddLeadPaymentMethod", (List<SelectListItem>)ViewBag.MMRPaying, new { @class = "form-control", id = "AddLeadPaymentMethod" })*@
+                                <div class="mmr_payment_method_detils">
+
+                                    @Html.HiddenFor(x => x.PaymentInfo.Id) 
+                                    <div class="tab-content">
+                                        <div class="tab-pane active" >
+                                            <div class="payment_form_div">
+                                                <div id="ACHForm">
+
+                                                    <div class="li_info_details_block">
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12">
+                                                                    <span class="text-custom">@Localize.T("Routing No :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.RoutingNo, new { @class = "form-control", id = "ACH_PaymentInfo_RoutingNo", datarequired = "true", placeholder = "Routing No" })
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Account No :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.AcountNo, new { @class = "form-control", id = "ACH_PaymentInfo_AcountNo", datarequired = "true", placeholder = "Account No" })
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Bank Acc Type :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.DropDownListFor(x => x.PaymentInfo.BankAccountType, (List<SelectListItem>)ViewBag.BankAccountType, new { @class = "form-control ACH_PaymentInfo_BankAccountType", id = "ACH_PaymentInfo_BankAccountType", datarequired = "true" })
+
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("eCheck Type :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.DropDownListFor(x => x.PaymentInfo.EcheckType, (List<SelectListItem>)ViewBag.ECheckType, new { @class = "form-control ach_e_check_type", id = "ACH_PaymentInfo_EcheckType", datarequired = "true" })
+
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Account Name :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.AccountName, new { @class = "form-control", id = "ACH_PaymentInfo_AccountName", datarequired = "true", placeholder = "Account Name" })
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Bank Name :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.BankName, new { @class = "form-control", id = "ACH_PaymentInfo_BankName", datarequired = "true", placeholder = "Bank Name" })
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+
+                                                </div>
+
+                                                <div id="CashForm">
+
+                                                </div>
+
+                                                <div id="CheckForm">
+
+                                                    <div class="li_info_details_block">
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            @Html.TextBoxFor(x => x.PaymentInfo.CheckNo, new { @class = "form-control", id = "Check_PaymentInfo_CheckNo", datarequired = "true" })
+                                                            <label class="label hidden red absolute" id="CardNumberError">*@Localize.T("Please enter Valid No."). </label>
+                                                        </div>
+                                                    </div>
+
+
+                                                </div>
+
+                                                <div id="CreditForm">
+
+                                                    <div class="li_info_details_block">
+                                                        <div class="li_info_details_row custom_row_style hidden">
+                                                            <div class="row">
+                                                                <div class="col-sm-3 pading_none">
+                                                                    <input type="radio" id="Credittest1" name="radio-group" value="Master Card">
+                                                                    <label for="Credittest1"><img class="payment-icon-image" src="~/Content/img/mastercard.png" /></label>
+                                                                </div>
+                                                                <div class="col-sm-3 pading_none">
+                                                                    <input type="radio" id="Credittest2" name="radio-group" value="Visa Card">
+                                                                    <label for="Credittest2"><img class="payment-icon-image" src="~/Content/img/visa.png" /></label>
+                                                                </div>
+                                                                <div class="col-sm-3 pading_none">
+                                                                    <input type="radio" id="Credittest3" name="radio-group" value="AmericanExpress">
+                                                                    <label for="Credittest3"><img class="payment-icon-image" src="~/Content/img/AmericanExpress.png" /></label>
+                                                                </div>
+                                                                <div class="col-sm-3 pading_none">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style hidden">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Card Type :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.CardType, new { @class = "form-control", id = "CreditCard_PaymentInfo_CardType", datarequired = "true", placeholder = "Card Type" })
+                                                                    <label class="label hidden red absolute" id="CardNumberError">*@Localize.T("Please enter Valid No."). </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Card Number :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.CardNumber, new { @class = "form-control input-card-format", id = "CreditCard_PaymentInfo_CardNumber", placeholder = "xxxx-xxxx-xxxx-xxxx", dataformat = "card", datarequired = "true" , maxlength = "19" })
+                                                                    <label class="label hidden red absolute" id="CardNumber_Error">*@Localize.T("Please enter a valid card number."). </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Expiration Date :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.CardExpireDate, new { @class = "form-control ", placeholder = "MM/YY", id = "CreditCard_PaymentInfo_CardExpireDate", dataformat = "cardex", datarequired = "true" })
+                                                                    <label class="label hidden red absolute" id="CardExpireError">*@Localize.T("Please enter Valid Date."). </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Secuity Code :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.PasswordFor(x => x.PaymentInfo.CardSecurityCode, new { @class = "form-control", id = "CreditCard_PaymentInfo_CardSecurityCode", dataformat = "security", datarequired = "true", placeholder = "Secuity Code" })
+                                                                    <label class="label hidden red absolute" rel="CardSecurityCode">*@Localize.T("Please enter Security Code."). </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Name on Card :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.AccountName, new { @class = "form-control", id = "CreditCard_PaymentInfo_AccountName", datarequired = "true", placeholder = "Name on Card" })
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+
+                                                </div>
+
+                                                <div id="DebitForm">
+
+                                                    <div class="li_info_details_block">
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-sm-3 pading_none">
+                                                                    <input type="radio" id="Credittest1" name="radio-group" value="Master Card">
+                                                                    <label for="Credittest1"><img class="payment-icon-image" src="~/Content/img/mastercard.png" /></label>
+                                                                </div>
+                                                                <div class="col-sm-3 pading_none">
+                                                                    <input type="radio" id="Credittest2" name="radio-group" value="Visa Card">
+                                                                    <label for="Credittest2"><img class="payment-icon-image" src="~/Content/img/visa.png" /></label>
+                                                                </div>
+                                                                <div class="col-sm-3 pading_none">
+                                                                    <input type="radio" id="Credittest3" name="radio-group" value="AmericanExpress">
+                                                                    <label for="Credittest3"><img class="payment-icon-image" src="~/Content/img/AmericanExpress.png" /></label>
+                                                                </div>
+                                                                <div class="col-sm-3 pading_none">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Card Type :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.CardType, new { @class = "form-control", id = "DebitCard_PaymentInfo_CardType", datarequired = "true" })
+                                                                    <label class="label hidden red absolute" id="CardNumberError">*@Localize.T("Please enter Valid No."). </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Card Number :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.CardNumber, new { @class = "form-control input-card-format", id = "DebitCard_PaymentInfo_CardNumber", placeholder = "xxxx-xxxx-xxxx-xxxx", dataformat = "card", datarequired = "true", maxlength = "19" })
+                                                                    <label class="label hidden red absolute" id="CardNumberError">*@Localize.T("Please enter Valid No."). </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Expiration Date :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.CardExpireDate, new { @class = "form-control ", placeholder = "MM/YY", id = "DebitCard_PaymentInfo_CardExpireDate", dataformat = "cardex", datarequired = "true" })
+                                                                    <label class="label hidden red absolute" id="CardExpireError">*@Localize.T("Please enter Valid Date."). </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Secuity Code :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.PasswordFor(x => x.PaymentInfo.CardSecurityCode, new { @class = "form-control", id = "DebitCard_PaymentInfo_CardSecurityCode", dataformat = "security", datarequired = "true" })
+                                                                    <label class="label hidden red absolute" rel="CardSecurityCode">*@Localize.T("Please enter Security Code."). </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <div class="row">
+                                                                <div class="col-md-12 payment_text">
+                                                                    <span class="text-custom">@Localize.T("Name on Card :") </span>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                    @Html.TextBoxFor(x => x.PaymentInfo.AccountName, new { @class = "form-control", id = "DebitCard_PaymentInfo_AccountName", datarequired = "true" })
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+
+                                                <div id="InvoiceForm">
+
+
+                                                    <div class="li_info_details_block">
+                                                        <div class="li_info_details_row custom_row_style">
+                                                            <input type="text" />
+                                                            <label class="label hidden red absolute" id="CardNumberError">*@Localize.T("Please enter Valid No."). </label>
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+                                        </div> 
+                                    </div>
+
+
+                                    
+
+                                    <div class="card_info_save">
+                                        <button class="btn btn-primary" id="btn_card_info_save" style="float:right;background-color:#2ca01c;color:white;margin-top:10px;"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")</button>
+                                    </div>
+                                </div>
+</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="smart_payment_overview">
+        <table>
+            <tr>
+                <td colspan="2">@Localize.T("Payment Overview")</td>
+            </tr>
+            <tr>
+                <td>@Localize.T("Activation Fee") <span>:</span></td>
+                <td>@Currency@LabelHelper.FormatAmount(Model.ActivationFee)</td>
+            </tr>
+            <tr>
+                <td>@Localize.T("Monthly Service Fee")<span>:</span></td>
+                <td>@Currency@LabelHelper.FormatAmount(Model.ServiceFee)</td>
+            </tr>
+            <tr>
+                <td>@Localize.T("Equipment Fee")<span>:</span></td>
+                <td>@Currency@LabelHelper.FormatAmount(Model.EquipmentFee)</td>
+            </tr>
+            <tr class="spo_bottom">
+                <td>@Localize.T("Subtotal")<span>:</span></td>
+                <td>@Currency@LabelHelper.FormatAmount(Model.SubTotalFee)</td>
+            </tr>
+            <tr class="spo_bottom">
+                <td>@Localize.T("Tax")<span>:</span></td>
+                <td>@Currency@LabelHelper.FormatAmount(Model.Tax)</td>
+            </tr>
+            <tr class="spo_bottom">
+                <td>@Localize.T("Total")<span>:</span></td>
+                <td>@Currency@LabelHelper.FormatAmount(Model.TotalFee)</td>
+            </tr>
+        </table>
+    </div>
+</div>

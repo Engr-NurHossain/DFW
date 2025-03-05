@@ -1,0 +1,273 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.Seo
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@Styles.Render("~/styles/AddCustomer")
+<link href="~/Content/Css/AddFile/AddFile.css" rel="stylesheet" />
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script>
+    var seoid = '@Model.Id';
+    var folderopt = '@Model.FolderOption';
+    var isfol = '@Model.IsFolder';
+    var isnav = '@Model.IsNav';
+    var pubopt = '@Model.PublishOption';
+    var GetUrlSlug = function () {
+            $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: "/MenuManagement/GetURLSlug",
+            data: JSON.stringify({ key: $("#Name").val() }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                 if (data.result) {
+                       $("#PageUrl").val(data.str);
+                 }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        tinymce.init({
+    selector: 'textarea.tinymce',
+    height: 200,
+    
+    plugins: [
+      'advlist autolink lists link image charmap print preview anchor',
+      'searchreplace visualblocks code fullscreen',
+      'insertdatetime media table contextmenu paste code'
+    ],
+    toolbar: 'undo redo | insert | styleselect | bold italic | alignleft aligncenter alignright alignjustify |  bullist numlist outdent indent | link image',
+    content_css: '//www.tinymce.com/css/codepen.min.css'
+  });
+
+        $(".add_seo_content_inner_height").height(window.innerHeight - 94);
+        $("#SaveWebContent").click(function () {
+            var url = domainurl + "/Website/SeoContent";
+            var param = JSON.stringify({
+                Id: $("#seo_id").val(),
+                Name: $("#Name").val(),
+                PageUrl: $("#PageUrl").val(),
+                MetaTitle: $("#MetaTitle").val(),
+                MetaDescription: $("#MetaDescription").val(),
+                MetaKeywords: tinyMCE.get('page_content_ieatery').getContent(),
+                OgTitle: $("#OgTitle").val(),
+                OgDescription: $("#OgDescription").val(),
+                IsFolder: $("#select_folder").val() == "1" ? true : false,
+                FolderOption: $("#folder_opt").val(),
+                IsNav: $("#select_nav").val() == "1" ? true : false,
+                PublishOption: $("#published_folder").val(),
+            })
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result && data.message == "") {
+                        OpenIeateryPopupModal("Success", "Site content saved successfully")
+                        OpenTopToBottomModal(domainurl + "/Website/SeoContent?id=" + data.id);
+                        LoadContentTab(1, null);
+                    }
+                    else {
+                        OpenErrorMessageNew("Error", data.message);
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+        })
+        $("#SaveWebContentAndClose").click(function () {
+            var url = domainurl + "/Website/SeoContent";
+            var param = JSON.stringify({
+                Id: $("#seo_id").val(),
+                Name: $("#Name").val(),
+                PageUrl: $("#PageUrl").val(),
+                MetaTitle: $("#MetaTitle").val(),
+                MetaDescription: $("#MetaDescription").val(),
+                MetaKeywords: tinyMCE.get('page_content_ieatery').getContent(),
+                OgTitle: $("#OgTitle").val(),
+                OgDescription: $("#OgDescription").val(),
+                IsFolder: $("#select_folder").val() == "1" ? true : false,
+                FolderOption: $("#folder_opt").val(),
+                IsNav: $("#select_nav").val() == "1" ? true : false,
+                PublishOption: $("#published_folder").val(),
+            })
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result && data.message == "") {
+                        OpenIeateryPopupModal("Success", "Site content saved successfully")
+                        CloseTopToBottomModal();
+                        LoadContentTab(1, null);
+                    }
+                    else {
+                        OpenErrorMessageNew("Error", data.message);
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            })
+        })
+        if (parseInt(seoid) < 1) {
+            $("#Name").blur(function () {
+                if ($("#Name").val().length > 0) {
+                    GetUrlSlug();
+                }
+            })
+        }
+        $("#select_folder").change(function () {
+            if ($(this).val() == "1") {
+                $("#folder_opt").parent().removeClass("hidden");
+            }
+            else {
+                $("#folder_opt").val("-1");
+                $("#folder_opt").parent().addClass("hidden");
+            }
+        })
+        if (folderopt == "null" || folderopt == "") {
+            $("#folder_opt").val("-1");
+        }
+        else {
+            $("#folder_opt").val(folderopt);
+        }
+        if (isfol == "null" || isfol == "") {
+            $("#select_folder").val("0");
+        }
+        else {
+            if (isfol == "True") {
+                $("#folder_opt").parent().removeClass("hidden");
+                $("#select_folder").val("1");
+            }
+            else {
+                $("#folder_opt").parent().addClass("hidden");
+                $("#select_folder").val("0");
+            }
+        }
+        if (isnav == "null" || isnav == "") {
+            $("#select_nav").val("0");
+        }
+        else {
+            if (isnav == "True") {
+                $("#select_nav").val("1");
+            }
+            else {
+                $("#select_nav").val("0");
+            }
+        }
+        if (pubopt == "null" || pubopt == "") {
+            $("#published_folder").val("Unpublish");
+        }
+        else {
+            $("#published_folder").val(pubopt);
+        }
+    })
+    $(window).resize(function () {
+        $(".add_seo_content_inner_height").height(window.innerHeight - 94);
+    });
+</script>
+<style>
+    .custom-form-group {
+        width: 100%;
+        float: left;
+        margin-top: 10px;
+        padding: 0px 15px;
+    }
+
+    textarea.form-control {
+        height: 75px !important;
+    }
+    .width-25pp{
+        float:left;
+        width:25%;
+    }
+    .group_padding{
+        padding: 0px 0px 0px 5px;
+    }
+</style>
+@Html.HiddenFor(m => m.Id, new { id = "seo_id" })
+<div class="hidden" style="display:none;visibility:hidden;height:0px;">
+
+</div>
+<div class="add_seo_content_container">
+    <div class="add_seo_content_header">
+        @Localize.T("Site Content")
+    </div>
+    <div class="add_seo_content_inner_height">
+        <div class="add_seo_content_inner">
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Page Name")</span>
+                @Html.TextBoxFor(x => x.Name, new { @class = "form-control", id = "Name", placeholder = Localize.T("Page Name") })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Page Url")</span>
+                @Html.TextBoxFor(x => x.PageUrl, new { @class = "form-control", id = "PageUrl", placeholder = Localize.T("Page Url") })
+            </div>
+            <div class="form-group clearfix">
+                <span class="span-style">@Localize.T("Page Title")</span>
+                @Html.TextBoxFor(x => x.MetaTitle, new { @class = "form-control", id = "MetaTitle", placeholder = Localize.T("Meta Title") })
+            </div>
+            <div class="custom-form-group">
+                <span class="span-style">@Localize.T("Description")</span>
+                @Html.TextAreaFor(x => x.MetaDescription, new { @class = "form-control", id = "MetaDescription", placeholder = Localize.T("Meta Description") })
+            </div>
+            <div class="custom-form-group">
+                <div class="width-25pp">
+                    <span class="span-style">@Localize.T("Folder?")</span>
+                    <select class="form-control" id="select_folder">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+                <div class="width-25pp group_padding hidden">
+                    <span class="span-style">@Localize.T("Folder Option")</span>
+                    @Html.DropDownList("folder_opt", ViewBag.folderoption as List<SelectListItem>, new { @class = "form-control" })
+                </div>
+                <div class="width-25pp group_padding">
+                    <span class="span-style">@Localize.T("Nav?")</span>
+                    <select class="form-control" id="select_nav">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+                <div class="width-25pp group_padding">
+                    <span class="span-style">@Localize.T("Publish Option")</span>
+                    <select class="form-control" id="published_folder">
+                        <option value="Unpublish">Unpublish</option>
+                        <option value="Publish">Publish</option>
+                    </select>
+                </div>
+            </div>
+            <div class="custom-form-group">
+                <span class="span-style">@Localize.T("Page Content")</span>
+                <textarea class="tinymce" id="page_content_ieatery">@Model.MetaKeywords</textarea>
+            </div>
+        </div>
+    </div>
+    <div class="add_seo_content_footer">
+        <button onclick="CloseTopToBottomModal()" class="btn btn-danger"><i class="fa fa-times" aria-hidden="true"></i> @Localize.T("Close")</button>
+
+        <button class="btn btn-default" id="SaveWebContent"><i class="fa fa-save" aria-hidden="true"></i> @Localize.T("Save")</button>
+        <button class="btn btn-default" id="SaveWebContentAndClose"> @Localize.T("Save and Close")</button>
+    </div>
+</div>

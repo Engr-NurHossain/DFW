@@ -1,0 +1,275 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@Styles.Render("~/styles/AddFile")
+<script>
+    var UserFileUploadjqXHRData;
+    var employeeId = '@ViewBag.empid';
+    var SaveCustomerFile = function () {
+        var url = domainurl + "/UserMgmt/SaveUserFile/";
+        var param = JSON.stringify({
+            File: $("#UploadedPath").val(),
+            EmployeeId: employeeId
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result == true) {
+                    setTimeout(function () {
+                        OpenSuccessMessageNew("Success!", data.message, function () {
+                            LoadUserInfo(data.UserLoginId, true);
+                        });
+                    }, 500);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+
+    }
+    $(document).ready(function () {
+        //parent.$('.close').click(function () {
+        //    parent.$(".modal-body").html('');
+        //});
+        $(".deleteDoc").click(function () {
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this file?", function () {
+                $(".Upload_Doc").removeClass('hidden');
+                //$(".LoadPreviewDocument").addClass('hidden');
+                //$(".LoadPreviewDocument1").addClass('hidden');
+                $(".fileborder").removeClass('red-border');
+                $("#uploadfileerror").addClass("hidden");
+                $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/blank_thumb_file.png');
+                $(".chooseFilebtn").removeClass("hidden");
+                $(".changeFilebtn").addClass("hidden");
+                $(".deleteDoc").addClass("hidden");
+                $("#Preview_Doc").attr('src', "");
+                $("#Frame_Doc").attr('src', "");
+                $("#UploadSuccessMessage").hide();
+                $("#description").val("");
+                $("#UploadedPath").val('');
+                $(".fileborder").addClass('border_none');
+                $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+            });
+        })
+        $("#SaveCustomerFiles").click(function () {
+            if (CommonUiValidation() && $("#UploadedPath").val() != "") {
+                SaveCustomerFile();
+                $(".fileborder").removeClass('red-border');
+            }
+            if ($("#UploadedPath").val() == "") {
+                $("#uploadfileerror").removeClass("hidden");
+                $(".fileborder").addClass('red-border');
+            }
+        });
+        $("#UploadCustomerFileBtn").click(function () {
+            $("#UploadedFile").click();
+            $("#UploadSuccessMessage").addClass('hidden');
+        });
+        $(".change-picture-logo").click(function () {
+            $("#UploadedFile").click();
+            $("#UploadSuccessMessage").addClass('hidden');
+        });
+        $('#UploadedFile').fileupload({
+            pasteZone: null,
+            url: domainurl + '/UserMgmt/UploadUserFile/?EmployeeId=' + employeeId,
+            dataType: 'json',
+            add: function (e, data) {
+                if ($("#description").val() == "") {
+                    var filename = data.fileInput[0].value.split('\\').pop();
+                    $("#description").val(filename);
+                }
+                UserFileUploadjqXHRData = data;
+            },
+            progress: function (e, data) {
+                var percentVal = parseInt(data.loaded / data.total * 100, 10);
+                $(".file-progress").show();
+                $(".file-progress .progress-bar").animate({
+                    width: percentVal + "%"
+                }, 40);
+                $(".file-progress .progress-bar span").text(percentVal + '%');
+            },
+            done: function (event, data) {
+                setTimeout(function () {
+                    $(".file-progress").hide();
+                    $(".file-progress .progress-bar").animate({
+                        width: 0 + "%"
+                    }, 0);
+                    $(".file-progress .progress-bar span").text(0 + '%');
+                }, 500);
+                console.log(data.result);
+                if ((typeof (data.result.isUploaded) != "undefined") && data.result.isUploaded == true) {
+                    $("#UploadSuccessMessage").removeClass('hidden');
+                    //$("#UploadCustomerFileBtn").addClass('hidden');
+                    $("#UploadedPath").val(data.result.filePath);
+                    $("#UploadCustomerFileBtn").attr('src', data.result.filePath)
+                    $(".chooseFilebtn").addClass("hidden");
+                    $(".changeFilebtn").removeClass("hidden");
+                    $(".deleteDoc").removeClass("hidden");
+                    $("#UploadCustomerFileBtn").addClass('custom-file');
+                    $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+                    $(".fileborder").addClass('border_none');
+
+                }
+            },
+            fail: function (event, data) {
+                if (data.files[0].error) {
+                    alert(data.files[0].error);
+                }
+            }
+        });
+        $("#UploadedFile").on("change", function () {
+            if (UserFileUploadjqXHRData) {
+                UserFileUploadjqXHRData.submit();
+            }
+            return false;
+        });
+    });
+</script>
+
+<div class="add_file_header">@Localize.T("Upload Profile Picture")</div>
+@*<div class="container_addfile">
+    <div class="addfile_inner_info">@Localize.T("Allowed file types: jpg, jpeg, gif, png") </div>
+    <div class="addfile_inner_info">@Localize.T("(max file size: 20 mb)")</div>
+
+    <span class="content-type">@Localize.T("Name")</span>
+    <div class="txt_form_add_file">
+        <input type="text" id="description" name="description" class="form-control content-text" />
+    </div>
+    <div>
+        <br />
+    </div>
+    <div class="txt_form_add_file">
+        <div class="col-md-12 padding-left-0">
+            <img id="UploadCustomerFileBtn" class="cursor-pointer" src="~/Content/Icons/blank_thumb_file.png" />
+            <div class="" style="margin-top: 15px;">
+                <span id="UploadSuccessMessage" class="hidden">@Localize.T("File Uploaded Successfully..!")</span>
+            </div>
+        </div>
+
+        <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+            <div class="progress progress-striped active">
+                <div class="progress-bar progress-bar-success" style="width:0%">
+                    <span> 0%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>*@
+
+<div class="container-fluid">
+    <div class="clearfix">
+        &nbsp;
+    </div>
+    <div class="form-group clearfix">
+        <div class="addfile_inner_info">@Localize.T("Allowed file types: jpg, jpeg, gif, png") </div>
+        <div class="addfile_inner_info">@Localize.T("(max file size: 20 mb)")</div>
+    </div>
+    <div>
+        <br />
+    </div>
+    <div class="txt-form Upload_Doc">
+        <div class="col-md-12 padding-left-0">
+            <div class="fileborder border_none">
+                <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="~/Content/Icons/blank_thumb_file.png" />
+            </div>
+            @*<input class="deleteDoc" type="image" src="/Content/Icons/cross_update.png" />*@
+            <div class="deleteDoc cursor-pointer hidden">
+                <img src="~/Content/Icons/cross-image-delete.png" />
+            </div>
+            <div class="change-picture-logo white-color cursor-pointer text-align-center">
+                <span class="chooseFilebtn"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Choose File to Upload")</span>
+                <span class="changeFilebtn hidden"><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+            </div>
+            @*<div class="" style="margin-top: 15px;">
+                    <span id="UploadSuccessMessage" class="hidden">@Localize.T("File Uploaded Successfully..!")</span>
+                </div>*@
+            <div class="LoadPreviewDocument hidden">
+                <div class="show-image PropertyLogoPreviewPic">
+                    <div class="image-delete" data-id="">
+                        <img src="~/Content/Icons/cross-image-delete.png" />
+                    </div>
+                    <img class="Preview_Doc T360image-photo T360image" src="" />
+                </div>
+                <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                    <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                </div>
+            </div>
+            @*<div class="progress-container file-progress" style="display:none">
+                    <div class="progress progress-striped active progress-bar">
+                        <div class="progress-bar progress-bar-danger" style="width:0%">
+                            <span> 0%</span>
+                        </div>
+                    </div>
+                    @*<div class="progress-bar progress-bar-success">
+                        <span> 0%</span>
+                    </div>
+                </div>*@
+        </div>
+
+        <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+            <div class="progress progress-striped active">
+                <div class="progress-bar progress-bar-success" style="width:0%">
+                    <span> 0%</span>
+                </div>
+            </div>
+        </div>
+        <label class="label red position-relative hidden" id="uploadfileerror">*@Localize.T("File required")</label>
+    </div>
+    @*<div class="LoadPreviewDocument hidden">
+            <div class="show-image">
+                <img id="Preview_Doc" src=""/>
+                <input class="deleteDoc" type="image" src="/Content/Icons/cross_update.png" />
+            </div>
+            <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+            </div>
+        </div>
+        <div class="LoadPreviewDocument1 hidden">
+            <div class="show-image">
+                <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+                <input class="deleteDoc" type="image" src="/Content/Icons/cross_update.png" />
+            </div>
+        </div>*@<div class="LoadPreviewDocument hidden">
+        <div class="show-image">
+            <img id="Preview_Doc" src="" />
+            <input class="deleteDoc" title="@Localize.T("Close")" type="image" src="~/Content/Icons/cross_update.png" />
+        </div>
+        <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+            <span><img src="~/Content/Icons/edit-icon.png" /></span>
+        </div>
+    </div>
+    <div class="LoadPreviewDocument1 hidden">
+        <div class="show-image">
+            <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+            <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+        </div>
+    </div>
+
+    <span class="content-type">@Localize.T("Name")</span>
+    <div class="txt-form">
+        <textarea rows="2" type="text" id="description" name="description" class="content-text" style="line-height:20px; height:60px" datarequired="true" />
+        <br /><label rel="description" class="label hidden red position-absolute">*@Localize.T("Name Required")</label>
+    </div>
+</div>
+<section class="footer-section">
+    <footer class="footer">
+        <div class="SaveCancelDiv">
+            <button class="btn btn_file" id="SaveCustomerFiles"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+
+        </div>
+    </footer>
+</section>
+<div class="">
+    <input type="hidden" id="UploadedPath" value="" />
+    <input type="file" name="CustomerFile" class="hidden" id="UploadedFile" accept="image/*"/>
+</div>
+

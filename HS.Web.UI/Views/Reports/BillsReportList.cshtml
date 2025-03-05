@@ -1,0 +1,150 @@
+﻿
+@{
+    Layout = null;
+}
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@*@model List<HS.Entities.Bill>*@
+@model HS.Entities.BillingReportModel
+<script>
+    var StartDate = '@ViewBag.StartDate';
+    var EndDate = '@ViewBag.EndDate';
+    var my_date_format = function (input) {
+        console.log(input + " r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var OpenBill = function (BillId) {
+        console.log('OpenBillById');
+        if (typeof (BillId) != "undefined" && BillId > 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/AddVendorBill/?id=" + BillId);
+        } else if (typeof (BillId) != "undefined" && BillId.indexOf("BL") == 0) {
+            OpenTopToBottomModal(domainurl + "/Expense/AddVendorBill/?BillID=" + BillId);
+        }
+    }
+
+    var totalcount = '@Localize.T("Total Bills: ")@ViewBag.TotalBills';
+    var totalpaid = '@Localize.T("Total Paid: ")@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.TotalPaid)';
+    var totaldue = '@Localize.T("Total Due: ")@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.TotalDue)';
+    $(document).ready(function () {
+        //var table = $('#BillReportTable').DataTable({
+        //    "pageLength": DataTablePageSize,
+        //    "destroy": true,
+        //    "language": {
+        //        "emptyTable": "No data available"
+        //    }
+        //});
+        $(".bill_report_total_bill").html(totalcount);
+        $(".bill_report_total_paid").html(totalpaid);
+        $(".bill_report_total_due").html(totaldue);
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+
+        if (StartDate != "" && EndDate != "") {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+           $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            LoadConvertedCustomerReport(1, orderval);
+        });
+    })
+</script>
+<table id="BillReportTable">
+    <thead>
+        <tr>
+            <th>
+                <div>Bill No.</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/billno"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/billno"></i></div>
+
+            </th>
+            <th>
+                <div>Supplier Name</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/supplier"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/supplier"></i></div>
+
+            </th>
+            <th>
+                <div>Supplier Company </div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/company"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/company"></i></div>
+
+            </th>
+            <th>
+                <div>Payment Due Date</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/duedate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/duedate"></i></div>
+
+            </th>
+            <th>
+                <div>Amount</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/amount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/amount"></i></div>
+
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.BillList)
+            {
+        <tr>
+            <td>
+                <div>Bill No. <span>:</span> </div>
+                <div>
+                    <a class="cus-anchor" onclick="OpenBill(@item.Id)" href="Javasicpt:Void(0)">@item.BillNo</a>
+                </div>
+                @*<div> @item.BillNo</div>*@
+            </td>
+            <td>
+                <div>Supplier Name <span>:</span> </div>
+                <div> @item.SupplierName</div>
+            </td>
+            <td>
+                <div>Supplier Company <span>:</span> </div>
+                <div> @item.SupplierCompanyName</div>
+            </td>
+
+            <td>
+                <div>Payment Due Date <span>:</span> </div>
+                <div> @item.PaymentDueDate.ToString("MM/dd/yyyy")</div>
+            </td>
+            <td>
+                <div>Amount <span>:</span> </div>
+                <div>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)</div>
+            </td>
+        </tr>
+        }
+        <tr class="table_total_bg">
+            <td colspan="4">
+                <b class="float_right">@Localize.T("Total:")</b>
+            </td>
+            <td>
+                <div>Total Amount <span>:</span> </div>
+                <div>
+                    <b title="@Localize.T("Total Amount")">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.TotalBill.TotalAmount.ToString("#,##0.00")</b>
+                </div>
+            </td>
+        </tr>
+    </tbody>
+    
+</table>
+
+
+

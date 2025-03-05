@@ -1,0 +1,302 @@
+﻿@{
+    Layout = null;
+    var currentLoggedIn = ((HS.Web.UI.Helper.CustomPrincipal)(User));
+}
+@model HS.Entities.BIListModel
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using POStat = HS.Web.UI.Helper.LabelHelper.PurchaseOrderStatus
+@using BIStat = HS.Web.UI.Helper.LabelHelper.BadInventoryStatus
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var table = $("#tblBI").DataTable({
+        "ordering": false,
+        searching: false, paging: false, info: false
+    })
+    var DeleteBadInventory = function (Id) {
+        OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this item?", function () {
+            $.ajax({
+                url: domainurl + "/Inventory/TechDeleteEquipmentReturn",
+                data: { id: Id },
+                type: "Post",
+                dataType: "Json"
+            }).done(function () {
+                BIListLoad(1, null);
+            });
+        });
+    }
+    $(document).ready(function () {
+        $(".icon_sort_bi").click(function () {
+            var orderval = $(this).attr('data-val');
+            BIListLoad(pageno, orderval);
+        });
+        $(".btn_delete_bad_inventory").click(function () {
+            //var Id = $(this).attr("data-id");
+            //OpenConfirmationMessageNew("Confirm?", "Are you sure you want to send?", function () {
+            //    $.ajax({
+            //        url: domainurl + "/Inventory/TechSendToBadInventory",
+            //        data: { id: Id },
+            //        type: "Post",
+            //        dataType: "Json"
+            //    }).done(function () {
+            //        BIListLoad(1, null);
+            //    });
+            //});
+            var idval = $(this).attr('data-id');
+            DeleteBadInventory(idval);
+        });
+        $(".btn_accept_bad_inventory").click(function () {
+            OpenConfirmationMessageNew("Confirmation", "Do you want to Accept?", function () {
+                var idval = $(this).attr('data-id');
+                $.ajax({
+                    url: domainurl + "/Inventory/TechAcceptBadInventory",
+                    data: { id: idval },
+                    type: "Post",
+                    dataType: "Json"
+                }).done(function () {
+                    BIListLoad(1, null);
+                });
+            })
+        })
+    })
+</script>
+<table id="tblBI" class="tbilp_table">
+    <thead class="table-head-border">
+        <tr>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Customer")</div>
+                <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/customer"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/customer"></i></div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Equipment")</div>
+                <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/equipment"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/equipment"></i></div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Quantity")</div>
+                <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/quantity"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/quantity"></i></div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Invoice No")</div>
+                <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/invoice"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/invoice"></i></div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Purchase Date")</div>
+                <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/purchase"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/purchase"></i></div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Technician")</div>
+                <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/wanranty"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/wanranty"></i></div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Description")</div>
+                <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/description"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/description"></i></div>
+            </th>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Status")</div>
+                <div><i class="fa fa-angle-up icon_sort_bi" data-val="ascending/status"></i><i class="fa fa-angle-down icon_sort_bi" data-val="descending/status"></i></div>
+            </th>
+            @{
+                if (string.IsNullOrWhiteSpace(ViewBag.tab))
+                {
+                    <th class="th_timeclock_pre">@Localize.T("Actions")</th>
+                }
+            }
+            
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.EquipmentReturnList)
+        {
+            <tr>
+                @{
+                    if (currentLoggedIn.UserRole.ToLower().IndexOf("technician") == 0 || currentLoggedIn.UserRole.ToLower().IndexOf("installation") == 0)
+                    {
+                        <td class="table-body-td-style">
+                            <div>@Localize.T("Customer") <span>:</span></div>
+                            <div>@item.CustomerName</div>
+                        </td>
+                    }
+                    else
+                    {
+
+                        <td class="table-body-td-style">
+                            <div>@Localize.T("Customer") <span>:</span></div>
+                            <div> <a style="color:#2ca01c;cursor:pointer;float:left; margin-right:10px;" onclick="OpenRightToLeftLgModal('/Inventory/TechAddBadInventory?Id=@item.Id')">@item.CustomerName</a></div>
+                        </td>
+                    }
+                }
+                
+                <td class="table-body-td-style">
+                    <div>@Localize.T("Equipment") <span>:</span></div>
+                    <div>@item.EquipmentName</div>
+                </td>
+                <td class="table-body-td-style">
+                    <div>@Localize.T("Quantity") <span>:</span></div>
+                    <div>@item.Quantity</div>
+                </td>
+                <td class="table-body-td-style">
+                    <div>@Localize.T("Invoice No") <span>:</span></div>
+                    <div>@item.InvoiceNo</div>
+                </td>
+                <td class="table-body-td-style">
+                    <div>@Localize.T("Purchase Date") <span>:</span></div>
+                    <div>@item.PurchaseDate.Value.ToString("MM/dd/yyyy")</div>
+                </td>
+                <td class="table-body-td-style">
+                    <div>@Localize.T("Technician") <span>:</span></div>
+                    <div>@item.TechnicianName</div>
+                </td>
+                <td class="table-body-td-style">
+                    <div>@Localize.T("Description") <span>:</span></div>
+                    <div>@item.Description</div>
+                </td>
+                <td class="table-body-td-style">
+                    <div>Status<span>:</span></div>
+                    <div>@item.Status</div>
+                </td>
+                @{
+                    if (string.IsNullOrWhiteSpace(ViewBag.tab))
+                    {
+                        <td class="cplp_info_allign">
+                            <div>@Localize.T("Actions") <span>:</span></div>
+                            <div>
+                                <span class="equip-sendtobadinventory btn_accept_bad_inventory" id="btn_accept_bad_inventory" data-id="@item.Id" style="color:#2ca01c;cursor:pointer;float:right; margin-right:10px;"><i class="fa fa-send" aria-hidden="true" title="Accept"></i></span>
+                                <span class="equip-sendtobadinventory btn_delete_bad_inventory" id="btn_delete_bad_inventory" data-id="@item.Id" style="cursor:pointer;float:right; margin-right:10px;"><i class="fa fa-trash" aria-hidden="true" title="Delete inventory"></i></span>
+                            </div>
+                        </td>
+                    }
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="POListLoad(@(ViewBag.PageNumber), @(ViewBag.order))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="POListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="POListLoad(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="POListLoad(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="POListLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="POListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="POListLoad(1, @(ViewBag.order))">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="POListLoad(2, @(ViewBag.order))">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="POListLoad(3, @(ViewBag.order))">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="POListLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber-2), @(ViewBag.order))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="POListLoad(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="POListLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber + 2), @(ViewBag.order))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber - 1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="POListLoad(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="POListLoad(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="POListLoad(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+
+

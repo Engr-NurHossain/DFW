@@ -1,0 +1,255 @@
+﻿@{
+    Layout = null;
+}
+
+@model HS.Entities.CustomerAdditionalContact
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Css/PackageSettings/AddPackage.css" rel="stylesheet" />
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>
+<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+<style>
+    .asccc_container {
+        width: 100%;
+        float: left;
+        overflow-x:hidden;
+        overflow-y:auto;
+    }
+   
+        .asccc_container .form-group label {
+            margin-bottom: 0px;
+         
+        }
+
+        .asccc_container .form-group {
+            position: relative;
+        }
+        #saveseccontact {
+            float:right;
+        }
+</style>
+
+<script>
+    var ContactFor = '@ViewBag.ContactFor';
+function FormateSSNNumber(Value) {
+    var ValueClean = "";
+    if (Value != undefined && Value != "" && Value != null) {
+        Value = Value.replace(/[-  ]/g, '');
+        if (Value.length == 9) {
+            ValueClean = Value.replace(/(\d{3})\-?(\d{2})\-?(\d{4})/, "$1-$2-$3");
+            $("#SSN").css({ "border": "1px solid #babec5" });
+      
+            
+        }
+        else if (Value.length > 9) {
+            ValueClean = Value;
+            $("#SSN").css({ "border": "1px solid red" });
+     
+        }
+        else {
+            ValueClean = Value;
+            $("#SSN").css({ "border": "1px solid #babec5" });
+
+        }
+    }
+    return ValueClean;
+    }
+    var CommonUiValidationForContact = function () {
+ 
+    var result = true;
+    if ($("#FirstName").attr('datarequired') == 'true') {
+            check = !Validation.IsEmpty($("#FirstName"));
+            if (!check)
+                result = check;
+        }
+            if ($("#LastName").attr('datarequired') == 'true') {
+            check = !Validation.IsEmpty($("#LastName"));
+            if (!check)
+                result = check;
+        }
+
+        //    if ($("#SSN").attr('datarequired') == 'true') {
+        //    check = !Validation.IsEmpty($("#SSN"));
+        //    if (!check)
+        //        result = check;
+        //}
+
+            if ($("#CoCity").attr('datarequired') == 'true') {
+            check = !Validation.IsEmpty($("#CoCity"));
+            if (!check)
+                result = check;
+        }
+
+            if ($("#CoState").attr('datarequired') == 'true') {
+            check = !Validation.IsEmpty($("#CoState"));
+            if (!check)
+                result = check;
+        }
+            if ($("#CoStreet").attr('datarequired') == 'true') {
+            check = !Validation.IsEmpty($("#CoStreet"));
+            if (!check)
+                result = check;
+        }
+
+            if ($("#CoZipCode").attr('datarequired') == 'true') {
+            check = !Validation.IsEmpty($("#CoZipCode"));
+            if (!check)
+                result = check;
+        }
+    return result;
+}
+    var AddSecondaryContact = function () {
+        var url = domainurl + "/SmartPackageSetup/AddSecondaryCreditCheckContact";
+        var customerId;
+          if (typeof LeadGuid !== 'undefined') {
+              customerId = LeadGuid
+        }
+        else {
+            customerId = CustomerGuidId;
+        }
+        var Param = JSON.stringify({
+                Id: $("#Id").val(),
+                CustomerId: customerId,
+                CorpCity: $("#CoCity").val(),
+                CorpState: $("#CoState").val(),
+                CorpZipCode: $("#CoZipCode").val(),
+                CorpAddress: $("#CoStreet").val(),
+                FirstName: $("#CoFirstName").val(),
+                LastName: $("#CoLastName").val(),
+                SSN: $("#CoSSN").val(),
+                DOB: $("#DateOfBirth").val(),
+                Email: $("#Email").val(),
+                Phone:$("#Phone").val()
+            });
+            $.ajax({
+                type: "POST",
+         
+                url: url,
+                data: Param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    OpenSuccessMessageNew("", data.message, function () {
+                        $(".close").click()
+                         $("#SecondaryContactList").load("/SmartPackageSetup/SecondaryContactListForCreditCheck?CustomerId=" + customerId+"&For=CreditCheck");
+                    })
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+         
+                }
+            });
+
+    }
+    $(document).ready(function () {
+
+      
+         $(".asccc_container").height(window.innerHeight - 100);
+              BirthdayDatepicker = new Pikaday({
+                            format: 'MM/DD/YYYY',
+                            field: $('#DateOfBirth')[0],
+                            firstDay: 1,
+                            StartDate: new Date()  
+      
+              });
+           $("#SSN").keyup(function () {
+                var SSNNumber = $(this).val();
+                if (SSNNumber != undefined && SSNNumber != null && SSNNumber != "") {
+                    var cleanSSNNumber = FormateSSNNumber(SSNNumber);
+                    $(this).val(cleanSSNNumber);
+                }
+            });
+
+        $("#saveseccontact").click(function () {
+            console.log("dsf");
+            if (CommonUiValidationForContact()) {
+                 AddSecondaryContact();
+            }
+           
+        })
+    })
+    $(window).resize(function () {
+        $(".asccc_container").height(window.innerHeight - 100);
+    })
+</script>
+
+<div class="add_package_settings_header">
+    @Localize.T("Add Contact")
+</div>
+<div class="asccc_container">
+    <div class="container-fluid">
+        <input type="hidden" id="Id" value="@Model.Id" />
+        <div class="form-group clearfix">
+            <label>@Localize.T("First Name")<span class="red">*</span></label>
+
+            <input type="text" id="CoFirstName" value="@Model.FirstName" name="FirstName" class="form-control" placeholder="First Name" datarequired="true" />
+            <label rel="CoFirstName" class="label hidden red position-absolute">*@Localize.T("First Name Required")</label>
+        </div>
+        <div class="form-group clearfix">
+            <label>@Localize.T("Last Name")<span class="red">*</span></label>
+            <input type="text" id="CoLastName" value="@Model.LastName" name="LastName" class="form-control" placeholder="Last Name" datarequired="true" />
+            <label rel="CoLastName" class="label hidden red position-absolute">*@Localize.T("Last Name Required")</label>
+        </div>
+
+        <div class="form-group clearfix">
+            <label>@Localize.T("City")<span class="red">*</span></label>
+
+            @Html.TextBoxFor(x => x.CorpCity, new { @class = "form-control", Placeholder = "City", datarequired = "true", id = "CoCity" })
+            <label rel="CoCity" class="label hidden red position-absolute">*@Localize.T("City  Required")</label>
+        </div>
+        <div class="form-group clearfix">
+            <label>@Localize.T("State")<span class="red">*</span></label>
+            @Html.TextBoxFor(x => x.CorpState, new { @class = "form-control", Placeholder = "State", datarequired = "true", id = "CoState" })
+            <label rel="CoState" class="label hidden red position-absolute">*@Localize.T("State Required")</label>
+        </div>
+        <div class="form-group clearfix">
+            <label>@Localize.T("Street")<span class="red">*</span></label>
+            @Html.TextBoxFor(x => x.CorpAddress, new { @class = "form-control", Placeholder = "Street", datarequired = "true", id = "CoStreet" })
+            <label rel="CoStreet" class="label hidden red position-absolute">*@Localize.T("Street Required")</label>
+        </div>
+        <div class="form-group clearfix CoCityState_insert_div">
+            <label>@Localize.T("Zip")<span class="red">*</span></label>
+
+            <input type="text" class="" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUp(this,event)" value="@Model.CorpZipCode" id="CoZipCode" placeholder="Zip Code" name="ZipCode" datarequired="true" />
+            <label rel="CoZipCode" class="label hidden red position-absolute">*@Localize.T("ZipCode Required")</label>
+            <div class='tt-menu'>
+                <div class='tt-dataset tt-dataset-autocomplete'> </div>
+            </div>
+
+        </div>
+
+
+
+        <div class="form-group clearfix">
+            <label>@Localize.T("SSN")<span class="red">*</span></label>
+            @Html.TextBoxFor(x => x.SSN, new { @class = "form-control", Placeholder = "SSN", id = "CoSSN", datarequired = "true" })
+            <label rel="CoSSN" class="label hidden red position-absolute">*@Localize.T("SSN Required")</label>
+        </div>
+        <div class="form-group  add-on">
+            <label>@Localize.T("Date Of Birth")<span class="red">*</span></label>
+            @Html.TextBoxFor(x => x.DOB, "", new { @class = "form-control close-datepicker", Placeholder = "Date Of Birth", id = "DateOfBirth" })
+
+        </div>
+        <div class="form-group clearfix">
+            <label>@Localize.T("Email")<span class="red">*</span></label>
+            @Html.TextBoxFor(x => x.Email, new { @class = "form-control", Placeholder = "Email", id = "Email", datarequired = "true" })
+            <label rel="Email" class="label hidden red position-absolute">*@Localize.T("Email Required")</label>
+        </div>
+        <div class="form-group clearfix">
+            <label>@Localize.T("Phone")<span class="red">*</span></label>
+            @Html.TextBoxFor(x => x.Phone, new { @class = "form-control", Placeholder = "Phone", id = "Phone" })
+            <label rel="Phone" class="label hidden red position-absolute">*@Localize.T("Phone Required")</label>
+        </div>
+
+    </div>
+</div>
+
+<section class="footer-section">
+    <footer class="footer">
+       
+            <button class="btn btn-default green_button save-contact" id="saveseccontact">@Localize.T("Save")</button>
+      
+    </footer>
+</section>

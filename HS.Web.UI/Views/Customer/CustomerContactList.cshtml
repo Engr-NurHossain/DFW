@@ -1,0 +1,50 @@
+﻿@{
+    Layout = null;
+    var CurrentLoggedInUser = ((HS.Web.UI.Helper.CustomPrincipal)(User));
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script>
+    var contactTab = '@ViewBag.contactTab';
+
+    var LoadCustomerDiv = "#customer_tab_" + CustomerLoadId + " ";
+    var SoldBy = '@ViewBag.SoldBy';
+    var FromCustomer = '@ViewBag.CustomerId';
+    var NavigatePageListing = function (pagenumber, order) {
+        var searchText = $(LoadCustomerDiv + ".srch-term").val();
+        $(LoadCustomerDiv + "#LoadContactList").load("@(AppConfig.DomainSitePath)/Contact/LoadContactList", { PageNumber: pagenumber, SearchText: searchText, Order: order, FromCustomer: FromCustomer, soldby: SoldBy });
+    }
+    $(document).ready(function () {
+        var pagenumber = 1;
+
+        $(LoadCustomerDiv + "#LoadContactList").load("@(AppConfig.DomainSitePath)/Contact/LoadContactList", { PageNumber: pagenumber, FromCustomer: FromCustomer, soldby: SoldBy });
+        $(LoadCustomerDiv + '.srch-term').keyup(function () {
+            NavigatePageListing(pagenumber);
+        })
+        $(LoadCustomerDiv + "#btnAddContacts").click(function () {
+            OpenTopToBottomModal("@(AppConfig.DomainSitePath)/Contact/AddContact?CustomerId=" + CustomerLoadGuid + "&contactTab=" + contactTab);
+            history.pushState({ urlpath: window.location.pathname }, window.location.hash, "#addContact");
+        });
+    })
+</script>
+
+<link href="~/Content/Css/Contacts/contactlist.css" rel="stylesheet" />
+<div class="contact_list_container">
+
+    <div id="contact_search_container">
+        <div id="searchbardiv">
+            <input class="form-control srch-term" placeholder="Find Contacts" type="text">
+        </div>
+        <div class="add_Contact dfw_add_contact">
+            @if (!PermissionChekcer.IsPermitted(Permissions.UserMgmtPermissions.CustomerViewOnly) || ViewBag.SoldBy == CurrentLoggedInUser.UserId.ToString())
+            {
+                <button id="btnAddContacts" class="btn btn_addPTO "><i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T("Add Contacts")</button>
+            }
+        </div>
+    </div>
+    <div id="LoadContactList">
+
+    </div>
+</div>

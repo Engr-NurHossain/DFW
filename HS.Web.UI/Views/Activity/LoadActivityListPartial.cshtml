@@ -1,0 +1,320 @@
+﻿@{
+    Layout = null;
+    var CurrentLoggedInUser = ((HS.Web.UI.Helper.CustomPrincipal)(User));
+}
+@using HS.Framework
+@model IEnumerable<HS.Entities.Activity>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Activity/Activity.css" rel="stylesheet" />
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var ClosePopup = function () {
+        $.magnificPopup.close();
+    }
+    var ShowEmail = function(id)
+    {
+
+        var emailLoadUrl = domainurl + "/Activity/ShowNoteEmail?id=" + id;
+        $(".EmailMagnific").attr("href", emailLoadUrl);
+        $(".EmailMagnific").click();
+       // OpenTopToBottomModal("/Activity/ShowNoteEmail?id=" + id);
+    }
+    $(document).ready(function () {
+        var idlist = [{ id: ".EmailMagnific", type: 'iframe', width: 920, height: 520 },
+        { id: ".EmailMagnific", type: 'iframe', width: 920, height: 520 }
+        ];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            NavigatePageListing(pageno, orderval);
+        })
+    });
+</script>
+
+<div class="Activity_container">
+    @if (ViewBag.OutOfNumber == 0)
+    {
+        @ViewBag.Message;
+    }
+    else
+    {
+        <table class="Activity_table">
+            <thead>
+                <tr>
+                    <th>
+                        <div title="@Localize.T("Activity ID")">@Localize.T("Activity ID")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/id"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/id"></i></div>
+                    </th>
+
+                    <th>
+                        <div title="@Localize.T("Activity Type")">@Localize.T("Activity Type")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/activitytype"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/activitytype"></i></div>
+                    </th>
+                    <th>
+                        <div title="@Localize.T("Assign To")">@Localize.T("Assign To")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/assignedTo"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/assignedTo"></i></div>
+                    </th>
+
+                    <th>
+                        <div title="@Localize.T("Due Date")">@Localize.T("Due Date")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/duedate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/duedate"></i></div>
+                    </th>
+
+                    <th>
+                        <div title="@Localize.T("Status")">@Localize.T("Status")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+                    </th>
+                    <th>
+                        <div title="@Localize.T("Stock/Unit#")">@Localize.T("Stock/Unit#")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+                    </th>
+                    <th class="dept">
+                        <div title="@Localize.T("Department")">@Localize.T("Department")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/department"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/department"></i></div>
+                    </th>
+                    <th>
+                        <div title="@Localize.T("Associated With")">@Localize.T("Associated With")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/associatedwith"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/associatedwith"></i></div>
+                    </th>
+                    <th>
+                        <div title="@Localize.T("Note")">@Localize.T("Note")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/Note"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/Note"></i></div>
+                    </th>
+                    <th>
+                        <div title="@Localize.T("Created Status")">@Localize.T("Created Status")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/createdBy"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/createdBy"></i></div>
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var item in Model)
+                {
+                <tr class="PrintItem" data-id="@item.Id">
+                    <td>
+                        <div>@Localize.T("Activity ID") <span>:</span></div>
+                        <div>
+                            @if (!PermissionChekcer.IsPermitted(Permissions.UserMgmtPermissions.CustomerViewOnly) || item.AssignedTo == CurrentLoggedInUser.UserId)
+                            {
+                                <a id="edit" class="cus-anchor" onclick="AddActivityCustomer('@item.Id')">@item.Id</a>
+                            }
+                            else
+                            {
+                                @item.Id
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Activity Type") <span>:</span></div>
+                        <div>@item.ActivityTypeVal</div>
+                    </td>
+
+                    <td>
+                        <div>@Localize.T("Assign To") <span>:</span></div>
+                        <div>@item.AssignedToVal</div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Due Date") <span>:</span></div>
+                        <div>
+                            @if (item.DueDate != null && item.DueDate != new DateTime())
+                            {
+                                //if (item.Origin == "Badger Map")
+                                //{
+                                <span>@Convert.ToDateTime(item.DueDate).UTCToClientTime()</span>
+                                @*}
+                    else
+                    {
+                        <span>@item.DueDate</span>
+                    }*@
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Status") <span>:</span></div>
+                        <div>
+                            @if (item.Status != "-1")
+                            {
+                                <span>@item.Status</span>
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Stock/Unit#") <span>:</span></div>
+                        <div>@item.Origin</div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Department") <span>:</span></div>
+                        <div>@((String.IsNullOrWhiteSpace(item.Department) || item.Department == "-1") ? "-" : item.DepartmentVal)</div>
+                    </td>
+                    <td>
+                        <div>@Localize.T("Associated With") <span>:</span></div>
+                        @if (!string.IsNullOrEmpty(@item.AssociatedOpportunityVal))
+                        {
+                            <div> @item.AssociatedOpportunityVal</div>
+                        }
+                        else if (!string.IsNullOrEmpty(@item.AssociatedContactVal))
+                        {
+                            <div> @item.AssociatedContactVal</div>
+                        }
+                        else if (!string.IsNullOrEmpty(@item.DisplayName))
+                        {
+                            <div>
+                                <a class="cus-anchor" target="_blank" href="/Customer/Customerdetail?id=@item.CustomerId">@item.DisplayName</a>
+                            </div>
+                        }
+
+                    </td>
+                    <td>
+                        <div>@Localize.T("Note") <span>:</span></div>
+                        @if (item.ActivityTypeVal == "Email")
+                        {
+                            <div>
+                                <a class="cus-anchor" href="javascript:void(0);" onclick="ShowEmail('@item.Id')">View Email</a>
+                            </div>
+                        }
+                        else
+                        {
+                            <div>@Html.Raw(item.Note)</div>
+                        }
+
+                    </td>
+                    <td>
+                        <div>@Localize.T("Created Status") <span>:</span></div>
+                        <div>
+                            @item.CreatedByVal <br />
+                            @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy")
+                        </div>
+                    </td>
+                </tr>
+                }
+            </tbody>
+
+        </table>
+        <div class="Activity_pagination_container">
+            <div class="Activity_pagination_inner">
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))">1</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons disabledBtn" disabled>Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigatePageListing(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigatePageListing(2)">2</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons" disabled="@(ViewBag.PageNumber == 2 ? "disabled" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 2 ? ViewBag.PageNumber + 1 : ""))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigatePageListing(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigatePageListing(2)">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 3 ? "activeBtn" : "")" onclick="NavigatePageListing(3)">3</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons" disabled="PaginationButtons @(ViewBag.PageNumber == 3 ? "disabled" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 3 ? ViewBag.PageNumber + 1 : ""))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv" id="pagination">
+                            <button class="PaginationButtons" disabled onclick="NavigatePageListing()">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))" id="pagination">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber - 2))" id="pagination">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))" id="pagination">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))" id="pagination">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" disabled onclick="NavigatePageListing()">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">Next</button>
+                        </div>
+
+                    }
+                }
+            </div>
+            <div class="area_zip_code_pagination_inner">
+                @if (ViewBag.PageCount > 0)
+                {
+                    <div class="paginationtextdv">
+                        <span>Showing item @ViewBag.CurrentNumber of @ViewBag.OutOfNumber</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    <input type="hidden" id="FromCustomer" value="@ViewBag.FromCustomer" />
+    <div class="displayNone">
+        <a href="" class="EmailMagnific">@Localize.T("View Email")</a>
+    </div>
+</div>
+

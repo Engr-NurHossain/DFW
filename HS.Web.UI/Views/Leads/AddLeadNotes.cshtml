@@ -1,0 +1,179 @@
+﻿@model HS.Entities.CustomerNote
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/Js/Popups/AddLeadNotes.js"></script>
+<link href="~/Content/Css/Lead/AddLeadNotes.css" rel="stylesheet" />
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script>
+    var Emparr = [];
+    @if(@Model.AssignEmpList != null){
+        @: Emparr = [
+    foreach(var item in Model.AssignEmpList)
+        {
+        @: '@item.AssignedEmpId',
+        }
+    @:];
+            }
+    var idval = '@Model.Id';
+    var CustomerId = '@ViewBag.CustomerId';
+    var From = '@ViewBag.From';
+    var NoteColor = '@Model.Color';
+    function formatColor(color) {
+        if (!color.id) { return color.text; }
+        var $color = $(
+            '<span><span class="colorBox" style="background-color: ' + color.element.value + ';"></span> ' + color.text + '</span>'
+         );
+        return $color;
+    };
+    function formatColorOption(color) {
+        return formatColor(color);
+    };
+    $('#NoteType').select2({
+        placeholder: "Select a Color",
+        minimumResultsForSearch: Infinity, //removes the search box
+        templateResult: formatColorOption,
+        templateSelection: formatColor,
+        allowClear: true
+    });
+    $(document).ready(function () {
+        $(".add_lead_note_height").height(window.innerHeight - 110);
+        $('.selectpicker').selectpicker('val', Emparr);
+        if (NoteColor != "" && NoteColor != undefined) {
+            $("#NoteType").val("#" + NoteColor);
+            $('#NoteType').trigger('change');
+        }
+          console.log(CustomerId + "bbCustomerId");
+        if (From == "leadform") {
+            $(".btn-leadnote").hide();
+        }
+        else {
+            $(".btn-leadnoteLeadform").hide();
+        }
+
+    });
+    $(window).resize(function () {
+        $(".add_lead_note_height").height(window.innerHeight - 110);
+    })
+</script>
+<div class="add_lead_note_header">@Localize.T("Add Lead Notes")</div>
+<div class="container-fluid add_lead_note_height">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.CustomerId)
+
+    @*<div class="form-group clearfix">
+            <div class="row">
+                <div class="col-md-12">
+                    <span class="content-type">@Localize.T("Note Type")</span>
+                    <select class="form-control dropdown_customar" id='NoteType'>
+                        <option></option>
+                        @foreach (var notetype in ViewBag.NoteTypeList as IEnumerable<HS.Entities.Lookup>)
+                        {
+                            <option id="optionnotetype" originalvalue="@notetype.DataValue" value="#@notetype.AlterDisplayText">@notetype.DisplayText</option>
+                        }
+                    </select>
+                    <label class="NoteTypeError hidden">Please select a note type</label>
+                </div>
+            </div>
+        </div>*@
+
+    <div class="form-clearfix">
+        <div class="not-style">
+            <div class="Ltxt-style">@Localize.T("Note Type")</div>
+            <select class="form-control dropdown_customar" id='NoteType'>
+                <option></option>
+                @foreach (var notetype in ViewBag.NoteTypeList as IEnumerable<HS.Entities.Lookup>)
+                {
+                    <option originalvalue="@notetype.DataValue" value="#@notetype.AlterDisplayText">@notetype.DisplayText</option>
+                }
+            </select>
+            <label class="NoteTypeError hidden">Please select a note type</label>
+        </div>
+    </div>
+    <div class="form-clearfix">
+        <div class="not-style">
+            <div class="Ltxt-style">@Localize.T("Lead Note")</div>
+            @Html.TextAreaFor(x => x.Notes, new { @class = "form-control lnote-style", id = "Leadnote", datarequired = "true" })
+            <br /><label rel="Name" class="label hidden red position-absolute"></label>
+        </div>
+    </div>
+    <!--[Shariful-17-9-19]-->
+    @if (PermissionChekcer.IsPermitted(Permissions.LeadPermissions.LeadAddNoteSendNote))
+    {
+        <div class="form-clearfix note_send_for">
+            <span class="Ltxt-style">@Localize.T("Note For")</span>
+            @Html.DropDownListFor(x => x.EmpId, (List<SelectListItem>)ViewBag.SalesPersonList, new { @class = "form-control selectpicker", id = "AssignName", @multiple = "multiple" })
+        </div>
+        <div class="reminder-text">
+            <label for="IsEmailReminder" class="label-cbx">
+                <input id="IsEmailReminder" type="checkbox" class="invisible" @(Model.IsEmail.Value ? "checked" : "") autocomplete="off">
+                <div class="checkbox">
+                    <svg width="20px" height="20px" viewBox="0 0 20 20">
+                        <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                        <polyline points="4 11 8 15 16 6"></polyline>
+                    </svg>
+                </div>
+                <label for="IsEmailReminder" style="cursor:pointer;" class="lbl-CheckBoxText pad_none">@Localize.T("Email Note")</label>
+            </label>
+        </div>
+        <div class="reminder-text">
+            <label for="IsTextReminder" class="label-cbx">
+                <input id="IsTextReminder" type="checkbox" class="invisible" @(Model.IsText.Value ? "checked" : "") autocomplete="off">
+                <div class="checkbox">
+                    <svg width="20px" height="20px" viewBox="0 0 20 20">
+                        <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                        <polyline points="4 11 8 15 16 6"></polyline>
+                    </svg>
+                </div>
+                <label for="IsTextReminder" style="cursor:pointer;" class="lbl-CheckBoxText pad_none">@Localize.T("Text Note")</label>
+            </label>
+        </div>
+    }
+    <div class="reminder-text">
+        <label for="IsPinned" class="label-cbx">
+            <input id="IsPinned" type="checkbox" class="invisible cus-checkBox" @(Model.IsPin.HasValue && Model.IsPin.Value ? "checked" : "") autocomplete="off">
+            <div class="checkbox">
+                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                    <polyline points="4 11 8 15 16 6"></polyline>
+                </svg>
+            </div>
+        </label>
+        <span class="lbl-CheckBoxText add_reminder_style">@Localize.T("Pin to Top")</span>
+    </div>
+    <div class="reminder-text">
+        <label for="isoverview" class="label-cbx">
+            <input id="isoverview" type="checkbox" class="invisible cus-checkBox" @(Model.IsOverview.HasValue && Model.IsOverview.Value == true ? "checked" : "") autocomplete="off">
+            <div class="checkbox">
+                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                    <polyline points="4 11 8 15 16 6"></polyline>
+                </svg>
+            </div>
+        </label>
+        <span class="lbl-CheckBoxText add_reminder_style">@Localize.T("Show in Overview")</span>
+    </div>
+    <!--[~Shariful-17-9-19]-->
+</div>
+<section class="footer-section">
+    <footer class="footer">
+        <div class="SaveCancelDiv">
+            <button class="btn btn-leadnote" id-val="@Model.CustomerId" id="btn-AddLeadNote"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+
+            <button class="btn btn-leadnoteLeadform" id-val="@Model.CustomerId" id="btn-AddLeadNoteLeadform"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+
+
+        </div>
+       
+    </footer>
+</section>
+
+
+
+
+
+

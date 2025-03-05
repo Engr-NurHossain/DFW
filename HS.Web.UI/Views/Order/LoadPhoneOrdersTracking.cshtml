@@ -1,0 +1,251 @@
+﻿@model List<HS.Entities.TrackingNumberRecorded>
+@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+    var TotalPhoneOrder = 0;
+    var OrderTotalPhone = 0;
+    var SalesTotal = 0;
+    var ServiceTotal = 0;
+    var totalMinutes = 0.0;
+    var totalHours = 0.0;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HtmlAgilityPack;
+<link href="~/Content/Css/Pagination.css" rel="stylesheet" />
+@Styles.Render("~/styles/MenuListPartial")
+<style>
+    .ieatery_isview_input {
+        width: 40px !important;
+        height: 20px;
+        color: white;
+        background-color: #2ca01c !important;
+        float: left;
+        margin-right: 5px;
+    }
+
+    .ieatery_order_customer_anchor {
+        color: #2ca01c;
+    }
+
+        .ieatery_order_customer_anchor:hover {
+            color: #2ca01c;
+            text-decoration: underline;
+        }
+
+    .filter_order_block {
+        width: 100%;
+        float: left;
+        margin-bottom: 10px;
+    }
+
+        .filter_order_block .input-group {
+            width: 20%;
+            float: left;
+        }
+
+    .phone_orders_edit_icon {
+        cursor: pointer;
+        color: #2ca01c;
+        float: right;
+    }
+</style>
+<script>
+    $(".btn-apply-Datefilter").click(function () {
+        var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+                var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+                if (StartDate == "NaN undefined, NaN") {
+                    StartDate = "All Time";
+                    EndDate = "";
+                }
+
+                $(".DateFilterContents .date-start").html("");
+                $(".DateFilterContents .date-end").html("");
+                $(".DateFilterContents .date-start").html(StartDate);
+                $(".DateFilterContents .date-end").html(EndDate);
+                $(".DateFilterContents .dropdown-filter").hide();
+                UpdatePtoCookie();
+                LoadPhoneOrdersTab(1)
+    })
+</script>
+
+<div class="menulist_container">
+    <div class="order_partial_block order_summery_block">
+
+        <div class="order_partial_block_left">
+            <div class="ci_block">
+                <div class="ci_header">Phone Orders Summary</div>
+                <div class="ci_info">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Total</th>
+                                <th>Orders</th>
+                                <th>Spam/Sales Calls</th>
+                                <th>Customer Service</th>
+                                <th>Talk Time (Minutes)</th>
+                                <th>Talk Time (Hours)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                @{
+                                    foreach (var porder in Model)
+                                    {
+                                        TotalPhoneOrder = TotalPhoneOrder + 1;
+                                        if (porder.Status.ToLower() == "order")
+                                        {
+                                            OrderTotalPhone = OrderTotalPhone + 1;
+                                        }
+                                        if (porder.Status.ToLower() == "spam/sales")
+                                        {
+                                            SalesTotal = SalesTotal + 1;
+                                        }
+                                        if (porder.Status.ToLower() == "customer service")
+                                        {
+                                            ServiceTotal = ServiceTotal + 1;
+                                        }
+                                        totalMinutes = totalMinutes + (!string.IsNullOrWhiteSpace(porder.TalkTimeSeconds) ? Convert.ToDouble(porder.TalkTimeSeconds) : 0) / 60;
+                                        totalHours = totalHours + (!string.IsNullOrWhiteSpace(porder.TalkTimeSeconds) ? Convert.ToDouble(porder.TalkTimeSeconds) : 0) / 3600;
+                                    }
+                                }
+                                <td>@HS.Web.UI.Helper.LabelHelper.FormatCount(TotalPhoneOrder)</td>
+                                <td>@HS.Web.UI.Helper.LabelHelper.FormatCount(OrderTotalPhone)</td>
+                                <td>@HS.Web.UI.Helper.LabelHelper.FormatCount(SalesTotal)</td>
+                                <td>@HS.Web.UI.Helper.LabelHelper.FormatCount(ServiceTotal)</td>
+                                <td>@HS.Web.UI.Helper.LabelHelper.FormatAmount(totalMinutes)</td>
+                                <td>@HS.Web.UI.Helper.LabelHelper.FormatAmount(totalHours)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="order_partial_block">
+        <div class="ci_block">
+            <div class="ci_header">@Localize.T("Phone Order Details")</div>
+            <div class="ci_info">
+                <table class="display all_menu menu_list_partial_info" id="tblMenu">
+                    <thead class="table-head-border">
+                        <tr>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Call")</div>
+                                @if (ViewBag.order == "ascending/orderid" || ViewBag.order == "descending/orderid")
+                                {
+                                    <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Received On")</div>
+                                @if (ViewBag.order == "ascending/orderid" || ViewBag.order == "descending/orderid")
+                                {
+                                    <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i style="color: darkred; font-weight: bold " class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Phone Number")</div>
+                                @if (ViewBag.order == "ascending/ordercustomer" || ViewBag.order == "descending/ordercustomer")
+                                {
+                                    <div>
+                                        <i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i style="color: darkred;
+        font-weight: bold
+    " class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i>
+                                    </div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Caller ID")</div>
+                                @if (ViewBag.order == "ascending/ordertype" || ViewBag.order == "descending/ordertype")
+                                {
+                                    <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordertype"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordertype"></i></div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordertype"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordertype"></i></div>
+
+                                }
+                            </th>
+                            <th class="thead-th-style">
+                                <div>@Localize.T("Status")</div>
+                                @if (ViewBag.order == "ascending/status" || ViewBag.order == "descending/status")
+                                {
+                                    <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+
+                                }
+                                else
+                                {
+                                    <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+
+                                }
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <b>@item.LocationName</b><br>
+                                        @if (!string.IsNullOrWhiteSpace(item.RecordFile))
+                                        {
+                                            <article class="audio">
+                                                <audio controls>
+                                                    <source src="@item.RecordFile" type="audio/mp3" />
+                                                </audio>
+                                            </article>
+                                        }
+                                        else
+                                        {
+                                            <span>@Localize.T("No call record found")</span>
+                                        }
+                                    </td>
+                                    <td>@item.RecordDate.Value.ToString("MM/dd/yyyy") @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.For12Hours(item.RecordDate.Value)</td>
+                                    <td>@item.CallerNumber</td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(item.CallerName))
+                                        {
+                                            <span>@item.CallerName</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Anonymous</span>
+                                        }
+                                    </td>
+                                    <td>@item.Status <i class="fa fa-edit phone_orders_edit_icon" title="Change Status" onclick="OpenRightToLeftModal('/Order/EditPhoneOrdersTracking?id=@item.Id')"></i></td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+    </div>
+</div>

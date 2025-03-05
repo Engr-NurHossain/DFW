@@ -1,0 +1,66 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.Invoice
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<html>
+<head>
+    <script src="~/Content/Jquery-ui/jquery.js"></script>
+    @Styles.Render("~/styles/GetInvoice")
+    <script>
+    function printFrame(id) {
+        var frm = document.getElementById(id).contentWindow;
+        frm.focus(); // focus on contentWindow is needed on some ie versions
+        frm.print();
+        return false;
+    }
+
+    var PrintInvoice = function () {
+        var ids = '@ViewBag.InvoiceId';
+        var invIds = ids.slice(0, -1)
+        var idList = invIds.split(",")
+        console.log(idList);
+        var url = "/Invoice/SaveInvoicePdfList";
+        var param = JSON.stringify({
+            "InvoiceIdList": idList
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                console.log(data.filePath);
+                $("#iframePdf").attr('src', data.filePath);
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    };
+    $(document).ready(function () {
+        PrintInvoice();
+    })
+    </script>
+</head>
+<body>
+    <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+        <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+    </div>
+    <div class="HeadContents">
+        <h4>Print preview</h4>
+        <span>To print, right-click the preview and select Print. Or, click the Print icon if you see one below.</span>
+
+    </div>
+    <div class="bodyConentsDiv">
+        <iframe class="pdf-styles" id="iframePdf" src=""></iframe>
+    </div>
+    <div class="footerContents">
+        <button onclick="parent.ClosePopup()" class="btnCancel">Cancel</button>
+        <button onclick="printFrame('iframePdf')" class="btnPrint">Print</button>
+    </div>
+</body>
+</html>

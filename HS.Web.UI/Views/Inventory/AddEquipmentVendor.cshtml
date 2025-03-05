@@ -1,0 +1,98 @@
+﻿@model HS.Entities.EquipmentVendor
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+<style>
+</style>
+
+<script>
+    var SaveMultiVendorCost = function () {
+        var url = domainurl + "/Inventory/AddEquipmentVendor/";
+        var param;
+        param = JSON.stringify({
+            Id: $("#eqpId").val(),
+            Cost: $("#Cost").val(),
+            SKU: $("#vendorSKU").val(),
+            SupplierId: $("#SupplierIdList").val(),
+            EquipmentId: $("#EquipmentId").val(),
+            IsPrimary: $("#IsPrimaryPrice").is(":checked")
+        });
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result == true) {
+                    $(".EquipmentVendorList").load(domainurl + "/Inventory/VendorList?EquipmentId=" + equipmentId);
+                    $("#SupplierIdList").val('0');
+                    $("#SupplierIdList").val("-1");
+                    $("#Cost").val("");
+                    $("#vendorSKU").val("");
+
+                    $("#eqpId").val(0);
+                    $("#IsPrimaryPrice").prop("checked", false);
+                    $("#btnSaveCost").text("Save");
+
+                    SupplierCost = data.SupplierCost;
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $("#btnSaveCost").click(function () {
+            SaveMultiVendorCost();
+        });
+
+    });
+</script>
+
+
+<input type="hidden" value="@Model.Id" id="eqpId" />
+<div class="form-group">
+    <span class="span-style">@Localize.T("Vendor Name")  </span>
+    @Html.DropDownListFor(x => x.SupplierId, ViewBag.SupplierList as List<SelectListItem>, new { @class = "form-control", placeholder = "Vendor Name", id = "SupplierIdList" })
+    <label class="label hidden red absolute" rel="SupplierIdList">@Localize.T("Please select vendor")</label>
+</div>
+<div class="form-group currency_style">
+    <span class="span-style">@Localize.T("Cost")</span>
+    <div class="input-group">
+        <div class="input-group-prepend">
+            <span class="input-group-text">
+                @HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)
+            </span>
+        </div>
+        <input type="text" value="@LabelHelper.FormatTo3DP(Model.Cost)" id="Cost" class="form-control" /> 
+    </div>
+    <label class="label hidden red absolute" rel="Cost">@Localize.T("Please enter price")</label>
+</div>
+<div class="form-group">
+    <span class="span-style">@Localize.T("Vendor SKU")</span>
+    @*<div class="input-group">*@
+
+    @Html.TextBoxFor(x => x.SKU, new { @class = "form-control", id = "vendorSKU" })
+    @*</div>*@
+    <label class="label hidden red absolute" rel="vendorSKU">@Localize.T("Please enter Vendor SKU")</label>
+</div>
+<div class="form-group margin-top-20">
+    <label><input @(Model.IsPrimary ? "checked" : "") type="checkbox" id="IsPrimaryPrice" /> Is Primary?</label>
+</div>
+<div class="add_multi_vendor_save_btn">
+    <button type="button" class="btn" id="btnSaveCost"><i class="fa fa-floppy-o" aria-hidden="true"></i>&nbsp;@(Model.Id>0? Localize.T("Update"): Localize.T("Save")) </button>
+</div>
+
+
+
+
+
+
+

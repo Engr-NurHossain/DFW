@@ -1,0 +1,416 @@
+﻿@model List<HS.Entities.Invoice>
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@Styles.Render("~/styles/Invoice")
+@Scripts.Render("~/scripts/Invoice")
+<style>
+    .green-tooltip1 + .tooltip > .tooltip-inner {
+        background-color: #2ca01c;
+    }
+    .estimatestatus{
+        cursor:pointer;
+    }
+</style>
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    $(document).ready(function () {
+        //$('[data-toggle="tooltip"]').tooltip();
+        var Popupwidth = 920;
+        if (window.innerWidth < 920) {
+            Popupwidth = window.innerWidth;
+        }
+        var idlist = [{ id: ".InvEstPreviewPartial", type: 'iframe', width: Popupwidth, height: 600 }
+        ];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            InvoiceSearchKeyUp(pageno, orderval);
+        })
+    });
+</script>
+<div class="page-content-wrap cus-padding-top10p invoicelist">
+    <div class="invoice-table">
+        <table class="display all_invoice filter_invoice_list_partial_table" id="tblInvoice1">
+            <thead class="table-head-border invoice_hide_for_device">
+                <tr>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Created On")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/createdon"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/createdon"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Invoice No")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/invoiceno"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/invoiceno"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Description")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/description"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/description"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Due Date")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/duedate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/duedate"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Total")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/total"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/total"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Balance")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/balance"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/balance"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Status")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        @Localize.T("Actions")
+                    </th>
+                    @if (ViewBag.Role != "Customer")
+                    {
+                        <th class="thead-th-style">
+                            <div>@Localize.T("Last Note Added")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/lastnoteadded"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/lastnoteadded"></i></div>
+                        </th>
+
+                        <th class="thead-th-style">
+                            <div>@Localize.T("Print / Email")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/timeclockdate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/tickettype"></i></div>
+                            @*@(PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerInvoiceDelete)?"/ Delete":"")*@
+                        </th>
+                    }
+                    else
+                    {
+                        <th class="thead-th-style">
+                            @Localize.T("Print")
+                            @*@(PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerInvoiceDelete)?"/ Delete":"")*@
+                        </th>
+                    }
+                </tr>
+
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    string status = item.Status;
+                    if (status != "Cancel" && status != "Paid" && status != "Partial")
+                    {
+                        status = item.DueDate.Value < DateTime.Today ? "Due" : status;
+                    }
+
+                    <tr class="tr-style">
+                        <td class="table-body-td-style invoice_device_row" valign="top">
+                            @{
+                                if (status == "Due")
+                                {
+                                    <div class="invoice_device_header">@Localize.T("Created On")</div>
+                                    <div class="invoice_device_info">
+                                        <span style="color:red">@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy") @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("hh:mm tt")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="invoice_device_header">@Localize.T("Created On")</div>
+                                    <div class="invoice_device_info">
+                                        <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy") @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("hh:mm tt")</span>
+                                    </div>
+                                }
+                            }
+                        </td>
+
+                        <td class="table-body-td-style invoice_device_row" valign="top">
+                            <div class="invoice_device_header">@Localize.T("Invoice No")</div>
+                            <div class="invoice_device_info">
+                                <a class="cus-anchor" href="javascript:void(0)" onclick="OpenInvById(@item.Id)">@item.InvoiceId</a>
+                            </div>
+
+                        </td>
+                        <td class="table-body-td-style invoice_device_row" valign="top">
+                            <div class="invoice_device_header">@Localize.T("Description")</div>
+                            <div class="invoice_device_info">@Html.Raw(item.Description)</div>
+                        </td>
+                        <td class="table-body-td-style invoice_device_row" valign="top">
+                            @if (item.DueDate.HasValue)
+                            {
+                                if (status == "Due")
+                                {
+                                    <div class="invoice_device_header">@Localize.T("Due Date")</div>
+                                    <div class="invoice_device_info">
+                                        <span class="color_red_style">@item.DueDate.Value.ToString("MM/dd/yy")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="invoice_device_header">@Localize.T("Due Date")</div>
+                                    <div class="invoice_device_info">
+                                        <span>@item.DueDate.Value.ToString("MM/dd/yy")</span>
+                                    </div>
+                                }
+
+                            }
+                        </td>
+                        <td class="table-body-td-style invoice_device_row" valign="top">
+                            @{
+                                if (status == "Due")
+                                {
+                                    <div class="invoice_device_header">@Localize.T("Total")</div>
+                                    <div class="invoice_device_info">
+                                        <span class="color_red_style">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.TotalAmount.Value.ToString("#,##0.00")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="invoice_device_header">@Localize.T("Total")</div>
+                                    <div class="invoice_device_info">
+                                        <span class="">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.TotalAmount.Value.ToString("#,##0.00")</span>
+                                    </div>
+                                }
+                            }
+
+                        </td>
+                        <td class="table-body-td-style invoice_device_row" valign="top">
+                            @{
+                                if (status == "Due")
+                                {
+                                    <div class="invoice_device_header">@Localize.T("Balance")</div>
+                                    <div class="invoice_device_info">
+                                        <span class="color_red_style">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.BalanceDue.Value.ToString("#,##0.00")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="invoice_device_header">@Localize.T("Balance")</div>
+                                    <div class="invoice_device_info">
+                                        <span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@item.BalanceDue.Value.ToString("#,##0.00")</span>
+                                    </div>
+                                }
+                            }
+
+                        </td>
+                        <td class="table-body-td-style invoice_device_row" valign="top">
+                            <div class="invoice_device_header">@Localize.T("Status")</div>
+                            <div class="invoice_device_info">
+                                @if (item.CustomerViewedTime != null && item.CustomerViewedTime != new DateTime() && item.CustomerViewedTime.HasValue)
+                                {
+                                    if (item.CustomerViewedType == HS.Web.UI.Helper.LabelHelper.EstimateStatus.SentToCustomer)
+                                    {
+                                        <span class="green-tooltip estimatestatus" data-toggle="tooltip" title="@string.Format(item.CustomerViewedTime.Value.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"))">@Localize.T("Sent To Customer")</span>
+                                    }
+                                    else if (item.CustomerViewedType == "LoadInvoice")
+                                    {
+                                        <span class="green-tooltip estimatestatus" data-toggle="tooltip" title="@string.Format(item.CustomerViewedTime.Value.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"))">@Localize.T("Customer Viewed")</span>
+                                    }
+                                    else if (item.CustomerViewedType == "PaymentInvoice")
+                                    {
+                                        <span class="green-tooltip estimatestatus" data-toggle="tooltip" title="@string.Format(item.CustomerViewedTime.Value.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"))">@Localize.T("Invoice Payment")</span>
+                                    }
+                                }
+                                else
+                                {
+                                    if (status == "Due")
+                                    {
+                                        <span class="color_red_style_bold">@status</span>
+                                    }
+                                    else if (status == "Partial")
+                                    {
+                                        <span class="invStatus">@status</span>
+                                    }
+                                    else if (status == "Paid")
+                                    {
+                                        <span class="invStatus">@status</span>
+                                    }
+                                    else if (status == "Cancel")
+                                    {
+                                        <span class="invStatus">Rolled Over</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="invStatus">@status</span>
+                                    }
+                                }
+                            </div>
+
+                        </td>
+                        <td class="table-body-td-style invoice_device_row" valign="top">
+                            @if (item.Status == "Open" || item.Status == "Partial")
+                            {
+                                if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerInvoiceReceivePayment))
+                                {
+                                    <div class="invoice_device_header">@Localize.T("Actions")</div>
+                                    <div class="invoice_device_info">
+                                        <a class="cus-anchor" onclick="ReceivePaymentByInv(@item.Id)" href="javascript:void(0)">@Localize.T("Receive Payment")</a>
+                                    </div>
+                                }
+                            }
+                        </td>
+                        <td class="table-body-td-style invoice_device_row" valign="top">
+                            @{
+                                if (item.InvoiceNoteAddedDate != new DateTime() && item.InvoiceNoteAddedDate != null)
+                                {
+                                    <div class="invoice_device_header">@Localize.T("Last Note Added")</div>
+                                    <div class="invoice_device_info">
+                                        <a onclick="OpenInvoiceNotesById(@item.Id)" class="cus-anchor green-tooltip1" data-toggle="tooltip" data-placement="top" title="@item.NotesInvoice - @item.NoteInvoiceAddedBy">@string.Format(item.InvoiceNoteAddedDate.UTCToClientTime().ToString("MM/dd/yy hh:mm tt"))</a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="invoice_device_header">@Localize.T("Last Note Added")</div>
+                                    <div class="invoice_device_info">
+                                        <span>@Localize.T("-")</span>
+                                    </div>
+                                }
+                            }
+                        </td>
+
+                        <td class="table-body-td-style invoice_device_row" valign="top">
+                            <div class="invoice_device_header">@Localize.T("Print / Email")</div>
+                            <div class="invoice_device_info">
+                                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerInvoicePrint))
+                                {
+                                    <a class="InvEstPreviewPartial" href="@(AppConfig.DomainSitePath)/Invoice/GetInvoicePartial?Id=@item.Id" style=""><i class="fa fa-print" aria-hidden="true"></i></a>
+                                        @Localize.T(" / ")
+                                        <a href="/@(AppConfig.DomainSitePath)nvoice/SendEmailInvoicePartial?id=@item.Id" class="InvEstPreviewPartial" style=""><i class="fa fa-envelope" aria-hidden="true"></i></a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<input type="hidden" id="Status" value="@ViewBag.InvoiceType"/>
+<div class="AgentListPagination">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber),'@ViewBag.order')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="InvoiceSearchKeyUp(1,'@ViewBag.order')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="InvoiceSearchKeyUp(2,'@ViewBag.order')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@ViewBag.order')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="InvoiceSearchKeyUp(1,'@ViewBag.order')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="InvoiceSearchKeyUp(2,'@ViewBag.order')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="InvoiceSearchKeyUp(3,'@ViewBag.order')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@ViewBag.order')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber-2),'@ViewBag.order')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="InvoiceSearchKeyUp()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber+1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber + 2),'@ViewBag.order')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber-1),'@ViewBag.order')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber - 1),'@ViewBag.order')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber),'@ViewBag.order')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber + 1),'@ViewBag.order')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="InvoiceSearchKeyUp(@(ViewBag.PageNumber+1),'@ViewBag.order')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>

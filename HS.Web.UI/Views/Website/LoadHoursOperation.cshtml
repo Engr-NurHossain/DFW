@@ -1,0 +1,82 @@
+﻿@model HS.Entities.WebsiteLocationOperation
+@{ 
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<style>
+    .hop_container{
+        width:100%;
+        float:left;
+        padding: 0px 10px;
+    }
+    #savehoursoperation{
+        margin-top:20px;
+    }
+</style>
+<script>
+    var daysavailcount = '@(((List<SelectListItem>)ViewBag.daysavailable).Count))'
+    var SaveHoursOperation = function () {
+        var url = "/Website/SaveHoursOperation";
+        var param = JSON.stringify({
+            SiteLocationId: parent.$("#site_loc_id").val(),
+            HoursofOperation: $("#HoursofOperation").val(),
+            OperationStartTime: $("#OperationStartTime_OPT").val(),
+            OperationEndTime: $("#OperationEndTime_OPT").val()
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    parent.$(".load_hours_opt_data").load("/Website/LoadHoursOfOPt?locid=" + data.locid);
+                    parent.$(".load_order_hours_opt_data").load("/Website/LoadOnlineOrderHoursOfOPt?locid=" + data.locid);
+                    parent.$(".load_hours_operation").load("/Website/LoadHoursOperation?daylist=" + String(parent.$("#selectDaysAvailable_loc").val()) + "&locid=" + data.locid);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        })
+    }
+    $(document).ready(function () {
+        if (parseInt(daysavailcount) == 0) {
+            $(".load_hours_operation").addClass("hidden");
+        }
+        else {
+            $(".load_hours_operation").removeClass("hidden");
+            $("#OperationStartTime_OPT").val("00:00");
+            $("#OperationEndTime_OPT").val("23:45");
+        }
+        $("#savehoursoperation").click(function () {
+            if (CommonUiValidation()) {
+                SaveHoursOperation();
+            }
+        })
+    })
+</script>
+<div class="container-fluid">
+    <div class="hop_container">
+        <div class="row">
+            <div class="col-md-3">
+                <span class="span-style">@Localize.T("Hours of Operation Day")</span>
+                @Html.DropDownListFor(m => m.HoursofOperation, ViewBag.daysavailable as List<SelectListItem>, new { @class = "form-control", id = "HoursofOperation", datarequired = "true" })
+            </div>
+            <div class="col-md-3">
+                <span class="span-style">@Localize.T("Operation Start Time")</span>
+                @Html.DropDownListFor(m => m.OperationStartTime, ViewBag.timeAvailable as List<SelectListItem>, new { @class = "form-control", id = "OperationStartTime_OPT", datarequired = "true" })
+            </div>
+            <div class="col-md-3">
+                <span class="span-style">@Localize.T("Operation End Time")</span>
+                @Html.DropDownListFor(m => m.OperationEndTime, ViewBag.timeAvailable as List<SelectListItem>, new { @class = "form-control", id = "OperationEndTime_OPT", datarequired = "true" })
+            </div>
+            <div class="col-md-3">
+                <button class="form-control" id="savehoursoperation"><i class="fa fa-plus"></i> @Localize.T("Add")</button>
+            </div>
+        </div>
+    </div>
+</div>

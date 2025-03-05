@@ -1,0 +1,844 @@
+﻿@model List<HS.Entities.CustomerAppointmentEquipment>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@Styles.Render("~/styles/UserList")
+<link href="~/Content/Css/Lead/EmergencyContactListPartial.css" rel="stylesheet" />
+@*@Scripts.Render("~/scripts/MenuItemList")*@
+<style>
+    #TblEmergencyContactList_menuitem {
+        width: 100%;
+    }
+
+    .TblNewRequestOrderList {
+        table-layout: fixed;
+    }
+
+        .TblNewRequestOrderList tbody tr td {
+            position: relative;
+        }
+
+        .TblNewRequestOrderList .wqty,
+        .TblNewRequestOrderList .qtyoh,
+        .TblNewRequestOrderList .ordrng {
+            width: 126px;
+        }
+
+        .TblNewRequestOrderList .act_last {
+            width: 50px;
+        }
+
+        .TblNewRequestOrderList .psku_po {
+            width: 200px;
+        }
+
+    .txtOrderingQuantity {
+        width: 100%;
+        height: 34px;
+    }
+
+    .TblNewRequestOrderList td .tt-menu {
+        background: white;
+        min-width: 320px;
+        font-size: 12px;
+        max-height: 400px;
+        overflow-y: scroll;
+        overflow-x: hidden;
+        -webkit-box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        margin-top: 0px;
+        overflow: hidden;
+        position: absolute;
+        left: 8px;
+        z-index: 100;
+        display: none;
+        width: 450px;
+    }
+    .txtWarehouseQuantity {
+    background-color: #f0f0ef;
+}
+    .txtQTYOnHand {
+    background-color: #f0f0ef;
+
+    }
+    .txtProductSKU {
+    background-color: #f0f0ef;
+
+    }
+    .txtManufacturerName{
+    background-color: #f0f0ef;
+
+    }
+    .TblNewRequestOrderList td .tt-dataset-autocomplete {
+        margin-top: -5px;
+    }
+
+    .TblNewRequestOrderList td .tt-suggestion {
+        min-height: 50px;
+        display: block;
+        padding: 10px 10px 9px 15px;
+        position: relative;
+        cursor: pointer;
+        white-space: nowrap;
+        border-bottom: 1px solid #ccc;
+    }
+
+
+    .TblNewRequestOrderList td .tt-menu p {
+        margin: 0;
+    }
+
+    .TblNewRequestOrderList td .tt-sug-text {
+        width: 85%;
+        font-size: 14px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+
+    .TblNewRequestOrderList td .tt-suggestion u {
+        text-decoration: none;
+        color: #aa2121;
+    }
+
+    .TblNewRequestOrderList td .tt-suggestion.active {
+        background-color: #f2f2f2;
+    }
+
+    .TblNewRequestOrderList td .tt-sug-desc {
+        width: 100%;
+        color: #999;
+        padding-top: 2px;
+        display: block;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+
+    .TblNewRequestOrderList td .tt-sug-type {
+        position: absolute;
+        bottom: 0px;
+        color: #999;
+        font-style: italic;
+    }
+
+    .TblNewRequestOrderList td .tt-eq-price {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+    }
+
+    .TblNewRequestOrderList td .tt_sug_manufac {
+        position: absolute;
+        right: 10px;
+        bottom: 0px;
+    }
+
+    .NewProjectSuggestion {
+        overflow-x: hidden;
+        overflow-y: scroll;
+    }
+
+    .TblNewRequestOrderList tbody tr td > span {
+        display: block;
+    }
+
+    .TblNewRequestOrderList tbody tr td input {
+        display: none;
+    }
+
+    .TblNewRequestOrderList tbody tr.focusedItem input {
+        display: block;
+    }
+
+    .TblNewRequestOrderList tbody .HasNewItem.focusedItem td > span {
+        display: none;
+    }
+
+    .TblNewRequestOrderList thead tr th,
+    .TblNewRequestOrderList tbody tr td {
+        border: 1px solid #ccc !important;
+    }
+    #TblEmergencyContactList_menuitem thead tr th,
+    #TblEmergencyContactList_menuitem tbody tr td {
+        border: 1px solid #ccc !important;
+    }
+    #TblEmergencyContactList_menuitem .label-cbx .checkbox {
+        margin-top: 0px;
+        margin-bottom: 0px;
+    }
+
+    .table_caption {
+        font-weight: bold;
+        color: #000;
+        font-size: 17px;
+    }
+    
+</style>
+<script>
+    var PropertyUserSuggestiontemplate =
+        '<div class="tt-suggestion tt-selectable" data-select="{1}" data-price="{2}" data-onhand="{10}" data-type="{5}" data-id="{0}" data-description="{6}" data-sku="{7}" data-manufac="{8}" data-warehouse="{9}">'
+        /*
+        *For Equipment Image
+        *+ "<img src='{7}' class='EquipmentImage'>"*/
+        + "<p class='tt-sug-text'>"
+        + "<em class='tt-sug-type'>{5}</em>"
+        + "<span>{1}</span>"
+        + "<em class='tt_sug_manufac'>{8}</em>"
+        + "<em class='tt-eq-price'>${2}</em>"
+        + "<br />"
+        + "</p> "
+        + "</div>";
+
+    var NewEquipmentRow = "<tr class='tr-style'>"
+        + "<td class='hidden'>"
+        + "<input type='hidden' readonly class='txtEqpId' /><span class='spnEqpId'></span>"
+        + "</td> "
+        + "<td valign='top' class='CE-table-body-td-style eg_contact_header_row'>"
+        + "<input type='text' class='txtEquipmentName' onkeydown='SearchKeyDown(this,event)' onkeyup='SearchKeyUp(this,event)' />"
+        + "<div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>"
+        + "<span class='spnEquipmentName'></span>"
+        + "</td>"
+        + "<td valign='top' class='CE-table-body-td-style eg_contact_header_row'>"
+        + "<input type='text' onkeydown='OthersKeyDown(this,event)' readonly class='txtWarehouseQuantity'/><span class='spnWarehouseQuantity'></span>"
+        + "</td> "
+        + "<td valign='top' class='CE-table-body-td-style eg_contact_header_row'>"
+        + "<input type='text' readonly onkeydown='OthersKeyDown(this,event)' class='txtQTYOnHand' /><span class='spnQTYOnHand'></span>"
+        + "</td>"
+
+        + "<td valign='top' class='CE-table-body-td-style eg_contact_header_row'>"
+        + "<input type='text' readonly onkeydown='OthersKeyDown(this,event)' class='txtProductSKU' /><span class='spnProductSKU'></span>"
+        + "</td>"
+        + "<td valign='top' class='CE-table-body-td-style eg_contact_header_row'>"
+        + "<input type='text' readonly onkeydown='OthersKeyDown(this,event)' class='txtManufacturerName' /><span class='spnManufacturerName'></span>"
+        + "</td>"
+        + "<td valign='top' class='CE-table-body-td-style eg_contact_header_row'>"
+        + "<input type='number' onkeydown='OthersKeyDown(this,event)' class='txtOrderingQuantity' /><span class='spnOrderingQuantity'></span>"
+        + "</td>"
+        + "<td valign='top' class='CE-table-body-td-style eg_contact_header_row'>"
+        + "<i class='fa fa-trash-o' aria-hidden='true'></i>"
+        + "</td>"
+        + "</tr>";
+
+    var POEqSuggestionclickbind = function (item) {
+        $('.TblNewRequestOrderList .tt-suggestion').click(function () {
+            console.log('clicked');
+            var clickitem = this;
+            $('.TblNewRequestOrderList .tt-menu').hide();
+            /*ID*/
+            $(item).val($(clickitem).attr('data-select'));
+            $(item).attr('data-id', $(clickitem).attr('data-id'));
+            $(item).parent().parent().attr('data-id', $(clickitem).attr('data-id'));
+            $(item).parent().parent().addClass('HasNewItem');
+            var spnItemId = $(item).parent().parent().find('.spnEqpId');
+            $(spnItemId).text($(this).attr('data-id'));
+            var txtItemId = $(item).parent().parent().find('.txtEqpId');
+            $(txtItemId).val($(this).attr('data-id'));
+            /*Name*/
+            var itemName = $(item).parent().find('span');
+            $(itemName).text($(item).val());
+            /*WareHouse*/
+            var spnItemWareHouse = $(item).parent().parent().find('.spnWarehouseQuantity');
+            $(spnItemWareHouse).text($(this).attr('data-warehouse'));
+            var txtWareHouse = $(item).parent().parent().find('.txtWarehouseQuantity');
+            $(txtWareHouse).val($(this).attr('data-warehouse'));
+            /*OnHand*/
+            var spnItemQTYOnHand = $(item).parent().parent().find('.spnQTYOnHand');
+            $(spnItemQTYOnHand).text($(this).attr('data-onhand'));
+            var txtQTYOnHand = $(item).parent().parent().find('.txtQTYOnHand');
+            $(txtQTYOnHand).val($(this).attr('data-onhand'));
+            /*ProductSKU*/
+            var spnItemProductSKU = $(item).parent().parent().find('.spnProductSKU');
+            $(spnItemProductSKU).text($(this).attr('data-sku'));
+            var txtProductSKU = $(item).parent().parent().find('.txtProductSKU');
+            $(txtProductSKU).val($(this).attr('data-sku'));
+            /*ManufacturerName*/
+            var spnItemManufacturerName = $(item).parent().parent().find('.spnManufacturerName');
+            $(spnItemManufacturerName).text($(this).attr('data-manufac'));
+            var txtManufacturerName = $(item).parent().parent().find('.txtManufacturerName');
+            $(txtManufacturerName).val($(this).attr('data-manufac'));
+            /*OredringQuantity*/
+            var spnItemOrderingQuantity = $(item).parent().parent().find('.spnOrderingQuantity');
+            $(spnItemOrderingQuantity).text(1);
+            var txtOrderingQuantity = $(item).parent().parent().find('.txtOrderingQuantity');
+            $(txtOrderingQuantity).val(1);
+            //$(item).parent().parent().addClass('focusedItem');
+            /*Item Rate Set*/
+            //var spnItemRate = $(item).parent().parent().find('.spnProductRate');
+            //$(spnItemRate).text($(this).attr('data-price'));
+            //var txtItemRate = $(item).parent().parent().find('.txtProductRate');
+            //$(txtItemRate).val($(this).attr('data-price'));
+            /*Item Description Set*/
+            //var spnItemRate = $(item).parent().parent().find('.spnSKU');
+            //$(spnItemRate).text($(this).attr('data-sku'));
+            //var txtItemRate = $(item).parent().parent().find('.txtSKU');
+            //$(txtItemRate).val($(this).attr('data-sku'));
+            /*Item Quantity Set*/
+            //var spnItemRate = $(item).parent().parent().find('.spnProductQuantity');
+            //$(spnItemRate).text(1);
+            //var txtItemRate = $(item).parent().parent().find('.txtProductQuantity');
+            //$(txtItemRate).val(1);
+            /*Item Amount Set*/
+            //var spnItemRate = $(item).parent().parent().find('.spnProductAmount');
+            //$(spnItemRate).text($(this).attr('data-price'));
+            //var txtItemRate = $(item).parent().parent().find('.txtProductAmount');
+            //$(txtItemRate).val($(this).attr('data-price'));
+            /*Item QuantityReceived Set*/
+            //var spnItemRate = $(item).parent().parent().find('.spnProductQuantityReceived');
+            //$(spnItemRate).text(0);
+            //var txtItemRate = $(item).parent().parent().find('.txtProductQuantityReceived');
+            //$(txtItemRate).val(0);
+            /*Item QuantityReceiving Set*/
+            //var spnItemRate = $(item).parent().parent().find('.spnProductQuantityReceiving');
+            //$(spnItemRate).text(0);
+            //var txtItemRate = $(item).parent().parent().find('.txtProductQuantityReceiving');
+            //$(txtItemRate).val(0);
+
+
+            /*
+            $(item).parent().parent().addClass('focusedItem');
+            $(item).focus();
+            */
+
+            //CalculateNewAmount();
+
+        });
+        $('.TblNewRequestOrderList .tt-suggestion').hover(function () {
+            var clickitem = this;
+            $('.tt-suggestion').removeClass("active");
+            $(clickitem).addClass('active');
+        });
+    }
+
+    var SearchKeyUp = function (item, event) {
+        if (event.keyCode == 40 || event.keyCode == 38 || event.keyCode == 13 || event.keyCode == 9)
+            return false;
+        var ExistEquipment = "";
+        var ExistEquipmentInner = "";
+        $(".HasNewItem").each(function () {
+            ExistEquipmentInner += "'" + $(this).attr('data-id') + "',";
+        });
+        if (ExistEquipmentInner.length > 0) {
+            ExistEquipmentInner = ExistEquipmentInner.slice(0, -1);
+            ExistEquipment = "(" + ExistEquipmentInner + ")";
+        }
+        $.ajax({
+            url: domainurl + "/Invoice/GetEquipmentListByKeyTechnicianId",
+            data: {
+                key: $(item).val(),
+                "technicianId": parent.$('#User').val(),
+                ExistEquipment: ExistEquipment
+            },
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var resultparse = JSON.parse(data.result);
+                if (resultparse.length > 0) {
+                    var searchresultstring = "<div class='NewProjectSuggestion'>";
+                    for (var i = 0; i < resultparse.length; i++) {
+                        searchresultstring = searchresultstring + String.format(PropertyUserSuggestiontemplate,
+                        /*0*/resultparse[i].EquipmentId,
+                        /*1*/ resultparse[i].EquipmentName.replaceAll('"', '\'\''),
+                        /*2*/ resultparse[i].SupplierCost,
+                        /*3*/resultparse[i].Reorderpoint,
+                        /*4*/ resultparse[i].QuantityAvailable,
+                        /*5*/ resultparse[i].EquipmentType,
+                        /*6*/resultparse[i].EquipmentDescription.replaceAll('"', '\'\''),
+                        /*7*/resultparse[i].SKU,
+                        /*8*/resultparse[i].ManufacturerName.replaceAll('"', '\'\''),
+                        /*9*/resultparse[i].WareHouseQuantity,
+                        /*10*/resultparse[i].QuantityOnHand/*ImageSource*/);
+                    }
+                    searchresultstring += "</div>";
+                    var ttdom = $($(item).parent()).find('.tt-menu');
+                    var ttdomComplete = $($(item).parent()).find('.tt-dataset-autocomplete');
+                    $(ttdomComplete).html(searchresultstring);
+                    $(ttdom).show();
+
+                    POEqSuggestionclickbind(item);
+                    if (resultparse.length > 4) {
+                        $(".NewProjectSuggestion").height(352);
+                        $(".NewProjectSuggestion").css('position', 'relative');
+                        /*$(".NewProjectSuggestion").perfectScrollbar()*/
+                    }
+                }
+                if (resultparse.length == 0)
+                    $('.tt-menu').hide();
+            }
+        });
+    }
+
+    var SearchKeyDown = function (item, event) {
+
+        if (event.keyCode == 13) {/*Enter*/
+            var selectedTTMenu = $(event.target).parent().find('.tt-suggestion.active');
+            $(selectedTTMenu).click();
+            $('.tt-menu').hide();
+        }
+        if (event.keyCode == 40) {/*Down*/
+            var ttSugstionDom = $(event.target).parent().find('.tt-suggestion');
+            var ttSugActive = $(event.target).parent().find('.tt-suggestion.active');
+            if ($(ttSugstionDom).length > 0 && $(ttSugstionDom).is(':visible')) {
+                if ($(ttSugActive).length == 0) {
+                    $($(ttSugstionDom).get(0)).addClass('active');
+                    $(item).val($($(ttSugstionDom).get(0)).attr('data-select'))
+                }
+                else {
+                    var suggestionlist = $(ttSugstionDom);
+                    var activesuggestion = $(ttSugActive);
+                    var indexactive = -1;
+                    for (var id = 0; id < suggestionlist.length; id++) {
+                        if ($(suggestionlist[id]).hasClass('active'))
+                            indexactive = id;
+                    }
+                    if (indexactive < suggestionlist.length - 1) {
+                        $(ttSugstionDom).removeClass('active');
+                        var possibleactive = $(ttSugstionDom).get(indexactive + 1);
+                        $($(ttSugstionDom).get(indexactive + 1)).addClass('active');
+                        $(possibleactive).addClass('active');
+                        $(item).val($(possibleactive).attr('data-select'));
+                    }
+                }
+
+                event.preventDefault();
+            }
+            else {
+
+                var trselected = $($(event.target).parent()).parent();
+                $(trselected).removeClass('focusedItem');
+                $($(trselected).next('tr')).addClass('focusedItem');
+                if ($(event.target).hasClass('txtEquipmentName')) {
+                    $($(trselected).next('tr')).find('input.txtEquipmentName').focus();
+                }
+            }
+        }
+        if (event.keyCode == 38) {/*UP*/
+            var ttSugstionDom = $(event.target).parent().find('.tt-suggestion');
+            var ttSugActive = $(event.target).parent().find('.tt-suggestion.active');
+            if ($(ttSugstionDom).length > 0 && $(ttSugActive).length > 0 && $(ttSugstionDom).is(':visible')) {
+                var suggestionlist = $(ttSugstionDom);
+                var activesuggestion = $(ttSugActive);
+                var indexactive = -1;
+                for (var id = 0; id < suggestionlist.length; id++) {
+                    if ($(suggestionlist[id]).hasClass('active'))
+                        indexactive = id;
+                }
+                if (indexactive > 0) {
+                    $(ttSugstionDom).removeClass('active');
+                    var possibleactive = $(ttSugstionDom).get(indexactive - 1);
+                    $(possibleactive).addClass('active');
+                    $(item).val($(possibleactive).attr('data-select'))
+                }
+                event.preventDefault();
+            }
+            else {
+                var trselected = $($(event.target).parent()).parent();
+                $(trselected).removeClass('focusedItem');
+                $($(trselected).prev('tr')).addClass('focusedItem');
+                $($(trselected).prev('tr')).find('input.txtEquipmentName').focus();
+            }
+        }
+
+    }
+    var OthersKeyDown = function (item, event) {
+        if (event.keyCode == 40) {
+            var trselected = $($(event.target).parent()).parent();
+            $(trselected).removeClass('focusedItem');
+            $($(trselected).next('tr')).addClass('focusedItem');
+            if ($(event.target).hasClass('txtWarehouseQuantity')) {
+                $($(trselected).next('tr')).find('input.txtWarehouseQuantity').focus();
+            } else if ($(event.target).hasClass('txtQTYOnHand')) {
+                $($(trselected).next('tr')).find('input.txtQTYOnHand').focus();
+            } else if ($(event.target).hasClass('txtProductSKU')) {
+                $($(trselected).next('tr')).find('input.txtProductSKU').focus();
+            } else if ($(event.target).hasClass('txtManufacturerName')) {
+                $($(trselected).next('tr')).find('input.txtManufacturerName').focus();
+            } else if ($(event.target).hasClass('txtOrderingQuantity')) {
+                $($(trselected).next('tr')).find('input.txtOrderingQuantity').focus();
+            } else if ($(event.target).hasClass('txtEquipmentName')) {
+                $($(trselected).prev('tr')).find('input.txtEquipmentName').focus();
+            }
+        } else if (event.keyCode == 38) {
+            var trselected = $($(event.target).parent()).parent();
+            $(trselected).removeClass('focusedItem');
+            $($(trselected).prev('tr')).addClass('focusedItem');
+            if ($(event.target).hasClass('txtWarehouseQuantity')) {
+                $($(trselected).prev('tr')).find('input.txtWarehouseQuantity').focus();
+            } else if ($(event.target).hasClass('txtQTYOnHand')) {
+                $($(trselected).prev('tr')).find('input.txtQTYOnHand').focus();
+            } else if ($(event.target).hasClass('txtProductSKU')) {
+                $($(trselected).prev('tr')).find('input.txtProductSKU').focus();
+            } else if ($(event.target).hasClass('txtManufacturerName')) {
+                $($(trselected).prev('tr')).find('input.txtManufacturerName').focus();
+            } else if ($(event.target).hasClass('txtOrderingQuantity')) {
+                $($(trselected).prev('tr')).find('input.txtOrderingQuantity').focus();
+            } else if ($(event.target).hasClass('txtEquipmentName')) {
+                $($(trselected).prev('tr')).find('input.txtEquipmentName').focus();
+            }
+        }
+        else if (event.keyCode == 9) {
+            var trselected = $($(event.target).parent()).parent();
+            $(trselected).removeClass('focusedItem');
+            var trfocuseditem = $(trselected).next('tr');
+            $(trfocuseditem).addClass('focusedItem');
+            $($(trfocuseditem).find('input.txtEquipmentName')).focus();
+            event.preventDefault();
+        }
+
+    }
+    $(document).ready(function () {
+        //$(".QTYNeeded").change(function () {
+        //    console.log("QTYFire");
+        //    var orderval = 0;
+        //    var handval = $(this).attr('data-val-qtyhand');
+        //    if (parseInt($(this).val()) > parseInt(handval)) {
+        //        orderval = parseInt($(this).val()) - parseInt(handval);
+        //    }
+        //    var ordercount = $(this).attr('data-count');
+        //    $(".Ordering_" + ordercount).val(orderval);
+        //})
+        $("#TblNewRequestOrderList tbody").on('focusout', 'input.txtEquipmentName', function () {
+            setTimeout(function () {
+                $(".tt-menu").hide();
+            }, 300);
+            //$(".tt-menu").hide();
+            //var ProductNameDom = $(this).parent().find('span.spnEquipmentName');
+            //$(ProductNameDom).text($(this).val());
+        });
+        $("#TblNewRequestOrderList tbody").on('click', 'tr', function (e) {
+            if ($(e.target).hasClass('fa') || $(e.target).hasClass('tt-sug-text') || $(e.target).hasClass('tt-suggestion')) {
+                return;
+            }
+            //console.log(e.target);
+            if (parent.$('#User').val() != "") {
+                if ($(e.target).hasClass("spnEquipmentName") || $(e.target).hasClass("spnOrderingQuantity")) {
+
+                    $("#TblNewRequestOrderList tr").removeClass("focusedItem");
+                    $($(e.target).parent().parent()).addClass("focusedItem");
+                    $(e.target).parent().find('input').focus();
+
+                }
+                //else if ($(e.target).hasClass("pAmount")) {
+                //    $(".ServiceEqTab tr").removeClass("focusedItem");
+                //    $($(e.target).parent().parent()).addClass("focusedItem");
+                //    $(e.target).find('input').focus();
+
+                //}
+                else if (e.target.tagName.toUpperCase() == 'INPUT') {
+                    return;
+                }
+                else {
+                    $("#TblNewRequestOrderList tr").removeClass("focusedItem");
+                    $($(e.target).parent()).addClass("focusedItem");
+                    $(e.target).find('input').focus();
+
+                }
+
+            }
+        });
+
+        /*Add new row*/
+        $("#TblNewRequestOrderList tbody").on('click', 'tr:last', function (e) {
+            if ($(e.target).hasClass('fa')) {
+                return;
+            }
+            if (parent.$('#User').val() == "") {
+                return;
+            }
+            $("#TblNewRequestOrderList tbody tr:last").after(NewEquipmentRow);
+            var i = 1;
+            $(".TblNewRequestOrderList tbody tr td:first-child").each(function () {
+                $(this).text(i);
+                i += 1;
+            });
+
+        });
+        /*Remove last row*/
+        $(".TblNewRequestOrderList tbody").on('click', 'tr td i.fa', function (e) {
+            if (parent.$('#User').val() == "") {
+                return;
+            }
+            $(this).parent().parent().remove();
+            if ($(".TblNewRequestOrderList tbody tr").length < 2) {
+                $("#TblNewRequestOrderList tbody tr:last").after(NewEquipmentRow);
+            }
+            var i = 1;
+            $(".TblNewRequestOrderList tbody tr td:first-child").each(function () {
+                $(this).text(i);
+                i += 1;
+            });
+        });
+        $(".TblNewRequestOrderList tbody").on('change', "tr td .txtOrderingQuantity", function () {
+            var OrderingQuantityDom = $(this).parent().find('span.spnOrderingQuantity');
+            $(OrderingQuantityDom).text($(this).val());
+        });
+        $(".CAEAll").change(function () {
+            console.log("hlw");
+            if ($(this).is(':checked')) {
+                $(".HasItem").each(function () {
+                    $('.CAEId').prop('checked', true);
+                });
+            }
+            else {
+                $(".HasItem").each(function () {
+                    $('.CAEId').prop('checked', false);
+                });
+            }
+        });
+    });
+</script>
+<div class="">
+    <table id="TblEmergencyContactList_menuitem" class="menu_item_list_partial_table">
+        <caption class="table_caption" align="left">@Localize.T("Requisition List")</caption>
+        <thead class="table-head-border eg_contact_hide">
+            <tr>
+                <th class="CE-thead-th-style">
+                    <label for="IsCheckVal1" class="label-cbx">
+                        <input id="IsCheckVal1" type="checkbox" style="position:relative;" class="cus-checkBox invisible CAEAll" autocomplete="off">
+                        <div class="checkbox">
+                            <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                <polyline points="4 11 8 15 16 6"></polyline>
+                            </svg>
+                        </div>
+                    </label>
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("Warehouse QTY")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("QTY on Hand2")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("Product SKU")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("Manufacturer")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("Name")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("QTY Needed")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("Ordering")
+                </th>
+                @*<th class="CE-thead-th-style">
+                        @Localize.T("Action")
+                    </th>*@
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                //if (item.Quantity > 0)
+                //{
+                <tr class="tr-style HasItem">
+                    <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                        @*<label for="pp_@item.Id" class="label-cbx">
+                                <input type="checkbox" class="CheckItems invisible CAEId" value="" autocomplete="off">
+                                <div class="checkbox">
+                                    <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                        <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                        <polyline points="4 11 8 15 16 6"></polyline>
+                                    </svg>
+                                </div>
+                            </label>*@
+                        <label for="@item.EquipmentId" class="label-cbx">
+                            <input id="@item.EquipmentId" type="checkbox" style="position:relative;" class="cus-checkBox invisible CAEId" value="@item.EquipmentId">
+                            <div class="checkbox">
+                                <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                    <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                    <polyline points="4 11 8 15 16 6"></polyline>
+                                </svg>
+                            </div>
+                        </label>
+                        @*<input type="checkbox" class="CAEId" value="true" />*@
+                    </td>
+                    <td class="CE-table-body-td-style eg_contact_header_row" valign="top"><span>@item.WarehouseQTY</span></td>
+                    <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                        <span>@item.QTYOnHand</span>
+                    </td>
+                    <td class="CE-table-body-td-style eg_contact_header_row" valign="top"><span>@item.ProductSKU</span></td>
+                    <td class="CE-table-body-td-style eg_contact_header_row" valign="top"><span>@item.ManufacturerName</span></td>
+                    <td class="CE-table-body-td-style eg_contact_header_row" valign="top"><span>@item.EquipmentName</span></td>
+                    <td class="CE-table-body-td-style eg_contact_header_row" valign="top"><span title="@item.TicketsId" style="cursor:pointer;color:blue;"><u>@item.Quantity</u></span></td>
+                    <td class="CE-table-body-td-style eg_contact_header_row" valign="top"><input type="number" id="OrderingQuantity" class="OrderingQuantity" value="@(item.QTYOnHand>=item.Quantity?0:(item.Quantity-item.QTYOnHand))" /></td>
+                    <td class="hidden">
+                        <input type="hidden" class="WarehouseQTY" value="@item.WarehouseQTY" />
+                        <input type="hidden" class="QTYOnHand" value="@item.QTYOnHand" />
+                        <input type="hidden" class="ProductSKU" value="@item.ProductSKU" />
+                        <input type="hidden" class="ManufacturerName" value="@item.ManufacturerName" />
+                        <input type="hidden" class="EquipmentName" value="@item.EquipmentName" />
+                        <input type="hidden" class="Quantity" value="@item.Quantity" />
+                        <input type="hidden" class="EquipmentId" value="@item.EquipmentId" />
+                    </td>
+                    @*<td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                            <a class="contact_delete" data-toggle="tooltip" title="Delete" onclick="DeleteOrderItem" data-original-title="Delete"><i class="fa fa-trash-o"></i></a>
+                        </td>*@
+                </tr>
+                //}
+            }
+        </tbody>
+    </table>
+    @*</div>
+
+        <div>*@
+    <br /><br /><br />
+    <table id="TblNewRequestOrderList" class="menu_item_list_partial_table TblNewRequestOrderList table">
+        <caption class="table_caption" align="left">@Localize.T("New Order")</caption>
+        <thead class="table-head-border eg_contact_hide">
+            <tr>
+                <th class="CE-thead-th-style">
+                    @Localize.T("Name")
+                </th>
+                <th class="CE-thead-th-style wqty">
+                    @Localize.T("Warehouse QTY")
+                </th>
+                <th class="CE-thead-th-style qtyoh">
+                    @Localize.T("QTY on Hand2")
+                </th>
+
+                <th class="CE-thead-th-style psku_po">
+                    @Localize.T("Product SKU")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("Manufacturer")
+                </th>
+                <th class="CE-thead-th-style ordrng">
+                    @Localize.T("Ordering")
+                </th>
+                <th class="CE-thead-th-style act_last">
+
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="tr-style">
+
+                <td class="hidden">
+                    <input type="hidden" readonly class="txtEqpId" />
+                    <span class="spnEqpId"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="text" class="txtEquipmentName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                    <span class="spnEquipmentName"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="text" onkeydown='OthersKeyDown(this,event)' readonly class="txtWarehouseQuantity" />
+                    <span class="spnWarehouseQuantity"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="text" readonly onkeydown='OthersKeyDown(this,event)' class="txtQTYOnHand" />
+                    <span class="spnQTYOnHand"></span>
+                </td>
+
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="text" readonly onkeydown='OthersKeyDown(this,event)' class="txtProductSKU" />
+                    <span class="spnProductSKU"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="text" readonly onkeydown='OthersKeyDown(this,event)' class="txtManufacturerName" />
+                    <span class="spnManufacturerName"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="number" onkeydown='OthersKeyDown(this,event)' class="txtOrderingQuantity" />
+                    <span class="spnOrderingQuantity"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                </td>
+            </tr>
+            <tr class="tr-style">
+                <td class="hidden">
+                    <input type="hidden" readonly class="txtEqpId" />
+                    <span class="spnEqpId"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="text" class="txtEquipmentName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                    <span class="spnEquipmentName"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="text" readonly onkeydown='OthersKeyDown(this,event)' class="txtWarehouseQuantity" />
+                    <span class="spnWarehouseQuantity"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="text" readonly onkeydown='OthersKeyDown(this,event)' class="txtQTYOnHand" />
+                    <span class="spnQTYOnHand"></span>
+                </td>
+
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="text" readonly onkeydown='OthersKeyDown(this,event)' class="txtProductSKU" />
+                    <span class="spnProductSKU"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="text" readonly onkeydown='OthersKeyDown(this,event)' class="txtManufacturerName" />
+                    <span class="spnManufacturerName"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <input type="number" onkeydown='OthersKeyDown(this,event)' class="txtOrderingQuantity" />
+                    <span class="spnOrderingQuantity"></span>
+                </td>
+                <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                    <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <br /><br /><br /><br /><br />
+    <table id="TblEmergencyContactList_menuitem" class="menu_item_list_partial_table">
+        <caption class="table_caption" align="left">@Localize.T("Order List")</caption>
+        <thead class="table-head-border eg_contact_hide">
+            <tr>
+                <th class="CE-thead-th-style">
+                    @Localize.T("Warehouse QTY")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("QTY on Hand2")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("Product SKU")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("Manufacturer")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("Name")
+                </th>
+                <th class="CE-thead-th-style">
+                    @Localize.T("QTY Pending")
+                </th>
+                @*<th class="CE-thead-th-style">
+                        @Localize.T("Ordering")
+                    </th>*@
+                @*<th class="CE-thead-th-style">
+                        @Localize.T("Action")
+                    </th>*@
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                if (item.QTYPending > 0)
+                {
+                    <tr class="tr-style">
+                        <td class="CE-table-body-td-style eg_contact_header_row" valign="top"><span>@item.WarehouseQTY</span></td>
+                        <td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                            <span>@item.QTYOnHand</span>
+                        </td>
+                        <td class="CE-table-body-td-style eg_contact_header_row" valign="top"><span>@item.ProductSKU</span></td>
+                        <td class="CE-table-body-td-style eg_contact_header_row" valign="top"><span>@item.ManufacturerName</span></td>
+                        <td class="CE-table-body-td-style eg_contact_header_row" valign="top"><span>@item.EquipmentName</span></td>
+                        <td class="CE-table-body-td-style eg_contact_header_row" valign="top"><span>@item.QTYPending</span></td>
+                        @*<td class="CE-table-body-td-style eg_contact_header_row" valign="top"><span>@item.Quantity</span></td>*@
+                        @*<td class="CE-table-body-td-style eg_contact_header_row" valign="top">
+                                <a class="contact_delete" data-toggle="tooltip" title="Delete" onclick="DeleteOrderItem" data-original-title="Delete"><i class="fa fa-trash-o"></i></a>
+                            </td>*@
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+

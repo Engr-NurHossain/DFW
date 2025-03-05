@@ -1,0 +1,1644 @@
+﻿
+@{
+    Layout = null;
+}
+@model HS.Entities.CreateTicketModel
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using TickType = HS.Web.UI.Helper.LabelHelper.TicketType
+@using DateTimeExt = HS.Framework.DateTimeExtension
+@using TickStat = HS.Web.UI.Helper.LabelHelper.TicketStatus
+ @Styles.Render("~/styles/ServiceOrderProductInstallation")
+
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/AddTicket.css" rel="stylesheet" />
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<script src="~/Scripts/CustomerSelect.js"></script>
+
+
+
+
+<script>
+    var AttachVal = "Invoice";
+    var UserFileUploadjqXHRData;
+    var FileDescription;
+    var TinyMCEHeightSet = 250;
+    var TicketStatus = '@Model.Ticket.Status';
+    var TicketType = '@Model.Ticket.TicketType';
+    var TicketId = '@Model.Ticket.TicketId';
+    var TicketIntId = @Model.Ticket.Id;
+    var IsComplete = false;
+    var HoursToAdd = @Model.TicketDefaultTimeDuration;
+
+    var GuidCustomer = '@Model.Customer.CustomerId';
+
+
+
+    var TicketCustomerIntId = '@Model.Customer.Id';
+    var ScheduleTicketStatus = '@ViewBag.TempTicketStatusval';
+
+    var GetTimeFormat = function (date) {
+        var time = "00:00:00";
+        return (date + ' ' + time);
+    }
+    var ReloadTicket = function(){
+        if(typeof(OpenTicketTab) != 'undefined' ){
+            OpenTicketTab();
+        }
+
+        $(".TopToBottomModal .top_to_bottom_modal_container .ContentsDiv").html(TabsLoaderText);
+        $(".TopToBottomModal .top_to_bottom_modal_container .ContentsDiv").load("@(AppConfig.DomainSitePath)/CustomerPublic/AddTicket/?Id="+TicketIntId);
+    }
+
+    var AddTicket = function () {
+        //GuidCustomer = $('#CustomerList').val();
+        //console.log(GuidCustomer);
+        var Param = {
+            "Ticket.Id": $("#Ticket_Id").val(),
+            "Ticket.TicketId" : $("#Ticket_TicketId").val(),
+            "Ticket.Subject": $("#Ticket_Subject").val(),
+            "Ticket.Message":tinyMCE.get('BodyContent').getContent(),
+            "Ticket.Status":$("#Ticket_Status").val(),
+            "Ticket.CustomerId": GuidCustomer,
+            "Ticket.TicketType": $("#Ticket_TicketType").val(),
+            "Ticket.CompletionDate": GetTimeFormat($("#Ticket_CompletionDate").val()),
+            "Ticket.AppointmentStartTime": $("#AppointmentStartTime").val(),
+            "Ticket.AppointmentEndTime": $("#AppointmentEndTime").val(),
+            Assigned: $("#AssignedTo").val(),
+            UserList: $("#AdditionalMembers").val(),
+            NotifyingUserList: $("#NotifyingMembers").val()
+        };
+
+        var url = "@(AppConfig.DomainSitePath)/CustomerPublic/AddTicket";
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".ticket-loader-div").show(),
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                console.log("hlw");
+                UpdateCustomerTabCounter();
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message, function () {
+                        //$(".TicketTab_Load").load("/Ticket/TicketListPartial/?CustomerId=" + GuidCustomer);
+                        //CloseTopToBottomModal();
+                        //if(data.CustomerId>0){
+                        //    window.location.href ="/Customer/Customerdetail/?id="+data.CustomerId+"#TicketTab";
+                        //}else{
+                        //    location.href = location.href;
+                        //}
+                        TicketIntId = data.TicketId;
+                        ReloadTicket();
+                    });
+                }
+                else {
+                    $(".ticket-loader-div").hide();
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+
+    var AddTicketReply = function () {
+
+        var Param = {
+            "TicketId": $("#Ticket_TicketId").val(),
+            "Message": tinyMCE.get('BodyContent').getContent(),
+        };
+        var url = domainurl + "/Ticket/AddTicketReply";
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".ticket-loader-div").show(),
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message, function () {
+
+                        //CloseTopToBottomModal();
+                        ReloadTicket();
+                    });
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".ticket-loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+
+    }
+    var OpenTicketInvoice = function(invoiceid){
+        if(typeof(invoiceid)!="undefined"){
+            OpenTopToBottomModal(domainurl + "/Invoice/AddInvoice/?InvoiceId=" + invoiceid);
+        }
+    }
+    var OpenTicketEstimate = function(EstimateId){
+        if(typeof(EstimateId)!="undefined"){
+            OpenTopToBottomModal("/Estimate/AddEstimate/?InvoiceId=" + EstimateId);
+        }
+    }
+    var AddAttachment = function (invoiceid) {
+        var Param = {
+            "TicketId": $("#Ticket_TicketId").val(),
+            "InvoiceId": invoiceid,
+        };
+        var url =domainurl +  "/Ticket/AttachTicketInvoie";
+        $.ajax({
+            type: "POST",
+            ajaxStart:  $(".ticket-loader-div").show(),
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message, function () {
+                        //OpenTicketTab();
+                        //CloseTopToBottomModal();
+                        ReloadTicket();
+                    });
+                }
+                else {
+                    $(".ticket-loader-div").hide();
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".ticket-loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+
+    }
+
+    var InitUploader = function () {
+        $('#UploadedFile').fileupload({
+            pasteZone: null,
+            url: '@(AppConfig.DomainSitePath)/File/UploadTicketFile/?TicketId=' + TicketId,
+            dataType: 'json',
+            formData: { FileDescription: $("#FileDescription").val() },
+            add: function (e, data) {
+                if ($("#FileDescription").val() == "") {
+                    var filename = data.fileInput[0].value.split('\\').pop();
+                    $("#FileDescription").val(filename);
+                }
+                $("#SelectedFileName").text(data.files[0].name);
+                UserFileUploadjqXHRData = data;
+            },
+            progress: function (e, data) {
+                var percentVal = parseInt(data.loaded / data.total * 100, 10);
+                $(".file-progress").show();
+                $(".file-progress .progress-bar").animate({
+                    width: percentVal + "%"
+                }, 40);
+                $(".file-progress .progress-bar span").text(percentVal + '%');
+            },
+            done: function (event, data) {
+                UserFileUploadjqXHRData = null;
+                setTimeout(function () {
+                    $(".file-progress").hide();
+                    $(".file-progress .progress-bar").animate({
+                        width: 0 + "%"
+                    }, 0);
+                    $(".file-progress .progress-bar span").text(0 + '%');
+                }, 500);
+                if ((typeof (data.result.isUploaded) != "undefined") && data.result.isUploaded == true) {
+                    //$("#UploadSuccessMessage").removeClass('hidden');
+                    //$("#UploadCustomerFileBtn").addClass('hidden');
+                    $("#UploadedPath").val(data.result.filePath);
+                    OpenSuccessMessageNew ("Success!", data.result.message, function () {
+                        //OpenTicketTab();
+                        //CloseTopToBottomModal();
+                        ReloadTicket();
+                    });
+                } else {
+                    OpenErrorMessageNew("Error!", data.result.message);
+                }
+
+            },
+            fail: function (event, data) {
+                if (data.files[0].error) {
+                    console.log(data.files[0].error);
+                }
+                UserFileUploadjqXHRData = null;
+            }
+        });
+    }
+
+    var SaveServiceOrderEquipmentDetailsFromTicket = function () {
+        var url = "";
+        var DetailList = [];
+        var param;
+        $(".HasItem").each(function () {
+            DetailList.push({
+                EquipmentId: $(this).attr('data-id'),
+                EquipName:$(this).find('.ProductName').val(),
+                EquipDetail:$(this).find('.txtProductDesc').val(),
+                Quantity: $(this).find('.txtProductQuantity').val(),
+                UnitPrice: $(this).find('.txtProductRate').val(),
+                TotalPrice: $(this).find('.txtProductQuantity').val() * $(this).find('.txtProductRate').val(),
+                EquipmentName: $(this).find('.ProductName').val(),
+            });
+        });
+        url = domainurl + "/Ticket/UpdateCustomerAppoinment";
+        param = JSON.stringify({
+            "CustomerAppointment.CustomerAppointmentEquipmentList": DetailList,
+            "CustomerAppointment.AppointmentId": TicketId,
+            "CustomerAppointment.TaxPercent": $("#CustomerAppointment_TaxPercent").val(),
+            "CustomerAppointment.TaxType": $("#CustomerAppointment_TaxPercent option:selected").text(),
+            "CustomerAppointment.TaxTotal": TaxTotal,
+            "CustomerAppointment.TotalAmount": SubTotal,
+            "CustomerAppointment.TotalAmountTax": Amount,
+            "CustomerAppointment.IsComplete": IsComplete,
+            AddedEquipmentList:AddedEquipmentList,
+            RemovedEquipmentList:RemovedEquipmentList
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".ticket-loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+
+                if (data.result == true) {
+                    OpenSuccessMessageNew ("Success!", data.message);
+                    setTimeout(function () {
+                        //CloseTopToBottomModal();
+                        ReloadTicket();
+                    }, 1000);
+                } else {
+                    $(".ticket-loader-div").hide();
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".ticket-loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    var HideAllAttachmentsDiv = function () {
+        $(".attach_invoice").addClass("hidden");
+        $(".attach_estimate").addClass("hidden");
+        $(".addfile_tr").addClass("hidden");
+        $(".Add_equipment").addClass("hidden");
+    }
+    var AddTime = function () {
+        if ($("#AppointmentStartTime").val() != "-1"
+            /*&& $("#AppointmentEndTime").val() == "-1"*/) {
+            var hour = (parseInt($("#AppointmentStartTime").val().split(":")[0]) + HoursToAdd) % 24;
+            if (hour < 10) {
+                hour = '0' + hour;
+            }
+            hour = hour + ":" + $("#AppointmentStartTime").val().split(":")[1];
+            $("#AppointmentEndTime").val(hour);
+        }
+    }
+
+    var initWindow = function(){
+        if (screen.width < 414) {
+            $(".add_ticket_main").height((window.innerHeight - $(".header-title").height() - 20));
+        }
+        else {
+            $(".add_ticket_main").height((window.innerHeight - $(".header-title").height() - 20));
+        }
+       
+        $('.selectpicker').selectpicker();
+
+        if (TicketStatus == "Init") {
+            $("#Ticket_Status").val("Created");
+        }
+
+        $(".CustomerInvoiceTab tbody").sortable({
+            update: function () {
+                var i = 1;
+                $(".CustomerInvoiceTab tbody tr td:first-child").each(function () {
+                    $(this).text(i);
+                    i += 1;
+                });
+            }
+        }).disableSelection();
+
+        var CompletionDatepicker = new Pikaday({
+            field: $('#Ticket_CompletionDate')[0],
+            format: 'MM/DD/YYYY'
+        });
+
+        var Popupwidth = 920;
+        var Popupheight = 600;
+        if (Device.All()) {
+            Popupwidth = window.innerWidth;
+            Popupheight = window.innerHeight;
+        }
+        var idlist = [{ id: "#TicketPrint", type: 'iframe', width: Popupwidth, height: Popupheight }
+        ];
+        jQuery.each(idlist, function (i, val) {
+            magnificPopupObj(val);
+        });
+        if(ScheduleTicketStatus!=''){
+            $("#Ticket_Status").val(ScheduleTicketStatus);
+        }
+    }
+
+    var LoadScheduleCalendar = function() {
+        //GuidCustomer = $('#CustomerList').val();
+        //console.log(GuidCustomer);
+        var Param = {
+            "Id": $("#Ticket_Id").val(),
+            "TicketId" : $("#Ticket_TicketId").val(),
+            "Subject": $("#Ticket_Subject").val(),
+            "Message":tinyMCE.get('BodyContent').getContent(),
+            "Status":$("#Ticket_Status").val(),
+            "CustomerId": GuidCustomer,
+            "TicketType": $("#Ticket_TicketType").val(),
+            "CompletionDate": GetTimeFormat($("#Ticket_CompletionDate").val()),
+            "AppointmentStartTime": $("#AppointmentStartTime").val(),
+            "AppointmentEndTime": $("#AppointmentEndTime").val(),
+        };
+        var url = domainurl + "/Ticket/SaveTicketSession";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    var pathname = window.location.pathname.toLowerCase();
+                    if (pathname == '/scheduleinfo') {
+                        window.location.href = "/ScheduleInfo?date=" + $("#Ticket_CompletionDate").val() + "&viewtype=" + "Daily" + "&TicketId=" + $("#Ticket_Id").val() + "&CustomerId=" + GuidCustomer;
+                    }
+                    else {
+                        window.location.href = "/calendar?ticketdate=" + $("#Ticket_CompletionDate").val() + "&ticketid=" + $("#Ticket_Id").val() + "&customerid=" + GuidCustomer;
+                    }
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $('#CustomerList').change(function(){
+            GuidCustomer = $('#CustomerList').val();
+
+            $('.custom-title-span-dynamic').html("");
+            $('.custom-title-span-dynamic').html($("#CustomerList :selected").text().replace('Customer',''));
+
+        });
+
+        InitializeSuburbDropdown($('.dropdown_customar'));
+        initWindow();
+        $("#AppointmentStartTime").change(function () {
+            AddTime();
+        });
+        $("#CreateTicket").click(function () {
+            if(CommonUiValidation() ){
+                AddTicket();
+            }
+        });
+        $("#MakeReply").click(function () {
+            console.log("asi");
+            if(tinyMCE.get('BodyContent').getContent() != ""){
+                AddTicketReply();
+            }
+            else{
+                $(".mce-panel").css('border-color', "red");
+            }
+        });
+        $(".AttachInvoiceEstimatebtn").click(function () {
+            if(AttachVal=="Invoice"){
+                if($("#InvoiceList").val()=="-1"){
+                    OpenErrorMessageNew("Error!","Please choose an estimate first");
+                }else{
+                    AddAttachment($("#InvoiceList").val());
+                }
+
+            }else if(AttachVal=="Estimate"){
+                if($("#EstimateList").val()=="-1"){
+                    OpenErrorMessageNew("Error!","Please choose an invoice first");
+                }else{
+                    AddAttachment($("#EstimateList").val());
+                }
+            }
+        });
+        $("#UploadCustomerFileBtn").click(function () {
+            $("#UploadedFile").click();
+            $("#UploadSuccessMessage").addClass('hidden');
+        });
+
+        InitUploader();
+        $("#AddFileBtn").click(function () {
+            InitUploader();
+            if (UserFileUploadjqXHRData) {
+                UserFileUploadjqXHRData.submit();
+            } else {
+                OpenErrorMessageNew("Error!", "Please choose file to upload.");
+            }
+            return false;
+        });
+        $("#UpdateEqList").click(function () {
+            SaveServiceOrderEquipmentDetailsFromTicket();
+        });
+        $("#AttachEstimate").click(function () {
+            HideAllAttachmentsDiv();
+            AttachVal = "Estimate";
+            $(".attach_estimate").removeClass("hidden");
+        });
+        $("#AttachInvoice").click(function () {
+            HideAllAttachmentsDiv();
+            AttachVal = "Invoice";
+            $(".attach_invoice").removeClass("hidden");
+        });
+        $("#AttachFile").click(function () {
+            HideAllAttachmentsDiv();
+            $(".addfile_tr").removeClass("hidden");
+        });
+        $("#AttachProducts").click(function () {
+            HideAllAttachmentsDiv();
+            $(".Add_equipment").removeClass("hidden");
+        });
+        /*$("#UploadedFile").on("change", function () {
+            if (UserFileUploadjqXHRData) {
+                UserFileUploadjqXHRData.submit();
+            }
+            return false;
+        });*/
+        $("#PrintTicket").click(function(){
+            $("#TicketPrint").click();
+        });
+    });
+
+</script>
+
+<script>
+    var InvoiceDatepicker;
+    var DueDatepicker;
+    var ServiceOrderDate;
+    var Amount;
+    var SubTotal;
+    var TaxTotal;
+    var DetailList = [];
+    var counter = 0;
+    var AddedEquipmentList =[""];
+    var RemovedEquipmentList = [""];
+
+    String.prototype.replaceAll = function (search, replacement) {
+        var target = this;
+        return target.split(search).join(replacement);
+    };
+
+    var PropertyUserSuggestiontemplate =
+                    '<div class="tt-suggestion tt-selectable" data-select="{1}" data-price="{2}" data-type="{5}" data-id="{0}" data-description="{6}">'
+                       //+ "<img src='{7}' class='EquipmentImage'>"
+                       + "<p class='tt-sug-text'>"
+                           + "<em class='tt-sug-type'>{5}</em>{1}" + "<br /><em class='tt_sug_manufac'>{7}</em>"
+                           + "<em class='tt-eq-price'>${2}</em>"
+                           + "<br />"
+                       + "</p> "
+                    + "</div>";
+
+    var NewEquipmentRow = "<tr>"
+                            + "<td valign='top' class='rowindex'></td>"
+                            + "<td valign='top'><input type='text'class='ProductName' onkeydown='SearchKeyDown(this,event)' onkeyup='SearchKeyUp(this,event)' />"
+                                + "<div class='tt-menu'>"
+                                    + "<div class='tt-dataset tt-dataset-autocomplete'> </div> "
+                                + "</div>"
+                                + "<span class='spnProductName'></span>"
+                            + "</td>"
+                            + "<td valign='top'>"
+                                + "<input type='text' class='txtProductDesc' />"
+                                + "<span class='spnProductDesc'></span>"
+                            + "</td>"
+                            + "<td valign='top'>"
+                                + "<input type='number' onkeydown='OthersKeyDown(this,event)' class='txtProductQuantity' />"
+                                + "<span class='spnProductQuantity'></span>"
+                            + "</td>"
+                            + "<td valign='top' class='hidden'>"
+                                + "<input type='text' onkeydown='OthersKeyDown(this,event)' class='txtProductRate' />"
+                                + "<span class='spnProductRate'></span>"
+                            + "</td>"
+                            + "<td valign='top'  class='hidden'>"
+                                + "<input type='text' onkeydown='OthersKeyDown(this,event)' class='txtProductAmount' />"
+                                + "<span class='spnProductAmount'></span>"
+                            + "</td>"
+                            + "<td valign='top' class='tableActions'>"
+                                + "<i class='fa fa-trash-o' aria-hidden='true'></i>"
+                            + "</td>"
+                        + "</tr>";
+
+    var InvoiceEqSuggestionclickbind = function (item) {
+        $('.CustomerInvoiceTab .tt-suggestion').click(function () {
+            var clickitem = this;
+            $('.CustomerInvoiceTab .tt-menu').hide();
+            $(item).val($(clickitem).attr('data-select'));
+            $(item).attr('data-id', $(clickitem).attr('data-id'));
+
+            var itemName = $(item).parent().find('span');
+            $(itemName).text($(item).val());
+            AddedEquipmentList = AddedEquipmentList.concat($(item).val());
+
+            $(item).parent().parent().attr('data-id', $(clickitem).attr('data-id'));
+            $(item).parent().parent().addClass('HasItem');
+            /*Item Rate Set*/
+            var spnItemRate = $(item).parent().parent().find('.spnProductRate');
+            $(spnItemRate).text($(this).attr('data-price'));
+            var txtItemRate = $(item).parent().parent().find('.txtProductRate');
+            $(txtItemRate).val($(this).attr('data-price'));
+            /*Item Description Set*/
+            var spnItemRate = $(item).parent().parent().find('.spnProductDesc');
+            $(spnItemRate).text($(this).attr('data-description'));
+            var txtItemRate = $(item).parent().parent().find('.txtProductDesc');
+            $(txtItemRate).val($(this).attr('data-description'));
+            /*Item Quantity Set*/
+            var spnItemRate = $(item).parent().parent().find('.spnProductQuantity');
+            $(spnItemRate).text(1);
+            var txtItemRate = $(item).parent().parent().find('.txtProductQuantity');
+            $(txtItemRate).val(1);
+            /*Item Amount Set*/
+            var spnItemRate = $(item).parent().parent().find('.spnProductAmount');
+            $(spnItemRate).text($(this).attr('data-price'));
+            var txtItemRate = $(item).parent().parent().find('.txtProductAmount');
+            $(txtItemRate).val($(this).attr('data-price'));
+
+            CalculateNewAmount();
+
+        });
+        $('.CustomerInvoiceTab .tt-suggestion').hover(function () {
+            var clickitem = this;
+            $('.tt-suggestion').removeClass("active");
+            $(clickitem).addClass('active');
+        });
+    }
+
+    var SearchKeyUp = function (item, event) {
+        if (event.keyCode == 40 || event.keyCode == 38 || event.keyCode == 13)
+            return false;
+        var ExistEquipment="";
+        var ExistEquipmentInner="";
+        $(".HasItem").each(function () {
+            ExistEquipmentInner +="'"+$(this).attr('data-id') + "',";
+        });
+        if(ExistEquipmentInner.length>0)
+        {
+            ExistEquipmentInner= ExistEquipmentInner.slice(0,-1);
+            ExistEquipment="("+ExistEquipmentInner+")";
+        }
+        $.ajax({
+            url: domainurl + "/Invoice/GetEquipmentListByKey",
+            data: {
+                key: $(item).val(),
+                ExistEquipment:ExistEquipment
+            },
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var resultparse = JSON.parse(data.result);
+
+                if (resultparse.length > 0) {
+                    var searchresultstring = "<div class='NewProjectSuggestion'>";
+                    for (var i = 0; i < resultparse.length; i++) {
+                        searchresultstring = searchresultstring + String.format(PropertyUserSuggestiontemplate,
+                            /*0*/resultparse[i].EquipmentId,
+                            /*1*/ resultparse[i].EquipmentName.replaceAll('"', '\'\''),
+                            /*2*/ resultparse[i].RetailPrice,
+                            /*3*/resultparse[i].Reorderpoint,
+                            /*4*/ resultparse[i].QuantityAvailable,
+                            /*5*/ resultparse[i].EquipmentType,
+                            /*6*/resultparse[i].EquipmentDescription.replaceAll('"', '\'\''),
+                            /*7*/resultparse[i].ManufacturerName.replaceAll('"', '\'\'')/* ImageSource*/);
+                    }
+                    searchresultstring += "</div>";
+                    var ttdom = $($(item).parent()).find('.tt-menu');
+                    var ttdomComplete = $($(item).parent()).find('.tt-dataset-autocomplete');
+                    $(ttdomComplete).html(searchresultstring);
+                    $(ttdom).show();
+
+                    InvoiceEqSuggestionclickbind(item);
+                    if (resultparse.length > 4) {
+                        $(".NewProjectSuggestion").height(352);
+                        $(".NewProjectSuggestion").css('position', 'relative');
+                        $(".NewProjectSuggestion").perfectScrollbar()
+                    }
+                }
+                if (resultparse.length == 0)
+                    $('.tt-menu').hide();
+            }
+        });
+    }
+
+    var SearchKeyDown = function (item, event) {
+
+        if (event.keyCode == 13) {
+            $('.tt-menu').hide();
+        }
+        if (event.keyCode == 40) {
+            if ($('.tt-suggestion').length > 0) {
+                if ($('.tt-suggestion.active').length == 0) {
+                    $($('.tt-suggestion').get(0)).addClass('active');
+                    $(item).val($($('.tt-suggestion').get(0)).attr('data-select'))
+                }
+                else {
+                    var suggestionlist = $('.tt-suggestion');
+                    var activesuggestion = $('.tt-suggestion.active');
+                    var indexactive = -1;
+                    for (var id = 0; id < suggestionlist.length; id++) {
+                        if ($(suggestionlist[id]).hasClass('active'))
+                            indexactive = id;
+                    }
+                    if (indexactive < suggestionlist.length - 1) {
+                        $('.tt-suggestion').removeClass('active');
+                        var possibleactive = $('.tt-suggestion').get(indexactive + 1);
+                        $($('.tt-suggestion').get(indexactive + 1)).addClass('active');
+                        $(possibleactive).addClass('active');
+                        $(item).val($(possibleactive).attr('data-select'));
+                    }
+                }
+            }
+            event.preventDefault();
+        }
+        if (event.keyCode == 38) {
+            if ($('.tt-suggestion').length > 0 && $('.tt-suggestion.active').length > 0) {
+                var suggestionlist = $('.tt-suggestion');
+                var activesuggestion = $('.tt-suggestion.active');
+                var indexactive = -1;
+                for (var id = 0; id < suggestionlist.length; id++) {
+                    if ($(suggestionlist[id]).hasClass('active'))
+                        indexactive = id;
+                }
+                if (indexactive > 0) {
+                    $('.tt-suggestion').removeClass('active');
+                    var possibleactive = $('.tt-suggestion').get(indexactive - 1);
+                    $(possibleactive).addClass('active');
+                    $(item).val($(possibleactive).attr('data-select'))
+                }
+            }
+            event.preventDefault();
+        }
+    }
+
+    var OthersKeyDown = function (item, event) {
+        if (event.keyCode == 40) {
+            var trselected = $($(event.target).parent()).parent();
+            $(trselected).removeClass('focusedItem');
+            $($(trselected).next('tr')).addClass('focusedItem');
+            if ($(event.target).hasClass('txtProductDesc')) {
+                $($(trselected).next('tr')).find('input.txtProductDesc').focus();
+            } else if ($(event.target).hasClass('txtProductQuantity')) {
+                $($(trselected).next('tr')).find('input.txtProductQuantity').focus();
+            } else if ($(event.target).hasClass('txtProductRate')) {
+                $($(trselected).next('tr')).find('input.txtProductRate').focus();
+            } else if ($(event.target).hasClass('txtProductAmount')) {
+                $($(trselected).next('tr')).find('input.txtProductAmount').focus();
+            }
+        } else if (event.keyCode == 38) {
+            var trselected = $($(event.target).parent()).parent();
+            $(trselected).removeClass('focusedItem');
+            $($(trselected).prev('tr')).addClass('focusedItem');
+            if ($(event.target).hasClass('txtProductDesc')) {
+                $($(trselected).prev('tr')).find('input.txtProductDesc').focus();
+            } else if ($(event.target).hasClass('txtProductQuantity')) {
+                $($(trselected).prev('tr')).find('input.txtProductQuantity').focus();
+            } else if ($(event.target).hasClass('txtProductRate')) {
+                $($(trselected).prev('tr')).find('input.txtProductRate').focus();
+            } else if ($(event.target).hasClass('txtProductAmount')) {
+                $($(trselected).prev('tr')).find('input.txtProductAmount').focus();
+            }
+        }
+        else if (event.keyCode == 9 && $(event.target).hasClass('txtProductAmount')) {
+            var trselected = $($(event.target).parent()).parent();
+            $(trselected).removeClass('focusedItem');
+            var trfocuseditem = $(trselected).next('tr');
+            $(trfocuseditem).addClass('focusedItem');
+            $($(trfocuseditem).find('input.ProductName')).focus();
+            event.preventDefault();
+        }
+
+    }
+
+    var CalculateNewAmount = function () {
+        var amount = parseFloat('0');
+        var subTotal = parseFloat('0');
+        var taxTotal = parseFloat('0');
+
+        $(".txtProductAmount").each(function (e,f) {
+            //console.log(e);
+            //var currAmountStr = parseFloat($(this).val().trim());
+            //currAmountStr = currAmountStr.replaceAll(',', '');
+
+            var _CalAmt = $(this).val().trim();
+            _CalAmt = _CalAmt.replaceAll(',', '');
+
+            var currAmount = parseFloat(_CalAmt);
+            if (!isNaN(currAmount)) {
+                amount += currAmount;
+                SubTotal = amount;
+            }
+        });
+        amount = parseFloat(amount).toFixed(2);
+        amount1 = amount.replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,");
+        $(".amount").text(TransCurrency + amount1);
+        $(".total").text(TransCurrency + amount1);
+        var tp = $("#CustomerAppointment_TaxPercent").val();
+        if (tp != "" && tp != "0" && tp != null) {
+            $(".tax-percent").text(tp + "%");
+            var ta = (amount) * (tp / 100);
+            TaxTotal = ta.toFixed(2);
+            $(".tax-amount").text(TransCurrency + ta.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+            amount = parseFloat(amount) + parseFloat(ta);
+            amount2 = amount.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,")
+            $(".total").text(TransCurrency + amount2);
+        }
+        if (tp == "0") {
+            $(".tax-percent").text(0 + "%");
+            $(".tax-amount").text(TransCurrency + "0.00");
+            TaxTotal = 0.0;
+        }
+        TotalAmount = amount;
+        Amount = amount;
+    }
+    var CloseTopToBottomTicket = function(){
+        if(location.href.toLocaleLowerCase().indexOf('/scheduleinfo?date=')>-1){
+            var NewLocation =domainurl +  '/Customer/Customerdetail/?id='+TicketCustomerIntId+'#TicketTab';
+            location.href= NewLocation;
+        }
+        CloseTopToBottomModal();
+    }
+    var InitRowIndex = function () {
+        var i = 1;
+        $(".CustomerInvoiceTab tbody tr td:first-child").each(function () {
+            $(this).text(i);
+            i += 1;
+        });
+    }
+    var DeleteFile = function () {
+        var delitem = selectedDeleteId;
+        $.ajax({
+            url: domainurl + "/Ticket/DeleteTicketReply",
+            data: {
+                id: delitem
+            },
+            type: "Post",
+            dataType: "Json",
+            success: function (result) {
+                if (result) {
+                    ReloadTicket();
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+
+            error: function () {
+            }
+        });
+    }
+    $(document).ready(function(){
+        InitRowIndex();
+        $(".delete-reply").click(function () {
+            selectedDeleteId = $(this).attr("data-id");
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this file ?", DeleteFile);
+            //LoadProductCategory(true);
+        });
+        /*Equiepment menu hide on body click*/
+        $("#CustomerInvoiceTab tbody").on('focusout', 'input.ProductName', function () {
+            $(".tt-menu").hide()
+        });
+        /*Row Click*/
+        $("#CustomerInvoiceTab tbody").on('click', 'tr', function (e) {
+            if ($(e.target).hasClass('fa') || $(e.target).hasClass('tt-sug-text') || $(e.target).hasClass('tt-suggestion')) {
+                return;
+            }
+            //console.log(e.target);
+
+            if ($(e.target).hasClass("spnProductName") || $(e.target).hasClass("spnProductDesc")
+                || $(e.target).hasClass("spnProductQuantity") || $(e.target).hasClass("spnProductRate")
+                || $(e.target).hasClass("spnProductAmount")) {
+
+                $("#CustomerInvoiceTab tr").removeClass("focusedItem");
+                $($(e.target).parent().parent()).addClass("focusedItem");
+                $(e.target).parent().find('input').focus();
+            }
+
+            else {
+                $("#CustomerInvoiceTab tr").removeClass("focusedItem");
+                $($(e.target).parent()).addClass("focusedItem");
+                $(e.target).find('input').focus();
+            }
+        });
+
+        $("#CustomerInvoiceTab tbody").on('click', 'tr:last', function (e) {
+            if ($(e.target).hasClass('fa')) {
+                return;
+            }
+            $("#CustomerInvoiceTab tbody tr:last").after(NewEquipmentRow);
+            var i = 1;
+            $(".CustomerInvoiceTab tbody tr td:first-child").each(function () {
+                $(this).text(i);
+                i += 1;
+            });
+        });
+        $("#CustomerInvoiceTab tbody").on('blur', 'tr', function (item) {
+            if (typeof ($(item.target).parent().parent().attr('data-id')) == 'undefined') {
+                var trdom = $(item.target).parent().parent();
+                $(trdom).find("input.ProductName").val('');
+                $(trdom).find("span.spnProductName").text('');
+
+                $(trdom).find("input.txtProductDesc").val('');
+                $(trdom).find("span.spnProductDesc").text('');
+
+                $(trdom).find("input.txtProductQuantity").val('');
+                $(trdom).find("span.spnProductQuantity").text('');
+
+                $(trdom).find("input.txtProductRate").val('');
+                $(trdom).find("span.spnProductRate").text('');
+
+                $(trdom).find("input.txtProductAmount").val('');
+                $(trdom).find("span.spnProductAmount").text('');
+                CalculateNewAmount();
+            }
+        });
+        $(".CustomerInvoiceTab tbody").on('click', 'tr td i.fa', function (e) {
+
+            var ThisRow = $(this).parent().parent();
+            var ProductName = $(ThisRow).find("input.ProductName").val()
+            if(ProductName.trim()!=""){
+                RemovedEquipmentList = RemovedEquipmentList.concat(ProductName);
+            }
+            $(this).parent().parent().remove();
+            if ($(".CustomerInvoiceTab tbody tr").length < 2) {
+                $("#CustomerInvoiceTab tbody tr:last").after(NewEquipmentRow);
+            }
+            var i = 1;
+            $(".CustomerInvoiceTab tbody tr td:first-child").each(function () {
+                $(this).text(i);
+                i += 1;
+            });
+            CalculateNewAmount();
+        });
+        $("#btnSchedule").click(function(){
+            LoadScheduleCalendar();
+        })
+    });
+    $(".CustomerInvoiceTab tbody").on('change', "tr td .txtProductDesc", function () {
+
+        var ProductQuantityDom = $(this).parent().find('span.spnProductDesc');
+        $(ProductQuantityDom).text($(this).val());
+    });
+
+
+</script>
+
+@*<script src="~/Content/Js/ServiceOrderProductInstallation/AddProductServiceOrder.js"></script>*@
+
+<div class="hidden" style="display:none;visibility:hidden;height:0px;">
+    <input type="hidden" id="Ticket_Id" value="@Model.Ticket.Id" />
+    <input type="hidden" id="Ticket_TicketId" value="@Model.Ticket.TicketId" />
+    <input type="hidden" id="UploadedPath" value="" />
+    <input type="file" name="CustomerFile" class="" id="UploadedFile" />
+    <textarea class="hidden" id="BodyVal">@Model.Ticket.Message</textarea>
+</div>
+
+@{
+    var CustomerName = "";
+    if (Model.Customer.BusinessName != null)
+    {
+        CustomerName = Model.Customer.FirstName + " " + Model.Customer.LastName;
+        if (Model.Customer.Type == "Commercial" && !string.IsNullOrWhiteSpace(Model.Customer.BusinessName))
+        {
+            CustomerName = Model.Customer.BusinessName;
+        }
+        <div class="header-title">
+            <span class="custom-title-span add_ticket_title_device">@(Model.Ticket.Status == TickStat.Init ? string.Format("{0}: {1}", Localize.T("Create Ticket for"), CustomerName) : String.Format("Ticket #{0} for: {1}", Model.Ticket.Id, CustomerName))</span>
+            <div onclick="CloseTopToBottomTicket()" class="ticketCloseDiv">
+                <img class="close_btn_size" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+            </div>
+        </div>
+       
+    }
+    else
+    {
+        <div class="header-title add_ticket_title_device">
+            <span class="custom-title-span add_ticket_title_device">@Localize.T("Create Ticket for:")</span>
+            <span class="custom-title-span-dynamic add_ticket_title_device"></span>
+        </div>
+    }
+}
+<div class="ticket-loader-div">
+    <div class="ticketLoaderFade"></div>
+    <div class='invoice-loader'>
+        <div>
+            <div class="lds-css ng-scope">
+                <div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div>
+            </div>
+        </div>    </div>
+</div>
+<div class="col-md-12 add_ticket_main">
+    <div class="add_ticket_contetns">
+        <div class="ticket_body col-md-8">
+            <table class="ticketTable">
+                @if (Model.Ticket.CustomerId == Guid.Empty)
+                {
+                    <tr>
+                        <td class="w25p">
+                            <b>@Localize.T("Customer")</b>
+                        </td>
+                        <td>
+                            <div class="col-md-5 padding-left-0">
+                                @Html.DropDownList("CustomerList", (List<SelectListItem>)ViewBag.CustomerList, new { @class = "form-control dropdown_customar", datarequired = "false" })
+                            </div>
+                        </td>
+                    </tr>
+                }
+                <tr>
+                    <td class="w25p @((Model.Ticket.Status == TickStat.Init)?"":"ticket_type_info_header_left")">
+                        <b>@Localize.T("Ticket Type")</b>
+                    </td>
+                    <td class="@((Model.Ticket.Status == TickStat.Init)?"":"ticket_type_info_header_right")">
+                        <div class="col-md-5 padding-left-0">
+                            @if (Model.Ticket.Status == TickStat.Init)
+                            {
+                                @Html.DropDownListFor(x => x.Ticket.TicketType, ViewBag.TicketType as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+
+                            }
+                            else
+                            {
+                                <span>@Model.Ticket.TicketTypeVal</span>
+                            }
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    @if (Model.Ticket.Status == TickStat.Init)
+                    {
+                        <td valign="top">
+                            <b>@Localize.T("Ticket Description")</b>
+                        </td>
+                        <td>
+                            <textarea id="BodyContent" name="BodyContent" class="tinymce">@Model.Ticket.Message</textarea>
+                        </td>
+                    }
+                    else
+                    {
+                        <td valign="top" class="ticket_created_info_left">
+                            <div class="ticket_created_profile_info">
+                                <div><b>@Localize.T("Created By")</b></div>
+                                <div class="ticket_created_profile_pic_div">
+                                    <div class="ticket_created_profile_pic">
+                                        <img src="@Model.ProfilePicture" alt="~/Content/img/user.png" />
+                                    </div>
+                                </div>
+                                <div><b>@Model.Ticket.CreatedByVal</b></div>
+                                <div class="ticket_profile_time">@Model.Ticket.CreatedDateVal</div>
+                            </div>
+                        </td>
+                        <td class="ticket_created_info_right">
+                            @Html.Raw(Model.Ticket.Message)
+                        </td>
+                    }
+                </tr>
+                <tr class="blank_row"><td colspan="2">&nbsp;</td></tr>
+               
+                @if (Model.Ticket.Status != TickStat.Init)
+                {
+                    if (Model.TicketReplyList.Count() > 0)
+                    {
+                        foreach (var item in Model.TicketReplyList)
+                        {
+                            string ticketstyleclass = "ticket_reply_style";
+                            if (item.ReplyType == "File")
+                            {
+                                ticketstyleclass = "ticket_file_style";
+                            }
+                            else if (item.Message.IndexOf("<span>Attached an") == 0)
+                            {
+                                ticketstyleclass = "ticket_attached_style";
+                            }
+                            else if (item.Message.IndexOf("<span data='itemsremoved'>") == 0)
+                            {
+                                ticketstyleclass = "ticket_itemremoved_style";
+                            }
+                            else if (item.Message.IndexOf("<span data='itemsadded'>") == 0)
+                            {
+                                ticketstyleclass = "ticket_itemsadded_style";
+                            }
+                            if (item.IsPrivate != true )
+                            {
+                                <tr class="Ticket_replies @ticketstyleclass">
+                                    <td valign="top">
+
+                                        <div class="ticket_add_custom_style">
+                                            @if (item.ReplyType == "File")
+                                            {
+                                                <div class="ticke_info_header"><i class="fa fa-upload"></i> @Localize.T("Uploaded by")</div>
+                                                <div class="ticket_created_profile_pic_div">
+                                                    <div class="ticket_created_profile_pic">
+                                                        <img src="@Model.ProfilePicture" alt="~/Content/img/user.png" />
+                                                    </div>
+                                                </div>
+                                            }
+                                            else if (item.Message.IndexOf("<span>Attached an") == 0)
+                                            {
+                                                <div class="ticke_info_header"><i class="fa fa-paperclip"></i> @Localize.T("Attached by")</div>
+
+                                                <div class="ticket_created_profile_pic_div">
+                                                    <div class="ticket_created_profile_pic">
+                                                        <img src="@Model.ProfilePicture" alt="~/Content/img/user.png" />
+                                                    </div>
+                                                </div>
+                                            }
+                                            else if (item.Message.IndexOf("<span data='itemsremoved'>") == 0)
+                                            {
+                                                <div class="ticke_info_header"><i class="fa fa-times-circle"></i> @Localize.T("Products Removed by")</div>
+
+                                                <div class="ticket_created_profile_pic_div">
+                                                    <div class="ticket_created_profile_pic">
+                                                        <img src="@Model.ProfilePicture" alt="~/Content/img/user.png" />
+                                                    </div>
+                                                </div>
+                                            }
+                                            else if (item.Message.IndexOf("<span data='itemsadded'>") == 0)
+                                            {
+
+                                                <div class="ticke_info_header"><i class="fa fa-cart-plus"></i> @Localize.T("Product Added By")</div>
+
+                                                <div class="ticket_created_profile_pic_div">
+                                                    <div class="ticket_created_profile_pic">
+                                                        <img src="@Model.ProfilePicture" alt="~/Content/img/user.png" />
+                                                    </div>
+                                                </div>
+
+                                            }
+                                            else if (item.Message.IndexOf("<span data='itemssold'>") == 0)
+                                            {
+
+                                                <div class="ticke_info_header"><i class="fa fa-cart-plus"></i> @Localize.T("Product Sold By")</div>
+
+                                                <div class="ticket_created_profile_pic_div">
+                                                    <div class="ticket_created_profile_pic">
+                                                        <img src="@Model.ProfilePicture" alt="~/Content/img/user.png" />
+                                                    </div>
+                                                </div>
+
+                                            }
+                                            else
+                                            {
+                                                <div class="ticke_info_header">
+                                                    <i class="fa fa-reply-all"></i> @Localize.T("Reply from")
+                                                </div>
+                                                <div class="ticket_created_profile_pic_div">
+                                                    <div class="ticket_created_profile_pic">
+                                                        <img src="@Model.ProfilePicture" alt="~/Content/img/user.png" />
+                                                    </div>
+                                                </div>
+                                            }
+                                            <b>@item.CreatedByVal</b>
+                                            <br />
+                                            <div class="ticket_profile_time">@item.RepliedDateVal @*on @(string.Format(DateTimeExt.UTCToClientTime(item.RepliedDate).ToString("MM/dd/yy {0} hh:mm:ss tt"), "at"))*@</div>
+                                        </div>
+
+                                    </td>
+                                    <td valign="top" class="ticket_td_height">
+                                        <div class="ticket_add_custom_style">
+                                            <div class="ticke_info_header"></div>
+                                            <p> @Html.Raw(item.Message) </p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+
+                            <tr class="blank_row"><td colspan="2">&nbsp;</td></tr>
+                        }
+                    } 
+                    <tr>
+                        <td></td>
+                        <td>
+                            @*<button id="AttachEstimate" class="btn">@Localize.T("Attach Estimate")</button>
+                            <button id="AttachInvoice" class="btn">@Localize.T("Attach Invoice")</button>
+                            <button id="AttachFile" class="btn">@Localize.T("Attach File")</button>*@
+                            @if (Model.Ticket.TicketType == TickType.Installtion || Model.Ticket.TicketType == TickType.Service)
+                            {
+                                <button id="AttachProducts" class="btn">@Localize.T("Attach Products")</button>
+                            }
+                        </td>
+                    </tr>
+                    
+                    @*<tr class="attach_invoice hidden">
+                        <td>
+                            <b class="atach_inv_text">@Localize.T("Attach Invoice")</b>
+                        </td>
+                        <td>
+
+                            @Html.DropDownList("InvoiceList", ViewBag.InvoiceList as List<SelectListItem>, new { @class = "form-control" })
+                             
+                        </td>
+                    </tr>
+                    <tr class="attach_invoice hidden">
+                            <td></td>
+                            <td class="text-right">
+                                <button class="btn AttachInvoiceEstimatebtn">@Localize.T("Attach")</button>
+                            </td>
+                        </tr>
+
+                    <tr class="attach_estimate hidden">
+                        <td>
+                            <b class="atach_inv_text">@Localize.T("Attach Estimate")</b>
+                        </td>
+                        <td>
+                            @Html.DropDownList("EstimateList", ViewBag.EstimateList as List<SelectListItem>, new { @class = "form-control" })
+                                 
+                        </td>
+                    </tr>
+
+                    <tr class="attach_estimate hidden">
+                        <td></td>
+                        <td class="text-right">
+                            <button class="btn AttachInvoiceEstimatebtn">@Localize.T("Attach")</button>
+                        </td>
+                    </tr>
+
+                    <tr class="addfile_tr hidden">
+                        <td valign="top">
+                            <b>@Localize.T("Add File")</b>
+                        </td>
+                        <td>
+                            <table class="w100p">
+                                <tr>
+                                    <td>
+                                        <textarea type="text" class="form-control FileDescription" placeholder="File Description" id="FileDescription" name="FileDescription" rows="3"></textarea>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-right">
+                                        <button id="UploadCustomerFileBtn" class="btn cursor-pointer">
+                                            @Localize.T("Choose File")
+                                        </button>
+                                        <button id="AddFileBtn" class="btn cursor-pointer">
+                                            @Localize.T("Upload")
+                                        </button>
+                                        <div class="" style="margin-top: 15px;">
+                                            <span id="UploadSuccessMessage" class="hidden">@Localize.T("File Uploaded Successfully..!")</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label id="SelectedFileName"></label>
+                                        <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+                                            <div class="progress progress-striped active">
+                                                <div class="progress-bar progress-bar-success" style="width:0%">
+                                                    <span> 0%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>*@
+
+                        <tr class="Add_equipment @((Model.CustomerAppointmentEquipmentList==null||Model.CustomerAppointmentEquipmentList.Count()==0)?"hidden":"")">
+                            <td></td>
+                            <td>
+                                <div class="col-md-12 Add_equipment">
+                                    @if (Model.Ticket.TicketType == TickType.Installtion || Model.Ticket.TicketType == TickType.Service)
+                                    {
+                                        <div>
+                                            <div class="EquipmentAdd clearfix">
+                                                <div class="row">
+                                                    <div class="col-md-12 padding-0">
+                                                        <table class="CustomerInvoiceTab" id="CustomerInvoiceTab">
+                                                            <thead>
+                                                                <tr class="InvoiceTableBorderTop">
+                                                                    <th class="thead-th-style1 tab-index">
+                                                                        <span>
+
+                                                                        </span>
+                                                                    </th>
+                                                                    <th class="thead-th-style1 tab-Product">
+                                                                        <span>
+                                                                            @Localize.T("Product/Service")
+                                                                        </span>
+                                                                    </th>
+                                                                    <th class="thead-th-style2 tab-Desc">
+                                                                        <span>
+                                                                            @Localize.T("Description")
+                                                                        </span>
+                                                                    </th>
+                                                                    <th class="thead-th-style2 tab-Quantity">
+                                                                        <span>
+                                                                            @Localize.T("Quantity")
+                                                                        </span>
+                                                                    </th>
+                                                                    <th class="thead-th-style2 tab-Rate hidden">
+                                                                        <span>
+                                                                            @Localize.T("Rate")
+                                                                        </span>
+                                                                    </th>
+                                                                    <th class="thead-th-style2 tab-Amount hidden">
+                                                                        <span>
+                                                                            @Localize.T("Amount")
+                                                                        </span>
+                                                                    </th>
+                                                                    <th class="thead-th-style2 tab-Action">
+
+                                                                    </th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @if (Model.CustomerAppointmentEquipmentList != null)
+                                                                {
+                                                                    foreach (var item in Model.CustomerAppointmentEquipmentList)
+                                                                    {
+                                                                        <tr data-id="@item.EquipmentId" class="HasItem">
+                                                                            <td valign="top"></td>
+                                                                            <td valign="top">
+                                                                                <input type="text" class="ProductName" value="@item.EquipName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                                                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                                                                <span class="spnProductName">@item.EquipName</span>
+                                                                            </td>
+                                                                            <td valign="top">
+                                                                                <input type="text" onkeydown='OthersKeyDown(this,event)' value="@item.EquipDetail" class="txtProductDesc" />
+                                                                                <span class="spnProductDesc">@item.EquipDetail</span>
+                                                                            </td>
+                                                                            <td valign="top">
+                                                                                <input type="number" onkeydown='OthersKeyDown(this, event)' value="@item.Quantity" class="txtProductQuantity" />
+                                                                                <span class="spnProductQuantity">@item.Quantity</span>
+                                                                            </td>
+                                                                            <td valign="top" class="hidden">
+                                                                                <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductRate" value="@item.UnitPrice" />
+                                                                                <span class="spnProductRate">@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.UnitPrice)</span>
+                                                                            </td>
+                                                                            <td valign="top" class="hidden">
+                                                                                <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" value="@item.TotalPrice" />
+                                                                                <span class="spnProductAmount">@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalPrice)</span>
+                                                                            </td>
+                                                                            <td valign="top" class="tableActions">
+                                                                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                                                            </td>
+                                                                        </tr>
+                                                                    }
+                                                                    if (!Model.CustomerAppointment.Status.HasValue
+                                                                        || Model.CustomerAppointment.Status == false)
+                                                                    {
+                                                                        <tr>
+                                                                            <td valign="top"></td>
+                                                                            <td valign="top">
+                                                                                <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                                                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                                                                <span class="spnProductName"></span>
+                                                                            </td>
+                                                                            <td valign="top">
+                                                                                <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDesc" />
+                                                                                <span class="spnProductDesc"></span>
+                                                                            </td>
+                                                                            <td valign="top">
+                                                                                <input type="number" onkeydown='OthersKeyDown(this, event)' class="txtProductQuantity" />
+                                                                                <span class="spnProductQuantity"></span>
+                                                                            </td>
+                                                                            <td valign="top" class="hidden">
+                                                                                <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductRate" />
+                                                                                <span class="spnProductRate"></span>
+                                                                            </td>
+                                                                            <td valign="top" class="hidden">
+                                                                                <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" />
+                                                                                <span class="spnProductAmount"></span>
+                                                                            </td>
+                                                                            <td valign="top" class="tableActions">
+                                                                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                                                            </td>
+                                                                        </tr>
+
+                                                                        if (Model.CustomerAppointmentEquipmentList.Count() == 0)
+                                                                        {
+                                                                            <tr>
+                                                                                <td valign="top"></td>
+                                                                                <td valign="top">
+                                                                                    <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                                                                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                                                                    <span class="spnProductName"></span>
+                                                                                </td>
+                                                                                <td valign="top">
+                                                                                    <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDesc" />
+                                                                                    <span class="spnProductDesc"></span>
+                                                                                </td>
+                                                                                <td valign="top">
+                                                                                    <input type="number" onkeydown='OthersKeyDown(this, event)' class="txtProductQuantity" />
+                                                                                    <span class="spnProductQuantity"></span>
+                                                                                </td>
+                                                                                <td valign="top" class="hidden">
+                                                                                    <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductRate" />
+                                                                                    <span class="spnProductRate"></span>
+                                                                                </td>
+                                                                                <td valign="top" class="hidden">
+                                                                                    <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" />
+                                                                                    <span class="spnProductAmount"></span>
+                                                                                </td>
+                                                                                <td valign="top" class="tableActions">
+                                                                                    <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                                                                </td>
+                                                                            </tr>
+                                                                            
+                                                                        }
+
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    <tr>
+                                                                        <td valign="top"></td>
+                                                                        <td valign="top">
+                                                                            <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                                                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                                                            <span class="spnProductName"></span>
+                                                                        </td>
+                                                                        <td valign="top">
+                                                                            <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDesc" />
+                                                                            <span class="spnProductDesc"></span>
+                                                                        </td>
+                                                                        <td valign="top">
+                                                                            <input type="number" onkeydown='OthersKeyDown(this, event)' class="txtProductQuantity" />
+                                                                            <span class="spnProductQuantity"></span>
+                                                                        </td>
+                                                                        <td valign="top" class="hidden">
+                                                                            <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductRate" />
+                                                                            <span class="spnProductRate"></span>
+                                                                        </td>
+                                                                        <td valign="top" class="hidden">
+                                                                            <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" />
+                                                                            <span class="spnProductAmount"></span>
+                                                                        </td>
+                                                                        <td valign="top" class="tableActions">
+                                                                            <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                                                        </td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td valign="top"></td>
+                                                                        <td valign="top">
+                                                                            <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                                                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                                                            <span class="spnProductName"></span>
+                                                                        </td>
+                                                                        <td valign="top">
+                                                                            <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDesc" />
+                                                                            <span class="spnProductDesc"></span>
+                                                                        </td>
+                                                                        <td valign="top">
+                                                                            <input type="number" onkeydown='OthersKeyDown(this, event)' class="txtProductQuantity" />
+                                                                            <span class="spnProductQuantity"></span>
+                                                                        </td>
+                                                                        <td valign="top" class="hidden">
+                                                                            <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductRate" />
+                                                                            <span class="spnProductRate"></span>
+                                                                        </td>
+                                                                        <td valign="top" class="hidden">
+                                                                            <input type="text" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" />
+                                                                            <span class="spnProductAmount"></span>
+                                                                        </td>
+                                                                        <td valign="top" class="tableActions">
+                                                                            <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                                                        </td>
+                                                                    </tr>
+                                                                }
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                                <div class="InvoiceCalculationsDiv InvoiceCalculationsDiv1 hidden">
+                                                    <div class="WorkOrderTaxCalculation">
+                                                        <div class="clearfix"><div class="text_bold">@Localize.T("Subtotal"):</div> <div class="text_normal amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</div></div>
+                                                        <div class="clearfix"><div class="text_bold"><div class="tax_dropdown">@Html.DropDownListFor(x => x.CustomerAppointment.TaxPercent, (List<SelectListItem>)ViewBag.TaxListItem, new { @class = "form-control select_TaxList" })</div></div><div class="text_normal tax-amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</div></div>
+                                                        <div class="clearfix"><div class="text_bold">@Localize.T("Total"):</div> <div class="text_normal total total_text_norm">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</div></div>
+
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div></div>
+                                            @*<div class="text-right">
+                                                <button id="UpdateEqList" class="btn cursor-pointer">
+                                                    @Localize.T("Update Equipment List") 
+                                                </button>
+                                            </div>*@
+                                        </div>
+                                    }
+                                </div>
+
+                            </td>
+                        </tr>
+
+                        <tr class="Reply_Space">
+                            <td valign="top">
+                                <b>@Localize.T("Add Reply")</b>
+                            </td>
+                            <td>
+                                <textarea id="BodyContent" name="BodyContent" class="tinymce"></textarea>
+                            </td>
+                        </tr>
+
+                        <tr class="Reply_button">
+                            <td></td>
+                            <td class="text-right">
+                                <button class="btn" id="MakeReply"> @Localize.T("Reply") </button>
+                            </td>
+                        </tr>
+                    
+
+
+                }
+            </table>
+        </div>
+        <div class="ticket_info col-md-4">
+            <div class="ticketInfoTable">
+                @if (Model.Ticket.Status != TickStat.Init)
+                {
+                    <div class="ticketInfoTable_row add_ticket_schedule">
+                        <div>
+                            <b>@Localize.T("Scheduled On")</b>
+                        </div>
+                        <div style="display:flex !important">
+                            <span>@(Model.Ticket.CompletionDate == new DateTime() ? "" : Model.Ticket.CompletionDate.ToString("MM/dd/yy"))</span>
+                            @*<button class="btn" style="border-radius: 0px 5px 5px 0px;" id="btnSchedule"><i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i></button>*@
+                        </div>
+                    </div>
+                    <div class="ticketInfoTable_row add_ticket_start_end_time">
+                        <div class="col-md-6 padding-left-0 padding-right-5">
+                            <b><span class="aso_span">@Localize.T("Start Time")</span></b>
+                            @*@Html.DropDownListFor(model => model.Ticket.AppointmentStartTime, (List<SelectListItem>)ViewBag.AppointmentTime, new { @class = "form-control select_search", @style = "width:100%;", id = "AppointmentStartTime" })*@ 
+                            @{ 
+                                if (Model.Ticket.AppointmentStartTime != "-1")
+                                {
+                                    string StartTime = (ViewBag.AppointmentTime as List<SelectListItem>).Where(x => x.Value == Model.Ticket.AppointmentStartTime).Select(x => x.Text).FirstOrDefault().ToString();
+                                    <div>@StartTime</div>
+                                }
+                                else
+                                {
+                                    <div>Nothing selected</div>
+                                }
+
+                            }
+                        </div>
+                        <div class="col-md-6 padding-right-0 padding-left-5">
+                            <b><span class="aso_span">@Localize.T("End Time")</span></b>
+                            @*@Html.DropDownListFor(model => model.Ticket.AppointmentEndTime, (List<SelectListItem>)ViewBag.AppointmentTime, new { @class = "form-control select_search", @style = "width:100%;", id = "AppointmentEndTime" })*@
+
+                            @if (Model.Ticket.AppointmentEndTime != "-1")
+                            {
+                                string EndTime = (ViewBag.AppointmentTime as List<SelectListItem>).Where(x => x.Value == Model.Ticket.AppointmentEndTime).Select(x => x.Text).FirstOrDefault().ToString();
+                                <div>@EndTime</div>
+                            }
+                            else
+                            {
+                                <div>Nothing selected</div>
+                            }
+                        </div>
+                    </div>
+                    <div class="ticketInfoTable_row add_ticket_btn add_ticket_padd_right">
+                        <div>
+                            <b>@Localize.T("Assigned To")</b>
+                        </div>
+                        <div>
+                            @*@Html.DropDownList("Ass@*nedTo", ViewBag.AssignedEmployee as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple" })*@
+                            @{
+                                var AssignedToList = (ViewBag.AssignedEmployee as List<SelectListItem>).Where(x => x.Selected == true).Select(x => x.Text);
+                                string AssignedTo = string.Join(", ", AssignedToList);
+                                if (string.IsNullOrWhiteSpace(AssignedTo))
+                                {
+                                    AssignedTo = "-";
+                                }
+                            }
+                            <span>@AssignedTo</span>
+                        </div>
+                    </div>
+                    <div class="ticketInfoTable_row add_ticket_btn add_ticket_padd_left">
+                        <div>
+                            <b>@Localize.T("Additional Members")</b>
+                        </div>
+                        <div>
+                            @*@Html.DropDownList("Add@*ionalMembers", ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple" })*@
+
+                            @{
+                                var AdditionalMemberList = (ViewBag.EmployeeList as List<SelectListItem>).Where(x => x.Selected == true).Select(x => x.Text);
+                                string AdditionalMembers = string.Join(", ", AdditionalMemberList);
+
+                                if (string.IsNullOrWhiteSpace(AdditionalMembers))
+                                {
+                                    AdditionalMembers = "-";
+                                }
+                            }
+                            <span>@AdditionalMembers</span>
+                        </div>
+                    </div>
+                    <div class="ticketInfoTable_row add_ticket_status">
+                        <div>
+                            <b>@Localize.T("Status")</b>
+                        </div>
+                        <div>
+                            @{ 
+                                string TicketStatus = (ViewBag.TicketStatus as List<SelectListItem>).Where(x => x.Value == Model.Ticket.Status).Select(x => x.Text).FirstOrDefault().ToString();
+                            }
+                            <span>@TicketStatus</span>
+                        </div>
+                    </div>
+                }
+                @*<div class="ticketInfoTable_row add_ticket_schedule">
+                    <div>
+                        <b>@Localize.T("Scheduled On")</b>
+                    </div>
+                    <div style="display:flex !important">
+                        <input type="text" style="border-radius: 5px 0px 0px 5px;" id="Ticket_CompletionDate" class="form-control" value="@(Model.Ticket.CompletionDate == new DateTime() ? "" : Model.Ticket.CompletionDate.ToString("MM/dd/yyyy"))" />
+                        <button class="btn" style="border-radius: 0px 5px 5px 0px;" id="btnSchedule"><i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i></button>
+                    </div>
+                </div>
+                <div class="ticketInfoTable_row add_ticket_start_end_time">
+                    <div class="col-md-6 padding-left-0 padding-right-5">
+                        <b><span class="aso_span">@Localize.T("Start Time")</span></b>
+                        @Html.DropDownListFor(model => model.Ticket.AppointmentStartTime, (List<SelectListItem>)ViewBag.AppointmentTime, new { @class = "form-control select_search", @style = "width:100%;", id = "AppointmentStartTime" })
+                    </div>
+                    <div class="col-md-6 padding-right-0 padding-left-5">
+                        <b><span class="aso_span">@Localize.T("End Time")</span></b>
+                        @Html.DropDownListFor(model => model.Ticket.AppointmentEndTime, (List<SelectListItem>)ViewBag.AppointmentTime, new { @class = "form-control select_search", @style = "width:100%;", id = "AppointmentEndTime" })
+
+                    </div>
+                </div>
+                <div class="ticketInfoTable_row add_ticket_btn add_ticket_padd_right">
+                    <div>
+                        <b>@Localize.T("Assigned To")</b>
+                    </div>
+                    <div>
+                        @Html.DropDownList("AssignedTo", ViewBag.AssignedEmployee as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple" })
+                    </div>
+                </div>
+                <div class="ticketInfoTable_row add_ticket_btn add_ticket_padd_left">
+                    <div>
+                        <b>@Localize.T("Additional Members")</b>
+                    </div>
+                    <div>
+                        @Html.DropDownList("AdditionalMembers", ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple" })
+                    </div>
+                </div>
+                <div class="ticketInfoTable_row add_ticket_btn add_ticket_padd_right">
+                    <div>
+                        <b>@Localize.T("Notifying Members")</b>
+                    </div>
+                    <div>
+                        @Html.DropDownList("NotifyingMembers", ViewBag.NotifyingUserList as List<SelectListItem>, new { @class = "form-control selectpicker", @multiple = "multiple" })
+                    </div>
+                </div>
+                <div class="ticketInfoTable_row add_ticket_status">
+                    <div>
+                        <b>@Localize.T("Status")</b>
+                    </div>
+                    <div>
+                        @Html.DropDownListFor(x => x.Ticket.Status, ViewBag.TicketStatus as List<SelectListItem>, new { @class = "form-control", datarequired = "true" })
+                    </div>
+                </div>*@
+                
+            </div>
+        </div>
+    </div>
+
+    <div class="add_ticktet_btn_footer">
+        <div>
+            @if (Model.Ticket.Status != TickStat.Init)
+            {
+                <button class="float-right btn PrintTicket" id="PrintTicket"><i class="fa fa-print"></i> @Localize.T("Print Ticket")</button>
+                <a class="TicketPrint" id="TicketPrint" href="/Ticket/TicketPreviewPopup/?Id=@Model.Ticket.Id"></a>
+            }
+        </div>
+    </div>
+</div>
+<script src="~/Content/Tiny/tiny.js"></script>

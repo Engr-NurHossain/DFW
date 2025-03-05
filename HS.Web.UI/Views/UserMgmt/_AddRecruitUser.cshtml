@@ -1,0 +1,177 @@
+﻿@{ 
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.AddUser
+<style>
+    .ChooseUserTypeHeader {
+    text-align: left;
+    background-color:#e4e4e4;
+}
+    .ChooseUserTypeHeader div {
+        padding-top: 10px;
+        padding-bottom: 10px;
+        padding-left:10px;
+        font-size:2rem;
+    }
+    .content-div{
+        padding-left:10px;
+        padding-right:10px;
+        margin-top:10px;
+    }
+    .SaveCancelDiv {
+        width: 95%;
+        padding-top: 8px;
+    }
+    .footer-section {
+        background: #eceef1;
+        height: 50px;
+        position: fixed;
+        width: 100%;
+        bottom: 0%;
+    }
+    .btn-rnote{
+        float:right;
+        background-color:green;
+        color:white;
+    }
+    .btn-rnote:hover{
+        color:white;
+    }
+</style>
+<script>
+    var SaveRecruitUser = function () {
+        var url = domainurl + "/UserMgmt/AddUser/";
+        var param = JSON.stringify({
+            Id: $("#UserLogin_Id").val(),
+            fName: $("#UserLogin_FirstName").val(),
+            lName: $("#UserLogin_LastName").val(),
+            email: $("#UserLogin_UserName").val(),
+            branchId: parseInt($("#branchId").val()),
+            IsServiceCall: false,
+            IsInstaller: false,
+            IsSalesPerson: false,
+            pGroup: "Recruit",
+            SendEmail: $("#SendEmailNotification").is(":checked")
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                $('.close').trigger('click');
+                if (data.result == true) {
+                    LoadRecruit(true);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    var IsUserExists = function () {
+        var url = domainurl + "/UserMgmt/IsUserExists/";
+        var param = JSON.stringify({
+            email: $("#UserLogin_UserName").val(),
+            Id: $("#UserLogin_Id").val()
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data == true) {
+                    $('.close').trigger('click');
+                    /*OpenConfirmationMessage("Warning!", "User already exist, please check another one", "");*/
+                    $(".user_exists_error").removeClass('hidden');
+                } else {
+                    $(".user_exists_error").addClass('hidden');
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $("#UserLogin_UserName").blur(function () {
+            IsUserExists();
+        });
+        $("#UserLogin_EmailAddress").keyup(function () {
+            if ($("#UserLogin_UserName").val() != $("#UserLogin_EmailAddress").val()) {
+                $(".lblcontent").removeClass('hidden');
+            }
+            else {
+                $(".lblcontent").addClass('hidden');
+            }
+        })
+        $("#SaveRecruitUser").click(function () {
+            if ($("#UserLogin_UserName").val() != "" && $("#UserLogin_EmailAddress").val() == "") {
+                $("#UserLogin_EmailAddress").css("border-color", "red");
+            }
+            else if ($("#UserLogin_UserName").val() == "" && $("#UserLogin_EmailAddress").val() != "") {
+                $("#UserLogin_UserName").css("border-color", "red");
+            }
+            else {
+                if (CommonUiValidation() && ($("#UserLogin_UserName").val() == $("#UserLogin_EmailAddress").val())) {
+                    SaveRecruitUser();
+                }
+                else if ($("#UserLogin_UserName").val() != $("#UserLogin_EmailAddress").val()) {
+                    $(".lblcontent").removeClass('hidden');
+                }
+                else {
+                    $("#UserLogin_FirstName").css("border-color", "red");
+                    $("#UserLogin_LastName").css("border-color", "red");
+                }
+            }
+        })
+    })
+</script>
+
+@Html.HiddenFor(x => x.UserLogin.Id)
+<div class="ChooseUserTypeHeader">
+    <div>@Localize.T("Add Recruit User")</div>
+</div>
+<div class="form-group clearfix content-div">
+    <label>@Localize.T("Branch")</label>
+    @Html.DropDownList("branchId", (List<SelectListItem>)ViewBag.BranchList, new { @class = "form-control" })
+</div>
+<div class="form-group clearfix content-div">
+    <label>@Localize.T("First Name ")<span class="red">*</span></label>
+    @Html.TextBoxFor(x => x.Employee.FirstName, new { @id = "UserLogin_FirstName", @class = "form-control", @placeholder = "First Name", datarequired = "true" })
+</div>
+<div class="form-group clearfix content-div">
+    <label>@Localize.T("Last Name ")<span class="red">*</span></label>
+    @Html.TextBoxFor(x => x.Employee.LastName, new { @id = "UserLogin_LastName", @class = "form-control", @placeholder = "Last Name", datarequired = "true" })
+</div>
+<div class="form-group clearfix content-div">
+    <label>@Localize.T("Email Address")</label>
+    @Html.TextBoxFor(x => x.UserLogin.UserName, new { @class = "form-control", dataformat = "email", @placeholder = "Email address" })
+    <label class="label hidden red user_exists_error">@Localize.T("User already exists.")</label>
+</div>
+<div class="form-group clearfix content-div">
+    <label>@Localize.T("Confirm Email Address")</label>
+    @Html.TextBoxFor(x => x.UserLogin.EmailAddress, new { @class = "form-control", @placeholder = "Verify email address" })
+    <label class="lblcontent hidden" style="color:red">@Localize.T("Email address does not match")</label>
+</div>
+<div class="form-group clearfix content-div"> 
+    <label><input type="checkbox" id="SendEmailNotification" checked /> @Localize.T("Send notification email.")</label>
+</div>
+
+<section class="footer-section">
+    <footer class="footer">
+        <div class="SaveCancelDiv">
+            <button class="btn btn-rnote" id="SaveRecruitUser"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+        </div>
+    </footer>
+</section>

@@ -1,0 +1,452 @@
+﻿@model List<HS.Entities.CustomerNote>
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+<script src="~/Content/Js/Customer/CustomerFollowUpTab/CustomerFollowUpTab.js">
+
+</script>
+<script>
+    var from = "";
+    var ChangeReminderStatus = function (id, IsShedule) {
+        console.log("hlw");
+
+
+        if ($(this).prop("checked")) {
+            IsShedule = true;
+        }
+        $.ajax({
+            url: domainurl + "/Notes/ChangeReminderStatus",
+            data: {
+                id: id,
+                IsShedule: IsShedule
+            },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result == true) {
+                    OpenNotesTab();
+                }
+            },
+
+            error: function () {
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        //if (from == "notification") {
+        //    openexistingreminder(id, taskid, time);
+        //}
+        $(".StatusToogle").bootstrapToggle({
+            on: 'Active',
+            off: 'Inactive'
+        });
+        $(".StatusToogle").unbind("onchange");
+
+        var IsShedule = false;
+
+    })
+</script>
+@Styles.Render("~/styles/Notes")
+@Scripts.Render("~/scripts/Notes")
+
+<input type="hidden" id="AddReminderLeadId" value="@ViewBag.CustomerFollowUpPartialCustomerId" />
+<div class="page-content-wrap">
+    <div class="header-section">
+        <div class="note_top_search_bar">
+            <div class="note_top_search_bar_inner">
+                <input type="text" class="form-control" value="@ViewBag.SearchText" id="Searchtxt" placeholder="Search" />
+                <input type="datetime" class="form-control" value="@ViewBag.StartDate" id="StartDate" placeholder="Start Date" />
+                <div class="input-group add-on">
+                    <input type="datetime" class="form-control" value="@ViewBag.EndDate" id="EndDate" placeholder="End Date" />
+                    <div class="input-group-btn"> <button class="btn applySearch green_button"><i class="glyphicon glyphicon-search"></i></button></div>
+                </div>
+            </div>
+
+
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerFollowUpAdd))
+            {
+                <button class="btn btn-note" onclick="AddReminder('@ViewBag.CustomerFollowUpPartialCustomerId')" type="button" title="@Localize.T("Add reminder")">
+                    <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" Reminder")
+                </button>
+            }
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerNotesAdd))
+            {
+                <button class="btn btn-note AddNotes" onclick="NewNotesLoad()" @*id="AddNotes"*@ type="button" title="@Localize.T("Add notes")" style="margin-right:10px;" @*data-toggle="modal" data-target="#Notes-modal"*@>
+                    <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" Notes")
+                </button>
+            }
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerMessageAdd))
+            {
+                <button class="btn btn-note AddMessage" type="button" title="@Localize.T("Add Message")" style="margin-right:10px;">
+                    <i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T(" Message")
+                </button>
+            }
+
+        </div>
+        <div class="Schedule-popup">
+        </div>
+    </div>
+
+    <div class="notes-table">
+        <table class="display " id="tblNotes">
+            <thead class="table-head-border notes_header_hide_for_device">
+                <tr>
+                    <th class="thead-th-style sorting">
+                        @Localize.T("Note")
+                    </th>
+                    <th class="thead-th-style sorting">
+                        @Localize.T("Note Details")
+                    </th>
+
+
+                    <th class="thead-th-style sorting">
+                        @Localize.T("Created")
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr class="tr-style @(item.IsPin.Value?"PinnedNote":"")">
+                        @if (item.IsFollowUp != true && item.IsShedule != true)
+                        {
+                            <td class="table-body-td-style notes_device_row" valign="top">
+                                <div class="notes_device_header">@Localize.T("Note") <span>:</span></div>
+                                <div class="notes_device_info">
+                                    <div class="nt_text_st nt_text_st_@item.Id" data-id="@item.Id">
+                                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerNotesEdit))
+                                        {
+                                            <div>
+                                                 
+                                                <a href="javascript:void(0)" class="item-edit" data-id="@item.Id" id="@item.CustomerId" idval="@item.AssignName" data-toggle="modal" data-target="#Notes-modal">
+                                                    <i class="fa fa-sticky-note-o"></i>
+                                                </a>
+                                                 
+                                                <div>@item.Id</div> 
+                                                <div>@Html.Raw(item.Notes)</div>
+                                                @if (item.IsPin.Value)
+                                                {
+                                                    <i class="fa fa-thumbtack"></i>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div>
+                                                <i class="fa fa-sticky-note-o"></i>
+                                                <div>@item.Id</div> 
+                                                <div>@Html.Raw(item.Notes)</div>
+                                                @if (item.IsPin.Value)
+                                                {
+                                                    <i class="fa fa-thumbtack"></i>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                    <span class="nt_text_btn moreContent moreContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show More")">@Localize.T("Show More >>")</span>
+                                    <span class="nt_text_btn lessContent lessContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show Less")">@Localize.T("<< Show Less")</span>
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerNotesDelete))
+                                    {
+                                        <a href="javascript:void(0)" class="item-delete" data-id="@item.Id" id="@item.CustomerId" style="float:right;cursor:pointer;" title="@Localize.T("Delete")">
+                                            <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        }
+                        else
+                        {
+                            <td class="table-body-td-style notes_device_row" valign="top">
+                                <div class="notes_device_header">@Localize.T("Note") <span>:</span></div>
+                                <div class="notes_device_info">
+                                    <div class="nt_text_st nt_text_st_@item.Id" data-id="@item.Id">
+                                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerFollowUpEdit))
+                                        {
+                                            <div>
+                                                <a href="javascript:void(0)" class="follow-up-edit" data-id="@item.Id" data-val="@item.ReminderDate.Value.ToString("HH:mm")" style="color:#2ca01c">
+                                                    <i class="fa fa-clock-o"></i>
+                                                    <div>@item.Id</div>
+
+                                                    <div>@Html.Raw(item.Notes)</div>
+                                                </a>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div>
+                                                <i class="fa fa-clock-o"></i>
+                                                <div>@item.Id</div>
+
+                                                <div>@Html.Raw(item.Notes)</div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <span class="nt_text_btn moreContent moreContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show More")">@Localize.T("Show More >>")</span>
+                                    <span class="nt_text_btn lessContent lessContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show Less")">@Localize.T("<< Show Less")</span>
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerFollowUpDelete))
+                                    {
+                                        <a href="javascript:void(0)" class="follow-up-delete" data-id="@item.Id" style="float:right;cursor:pointer;" title="@Localize.T("Delete")">
+                                            <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        }
+                    <td class="table-body-td-style notes_device_row" valign="top">
+                        @if (!string.IsNullOrEmpty(item.NoteTypeValue))
+                        {
+                            <div class="width-100p">
+                                <div class="notes_device_header">@Localize.T("Note Type") <span>:</span></div>
+                                <div class="notes_device_info">
+                                    <span class="notes_header_custom">@Localize.T("Note Type"):</span>
+                                    <div class="note-color" style="background-color:#@item.Color">
+                                    </div>
+                                    <span>@item.NoteTypeValue</span>
+                                </div>
+                            </div>
+                        }
+                        @if (item.ReminderDate != null && item.ReminderDate != new DateTime())
+                        {
+                            <div class="width-100p">
+                                <div class="notes_device_header">@Localize.T("Reminder On") <span>:</span></div>
+                                <div class="notes_device_info">
+                                    <span class="notes_header_custom">@Localize.T("Reminder On"):</span>
+                                    @if (item.IsShedule == true)
+                                    {
+                                        <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.ReminderDate.Value).ToString("M/d/yy") at @HS.Framework.DateTimeExtension.UTCToClientTime(item.ReminderDate.Value).ToString("h:mm tt")</span>
+                                        if (item.IsEmail == true)
+                                        {
+                                            <span class="glyphicon glyphicon-envelope btn-follow-envelope" id="btn-follow-envelope" data-id="@item.AssignName" idval="@item.Id" style="cursor: pointer;float:right;"></span>
+                                        }
+                                        if (item.IsText == true)
+                                        {
+                                            <span class="glyphicon glyphicon-phone" id="btn-phn" data-id="@item.Id" style="float:right;padding-right:10px;"></span>
+                                            <a href="" class="phnClick"></a>
+                                        }
+                                    }
+                                    else
+                                    {
+
+                                        <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.ReminderDate.Value).ToString("M/d/yy") at @HS.Framework.DateTimeExtension.UTCToClientTime(item.ReminderDate.Value).ToString("h:mm tt")</span>
+
+                                        @*<span>@Localize.T("-")</span>*@
+                                    }
+                                </div>
+                            </div>
+                            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowReminderCompletedDateOnAddReminder) && item.ReminderEndDate != null && item.ReminderEndDate != new DateTime())
+                            {
+                                <div class="width-100p">
+                                    <div class="notes_device_info">
+                                        <span class="notes_header_custom">@Localize.T("Completed By"):</span>
+                                        <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.ReminderEndDate.Value).ToString("M/d/yy")</span>
+                                    </div>
+                                </div>
+                            }
+                            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowTaskReply))
+                            {
+                                <div class="width-100p">
+                                    <div class="notes_device_info">
+                                        <span class="notes_header_custom">@Localize.T("Total Reply"):</span>
+                                        <span>@item.ReplyCount</span>
+                                    </div>
+                                </div>
+                            }
+                        }
+
+                        @if (!string.IsNullOrEmpty(item.AssignName))
+                        {
+                            <div class="width-100p">
+                                <div class="notes_device_header">@Localize.T("Assign User") <span>:</span></div>
+                                <div class="notes_device_info">
+                                    <span class="notes_header_custom">@Localize.T("Assign User"):</span>
+                                    <span>@item.AssignName</span>
+                                </div>
+                            </div>
+                        }
+
+                    </td>
+                    <td class="table-body-td-style notes_device_row" valign="top" data-order="@(HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy hh:mm tt"))">
+                        <div class="width-100p">
+                            <div class="notes_device_header">@Localize.T("Created On") <span>:</span></div>
+                            <div class="notes_device_info">
+                                <span class="notes_header_custom">@Localize.T("Created On"):</span>
+                                @if (item.IsShedule == true)
+                                {
+                                    <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("M/d/yy") @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("h:mm tt")</span>
+                                }
+                                else
+                                {
+                                    <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("M/d/yy") @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("h:mm tt")</span>
+                                }
+                            </div>
+                        </div>
+
+
+                        <div class="width-100p">
+                            <div class="notes_device_header">@Localize.T("Created by") <span>:</span></div>
+                            <div class="notes_device_info ellipsis_style">
+                                <span class="notes_header_custom">@Localize.T("Created by"):</span>
+                                <div class="user_profile_pic_div">
+                                    <img src="/EmpShow/W50H50X@(item.CreatedByUid)" />
+                                </div>
+                                <span>@item.empName</span>
+                            </div>
+                        </div>
+                        @if (item.ReminderDate != null && item.ReminderDate != new DateTime())
+                        {
+                            <div>
+                                @if (item.IsShedule == true)
+                                {
+                                    <input type="checkbox" @(item.IsShedule == true ? "checked" : "unchecked") class="StatusToogle" onchange="ChangeReminderStatus('@item.Id',false)" data-toggle="toggle" data-on="Open" data-off="Closed" data-onstyle="success" data-offstyle="danger" data-value="@item.Id">
+
+                                }
+                                else
+                                {
+                                    <input type="checkbox" @(item.IsShedule == false ? "unchecked" : "checked") class="StatusToogle" onchange="ChangeReminderStatus('@item.Id',false)" data-toggle="toggle" data-on="Open" data-off="Closed" data-onstyle="success" data-offstyle="danger" data-value="@item.Id">
+
+                                }
+
+
+                            </div>
+                        }
+
+                    </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="OpenNotesTab(@(ViewBag.PageNumber))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="OpenNotesTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="OpenNotesTab(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="OpenNotesTab(2)">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="OpenNotesTab(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="OpenNotesTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="OpenNotesTab(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="OpenNotesTab(2)">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="OpenNotesTab(3)">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="OpenNotesTab(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="OpenNotesTab(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="OpenNotesTab(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="OpenNotesTab(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="OpenNotesTab(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="OpenNotesTab()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="OpenNotesTab(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="OpenNotesTab(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="OpenNotesTab(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="OpenNotesTab(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="OpenNotesTab(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="OpenNotesTab(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="OpenNotesTab(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="OpenNotesTab(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="OpenNotesTab(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="OpenNotesTab(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="OpenNotesTab(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="OpenNotesTab(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="OpenNotesTab(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>

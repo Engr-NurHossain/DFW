@@ -1,0 +1,554 @@
+﻿@{ 
+    Layout = null;
+}
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using Permissions = HS.Framework.UserPermissions;
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper;
+@using System.Configuration
+@model HS.Entities.Customer
+@{
+    bool IsgrateCRm = false;
+    string IsGrate = ConfigurationManager.AppSettings["IsGrateCrm"];
+    string addressdata1stLine = "";
+    string addressdata2ndLine = "";
+    if (IsGrate == "true")
+    {
+        IsgrateCRm = true;
+    }
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+<link href="~/Content/Css/Techschedule/techSchedule.css" rel="stylesheet" />
+<link href="~/Content/Css/CustomerDetails/CustomerDetail.css" rel="stylesheet" />
+<link href="~/Content/Css/Customer/CustomerDetails.css" rel="stylesheet" />
+<link href="~/Content/Css/Customer/CustomerList.css" rel="stylesheet" />
+<link href="~/Content/Css/CustomerDetails/CustomerDetailsCustom.css" rel="stylesheet" />
+<script src="~/Content/Js/CustomerDetails/CustomerDashboard.js"></script>
+<script>
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+
+
+    var CustomerGuid = '@CurrentUser.UserId';
+    var CustomerLoadId = '@CurrentUser.UserId';
+    var CustomerLoadGuid = '@CurrentUser.UserId';
+    var CustomerIdNoteGuid = '@Model.CustomerId';
+    var ShowTag = function (item) {
+        $("#isVerifyEmail").attr("data-original-title", "");
+        $("#isVerifyEmail").attr("data-original-title", item);
+    }
+    $(document).ready(function () {
+        //$('[data-toggle="tooltip"]').tooltip();
+      
+    });
+</script>
+<style>
+    .customer_dashboard .btn-add-reffer-customer{
+        float:right;
+    }
+    
+     .customer_dashboard .nav-detail-contents ul li.active a {
+        color:#fff !important;
+    }
+     .customer_dashboard .nav-detail-contents ul li.active a:hover {
+        color:#fff !important;
+    }
+</style>
+<div class="row custom_padding_for_row customer_dashboard">
+    @*if (PermissionChecker.IsPermitted(PermissionList.Dashboard.CustomerDetails))
+        {
+            <span>Customer Details</span>
+        }*@
+
+    <div class="main-container-customer-detail">
+
+        <div class="detail-contents">
+            <div class="nav-detail-contents">
+                <ul class="nav nav-tabs customer-options-tabs customer_detail_tab_style customer_detail_tab_list" id="myTab">
+                    <li class="active CustomerDetailTab">
+                        <a tabname="#CustomerDetailTab" data-target=".CustomerDetailTab_Load" data-toggle="tab"data-id="@Model.Id" onclick="OpenCustomerDetailTab(this)" @*OpenDefaultTab()*@ href="javascript:void(0)">@Localize.T("CustomerDetailTab")</a>
+                    </li>
+                    <li class="TicketTab">
+                        <a tabname="#TicketTab" idval="@Model.CustomerId" data-target=".TicketTab_Load" data-toggle="tab" onclick="OpenTicketTab()">@Localize.T("Ticket")@(Model.CustomerTabCounts.TicketsCount > 0 ? string.Format("({0})", Model.CustomerTabCounts.TicketsCount) : "")</a>
+                    </li>
+                    <li class="InvoiceTab ">
+                        <a tabname="#InvoiceTab" class="tabInvoices" data-target=".InvoiceTab_Load" data-toggle="tab" onclick="OpenInvoiceTab()" href="javascript:void(0)">@(Localize.T("Invoice"))@(Model.CustomerTabCounts.InvoiceCount > 0 ? string.Format("({0})", Model.CustomerTabCounts.InvoiceCount) : "")</a>
+                    </li>
+                    <li class="AnnouncementTab ">
+                        <a tabname="#AnnouncementTab" class="tabAnnouncement" data-target=".AnnouncementTab_Load" data-toggle="tab" onclick="OpenAnnouncementTab()" href="javascript:void(0)">@(Localize.T("Announcement"))@( ViewBag.Count > 0 ? string.Format("({0})", ViewBag.Count) : "")</a>
+                    </li>
+                    <li class="ReferFriendTab ">
+                        <a tabname="#ReferFriendTab" class="tabReferFriend" data-target=".ReferFriendTab_Load" data-toggle="tab" onclick="OpenReferFriendTab()" href="javascript:void(0)">@(Localize.T("Referred Friend"))@(  ViewBag.FriendCount > 0 ? string.Format("({0})", ViewBag.FriendCount) : "")</a>
+                    </li>
+                  
+                </ul>
+              
+                <div class="tab-content tab_Content_customer_items">
+                    <div class="tab-pane active CustomerDetailTab_Load" id="CustomerDetailTab">
+                        <div class="tab-pane active CustomerDetailTab_Load" id="CustomerDetailTab">
+
+                            <div class="customer-details-container">
+                                <div class="customer-details-title-div">
+                                    @*custoner name & edit & new transaction button was here*@
+                                    <div class="row custom-row-align">
+                                        <div class="per_customer_info_container">
+                                            @*<div class="col-md-6">
+                                               <a class="back-to-customerlist" href="javascript:void(0)">@Localize.T("Back to CustomerList")</a>
+                                            </div>*@
+                                            <div class="per_customer_info_div" onclick="OpenTransactionTab()">
+                                                @*<div class="padding-bottom-20p" style="float:right">*@
+                                                <div class="Revenue-border">
+                                                    <div class="amount-caption-info device_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.PaidAmountDetail)</div>
+                                                    <div class="open-overdue">@Localize.T("TOTAL REVENUE")</div>
+                                                </div>
+                                                @*</div>*@
+                                            </div>
+                                            <div class="per_customer_info_div" onclick="OpenInvoiceTab()">
+                                                @*<div class="padding-bottom-20p" style="float:right">*@
+                                                <div class="open-border">
+                                                    <div class="amount-caption-info device_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.EstimateAmountDetail)</div>
+                                                    <div class="open-overdue">@Localize.T("OPEN")</div>
+                                                </div>
+                                                @*</div>*@
+                                            </div>
+                                            <div class="per_customer_info_div" onclick="OpenInvoiceTab()">
+                                                @*<div class="padding-bottom-20p" style="float:right">*@
+                                                <div class="unpaid_border">
+                                                    <div class="amount-caption-info device_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.UnpaidInvoice)</div>
+                                                    <div class="open-overdue">@Localize.T("UNPAID INVOICE")</div>
+                                                </div>
+                                                @*</div>*@
+                                            </div>
+                                            <div class="per_customer_info_div" onclick="OpenInvoiceTab()">
+                                                @*<div class="padding-bottom-20p" style="float:right">*@
+                                                <div class="overdue-border">
+                                                    <div class="amount-caption-info device_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(ViewBag.DueAmountDetail)</div>
+                                                    <div class="open-overdue">@Localize.T("OVER DUE")</div>
+                                                </div>
+                                                @*</div>*@
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @*<div class="customer_info_wrapper">*@
+                            <div class="Customer-detailstabcontent">
+                                <div class="Customer-details-info-left">
+                                    <div class="customer-subTab-left-content">
+                                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerDetailsPersonalInfo))
+                                        {
+
+                                            <div class="ci_block">
+                                                <div class="ci_header clearfix">
+                                                    <div style="float:left;">@Localize.T("Customer Information")</div>
+                                                    <div style="float:right;">
+                                                        <button title="Edit" type="button" @*id="editCustomerCustomerDetailsHeader"*@ onclick="EditCustomerDraft('@Model.Id')" idval="@Model.Id" class="btn edit-button editCustomerCustomerDetailsHeader">
+                                                            <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="ci_info">
+                                                    <table class="width-100p ci_table">
+                                                        <tr class="info-table-tr">
+                                                            <td class="tr-title">@Localize.T("Customer ID")</td>
+                                                            <td class="tr-data">: @Model.Id
+                                                            <td>
+                                                        </tr>
+                                                        <tr class="info-table-tr">
+                                                            <td class="tr-title">@Localize.T("Name")</td>
+                                                            @{ var CustomerFormattedName = "";
+                                                                CustomerFormattedName = Model.FirstName + " " + Model.LastName;
+                                                            }
+                                                            <td class="tr-data">: @CustomerFormattedName
+                                                            <td>
+                                                        </tr>
+                                                        @if (!string.IsNullOrWhiteSpace(Model.Type))
+                                                        {
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title">@Localize.T("Type")</td>
+                                                                <td class="tr-data">: @Model.Type
+                                                                <td>
+                                                            </tr>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(Model.BusinessName))
+                                                        {
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title">@Localize.T("Business Name")</td>
+                                                                <td class="tr-data">: @Model.BusinessName
+                                                                <td>
+                                                            </tr>
+
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(Model.DBA))
+                                                        {
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title">@Localize.T("DBA")</td>
+                                                                <td class="tr-data">: @Model.DBA
+                                                                <td>
+                                                            </tr>
+
+                                                        }
+                                                        @if (!IsgrateCRm)
+                                                        {
+                                                            if (!string.IsNullOrWhiteSpace(Model.CustomerNo))
+                                                            {
+                                                                <tr class="info-table-tr">
+                                                                    <td class="tr-title">@Localize.T("CS Account Number")</td>
+                                                                    <td class="tr-data">: @Model.CustomerNo
+                                                                    <td>
+                                                                </tr>
+
+                                                            }
+                                                            if (!string.IsNullOrWhiteSpace(Model.SecondCustomerNo))
+                                                            {
+                                                                <tr class="info-table-tr">
+                                                                    <td class="tr-title">@Localize.T("Secondary Ac. NO.")</td>
+                                                                    <td class="tr-data">: @Model.SecondCustomerNo
+                                                                    <td>
+                                                                </tr>
+                                                            }
+
+                                                            if (!string.IsNullOrWhiteSpace(Model.AdditionalCustomerNo))
+                                                            {
+                                                                <tr class="info-table-tr">
+                                                                    <td class="tr-title">@Localize.T("Additional Ac. No.")</td>
+                                                                    <td class="tr-data">: @Model.AdditionalCustomerNo
+                                                                    <td>
+                                                                </tr>
+
+                                                            }
+                                                        }
+                                                        @if (Model.DateofBirth != null)
+                                                        {
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title">@Localize.T("Date Of Birth")</td>
+                                                                <td class="tr-data">: @Model.DateofBirth.Value.ToString("MM/dd/yy")</td>
+                                                            </tr>
+
+                                                        }
+
+                                                        @if (Model.EmailAddress != "")
+                                                        {
+                                                            <tr class="info-table-tr">
+                                                                @*<td class="tr-title">@Localize.T("Email")</td>*@
+
+                                                                @if (Model.EmailVerified == true)
+                                                                {
+                                                                    <td class="tr-title green-tooltip" id="isVerifyEmail" onmouseover="ShowTag('Verified')" data-toggle="tooltip" data-placement="right">@Localize.T("Email")</td>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <td class="tr-title red-tooltip" id="isVerifyEmail" onmouseover="ShowTag('Not Verified')" data-toggle="tooltip" data-placement="right">@Localize.T("Email")</td>
+                                                                }
+                                                                <td class="tr-data">: @Model.EmailAddress</td>
+                                                            </tr>
+                                                        }
+
+                                                        @if (Model.PrimaryPhone != "")
+                                                        {
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title">@Localize.T("Phone No")</td>
+                                                                <td class="tr-data">: @Model.PrimaryPhone</td>
+
+                                                            </tr>
+                                                        }
+
+                                                        @if (!string.IsNullOrWhiteSpace(Model.SecondaryPhone))
+                                                        {
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title">@Localize.T("Secondary Number")</td>
+                                                                <td class="tr-data">: @Model.SecondaryPhone</td>
+
+                                                            </tr>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(Model.CellNo))
+                                                        {
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title">@Localize.T("Cell Number")</td>
+                                                                <td class="tr-data">: @Model.CellNo</td>
+
+                                                            </tr>
+                                                        }
+                                                        @if (Model.LeadSource != "-1" && Model.LeadSource != "")
+                                                        {
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title">@Localize.T("Lead Source")</td>
+                                                                <td class="tr-data">: @Model.LeadSource</td>
+                                                            </tr>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(Model.Note))
+                                                        {
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title">@Localize.T("Note")</td>
+                                                                <td class="tr-data">: @Html.Raw(Model.Note)</td>
+                                                            </tr>
+                                                        }
+                                                        @if (!IsgrateCRm)
+                                                        {
+                                                            if (!string.IsNullOrWhiteSpace(Model.BusinessAccountType) && Model.BusinessAccountType != "-1")
+                                                            {
+                                                                <tr class="info-table-tr">
+                                                                    <td class="tr-title">@Localize.T("Business Account Type")</td>
+                                                                    <td class="tr-data">: @Model.BusinessAccountType</td>
+                                                                </tr>
+                                                            }
+                                                        }
+                                                        <tr class="info-table-tr">
+                                                            <td class="tr-title">@Localize.T("Status")</td>
+                                                            @{
+                                                                if (Model.IsActive.Value)
+                                                                {
+                                                                    <td class="tr-data">
+                                                                        : <span class="customer-active-status">@Localize.T("Active")</span>
+                                                                    </td>
+                                                                }
+                                                                if (!Model.IsActive.Value)
+                                                                {
+                                                                    <td class="tr-data">
+                                                                        : <span class="customer-inactive-status">@Localize.T("Inactive")</span>
+                                                                    </td>
+                                                                }
+                                                            }
+                                                        </tr>
+                                                        @if (Model.IsActive == false
+                                                            && Model.CustomerCancel != null
+                                                            && Model.CustomerCancel.CancelDatet.HasValue
+                                                            && Model.CustomerCancel.CancelDatet != new DateTime())
+                                                        {
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title">@Localize.T("Cancellation Date")</td>
+                                                                <td class="tr-data">
+                                                                    : @HS.Framework.DateTimeExtension.UTCToClientTime(Model.CustomerCancel.CancelDatet.Value).ToString("MM/dd/yy") at @HS.Framework.DateTimeExtension.UTCToClientTime(Model.CustomerCancel.CancelDatet.Value).ToString("hh:mm tt")
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title">@Localize.T("Cancelled By")</td>
+                                                                <td class="tr-data">
+                                                                    : @Model.CustomerCancel.EmpName
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="info-table-tr">
+                                                                <td class="tr-title" style="vertical-align:top;">@Localize.T("Cancellation Reason")</td>
+                                                                <td class="tr-data">
+                                                                    : @Model.CustomerCancel.CancelReason
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        <div class="ci_block ci_margin_top customer_equipments_list">
+                                            <div class="ci_header clearfix">
+                                                @Localize.T("Credential")
+                                                <div style="float:right;">
+                                                    <button title="Edit" type="button" @*id="editCustomerCustomerDetailsHeader"*@ onclick="EditCredential('@Model.CustomerId')" idval="@Model.Id" class="btn edit-button editCustomerCustomerDetailsHeader">
+                                                        <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="ci_info">
+                                                <table class="width-100p ci_table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>@Localize.T("UserName")</th>
+                                                            <th>@Localize.T("Password")</th>
+                                                        </tr>
+                                                    </thead>
+
+                                                    <tr class="info-table-tr">
+                                                        <td></td>
+                                                        <td></td>
+                                                    </tr>
+
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        <div class="ci_block ci_margin_top customer_equipments_list">
+                                            <div class="ci_header clearfix">
+                                                @Localize.T("Announcement")
+                                               
+                                            </div>
+                                            <div class="ci_info">
+                                                <marquee behavior="scroll" direction="right">@ViewBag.Announcement</marquee>
+                                                 
+                                            </div>
+                                        </div>
+                                                                }
+                                        <div>
+                                            @if (Model.IsDirect == false)
+                                            {
+                                                <div class="ci_block ci_margin_top">
+                                                    <div class="ci_header">
+                                                        @Localize.T("QA1")
+                                                        @if (ViewBag.QA1FinalResult == true)
+                                                        {
+                                                            <a class="QA1Call" onclick="OpenQA1Call()"><i class="fa fa-check" style="float:right;cursor:pointer;"></i></a>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a class="QA1Call" onclick="OpenQA1Call()"><i class="fa fa-question" style="float:right;cursor:pointer;"></i></a>
+                                                        }
+                                                    </div>
+                                                    <div class="ci_info">
+                                                        <table class="width-100p">
+                                                            <tr class="info-table-tr">
+                                                                @if (ViewBag.QA1FinalResult == true)
+                                                                {
+                                                                    <td class="tr-title">@Localize.T("Passed")</td>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <td class="tr-title" style="color:red">@Localize.T("Pending")</td>
+                                                                }
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+
+                                        <div class="Responsible-Person-Histories" idval="@Model.CustomerId">
+
+                                        </div>
+                                                               
+                                    </div>
+                                    <div class="customer-subTab-right-content">
+                                        <div class="width-100p">
+
+                                            @if (!string.IsNullOrWhiteSpace(Model.Street) && !string.IsNullOrWhiteSpace(Model.City) && !string.IsNullOrWhiteSpace(Model.State) && !string.IsNullOrWhiteSpace(Model.ZipCode))
+                                            {
+
+                                                if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerDetailsPresentAddress))
+                                                {
+                                                    <div class="ci_block ci_block_device_margin">
+                                                        <div class="ci_header">@Localize.T("Site Address")</div>
+                                                        <div class="ci_info">
+                                                            <img class="addressMapPopup" data-id="@Model.CustomerId" src="~/Content/img/location.png" style="float:right;padding-right:10px;padding-top:5px;cursor:pointer;" />
+                                                            @if (!string.IsNullOrWhiteSpace(Model.Street) && !string.IsNullOrWhiteSpace(Model.City) && !string.IsNullOrWhiteSpace(Model.State) && !string.IsNullOrWhiteSpace(Model.ZipCode))
+                                                            {
+                                                                addressdata1stLine = string.Format("{0}", Model.Street);
+                                                                var StateAddress = "";
+                                                                if (Model.State != "")
+                                                                {
+                                                                    StateAddress = Model.State;
+                                                                }
+                                                                addressdata2ndLine = string.Format("{0}, {1} {2}", (Model.City.ToString().Substring(0, 1).ToUpper()) + (Model.City.ToString().Substring(1, Model.City.ToString().Length - 1)), StateAddress, Model.ZipCode);
+                                                            }
+                                                            <span class="address_padd">@addressdata1stLine</span> <br /> <span class="address_padd">@addressdata2ndLine</span>
+
+                                                        </div>
+                                                    </div>
+
+                                                }
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(Model.StreetPrevious) && !string.IsNullOrWhiteSpace(Model.CityPrevious) && !string.IsNullOrWhiteSpace(Model.StatePrevious) && !string.IsNullOrWhiteSpace(Model.ZipCodePrevious))
+                                            {
+
+                                                if (PermissionChekcer.IsPermitted(Permissions.CustomerDashBoard.CustomerDetailsBilingInfo))
+                                                {
+                                                    <div class="ci_block" style="margin-top:10px;">
+                                                        <div class="ci_header">@Localize.T("Billing Address")</div>
+                                                        <div class="ci_info">
+                                                            <img class="addressMapPopupPrevious" data-id="@Model.CustomerId" src="~/Content/img/location.png" style="float:right;padding-right:10px;padding-top:5px;cursor:pointer;" />
+                                                            @if (!string.IsNullOrWhiteSpace(Model.StreetPrevious) && !string.IsNullOrWhiteSpace(Model.CityPrevious) && !string.IsNullOrWhiteSpace(Model.StatePrevious) && !string.IsNullOrWhiteSpace(Model.ZipCodePrevious))
+                                                            {
+                                                                addressdata1stLine = string.Format("{0}", Model.StreetPrevious);
+                                                                var StateAddressPrevious = "";
+                                                                if (Model.StatePrevious != "")
+                                                                {
+                                                                    StateAddressPrevious = Model.StatePrevious;
+                                                                }
+                                                                addressdata2ndLine = string.Format("{0}, {1} {2}", (Model.CityPrevious.ToString().Substring(0, 1).ToUpper()) + (Model.CityPrevious.ToString().Substring(1, Model.CityPrevious.ToString().Length - 1)), StateAddressPrevious, Model.ZipCodePrevious);
+                                                            }
+                                                            <span class="address_padd">@addressdata1stLine</span> <br /> <span class="address_padd">@addressdata2ndLine</span>
+                                                        </div>
+                                                    </div>
+                                                }
+
+                                            }
+                                            <div class="Billing-Histories" idval="@Model.CustomerId">
+
+                                            </div>
+                                            <div class="System-Info-History" idval="@Model.CustomerId">
+
+                                            </div>
+                                            <div class="Account-Activity-History" idval="@Model.CustomerId">
+
+                                            </div>
+                                            <div class="Api-Setting-Histories" idval="@Model.CustomerId">
+
+                                            </div>
+                                        </div>
+                                   
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerDetailsAccountHistory))
+                                    {
+                                        if (Model.Invoice != null && Model.Invoice.Count > 0)
+                                        {
+                                            <div class="ci_block ci_block_device_margin" style="margin-bottom:10px;">
+                                                <div class="ci_header">@Localize.T("Unpaid Invoice")</div>
+                                                <div class="ci_info" style="height:20vh;overflow-y:scroll;">
+                                                    @foreach (var item in Model.Invoice)
+                                                    {
+                                                        if (!string.IsNullOrWhiteSpace(item.InvoiceId) && item.CreatedDate != null)
+                                                        {
+                                                            <b><a style="color:red !important; cursor:pointer;" onclick="OpenTopToBottomModal('@(AppConfig.DomainSitePath)/Invoice/AddInvoice?id=@item.Id&CustomerId=@Model.Id')">@item.InvoiceId</a></b> @Localize.T("Created in") <b>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy") @HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("hh:mm tt").ToLower()</b><br />
+                                                        }
+                                                    } 
+                                                </div>
+                                            </div>
+                                            }
+                                            <div class="ci_block ci_block_device_margin">
+                                                <div class="ci_header">@Localize.T("Account History")</div>
+                                                <div class="ci_info_custom Custom_account_history_content">
+                                                    <div class="history-JoinDate" idval="@Model.CustomerId">
+
+                                                    </div>
+                                                    <div class="lnvoice-Histories cus-margin-top5p" idval="@Model.CustomerId">
+
+                                                    </div>
+                                                    <div class="Estimate-Histories cus-margin-top5p" idval="@Model.CustomerId">
+
+                                                    </div>
+                                                    <div class="WorkOrder-Histories cus-margin-top5p" idval="@Model.CustomerId">
+
+                                                    </div>
+                                                    <div class="ServiceOrder-Histories cus-margin-top5p" idval="@Model.CustomerId">
+
+                                                    </div>
+                                                    <div class="CustomerSendEmailHistory cus-margin-top5p" idval="@Model.CustomerId"></div>
+                                                    <div class="Payment-Histories cus-margin-top5p" idval="@Model.CustomerId">
+
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            }
+                                    <div class="customer-file-content" idval="@Model.CustomerId">
+
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane InvoiceTab_Load" id="InvoiceTab">
+                       
+                    </div>
+                    <div class="tab-pane clearfix TicketTab_Load">
+                       
+                    </div>
+                    <div class="tab-pane AnnouncementTab_Load" id="AnnouncementTab">
+
+                    </div>
+                    <div class="tab-pane ReferFriendTab_Load" id="ReferFriendTab">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+<div style="display:none">
+    <a href="" class="TokenPopUp"></a>
+</div>

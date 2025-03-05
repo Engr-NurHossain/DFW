@@ -1,0 +1,244 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+<script>
+
+var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";	
+
+    var idsAll = "";
+    var my_date_format = function (input) {
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var PrintActivity = function () {
+        var ActivityType = $("#ActivityType").val();
+        var ActivityStatus = $("#ActivityStatus").val();
+        var AssignTo = $("#AssignTo").val();
+        var DueDateFrom = $(".DateFrom").val();
+        var DueDateTo = $(".DateTo").val();
+        var searchText = $(".srch-term").val();
+        var DateFrom = $(".min-date").val();
+        var DateTo = $(".max-date").val();
+
+        var PdfUrl = "/Activity/GetActivityFilterList?ActivityType=" + ActivityType + "&AssignTo=" + AssignTo + "&ActivityStatus=" + ActivityStatus + "&DueDateFrom=" + DueDateFrom + "&DueDateTo=" + DueDateTo + "&searchText=" + searchText + "&CreatedDateFrom=" + DateFrom + "&CreatedDateTo=" + DateTo;
+        window.open(PdfUrl, '_blank');
+
+    }
+   
+    var NavigatePageListing = function (pagenumber, order) {
+        //var searchText = $(".srch-term").val();
+        //$("#LoadActivityList").html(TabsLoaderText);
+        //$("#LoadActivityList").load("@(AppConfig.DomainSitePath)/Activity/LoadActivityList", { PageNumber: pagenumber, SearchText: searchText, Order: order });
+        var ActivityType = $("#ActivityType").val();
+        var ActivityStatus = $("#ActivityStatus").val();
+        var AssignTo = $("#AssignTo").val();
+        var DueDateFrom = $(".DateFrom").val();
+        var DueDateTo = $(".DateTo").val();
+        var DateFrom = $(".min-date").val();
+        var DateTo = $(".max-date").val();
+        var SearchText = $("#activity_search").val();
+        $("#LoadActivityList").html(TabsLoaderText);
+        $("#LoadActivityList").load("/Activity/LoadActivityList", { PageNumber: pagenumber, ActivityType: ActivityType, AssignTo: AssignTo, ActivityStatus: ActivityStatus, DueDateFrom: DueDateFrom, DueDateTo: DueDateTo, CreatedDateFrom: DateFrom, CreatedDateTo: DateTo, SearchText: SearchText });
+    }
+    $(document).ready(function () {
+        if (window.innerWidth < 421) {
+            $(".activities_fixed_header").width(window.innerWidth - 30);
+        }
+        else {
+            $(".activities_fixed_header").width(window.innerWidth - $(".sidebar").width() - 49);
+        };
+        $(".Activity_filter_list").hide();
+        $(".btn_customerlist_filter").click(function () {
+            console.log("df")
+            if ($(".Activity_filter_list").is(":visible")) {
+                $(".Activity_filter_list").hide();
+
+            } else {
+                $(".Activity_filter_list").show();
+
+            }
+        });
+        var DateFrom = new Pikaday({
+            field: $('.DateFrom')[0],
+            format: 'MM/DD/YYYY'
+        });
+        var DateTo = new Pikaday({
+            field: $('.DateTo')[0],
+            format: 'MM/DD/YYYY'
+        });
+
+        $(".LoaderWorkingDiv").hide();
+        var pagenumber = 1;
+        var From = $(".min-date").val();
+        var To = $(".max-date").val();
+        $("#LoadActivityList").load("@(AppConfig.DomainSitePath)/Activity/LoadActivityList", { PageNumber: pagenumber, CreatedDateFrom: From, CreatedDateTo: To });
+        $('.SearchActivities').click(function () {
+            NavigatePageListing(pagenumber);
+        })
+        $("#btnAddActivity").click(function () {
+            OpenTopToBottomModal("@(AppConfig.DomainSitePath)/Activity/AddActivity");
+        });
+        $(".btn-apply-filter").click(function () {
+            if (typeof (pagenumber) == "undefined") {
+                return;
+            }
+            NavigatePageListing(1, null);
+            //var ActivityType = $("#ActivityType").val();
+            //var ActivityStatus = $("#ActivityStatus").val();
+            //var AssignTo = $("#AssignTo").val();
+            //var DueDateFrom = $(".DateFrom").val();
+            //var DueDateTo = $(".DateTo").val();
+            //$("#LoadActivityList").html(TabsLoaderText);
+            //$("#LoadActivityList").load("/Activity/LoadActivityList", { PageNumber: pagenumber, ActivityType: ActivityType, AssignTo: AssignTo, ActivityStatus: ActivityStatus, DueDateFrom: DueDateFrom, DueDateTo: DueDateTo });
+
+        })
+        $(".btn-apply-Datefilter").click(function () {
+            if (typeof (pagenumber) == "undefined") {
+                return;
+            }
+            NavigatePageListing(1, null);
+            //var ActivityType = $("#ActivityType").val();
+            //var ActivityStatus = $("#ActivityStatus").val();
+            //var AssignTo = $("#AssignTo").val();
+            //var DueDateFrom = $(".DateFrom").val();
+            //var DueDateTo = $(".DateTo").val();
+            //var DateFrom = $(".min-date").val();
+            //var DateTo = $(".max-date").val();
+            //$("#LoadActivityList").html(TabsLoaderText);
+            //$("#LoadActivityList").load("/Activity/LoadActivityList", { PageNumber: pagenumber, ActivityType: ActivityType, AssignTo: AssignTo, ActivityStatus: ActivityStatus, DueDateFrom: DueDateFrom, DueDateTo: DueDateTo, CreatedDateFrom: DateFrom ,CreatedDateTo: DateTo});
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+            UpdatePtoCookie();
+        })
+
+        $(".btn-reset-filter").click(function () {
+            $("#ActivityType").val("-1");
+            $("#ActivityStatus").val("-1");
+            $("#AssignTo").val("00000000-0000-0000-0000-000000000000");
+            $(".DateFrom").val("");
+            $(".DateTo").val("");
+        })
+        $("#ExcelImport").click(function () {
+            var ActivityType = $("#ActivityType").val();
+            var ActivityStatus = $("#ActivityStatus").val();
+            var AssignTo = $("#AssignTo").val();
+            var DueDateFrom = $(".DateFrom").val();
+            var DueDateTo = $(".DateTo").val();
+            var SearchText = $("#activity_search").val();
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+            //window.location.href = "/Reports/NewReport/?ReportFor=Activity";
+            window.location.href = "/Reports/DownloadAllCustomerActivity/?ActivityType=" + ActivityType + "&AssignTo=" + AssignTo + "&ActivityStatus=" + ActivityStatus + "&DueDateFrom=" + DueDateFrom + "&DueDateTo=" + DueDateTo + "&SearchText=" + SearchText + "&CreatedDateFrom=" + DateFrom + "&CreatedDateTo=" + DateTo;
+        })
+        $("#activity_search").keyup(function (e) {
+            e.preventDefault();
+            if (e.keyCode == 13) {
+                if (typeof (pagenumber) == "undefined") {
+                    return;
+                }
+                NavigatePageListing(1, null);
+                //var ActivityType = $("#ActivityType").val();
+                //var ActivityStatus = $("#ActivityStatus").val();
+                //var AssignTo = $("#AssignTo").val();
+                //var DueDateFrom = $(".DateFrom").val();
+                //var DueDateTo = $(".DateTo").val();
+                //var SearchText = $(this).val();
+                //$("#LoadActivityList").html(TabsLoaderText);
+                //$("#LoadActivityList").load("/Activity/LoadActivityList", { PageNumber: pagenumber, ActivityType: ActivityType, AssignTo: AssignTo, ActivityStatus: ActivityStatus, DueDateFrom: DueDateFrom, DueDateTo: DueDateTo, SearchText: SearchText });
+            }
+        })
+    });
+    $(window).resize(function () {
+        if (window.innerWidth < 421) {
+            $(".activities_fixed_header").width(window.innerWidth - 30);
+        }
+        else {
+            $(".activities_fixed_header").width(window.innerWidth - $(".sidebar").width() - 49);
+        };
+    })
+</script>
+<link href="~/Content/Activity/Activity.css" rel="stylesheet" />
+<div class="activity_list_container">
+    <div class="activities_fixed_header">
+        <div class="activity_list_header">@Localize.T("Activities")</div>
+        <button id="btnAddActivity" class="btn btn_addPTO"><i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T("New")</button>
+        <div class="dropdown activities_export">
+            <button class="btn addView_button dropdown-toggle green_button" data-toggle="dropdown" title="@Localize.T("Download")"><i class="glyphicon glyphicon-download-alt"></i></button>
+            <ul class="dropdown-menu ImportPanel">
+                <li>
+                    <button class="btn" id="ExcelImport"><i class="fa fa-file-excel-o"></i> @Localize.T("Excel")</button>
+                </li>
+                <li>
+                    <button class="btn" onclick="PrintActivity()"><i class="fa fa-file-pdf-o"></i> @Localize.T("Pdf") </button>
+                </li>
+            </ul>
+        </div>
+        <div class="dateviewed">
+            @{Html.RenderAction("DateViewPartial", "Customer");}
+        </div>
+    </div>
+    <div id="activity_search_container">
+       
+        <div class="input-group add-on" id="searchbardiv">
+           
+                <input class="form-control srch-term" placeholder="Find Activities" type="text" value="@ViewBag.searchtext" id="activity_search">
+           
+            <div class="input-group-btn"> <button class="btn btn-default custom-btn SearchActivities green_button" type="submit"  title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button></div>
+           
+        </div>
+        <button title="Filter" class="btn btn-filter btn_customerlist_filter activity_filter_btn">
+            <span class="glyphicon glyphicon-filter"></span>
+        </button>
+     
+    </div>
+    <div class="Activity_filter_list customer-fliter-list_Toggle">
+        <div class="filter-by-type box_category">
+            @*<span>@Localize.T("Sales")</span>*@
+            @*@Html.DropDownList("UserList", (List<SelectListItem>)ViewBag.LeadUserList, new { @class = "form-control select_leaduser UserList", id = "UserList" })*@
+            @Html.DropDownList("ActivityType", (List<SelectListItem>)ViewBag.ActivityTypeList, new { @class = "form-control  ActivityType", id = "ActivityType" })
+        </div>
+        <div class="filter-by-status box_category ">
+            @*<span>@Localize.T("Sales")</span>*@
+            @Html.DropDownList("AssignTo", (List<SelectListItem>)ViewBag.EmployeeList, new { @class = "form-control  AssignTo", id = "AssignTo" })
+        </div>
+     
+        <div class="filter-by-equipmentClass box_category">
+            @Html.DropDownList("ActivityStatus", (List<SelectListItem>)ViewBag.ActivityStatusList, new { @class = "form-control  ActivityStatus", id = "ActivityStatus" })
+        </div>
+        <div class="input-group group_category">
+            <input type="text" class="form-control DateFrom" placeholder="Due Date From:">
+            <div class="middle_box_category">to</div>
+            <input type="text" class="form-control DateTo" placeholder="Due Date To:">
+        </div>
+
+        <div class="btn_category">
+            <button class="btn btn-apply-filter green_button">
+                <i class="fa fa-check" aria-hidden="true"></i> @Localize.T("Apply")
+            </button>
+            <button class="btn btn-reset-filter green_button">
+                <i class="fa fa-refresh" aria-hidden="true"></i>
+            </button>
+        </div>
+        @*<div class="sub-list-btn">
+
+            </div>*@
+    </div>
+    <div id="LoadActivityList">
+
+    </div>
+</div>

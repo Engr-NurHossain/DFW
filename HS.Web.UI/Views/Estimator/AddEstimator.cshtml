@@ -1,0 +1,1883 @@
+﻿@{  
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+    bool ShowInvoiceEquipmentCost = PermissionChekcer.IsPermitted(Permissions.CustomerTicketPermission.ShowInvoiceEquipmentCost);
+    bool ShowInvoiceDetailsLineItemDiscountValue = PermissionChekcer.IsPermitted(Permissions.InvoicePermissions.InvoiceDetailsLineItemDiscountAmountShow);
+    string paymentDate = ViewBag.PaymentDate;
+
+    List<SelectListItem> SupplierList = ViewBag.SupplierList;
+    SupplierList.Insert(0, new SelectListItem()
+    {
+        Value = "00000000-0000-0000-0000-000000000000",
+        Text = "Supplier"
+    });
+    SupplierList.Insert(1, new SelectListItem()
+    {
+        Value = "11111111-1111-1111-1111-111111111111",
+        Text = "+ Add New Supplier"
+    });
+
+    List<SelectListItem> EquipmentTypeList = ViewBag.EquipmentTypeList;
+    EquipmentTypeList.Insert(0, new SelectListItem()
+    {
+        Value = "-1",
+        Text = "Category"
+    });
+    List<SelectListItem> EquipmentUnitList = ViewBag.EquipmentUnitList;
+    EquipmentUnitList.Insert(0, new SelectListItem()
+    {
+        Value = "-1",
+        Text = "Unit"
+    });
+    List<SelectListItem> ManufacturerList = ViewBag.ManufacturerList;
+    ManufacturerList.Insert(0, new SelectListItem()
+    {
+        Value = "00000000-0000-0000-0000-000000000000",
+        Text = "Manufacturer"
+    });
+    ManufacturerList.Insert(1, new SelectListItem()
+    {
+        Value = "11111111-1111-1111-1111-111111111111",
+        Text = "+ Add New Manufacturer"
+    });
+
+
+    string PartNumberText = "<span class='spnPartDescription2' style='color: #999'>Part Number</span>";
+    string PartDescriptionText = "<span class='spnPartDescription2' style='color: #999'>Part Description</span>";
+
+    string P_OClass = "hidden"; }
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using cs = HS.Entities.Customer
+@model HS.Entities.CreateEstimator
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using EstimatorStatus = HS.Web.UI.Helper.LabelHelper.EstimatorStatus
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Js/TinyInvoice.js"></script>
+@*<script src="~/Content/Js/AddInvoice/Addinvoice5.js"></script>*@
+<script>
+    var DefaultDueDate = "30";
+    var From = '@ViewBag.From';
+    var TaxDbValue = '@Model.Estimator.TaxAmount';
+    var EstimatorId = '@Model.Estimator.EstimatorId';
+    var Id = '@Model.Estimator.Id';
+    var IntEstimatorId = '@Model.Estimator.Id';
+    var InvoiceStatus = '@Model.Estimator.Status';
+    var IsApproved = '@Model.Estimator.IsApproved';
+    var CustomerIntId = '@(Model.Customer != null ? Model.Customer.Id : 0)';
+    var TaxExemption = '@(Model.Customer != null ? Model.Customer.TaxExemption : "")';
+    var TicketIntId = '@(Model.Ticket != null ? Model.Ticket.Id : 0)';
+     var isestimator = '@ViewBag.isestimator';
+     var InitStatus = '@ViewBag.Status';
+
+    var ShowDiscountVal = '@ViewBag.DiscountValue';
+    var ShowDipositVal = '@ViewBag.DipositValue';
+    var ShowRetailVal = '@ViewBag.VendorPriceValue';
+    var Currency = "@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)";
+    var TransMakeCurrency = '@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)';
+    var ShowShipping = '';
+    var IsChanged = false;
+    var memopermit = '@PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowInvoiceMemo)';
+    var TaxablePermit = '@PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.InventoryIsTaxable)';
+    var Taxcheckbox = '@PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.Taxchceckbox)'; 
+    var LineItemEdit = '@PermissionChekcer.IsPermitted(Permissions.MenuPermissions.InventoryEdit)';
+    var EditCost = '@PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.EditCost)';
+    var EditPrice = '@PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.EditPrice)';
+    var ShowInvoiceEquipmentCost = '@ShowInvoiceEquipmentCost';
+    var ShowInvoiceDetailsLineItemDiscountValue = '@ShowInvoiceDetailsLineItemDiscountValue';
+    var ShowDiscount = '@ViewBag.DiscountValue';
+    var ShowDeposit = '@ViewBag.DipositValue';
+
+    var OpenPOByPurchaseOrderId = function (PurchaseOrderId) {
+        if (typeof (PurchaseOrderId) != "undefined" && PurchaseOrderId.indexOf('PO') > -1) {
+            OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?PurchaseOrderId=" + PurchaseOrderId);
+        }
+    }
+
+    var PartNumberText = "@Html.Raw(PartNumberText)";
+    var PartDescriptionText = "@Html.Raw(PartDescriptionText)";
+
+
+    /*Service Plan */
+    var ServicePlanAmount = 0;
+    var ShowServicePlan = @Model.Estimator.ShowServicePlan.Value.ToString().ToLower();
+    var ServicePlanRate = @Model.Estimator.ServicePlanRate;
+
+
+    // Change Tracker
+    var IsChanged = false;
+    @*var PurchaseOrder = '@ViewBag.POCreated';*@
+
+    var notTemplate = "<div class='NoteTemplate'>"
+                        + "<div class='InvoiceNote'>{2}"
+                        + "</div>"
+                        + "<div class='InvoiceNoteOptions clearfix'>"
+                        + "<div class='NoteAddedByDiv'>"
+                        + "<div>"
+                        + "<span><b>Added By</b>:<span class='NoteAddedBy'>{0}</span></span>"
+                        + "</div>"
+                        + "<div>"
+                        + "<span><b>Added Date</b>:<span class='NoteAddedDate'>{1}</span></span>"
+                        + "</div>"
+                        + "</div>"
+                        + "</div>"
+                    + "</div>";
+    Date.prototype.addDays = function (days) {
+        var dat = new Date(this.valueOf());
+        dat.setDate(dat.getDate() + days);
+        return dat;
+    }
+    var Popupwidth = 920;
+    if (window.innerWidth < 920) {
+        Popupwidth = window.innerWidth;
+    }
+    var Validateresult = true;
+     var RecreateAgreement = function (id, ticketid) {
+            if ($("#ContractType").val() == '-1') {
+                OpenErrorMessageNew("Error!", "Please Select Contract Type");
+                CommonUiValidation();
+                Validateresult = false;
+            }
+            else {
+                Validateresult = true;
+         }
+         if (Validateresult == true && CommonUiValidation()) {
+                var url = domainurl + "/Ticket/UpdateAgreementInfo";
+                var ContractTeam = $("#ContractTerm").val();
+                if (ContractTeam == "Custom") {
+                    ContractTeam = "";
+                    var CustomContactTerm = $(".CustomContactTerm").val();
+                    if (CustomContactTerm != "" && CustomContactTerm != undefined) {
+                        ContractTeam = parseInt(CustomContactTerm) / parseInt(12);
+                    }
+                }
+                var ContractDate = $("#ContractDate").val();
+                var Param = JSON.stringify({
+                    CustomerId: CustomerIntId,
+                    ContractTerm: ContractTeam,
+                    ActivationFee: $("#ActivationFee").val(),
+                    NonConfirmingFee: $("#NonConfirmingFee").val(),
+                    OrginalContractDate: $("#OrginalContractDate").val(),
+                    VerbalPassword: $("#VerbalPass").val(),
+                    RenewalTerm: $("#RenewalTerm").val(),
+                    ContractType: $("#ContractType").val()
+                });
+                $.ajax({
+                    type: "POST",
+                    ajaxStart: $(".sewsLoader").removeClass("hidden"),
+                    url: url,
+                    data: Param,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    cache: false,
+                    success: function (data) {
+                        $(".sewsLoader").addClass("hidden");
+                        if (data.result == true) {
+                            //var loadUrl = domainurl + "/SmartLeads/GetSmartLeadsForPopUp?LeadId=" + CustomerIntId + "&grant=false" + "&templateid=0" + "Modelodeldeldelfirstpage=false&ticketid=" + TicketIntId + "&recreate=true" + "&isinvoice=false"+"&invoiceid=''" +"&isestimator=true";
+                            //var loadUrl = domainurl + "/SmartLeads/GetSmartLeadsForPopUp?LeadId=" + CustomerIntId + "&grant=false" + "&templateid=0" + "&firstpage=false" + "&ticketid=" + TicketIntId + "&recreate=true" + "&isinvoice=false" + "&invoiceid=''" + "&isestimator=true" + "&estid=" + IntEstimatorId + "&commercial=false" + "&EstimatorId=" + EstimatorId; //&ContractDate=" + ContractDate;
+                            var loadUrl = domainurl + "/SmartLeads/GetSmartLeadsForPopUp?LeadId=" + CustomerIntId + "&grant=false" + "&templateid=0" + "&firstpage=false" + "&ticketid=" + TicketIntId + "&recreate=false" + "&EstimatorId=" + EstimatorId; //&ContractDate=" + ContractDate;
+                            //(int? LeadId, bool? grant, int? templateid, bool? firstpage, int? ticketid, bool? recreate, bool? isinvoice, string invoiceid, bool? isestimator, int? estid, bool? commercial)
+                            $(".FirstEstimatorPageAgreementDocument").attr('href', loadUrl);
+                            $(".FirstEstimatorPageAgreementDocument").click();
+                            //console.log(From);
+                            //if (From == "FirstPage") {
+                            //    loadFirstPage();
+                            //}
+                            //else {
+                            //    var loadUrl = domainurl + "/SmartLeads/GetSmartLeadsForPopUp?LeadId=" + CustomerIntId + "&grant=false" + "&templateid=0" + "Modelodeldeldelfirstpage=false&ticketid=" + TicketIntId + "&recreate=true"; //&ContractDate=" + ContractDate;
+                            //    $(".FirstPageAgreementDocument").attr('href', loadUrl);
+                            //    $(".FirstPageAgreementDocument").click();
+                            //}
+
+                        }
+                        else {
+                            OpenErrorMessageNew("", data.Message, function () {
+
+                            });
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+
+                    }
+                });
+            }
+        }
+
+
+    var idlist = [
+    { id: ".FirstEstimatorPageAgreementDocument", type: 'iframe', width: Popupwidth, height: 650 }
+    ];
+    jQuery.each(idlist, function (i, val) {
+        magnificPopupObj(val);
+    });
+    var AddEstimatorClone = function (EstimatorId) {
+        OpenConfirmationMessageNew("Confirm?", "Are you sure you want to make a copy of this estimate for the selected Customer?", function () {
+            $.ajax({
+                url: domainurl + "/Estimator/CloneEstimator",
+                data: { EstimatorId: EstimatorId},
+                type: "Post",
+                dataType: "Json",
+                success: function (data) {
+                    if (data.result) {
+                        OpenSuccessMessageNew("Success!", data.message);
+                        OpenEstimatorTab();
+                        CloseTopToBottomModal();
+                    } else {
+                        OpenErrorMessageNew("Error!", data.message);
+                    }
+
+                }
+            });
+        });
+    }
+
+    $(document).ready(function () {
+        /*$(".mce-tinymce").css("display", "block");*/
+        if (InvoiceStatus == "Declined") {
+
+            $('.div-body-contents').addClass('declineddivbodycontents');
+            $('.div-body-contents').addClass('EstimatorStatusdivbodycontents');
+            $('#CustomerEstimateTab').css('pointer-events', 'none');
+            $('.OtherInfos').css('pointer-events', 'none');
+            $('.EstimatorServiceInfoTab').css('pointer-events', 'none');
+            $('#EstimateDate').addClass('disableddate');
+            $('.EstimatePrintAndSend').addClass('disableddate');
+            $('.EstimatorEndpage').addClass('disableddate');
+
+        }
+        else if (InvoiceStatus == "Sent To Customer" || InvoiceStatus == "Contract Signed" || InvoiceStatus == "Resend To Customer" || InvoiceStatus == "Customer Viewed") {
+
+            $('.div-body-contents').addClass('declineddivbodycontents');
+            $('.div-body-contents').addClass('EstimatorStatusdivbodycontents');
+            $('#CustomerEstimateTab').css('pointer-events', 'none');
+            $('.OtherInfos').css('pointer-events', 'none');
+            $('.EstimatorServiceInfoTab').css('pointer-events', 'none');
+            $('#EstimatorStatus').prop('disabled', true);
+            $('#EstimateDate').addClass('disableddate');
+            $('.EstimatePrintAndSend').addClass('disableddate');
+            $('.EstimatorEndpage').addClass('disableddate');
+        }
+
+        var flag = 0;
+        $("#ContractType").val('-1')
+        $(".AddNewInvNotBtn").click(function () {
+            if ($("#EstimateNote").val().trim() == "") {
+                return;
+            }
+            var url = "/Estimate/AddEstimateNote";
+            var param = JSON.stringify({
+                EstimatorId: Invoice_int_Id,
+                Note: $("#EstimateNote").val(),
+                AddedBy: "0000000b-0004-0000-0000-000000050000",
+                CompanyId: "0000000b-0004-0000-0000-000000050000",
+            });
+
+            $.ajax({
+                type: "POST",
+                ajaxStart: $(".loader-div").show(),
+                url: url,
+                data: param,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                cache: false,
+                success: function (data) {
+                    if (data.result) {
+                        notTemplate = String.format(notTemplate, data.AddedBy, data.AddedDate, data.Note);
+                        $(".EstimateNotesList").prepend(notTemplate);
+                        $("#EstimateNote").val("")
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            });
+        });
+        //$(".shippingAddress").val($("#Invoice_BillingAddress").val());
+        $("#setting").click(function () {
+            OpenRightToLeftModal("/Estimator/EstimatorLeftSetting/?EstimatorId=" + EstimatorId);
+        });
+        $(".InvoiceDeleteButton").click(function () {
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this estimate?", function () {
+                DeleteEstimator();
+            });
+        });
+
+        $(".CheckPrintAndPreview").click(function () {
+            if ($(".HasItem").length == 0)
+            {
+                OpenErrorMessageNew("Error!", "You have to select at least one equipment to proceed", "");
+            }
+            else
+            {
+                SaveEstimate(false, true);
+                $("#EstimatorPrint").click();
+
+            }
+        });
+        $(".CheckPrintAndOpenEstimatorContract").click(function () {
+            if ($(".HasItem").length == 0)
+            {
+                OpenErrorMessageNew("Error!", "You have to select at least one equipment to proceed", "");
+            }
+            else
+            {
+                SaveEstimate(false, false, true);
+
+            }
+        });
+        $(".EstimatorExportReport").click(function () {
+            console.log("Test 256",EstimatorId);
+            if (EstimatorId != "" && EstimatorId != "undefined") {
+                console.log(EstimatorId);
+                window.location.href = domainurl + "/Reports/ExportEstimatorByEstimatorId/?EstimatorId=" + EstimatorId;
+            }
+            else {
+                OpenErrorMessageNew("", "Estimate not found");
+            }
+
+
+        });
+
+    });
+
+</script>
+<style>
+    .declineddivbodycontents .form-group .form-control,
+    .declineddivbodycontents .form-group .mce-tinymce,
+    .declineddivbodycontents .form-group .select2-container {
+        pointer-events: none;
+    }
+    .EstimatorStatusdivbodycontents #EstimatorStatus.form-control  {
+        pointer-events:unset !important;
+    }
+    .disableddate {
+        pointer-events: none; 
+    }
+    .C_S.I_G {
+        position: relative;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -ms-flex-wrap: wrap;
+        flex-wrap: wrap;
+        -webkit-box-align: stretch;
+        -ms-flex-align: stretch;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .editEquipment {
+        float: right;
+        padding: 0px;
+        height: 20px;
+        margin-top: 0px;
+        display: none;
+    }
+
+        .editEquipment i {
+            padding-top: 0px !important;
+        }
+
+    .HasItem .editEquipment {
+        display: block !important;
+        border: 0px;
+        float: left;
+        margin-left: 5px;
+        background-color: transparent;
+        cursor: pointer;
+        color: #2ca01c;
+    }
+
+        .HasItem .editEquipment i {
+            font-size: 15px !important;
+        }
+
+   /* .focusedItem .editEquipment {
+        display: none !important;
+    }*/
+    
+    .editEquipmentsug {
+        position: absolute;
+        top: 7px;
+        left: 15px;
+        font-size: 14px;
+        padding: 0px;
+        border: 0px;
+        color: #2ca01c;
+        background-color: transparent;
+    }
+
+        .editEquipmentsug i {
+            font-size: 14px !important;
+            padding-top: 0px !important;
+        }
+
+    .spnPartNumber {
+        width: 100%;
+        float: left;
+    }
+
+    .spnPartDescription {
+        width: auto;
+        float: left;
+    }
+
+    .estimator_container .tt-sug-text {
+        padding-left: 20px;
+    }
+    .spnsku {
+        width: 100%;
+        float: left;
+        font-style:italic;
+        position:relative;
+        padding-left:35px;
+        display:none !important;
+    }
+    .HasItem .spnsku {
+        display:block !important;
+    }
+    .spnsku:before {
+        content: "SKU:";
+        position: absolute;
+        left: 0px;
+        top: 0px;
+    } 
+    #CustomerEstimateTab tbody tr td:nth-child(2) {
+        vertical-align:top;
+    }
+</style>
+@Styles.Render("~/styles/AddEstimate")
+
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script src="~/Content/Select2/Select2.min.js"></script>
+<link href="~/Content/Css/Estimator/AddEstimator.css" rel="stylesheet" />
+@*<link href="~/Content/Css/Invoice/AddInvoice.css" rel="stylesheet" />*@
+<script src="~/Scripts/CustomerSelect.js"></script>
+<script src="~/Content/Js/AddEstimator/AddEstimatorScript2.js"></script> 
+<div onclick="OpenClosingConfirmationMessage()" class="close-div estimate-close">
+    <img class="close_btn_size" title="Close" src="/Content/Icons/cross_update.png">
+</div>
+<input type="hidden" value="@Model.Estimator.CustomerId" id="InvoiceCustomerId" />
+<input type="hidden" id="taxExemption" value="@Model.Customer.TaxExemption">
+@if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowEstimatorCogwheel))
+{
+<button id="setting" class="Settingin" data-toggle="dropdown"><i class="fa fa-cog cus-setting" aria-hidden="true"></i></button>}
+<div class="add-invoice-container estimator_container">
+    <div class="div-header clearfix">
+        <div class="header-title">
+
+            <span class="custom-title-span EstimatorName">
+                @Localize.T("Estimate:") @Model.Estimator.EstimatorId 
+            </span>
+            <span class="custom-title-span EstimatorSave_Message" style="color:green" ;>
+            </span>
+            @*<span class="custom-title-span POCreated_Message" style="color:green" ;>
+                </span>*@
+
+        </div>
+    </div>
+    @*<div class="form-group clearfix width-25p add_estimate_info_div_device hidden">
+            <span class="span-style">@Localize.T("Email Address")</span>
+            @Html.TextBoxFor(x => x.Estimator.EmailAddress, new { @class = "form-control", placeholder = "Email Address" })
+        </div>*@
+<div class="estimator_contents_scroll">
+    <div class="div-body-contents">
+        <div class="invoice-informations">
+            <div class="estimate_invoice_balance_info">
+                <div class="balance-info balance_info_for_mobile">
+                    <span class="span-style">@Localize.T("Amount")</span>
+                    <span class="amount amount-span-style amount-big">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowEstimatorCoverPage))
+                    {
+                        <div>
+                            <a onclick="AddCoverLetter('@Model.Estimator.EstimatorId')" class="btn btn-default green_button EstimatePrintAndSend">@Localize.T("Cover Page")</a>
+                        </div>
+                    }
+                    <div>
+                        <a onclick="AddEndPageCoverLetter('@Model.Estimator.EstimatorId')" class="btn btn-default green_button EstimatorEndpage">@Localize.T("Layout")</a>
+                    </div>
+                    <button class="btn download_btn " style="margin-right:5px;">
+                        <i title="Export" class="glyphicon glyphicon-download-alt EstimatorExportReport"></i>
+                    </button>
+                </div>
+                <div class="invoice-info-left-70p">
+                    <div class="form-group clearfix width-25p add_estimate_info_div_device">
+                        <span class="span-style">@Localize.T("Customer")</span>
+                        @Html.DropDownListFor(x => x.Estimator.CustomerId, (List<SelectListItem>)ViewBag.CustomerSelect, new { @class = "form-control", placeholder = "Customer", datarequired = "true" })
+                    </div>
+                    <div class="form-group clearfix width-25p add_estimate_info_div_device">
+                        <span class="span-style">@Localize.T("Email Address")</span>
+                        @Html.TextBoxFor(x => x.Estimator.EmailAddress, new { @class = "form-control", placeholder = "Email Address" })
+                    </div>
+                    <div class="form-group clearfix width-25p add_estimate_info_div_device" id="EstimateDate">
+                        <span class="span-style">@Localize.T("Estimate Date")</span>
+                        <div class="input_group_for_date add-on">
+                            @if (Model.Estimator.EstimateDate == null || Model.Estimator.EstimateDate == new DateTime())
+                            {
+                                Model.Estimator.EstimateDate = DateTime.Today;
+                            }
+                            <input type="text" class="form-control" value="@Model.Estimator.EstimateDate.Value.ToString("MM/dd/yyyy")" id="Estimator_EstimateDate" placeholder="Estimate Date" />
+                            <div class="input-group-btn">
+                                <btn class="btn" id="EstimateDate_Calendar"><i class="fa fa-calendar" aria-hidden="true"></i></btn>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group clearfix width-25p add_estimate_info_div_device" style="height:54.4px">
+                        <span class="span-style">@Localize.T("Payment Terms")<span class="red">*</span></span>
+                        @Html.DropDownListFor(x => x.Estimator.PaymentTerm, (List<SelectListItem>)ViewBag.EstimatorPaymentTerms, new { @class = "form-control PaymentTerm", datarequired = "true" })
+                    </div>
+
+                    <div class="form-group clearfix width-25p add_estimate_height" id="OrderInstallDateArea">
+                        <span class="span-style">@Localize.T("Start Date")</span>
+                        <div class="input_group_for_date add-on">
+                            @if (Model.Estimator.StartDate == null || Model.Estimator.StartDate == new DateTime())
+                            {
+                                Model.Estimator.StartDate = DateTime.Today;
+                            }
+                            <input type="text" class="form-control" value="@Model.Estimator.StartDate.Value.ToString("MM/dd/yyyy")" id="Estimator_StartDate" placeholder="Start Date" />
+                            <div class="input-group-btn">
+                                <btn class="btn" id="StartDate_Calendar"><i class="fa fa-calendar" aria-hidden="true"></i></btn>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group clearfix width-25p add_estimate_height">
+                        <span class="span-style">@Localize.T("Expires ON")</span>
+                        @Html.DropDownListFor(x => x.Estimator.ExpiresOn, (List<SelectListItem>)ViewBag.Term, new { @class = "form-control", id = "Terms" })
+                    </div>
+
+                    <div class="form-group clearfix width-25p" id="EstimateDateArea">
+                        <span class="span-style">@Localize.T("Expiration Date")<span class="red">*</span></span>
+                        <div class="input_group_for_date add-on">
+                            @Html.TextBoxFor(x => x.Estimator.CompletionDate, "{0:MM/dd/yy}", new { @class = "InvoiceDate form-control", id = "Estimator_CompletionDate", datarequired = "true" })
+                            <div class="input-group-btn">
+                                <btn class="btn" id="CompletionDate_Calendar"><i class="fa fa-calendar" aria-hidden="true"></i></btn>
+                            </div>
+                        </div>
+                    </div>
+                    @if (Model.Estimator.Status.ToLower() != "init")
+                    {
+                        <div class="form-group clearfix width-25p" id="EstimateDateArea">
+                            <span class="span-style">@Localize.T("Status")</span>
+                            <div class="input_group_for_date add-on">
+                                @Html.DropDownListFor(x => x.Estimator.Status, (List<SelectListItem>)ViewBag.StatusList, new { @class = "form-control", id = "EstimatorStatus", style = "width:100%" })
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="balance-info balance_info_for_desktop" style="display: flex; justify-content: flex-end; gap:10px;">
+                    <span class="span-style" style="font-size:25px; margin-top:9px;">@Localize.T("Amount")</span>
+                    <span class="amount amount-span-style amount-big">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+
+                </div>
+            </div>
+            <br />
+            <div class="estimate_billing_info_div">
+                <div class="invoice-info-left-70p">
+                    <div class="form-group clearfix width-25p add_estimate_info_div_device estimator_parent">
+                        <span class="span-style">
+                            @Localize.T("Billing Address")
+
+                            @if (!string.IsNullOrWhiteSpace(Model.Estimator.ParentBillingAddress))
+                            {
+                                <span title="@Localize.T("Load Address From Parent Account")" class="LoadParentAddress">
+                                    <svg xmlns="" x="0px" y="0px"
+                                         width="25" height="25"
+                                         viewBox="0 0 172 172"
+                                         style=" fill:#000000;">
+                                        <g fill="none" fill-rule="nonzero" stroke="none" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" stroke-dasharray="" stroke-dashoffset="0" font-family="none" font-weight="none" font-size="none" text-anchor="none" style="mix-blend-mode: normal"><path d="M0,172v-172h172v172z" fill="none"></path><g><path d="M34.9375,56.4375c-2.15,-27.4125 19.08125,-51.0625 47.3,-53.2125c28.21875,-2.15 52.675,18.54375 54.55625,45.95625c0.26875,2.41875 0.26875,4.8375 0,7.25625c0,36.0125 -45.15,66.1125 -51.0625,110.1875c-5.375,-44.075 -50.79375,-74.44375 -50.79375,-110.1875z" fill="#ed7899"></path><path d="M86,18.8125c-19.29545,0 -34.9375,15.64205 -34.9375,34.9375c0,19.29545 15.64205,34.9375 34.9375,34.9375c19.29545,0 34.9375,-15.64205 34.9375,-34.9375c0,-19.29545 -15.64205,-34.9375 -34.9375,-34.9375z" fill="#f9dd8f"></path><path d="M77.9375,61.8125c0,0 -8.6,0.5375 -16.125,13.4375c3.7625,8.33125 12.3625,13.70625 21.5,13.4375c16.39375,0 29.5625,-13.4375 29.5625,-13.4375l-18.8125,-13.4375z" fill="#72caaf"></path><path d="M18.8125,53.75h-16.125c-1.6125,0 -2.6875,-1.075 -2.6875,-2.6875c0,-1.6125 1.075,-2.6875 2.6875,-2.6875h16.125c1.6125,0 2.6875,1.075 2.6875,2.6875c0,1.6125 -1.075,2.6875 -2.6875,2.6875zM169.3125,53.75h-16.125c-1.6125,0 -2.6875,-1.075 -2.6875,-2.6875c0,-1.6125 1.075,-2.6875 2.6875,-2.6875h16.125c1.6125,0 2.6875,1.075 2.6875,2.6875c0,1.6125 -1.075,2.6875 -2.6875,2.6875zM13.4375,81.96875c-1.6125,0 -2.6875,-1.075 -2.6875,-2.6875c0,-1.075 0.5375,-2.15 1.6125,-2.41875l9.94375,-4.03125c1.34375,-0.5375 2.95625,0 3.49375,1.34375c0.5375,1.34375 0,2.95625 -1.34375,3.49375h-0.26875l-9.94375,4.03125c0,0.26875 -0.5375,0.26875 -0.80625,0.26875zM148.35,29.5625c-1.6125,0 -2.6875,-1.075 -2.6875,-2.6875c0,-1.075 0.5375,-2.15 1.6125,-2.41875l9.94375,-4.03125c1.34375,-0.5375 2.95625,0 3.49375,1.34375c0.5375,1.34375 0,2.95625 -1.34375,3.49375h-0.26875l-9.94375,4.03125c0,0.26875 -0.26875,0.26875 -0.80625,0.26875zM23.65,29.5625c-0.26875,0 -0.80625,0 -1.075,-0.26875l-9.94375,-4.03125c-1.6125,-0.26875 -2.15,-1.88125 -1.88125,-3.225c0.5375,-1.34375 1.88125,-2.15 3.49375,-1.6125h0.26875l9.94375,4.03125c1.34375,0.5375 1.88125,2.15 1.34375,3.49375c-0.26875,1.075 -1.34375,1.6125 -2.15,1.6125zM158.5625,81.96875c-0.26875,0 -0.80625,0 -1.075,-0.26875l-9.94375,-4.03125c-1.34375,-0.5375 -2.15,-1.88125 -1.6125,-3.49375c0.5375,-1.6125 1.88125,-2.15 3.49375,-1.6125h0.26875l9.94375,4.03125c1.34375,0.5375 1.88125,2.15 1.34375,3.49375c-0.26875,1.075 -1.34375,1.88125 -2.41875,1.88125zM86,0c-29.5625,0 -53.75,24.1875 -53.75,53.75c0,19.35 11.55625,36.55 23.91875,54.825c11.825,18.00625 24.1875,36.55 27.14375,58.31875c0.26875,1.34375 1.34375,2.41875 2.6875,2.41875c1.34375,0 2.41875,-1.075 2.6875,-2.41875c2.6875,-21.76875 15.05,-40.3125 27.14375,-58.31875c12.3625,-18.275 23.91875,-35.74375 23.91875,-54.825c-0.26875,-29.5625 -24.1875,-53.75 -53.75,-53.75zM111.2625,105.61875c-9.94375,15.05 -20.15625,30.36875 -25.2625,47.8375c-5.10625,-17.46875 -15.31875,-33.05625 -25.2625,-47.8375c-12.09375,-17.7375 -23.1125,-34.4 -23.1125,-51.86875c0,-26.60625 21.76875,-48.375 48.375,-48.375c26.60625,0 48.375,21.76875 48.375,48.375c-0.26875,17.46875 -11.2875,34.13125 -23.1125,51.86875z" fill="#8d6c9f"></path><path d="M86,91.375c-20.69375,0.26875 -37.89375,-16.39375 -37.89375,-37.35625c-0.26875,-20.69375 16.39375,-37.625 37.0875,-37.89375v0c1.6125,0 2.6875,1.075 2.6875,2.6875c0,1.6125 -1.075,2.6875 -2.6875,2.6875c-17.7375,0.5375 -31.98125,15.31875 -31.44375,33.05625c0.5375,17.7375 15.31875,31.98125 33.05625,31.44375c17.46875,-0.5375 31.44375,-14.78125 31.44375,-32.25c0,-8.6 -3.49375,-17.2 -9.675,-23.1125c-0.80625,-1.34375 -0.5375,-2.95625 0.80625,-3.7625c0.80625,-0.5375 2.15,-0.5375 2.95625,0c14.78125,14.5125 15.05,38.43125 0.5375,53.2125c-7.25625,7.25625 -16.93125,11.2875 -26.875,11.2875z" fill="#8d6c9f"></path><path d="M102.125,25.53125c-0.5375,0 -0.80625,0 -1.34375,-0.26875c-2.15,-1.075 -4.3,-2.15 -6.45,-2.6875c-1.34375,-0.26875 -2.41875,-1.88125 -1.88125,-3.225c0.26875,-1.34375 1.88125,-2.41875 3.225,-1.88125c0,0 0,0 0.26875,0c2.6875,0.80625 5.375,1.88125 7.79375,3.225c1.075,0.5375 1.6125,2.15 0.80625,3.49375c-0.5375,0.80625 -1.34375,1.34375 -2.41875,1.34375zM60.2,79.81875c-1.6125,0 -2.6875,-1.34375 -2.6875,-2.6875c0,-0.26875 0,-0.5375 0.26875,-1.075c4.03125,-10.48125 14.24375,-17.2 25.2625,-17.2h6.18125c11.01875,0 21.23125,6.71875 25.2625,17.2c0.5375,1.34375 -0.26875,2.95625 -1.6125,3.49375c-1.34375,0.5375 -2.95625,-0.26875 -3.49375,-1.6125c-3.49375,-8.0625 -11.2875,-13.4375 -20.425,-13.4375h-6.18125c-8.86875,0 -16.93125,5.375 -20.425,13.70625c-0.26875,1.075 -1.075,1.6125 -2.15,1.6125z" fill="#8d6c9f"></path><path d="M86,34.13125v0c7.525,0 13.4375,6.18125 13.4375,13.4375v6.71875c0,7.525 -6.18125,13.4375 -13.4375,13.4375v0c-7.525,0 -13.4375,-6.18125 -13.4375,-13.4375v-6.71875c0,-7.25625 5.9125,-13.4375 13.4375,-13.4375z" fill="#faefde"></path><path d="M86,70.68125v0c-9.1375,0 -16.125,-10.2125 -16.125,-18.8125v-4.3c0,-8.86875 7.25625,-16.125 16.125,-16.125c8.86875,0 16.125,7.25625 16.125,16.125v4.03125c0,8.86875 -6.9875,19.08125 -16.125,19.08125zM86,36.81875c-5.9125,0 -10.75,4.8375 -10.75,10.75v0v4.03125c0,6.18125 5.10625,13.4375 10.75,13.4375v0c5.9125,0 10.75,-7.525 10.75,-13.4375v-4.03125c0,-5.9125 -4.8375,-10.75 -10.75,-10.75z" fill="#8d6c9f"></path></g></g>
+                                    </svg>
+                                </span>}
+                        </span>
+
+
+                        @Html.TextAreaFor(x => x.Estimator.BillingAddress, new { @class = "BillingAddress form-control tinymce" })
+                    </div>
+                    <div class="form-group clearfix width-25p add_estimate_info_div_device">
+                        <span class="span-style">@Localize.T("Project Address")</span>
+                        @Html.TextAreaFor(x => x.Estimator.ProjectAddress, new { @class = "BillingAddress form-control tinymce" })
+                    </div>
+                    <div class="form-group clearfix width-25p currency_style">
+                        <span class="span-style">@Localize.T("Activation Fee")</span>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    @Currency
+                                </span>
+                            </div>
+
+                            @Html.TextBoxFor(x => x.Estimator.ActivationFee, new
+                       {
+                           @class = "form-control",
+                           type = "text",
+                           @Value = Model.Estimator.ActivationFee.HasValue ? (Model.Estimator.ActivationFee.Value.ToString("F2")) : "0.00",
+                           @onfocus = "this.select();",
+                           @onblur = "formatActivationFee(this)"
+                       })
+                        </div>
+
+                    </div>
+                    @if (Model.ShowEstimatorContractTerm)
+                    {
+                        <div class="form-group clearfix width-25p add_estimate_height">
+                            <span class="span-style">@Localize.T("Contract Term")</span>
+                            @Html.DropDownListFor(x => x.Estimator.ContractTerm, (List<SelectListItem>)ViewBag.EstimatorContractTerm, new { @class = "form-control" })
+                        </div>
+                    }
+
+                </div>
+                <div class="balance-info balance_info_for_desktop" style="display: flex; justify-content: flex-end; gap:10px;">
+                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowEstimatorCoverPage))
+                    {
+                        <a onclick="AddCoverLetter('@Model.Estimator.EstimatorId','CoverPage')" class="btn btn-default green_button EstimatePrintAndSend" style="margin-top:0px;">@Localize.T("Cover Page")</a>
+                    }
+                    <a onclick="AddEndPageCoverLetter('@Model.Estimator.EstimatorId','EndPage')" class="btn btn-default green_button EstimatorEndpage">@Localize.T("Layout")</a>
+
+                    <button class="btn download_btn " style="margin-right:5px;">
+                        <i title="Export" class="glyphicon glyphicon-download-alt EstimatorExportReport"></i>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="add_estimate_table_info">
+        <table class="CustomerEstimateTab CustomerEstimateTab estimatortable" id="CustomerEstimateTab">
+            <thead>
+                <tr>
+                    <th class="thead-th-style1 tab-index">
+                        <span>
+
+                        </span>
+                    </th>
+                    <th class="thead-th-style1 tab-Product">
+                        <span>
+                            @Localize.T("PRODUCT")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab_cat_sup">
+                        <span>
+                            @Localize.T("CATEGORY")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Quantity">
+                        <span>
+                            @Localize.T("UNIT/QTY")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Rate" style="width:5%;">
+                        <span>
+                            @Localize.T("COST")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Amount" style="width:7%;">
+                        <span>
+                            @Localize.T("PRICE")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Action">
+
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.estimatorDetails.Count() > 0)
+                {
+                    foreach (var item in Model.estimatorDetails)
+                    {
+                        <tr data-id="@item.EquipmentId" data-overheadrate="@item.OverheadRate" data-profitrate="@item.ProfitRate" class="HasItem">
+                            <td valign="middle" class="rowindex"></td>
+                            <td valign="middle">
+                                <input type="text" title="Part Description" value="@item.PartDescription" class="txtPartDescription" placeholder="Part Description" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)">
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+
+                                <span class="spnPartDescription" title="Part Description">@item.PartDescription</span>
+                                @if (PermissionChekcer.IsPermitted(Permissions.MenuPermissions.InventoryEdit))
+                                {
+                                    <button class="editEquipment"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></button>
+                                }
+                                <span class="spnsku" title="SKU">@item.SKU</span>
+
+                                @*<select class="form-control selManufacturer" title="Manufacturer">
+                                                                        <option value="00000000-0000-0000-0000-000000000000">Manufacturer</option>
+                                                                        <option value="11111111-1111-1111-1111-111111111111">+ Add New Manufacturer</option>
+
+                                                                        @foreach (var Manufacturer in item.Manufacturers)
+                                                                        {
+                                                                            <option value="@Manufacturer.ManufacturerId" @(item.ManufacturerId == Manufacturer.ManufacturerId ? "selected" : "")>@Manufacturer.Name</option>
+                                    }
+                                                                    </select>*@
+
+                                @*<input type="text" class="txtPartNumber" title="Part Number" value="@item.PartNumber" placeholder="Part Number">
+                                    <span class="spnPartNumber" title="Part Number">@item.PartNumber</span>*@
+
+                                @*<select class="form-control selPartNumber" title="Part Number">
+                                                                        <option value="-1">Part Number</option>
+                                                                        @if (item.EquipmentManufacturers != null && item.EquipmentManufacturers.Count > 0)
+                                                                        {
+                                                                            foreach (var em in item.EquipmentManufacturers)
+                                                                            {
+                                                                                <option value="@em.Id" @(em.Id == item.EquipmentManufacturerId ? "selected" : "")>@em.SKU @(string.IsNullOrWhiteSpace(em.Variation) ? "" : "- " + em.Variation)</option>
+                                    }
+                                                                        }
+                                                                    </select>*@
+
+                            </td>
+                            <td valign="middle">
+                                <div class="selectbox">
+                                    <select class="form-control selSupplier" title="Supplier">
+                                        @foreach (var Supplier in SupplierList)
+                                        {
+                                            <option value="@Supplier.Value" @(item.SupplierId.ToString() == Supplier.Value ? "selected" : "")>@Supplier.Text</option>
+                                        }
+                                    </select>
+                                    <select class="form-control selCategory" title="Category">
+                                        @foreach (var Category in EquipmentTypeList)
+                                        {
+                                            <option value="@Category.Value" @(item.CategoryId.ToString() == Category.Value ? "selected" : "")>@Category.Text</option>
+                                        }
+                                    </select>
+
+                                </div>
+                            </td>
+                            <td valign="middle">
+                                <select class="form-control selUnit">
+                                    @foreach (var Unit in EquipmentUnitList)
+                                    {
+                                        <option value="@Unit.Value" @(item.Unit.Equals(Unit.Value) ? "selected" : "")>@Unit.Text</option>
+                                    }
+                                </select>
+                                <input title="Quantity" type="text" class="txtQunatity" value="@item.Qunatity" placeholder="Quantity">
+                                <span title="Quantity" class="spnQunatity">@item.Qunatity</span>
+
+                            </td>
+                            <td valign="middle">
+                                <div class="C_S I_G">
+                                    <div class="input-group-prepend">
+                                        <div class="input-group-text">@Currency</div>
+                                    </div>
+                                    <input type="text" onkeydown="OthersKeyDown(this,event)" title="Unit Cost" class="txtUnitCost" value="@Math.Round(item.UnitCost.Value, 3)" placeholder="Unit Cost">
+
+
+                                    <div class="input-group-prepend">
+                                        <div class="input-group-text">@Currency</div>
+                                    </div>
+                                    <input type="text" onkeydown="OthersKeyDown(this,event)" title="Total Cost" class="txtTotalCost" value="@Math.Round(item.TotalCost.Value, 3)" placeholder="Total Cost">
+
+
+                                    <!--Profit And Overhead-->
+                                    <div class="input-group-prepend @P_OClass">
+                                        <div class="input-group-text">@Currency</div>
+                                    </div>
+                                    <input type="text" onkeydown="OthersKeyDown(this,event)" title="Profit" class="txtProfit @P_OClass" value="@Math.Round(item.Profit.Value, 2)" placeholder="Profit">
+                                    <div class="input-group-prepend @P_OClass">
+                                        <div class="input-group-text">@Currency</div>
+                                    </div>
+                                    <input type="text" onkeydown="OthersKeyDown(this,event)" title="Overhead" class="txtOverhead @P_OClass" value="@Math.Round(item.Overhead.Value, 2)" placeholder="Overhead">
+                                </div>
+                                <span class="spnUnitCost" title="Unit Cost">@Currency@HS.Web.UI.Helper.LabelHelper.FormatTo3DP(item.UnitCost)</span>
+                                <span class="spnTotalCost" title="Total Cost">@Currency@HS.Web.UI.Helper.LabelHelper.FormatTo3DP(item.TotalCost)</span>
+
+                                <span class="spnProfit @P_OClass" title="Profit">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Profit)</span>
+                                <span class="spnOverhead @P_OClass" title="Overhead">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Overhead)</span>
+                            </td>
+                            <td valign="middle">
+                                <div class="C_S I_G">
+
+                                    <div class="input-group-prepend">
+                                        <div class="input-group-text">%</div>
+                                    </div>
+                                    <input type="text" onkeydown="OthersKeyDown(this,event)" title="Profit Rate" class="txtProfitRate" value="@Math.Round(item.ProfitRate.HasValue ? item.ProfitRate.Value : 0, 2)" placeholder="Profit Rate">
+                                    <div class="input-group-prepend">
+                                        <div class="input-group-text">%</div>
+                                    </div>
+                                    <input type="text" onkeydown="OthersKeyDown(this,event)" title="Markup/Overhead Rate" class="txtOverheadRate" value="@Math.Round(item.OverheadRate.HasValue ? item.OverheadRate.Value : 0, 2)" placeholder="Markup/Overhead Rate">
+
+
+                                    <div class="input-group-prepend">
+                                        <div class="input-group-text">@Currency</div>
+                                    </div>
+                                    <input type="text" onkeydown="OthersKeyDown(this,event)" title="Total Price" class="txtTotalPrice" value="@Math.Round(item.TotalPrice.Value, 2)" placeholder="Total Price">
+                                </div>
+                                <span class="spnProfitRate" title="Profit Rate">@Math.Round(item.ProfitRate.HasValue ? item.ProfitRate.Value : 0, 2)%</span>
+                                <span class="spnOverheadRate" title="Markup/Overhead Rate">@Math.Round(item.OverheadRate.HasValue ? item.OverheadRate.Value : 0, 2)%</span>
+                                <span class="spnTotalPrice" title="Total Price">@Currency@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.TotalPrice)</span>
+                            </td>
+                            <td valign="middle" class="tableActions">
+                                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.Taxchceckbox))
+                                {
+                                    <input type="checkbox" title="Is Taxable?" class="chkTaxable" @((item.IsTaxable.HasValue && item.IsTaxable.Value) ? "checked" : "") style="display:block!important;" />
+                                }
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </td>
+                        </tr>
+                    }
+                    <tr>
+                        <td valign="middle" class="rowindex"></td>
+                        <td valign="middle">
+                            <input type="text" title="Part Description" class="txtPartDescription" placeholder="Part Description" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)">
+                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                            @*<input type="text" title="Part Number" class="txtPartNumber" placeholder="Part Number">*@
+                            <span class="spnPartDescription" title="Part Description">@Html.Raw(PartDescriptionText)</span>
+                            @if (PermissionChekcer.IsPermitted(Permissions.MenuPermissions.InventoryEdit))
+                            {
+                                <button class="editEquipment"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></button>
+                            }
+                            <span class="spnsku" title="SKU"></span>
+                            @*<span class="spnPartNumber" title="Part Number">@Html.Raw(PartNumberText)</span>*@
+                            @*<span class="spnVariation" title="Variation">@Html.Raw(VariationText)</span>*@
+                            @*<select class="form-control selManufacturer" title="Manufacturer">
+                                                                @foreach (var Manufacturer in ManufacturerList)
+                                                                {
+                                                                    <option value="@Manufacturer.Value">@Manufacturer.Text</option>
+                                }
+                                                            </select>
+                                                            <select class="form-control selPartNumber" title="Part Number">
+                                                                <option value="-1">Part Number</option>
+                                                            </select>*@
+                        </td>
+                        <td valign="middle">
+                            <div class="selectbox">
+                                <select class="form-control selSupplier">
+                                    @foreach (var Supplier in SupplierList)
+                                    {
+                                        <option value="@Supplier.Value">@Supplier.Text</option>
+                                    }
+                                </select>
+                                <select class="form-control selCategory">
+                                    @foreach (var Category in EquipmentTypeList)
+                                    {
+                                        <option value="@Category.Value">@Category.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </td>
+                        <td valign="middle">
+                            <select class="form-control selUnit">
+                                @foreach (var Unit in EquipmentUnitList)
+                                {
+                                    <option value="@Unit.Value">@Unit.Text</option>
+                                }
+                            </select>
+                            <input type="text" class="txtQunatity" placeholder="Quantity">
+                            <span class="spnQunatity"></span>
+                        </td>
+                        <td valign="middle">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Unit Cost" class="txtUnitCost" placeholder="Unit Cost">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Total Cost" class="txtTotalCost" placeholder="Total Cost">
+
+
+                                <!--Profit And Overhead-->
+                                <div class="input-group-prepend @P_OClass">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Profit" class="txtProfit @P_OClass" placeholder=" Profit">
+                                <div class="input-group-prepend @P_OClass">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Overhead" class="txtOverhead @P_OClass" placeholder=" Overhead">
+                            </div>
+                            <span class="spnUnitCost" title="Unit Cost"></span>
+                            <span class="spnTotalCost" title="Total Cost"></span>
+                            <span class="spnProfit @P_OClass" title="Profit"></span>
+                            <span class="spnOverhead @P_OClass" title="Overhead"></span>
+                        </td>
+                        <td valign="middle">
+                            <div class="C_S I_G">
+
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">%</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Profit Rate" class="txtProfitRate" value="" placeholder="Profit Rate">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">%</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Markup/Overhead Rate" class="txtOverheadRate" value="" placeholder="Markup/Overhead Rate">
+
+
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Total Price" class="txtTotalPrice" placeholder="Total Price">
+                            </div>
+
+
+                            <span class="spnProfitRate" title="Profit Rate"></span>
+                            <span class="spnOverheadRate" title="Markup/Overhead Rate"></span>
+                            <span class="spnTotalPrice" title="Total Price"></span>
+                        </td>
+                        <td valign="middle" class="tableActions">
+                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.Taxchceckbox))
+                            {
+                                <input type="checkbox" title="Is Taxable?" class="chkTaxable" checked style="display:block!important;" />
+                            }
+                            <i class="fa fa-trash-o" aria-hidden="true"></i>
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    <tr>
+                        <td valign="middle" class="rowindex"></td>
+                        <td valign="middle">
+                            <input type="text" title="Part Description" class="txtPartDescription" placeholder="Part Description" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)">
+                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                            @*<input type="text" title="Part Number" class="txtPartNumber" placeholder="Part Number">*@
+                            <span title="Part Description" class="spnPartDescription">@Html.Raw(PartDescriptionText)</span>
+                            @if (PermissionChekcer.IsPermitted(Permissions.MenuPermissions.InventoryEdit))
+                            {
+                                <button class="editEquipment"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></button>
+                            }
+                            <span class="spnsku" title="SKU"></span>
+                            @*<span title="Part Number" class="spnPartNumber">@Html.Raw(PartNumberText)</span>*@
+                            @*<span class="spnVariation" title="Variation">@Html.Raw(VariationText)</span>*@
+                            @*<select class="form-control selManufacturer" title="Manufacturer">
+                                                                @foreach (var Manufacturer in ManufacturerList)
+                                                                {
+                                                                    <option value="@Manufacturer.Value">@Manufacturer.Text</option>
+                                }
+                                                            </select>
+                                                            <select class="form-control selPartNumber" title="Part Number">
+                                                                <option value="-1">Part Number</option>
+                                                            </select>*@
+                        </td>
+                        <td valign="middle">
+                            <div class="selectbox">
+                                <select class="form-control selSupplier">
+                                    @foreach (var Supplier in SupplierList)
+                                    {
+                                        <option value="@Supplier.Value">@Supplier.Text</option>
+                                    }
+                                </select>
+                                <select class="form-control selCategory">
+                                    @foreach (var Category in EquipmentTypeList)
+                                    {
+                                        <option value="@Category.Value">@Category.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </td>
+                        <td valign="middle">
+                            <select class="form-control selUnit">
+                                @foreach (var Unit in EquipmentUnitList)
+                                {
+                                    <option value="@Unit.Value">@Unit.Text</option>
+                                }
+                            </select>
+                            <input type="text" class="txtQunatity" placeholder="Qunatity">
+                            <span class="spnQunatity"></span>
+                        </td>
+                        <td valign="middle">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input title="Unit Cost" type="text" onkeydown="OthersKeyDown(this,event)" class="txtUnitCost" placeholder="Unit Cost">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input title="Total Cost" type="text" onkeydown="OthersKeyDown(this,event)" class="txtTotalCost" placeholder="Total Cost">
+
+                                <!--Profit And Overhead-->
+                                <div class="input-group-prepend @P_OClass">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Profit" class="txtProfit @P_OClass" placeholder=" Profit">
+                                <div class="input-group-prepend @P_OClass">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Overhead" class="txtOverhead @P_OClass" placeholder=" Overhead">
+                            </div>
+                            <span title="Unit Cost" class="spnUnitCost"></span>
+                            <span title="Total Cost" class="spnTotalCost"></span>
+                            <span class="spnProfit @P_OClass" title="Profit"></span>
+                            <span class="spnOverhead @P_OClass" title="Overhead"></span>
+                        </td>
+                        <td valign="middle">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">%</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Profit Rate" class="txtProfitRate" value="" placeholder="Profit Rate">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">%</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Markup/Overhead Rate" class="txtOverheadRate" value="" placeholder="Markup/Overhead Rate">
+
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input title="Total Price" type="text" onkeydown="OthersKeyDown(this,event)" class="txtTotalPrice" placeholder="Total Price">
+                            </div>
+                            <span class="spnProfitRate" title="Profit Rate"></span>
+                            <span class="spnOverheadRate" title="Markup/Overhead Rate"></span>
+                            <span title="Total Price" class="spnTotalPrice"></span>
+
+                        </td>
+                        <td valign="middle" class="tableActions">
+                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.Taxchceckbox))
+                            {
+                                <input type="checkbox" title="Is Taxable?" checked class="chkTaxable" style="display:block!important;" />
+                            }
+                            <i class="fa fa-trash-o" aria-hidden="true"></i>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td valign="middle" class="rowindex"></td>
+                        <td valign="middle">
+                            <input type="text" title="Part Description" class="txtPartDescription" placeholder="Part Description" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)">
+                            <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                            @*<input title="Part Number" type="text" class="txtPartNumber" placeholder="Part Number">*@
+                            <span title="Part Description" class="spnPartDescription">@Html.Raw(PartDescriptionText)</span>
+                            @if (PermissionChekcer.IsPermitted(Permissions.MenuPermissions.InventoryEdit))
+                            {
+                                <button class="editEquipment"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></button>
+                            }
+                            <span class="spnsku" title="SKU"></span>
+                            @*<span title="Part Number" class="spnPartNumber">@Html.Raw(PartNumberText)</span>*@
+                            @*<span class="spnVariation" title="Variation">@Html.Raw(VariationText)</span>*@
+                            @*<select class="form-control selManufacturer" title="Manufacturer">
+                                                                @foreach (var Manufacturer in ManufacturerList)
+                                                                {
+                                                                    <option value="@Manufacturer.Value">@Manufacturer.Text</option>
+                                }
+                                                            </select>
+                                                            <select class="form-control selPartNumber" title="Part Number">
+                                                                <option value="-1">Part Number</option>
+                                                            </select>*@
+                        </td>
+                        <td valign="middle">
+                            <div class="selectbox">
+                                <select class="form-control selSupplier">
+                                    @foreach (var Supplier in SupplierList)
+                                    {
+                                        <option value="@Supplier.Value">@Supplier.Text</option>
+                                    }
+                                </select>
+                                <select class="form-control selCategory">
+                                    @foreach (var Category in EquipmentTypeList)
+                                    {
+                                        <option value="@Category.Value">@Category.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </td>
+                        <td valign="middle">
+                            <select class="form-control selUnit">
+                                @foreach (var Unit in EquipmentUnitList)
+                                {
+                                    <option value="@Unit.Value">@Unit.Text</option>
+                                }
+                            </select>
+                            @*<input type="text" class="txtUnit" placeholder="Unit">*@
+                            <input type="text" class="txtQunatity" placeholder="Qunatity">
+                            @*<span class="spnUnit"></span>*@
+                            <span class="spnQunatity"></span>
+                        </td>
+                        <td valign="middle">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" title="Unit Cost" onkeydown="OthersKeyDown(this,event)" class="txtUnitCost" placeholder="Unit Cost">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" title="Total Cost" onkeydown="OthersKeyDown(this,event)" class="txtTotalCost" placeholder="Total Cost">
+
+                                <!--Profit And Overhead-->
+                                <div class="input-group-prepend @P_OClass">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Profit" class="txtProfit @P_OClass" placeholder=" Profit">
+                                <div class="input-group-prepend @P_OClass">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Overhead" class="txtOverhead @P_OClass" placeholder=" Overhead">
+                            </div>
+
+
+                            <span title="Unit Cost" class="spnUnitCost"></span>
+                            <span title="Total Cost" class="spnTotalCost"></span>
+                            <span class="spnProfit @P_OClass" title="Profit"></span>
+                            <span class="spnOverhead @P_OClass" title="Overhead"></span>
+                        </td>
+                        <td valign="middle">
+                            <div class="C_S I_G">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">%</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Profit Rate" class="txtProfitRate" value="" placeholder="Profit Rate">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">%</div>
+                                </div>
+                                <input type="text" onkeydown="OthersKeyDown(this,event)" title="Markup/Overhead Rate" class="txtOverheadRate" value="" placeholder="Markup/Overhead Rate">
+
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">@Currency</div>
+                                </div>
+                                <input title="Total Price" type="text" onkeydown="OthersKeyDown(this,event)" class="txtTotalPrice" placeholder="Total Price">
+                            </div>
+
+                            <span class="spnProfitRate" title="Profit Rate"></span>
+                            <span class="spnOverheadRate" title="Markup/Overhead Rate"></span>
+                            <span title="Total Price" class="spnTotalPrice"></span>
+                        </td>
+                        <td valign="middle" class="tableActions">
+                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.Taxchceckbox))
+                            {
+                                <input type="checkbox" title="Is Taxable?" checked class="chkTaxable" style="display:block!important;" />
+                            }
+                            <i class="fa fa-trash-o" aria-hidden="true"></i>
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+        </table>
+
+    </div>
+    <div class="OtherInfos">
+        <div class="col-md-12">
+            <div class="estimate_description_container add_estimate_margin_top add_estimate_bootom_left">
+                <div class="InvoiceMgmtDiv">
+
+                    <button class="btnAddSubtotal hidden">@Localize.T("Add Subtotal")</button>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="billing_text_align">
+                            <span>@Localize.T("Estimate Description")</span>
+                        </div>
+                        @*@Html.TextAreaFor(x => x.Estimator.Description, new { @class = "InvoiceMessage", @maxlength = "5000", @rows = "2" })*@
+                        <textarea id="InvoiceDescriptionestimator" maxlength="5000" rows="2" class="InvoiceMessage">@Model.Estimator.Description</textarea>
+                        <div class="invoice_message_div">
+                            @*<span class="DescStartCount">0</span> out of <span class="DescEndCount">5000</span>*@
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="margin-bottom:10px;">
+                    <div class="col-md-12">
+                        <span class="clearfix POCreated_Header hidden">
+                        </span>
+                    </div>
+                </div>
+                @if (Model.PurchaseOrderWarehouse != null && Model.PurchaseOrderWarehouse.Count > 0)
+                {
+                    <div class="row" style="margin-bottom:10px;">
+                        <div class="col-md-12 PurchaseOrderId">
+
+                            <label><a class="cus-anchor" target="_blank" href="/Inventory?id=@Model.Estimator.EstimatorId#PurchaseOrderTab">Created POs:</a></label>
+                            @foreach (var item in Model.PurchaseOrderWarehouse)
+                            {
+                                <span class="cus-anchor" onclick="OpenPOByPurchaseOrderId('@item.PurchaseOrderId')">@item.PurchaseOrderId</span>}
+                            @*String.Join(", ", Model.PurchaseOrderWarehouse.Select(x => x.PurchaseOrderId))*@
+                        </div>
+                    </div>}
+                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerEstimatorsCreatePO))
+                {
+                    <div class="row est_create_po">
+                        <div class="col-md-12">
+                            <a onclick="CreatePO('True')" class="btn btn-default EstimatePrintAndSend">@(Model.Estimator.Status == "Init" ? Localize.T("Create PO") : Localize.T("Create PO"))</a>
+                        </div>
+                        <span class="clearfix POCreated_Message">
+                        </span>
+                    </div>}
+
+                <div class="InvNotesContainer">
+                    <div class="addNewInvoiceNoteDiv">
+                        <div class="billing_text_align">
+                            @*<span>@Localize.T("Notes for Estimator")</span>*@
+                        </div>
+                        @*<textarea rows="5" id="EstimateNote" class="InvoiceNotTxt"></textarea>*@
+                        <div class="clearfix">
+                            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerInvoiceAddNote))
+                            {@*<button class="btn green_button AddNewInvNotBtn" title=" @Localize.T("Add New Note")">
+                                        <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                                        @Localize.T("New Note")
+                                    </button>*@}
+                        </div>
+                    </div>
+                    <div class="EstimateNotesList">
+                        @{ if (Model.EstimatorNotes != null && Model.EstimatorNotes.Count() > 0)
+                            {
+                                foreach (var item in Model.EstimatorNotes)
+                                {
+                                    <div class="templates">
+                                        <div class="NoteTemplate">
+                                            <div class="InvoiceNote">@Html.Raw(item.Note)</div>
+                                            <div class="InvoiceNoteOptions clearfix">
+                                                <div class="NoteAddedByDiv">
+                                                    <div>
+                                                        <span><b>@Localize.T("Added By")</b>:<span class="NoteAddedBy">@item.AddedByText</span></span>
+                                                    </div>
+                                                    <div>
+                                                        <span><b>@Localize.T("Added Date")</b>:<span class="NoteAddedDate">@item.AddedDate.ToString("MM/dd/yy hh:mm:ss")</span></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div> }
+                            } }
+                    </div>
+                </div>
+            </div>
+            <div class="estimate_middle_container">
+                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.ShowEstimatorOverride))
+                {
+                    <div class="estimate_middle_block currency_style">
+                        <label>@Localize.T("Material Markup %")</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    %
+                                </span>
+                            </div>
+                            <input type="number" class="MaterialMarkup form-control" value="@Model.Estimator.DefaultMaterialMarkupRate" placeholder="Material Markup %" />
+                        </div>
+                    </div>
+                    <div class="estimate_middle_block currency_style hidden">
+                        <label>@Localize.T("Labor Profit %")</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    %
+                                </span>
+                            </div>
+                            <input type="number" class="LaborProfit form-control" value="@Model.Estimator.DefaultProfitRate" placeholder="Labor Profit %" />
+                        </div>
+                    </div>
+                    <div class="estimate_middle_block currency_style hidden">
+                        <label>@Localize.T("Labor Overhead %")</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    %
+                                </span>
+                            </div>
+                            <input type="number" class="LaborOverhead form-control" value="@Model.Estimator.DefaultOverheadRate" placeholder="Labor Overhead %" />
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="estimate_calculation_div add_estimate_bootom_right">
+                <div class="InvoiceCalculationsDiv">
+                    <div class="subtotal-amount-div row add_estimate_margin_top">
+                        <div class="col-xs-8">
+                            <span class="float-right subtotal_text">@Localize.T("Total Cost"):</span>
+                        </div>
+                        <div class="col-xs-4">
+                            <span class="TotalCost float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                        </div>
+                    </div>
+
+                    <div class="profit-amount-div row margin-TB-5p add_estimate_margin_top">
+                        <div class="col-xs-8">
+                            <span class="float-right subtotal_text">@Localize.T("Total Profit"):</span>
+                        </div>
+                        <div class="col-xs-4">
+                            <span class="TotalProfit float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                            @*<input type="text" style="width:80px;margin-left:12px;" class="TotalProfit form-control" />*@
+                        </div>
+                    </div>
+                    <div class="profit-amount-div row margin-TB-5p add_estimate_margin_top">
+                        <div class="col-xs-8">
+                            <span class="float-right subtotal_text">@Localize.T("Total Overhead"):</span>
+                        </div>
+                        <div class="col-xs-4">
+                            <span class="TotalOverHead float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                            @*<input type="text" style="width:80px;margin-left:12px;" class="TotalOverHead form-control" />*@
+                        </div>
+                    </div>
+                    <div class="subtotal-amount-div row add_estimate_margin_top">
+                        <div class="col-xs-8">
+                            <span class="float-right subtotal_text">@Localize.T("Subtotal"):</span>
+                        </div>
+                        <div class="col-xs-4">
+                            <span class="SubTotalWithoutTax float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                        </div>
+                    </div>
+                    <div class="tax-amount-div row margin-TB-5p add_estimate_margin_top">
+                        <div class="col-xs-8">
+                            @Html.DropDownList("taxType", (List<SelectListItem>)ViewBag.TaxListItem, new { @class = "form-control add_estimate_dropdown_style" })
+                        </div>
+                        <div class="col-xs-4">
+                            <div class="tax float-right tax_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</div>
+                        </div>
+                    </div>
+                    <div class="row balance-due-amount-div">
+                        <div class="col-xs-8">
+                            <span class="float-right subtotal_text">@Localize.T("Total Price"):</span>
+                        </div>
+                        <div class="col-xs-4 custom_pad_add_estimate">
+                            <span class="balanceDueAmount float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="EstimatorOneTimeServiceInfoTab">
+        @*@(Model.Estimator.ShowService.Value?"":"hidden")*@
+        <div class="EstimatorOneTimeServiceInfo">
+            <label>@Localize.T("One Time Services")</label>
+
+            <table class="CustomerOneTimeServiceInvoiceTab ticket_add_product_table" id="CustomerOneTimeServiceTable">
+                <thead>
+                    <tr class="InvoiceTableBorderTop">
+                        <th class="thead-th-style1 tab-index">
+
+                        </th>
+                        <th class="thead-th-style1 tab-Product">
+                            <span>
+                                @Localize.T("Service")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 prod_rate">
+                            <span>
+                                @Localize.T("Rate")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 prod_qty">
+                            <span>
+                                @Localize.T("Qty")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Amount">
+                            <span>
+                                @Localize.T("Price")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Action">
+                            <span>
+                                @*@Localize.T("Action")*@
+                            </span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.estimatorOneTimeServices != null && Model.estimatorOneTimeServices.Count > 0)
+                    {
+                        foreach (var item in Model.estimatorOneTimeServices)
+                        {
+                            <tr data-int-id="@item.Id" data-id="@item.EquipmentId" data-amount="@item.Amount" class="HasItem">
+                                <td valign="middle" class="rowindex"></td>
+                                <td valign="top">
+                                    <input class="ProductName" type="text" onkeydown="SearchKeyDownService(this,event)" onkeyup="SearchKeyUpService(this,event,'OneTimeService')" value="@item.EquipmentName" />
+                                    <span class="spnProductName">@item.EquipmentName</span>
+                                </td>
+                                <td valign="top">
+                                    <input type="number" onkeydown='OthersKeyDown(this, event)' value="@Math.Round(item.UnitPrice,2)" class="txtUnitPrice" />
+                                    <span class="spnUnitPrice" data-unitprice="@item.UnitPrice">@Currency@LabelHelper.FormatAmount(item.UnitPrice)</span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this, event)' value="@item.Quantity" class="txtProductQuantity" />
+                                    <span class="spnProductQuantity">@item.Quantity</span>
+                                </td>
+                                <td valign="top">
+                                    <input type="number" onkeydown='OthersKeyDown(this, event)' value="@Math.Round(item.Amount,2)" class="txtProductAmount" />
+                                    <span class="spnProductAmount">@Currency@LabelHelper.FormatAmount(item.Amount)</span>
+                                </td>
+
+                                <td valign="top" class="tableActions">
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.Taxchceckbox))
+                                    {
+                                        <input type="checkbox" title="Is Taxable?" class="chkTaxable" @((item.IsTaxable) ? "checked" : "") style="display:block!important;" />
+                                    }
+                                    <i class="fa fa-trash-o trash-hidden" aria-hidden="true" data-id="@item.Id" title="@Localize.T("Delete")"></i>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+
+                        <tr class="IsService">
+                            <td valign="middle" class="rowindex"></td>
+                            <td valign="top" class="tick_product_name">
+                                <input type="text" class="ProductName" onkeydown="SearchKeyDownService(this,event)" onkeyup="SearchKeyUpService(this,event,'OneTimeService')" />
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                <span class="spnProductName"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="number" onkeydown='OthersKeyDown(this, event)' value="" class="txtUnitPrice" />
+                                <span class="spnUnitPrice"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this, event)' value="" class="txtProductQuantity" />
+                                <span class="spnProductQuantity"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="number" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" />
+                                <span class="spnProductAmount"></span>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.Taxchceckbox))
+                                {
+                                    <input type="checkbox" title="Is Taxable?" class="chkTaxable" style="display:block!important;" />
+                                }
+                                <i class="fa fa-trash-o trash-hidden" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                            </td>
+                        </tr>
+                        <tr class="IsService">
+                            <td valign="middle" class="rowindex"></td>
+                            <td valign="top" class="tick_product_name">
+                                <input type="text" class="ProductName" onkeydown="SearchKeyDownService(this,event)" onkeyup="SearchKeyUpService(this,event,'OneTimeService')" />
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                <span class="spnProductName"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="number" onkeydown='OthersKeyDown(this, event)' value="" class="txtUnitPrice" />
+                                <span class="spnUnitPrice"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this, event)' value="" class="txtProductQuantity" />
+                                <span class="spnProductQuantity"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="number" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" />
+                                <span class="spnProductAmount"></span>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.Taxchceckbox))
+                                {
+                                    <input type="checkbox" title="Is Taxable?" class="chkTaxable" style="display:block!important;" />
+                                }
+                                <i class="fa fa-trash-o trash-hidden" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+        </div>
+        <div class="OtherInfos">
+            <div class="col-md-12">
+                <div class="estimate_description_container add_estimate_margin_top add_estimate_bootom_left">
+                    &nbsp;
+                </div>
+                <div class="estimate_middle_container">
+                    <div>&nbsp;</div>
+                </div>
+                <div class="estimate_calculation_div add_estimate_bootom_right">
+                    <div class="InvoiceCalculationsDiv">
+                        <div class="subtotal-amount-div row add_estimate_margin_top">
+                            <div class="col-xs-8">
+                                <span class="float-right subtotal_text">@Localize.T("Subtotal"):</span>
+                            </div>
+                            <div class="col-xs-4">
+                                <span class="ServiceSubTotalWithoutTax float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                            </div>
+                        </div>
+
+                        <div class="subtotal-amount-div ServicePlanItem row add_estimate_margin_top @(Model.Estimator.ShowServicePlan.Value?"":"hidden")">
+                            <div class="col-xs-8">
+                                @*<span class="float-right subtotal_text">@Localize.T("Service Plan"):</span>*@
+                                @Html.DropDownListFor(x => x.Estimator.ServicePlanType, (List<SelectListItem>)ViewBag.ServicePlanTypeList, new { @class = "form-control add_estimate_dropdown_style" })
+                            </div>
+                            <div class="col-xs-4">
+                                <span class="ServicePlan float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                            </div>
+                        </div>
+                        <div class="subtotal-amount-div ServicePlanItem row add_estimate_margin_top @(Model.Estimator.ShowServicePlan.Value?"":"hidden")">
+                            <div class="col-xs-8">
+                                <span class="float-right subtotal_text">@Localize.T("Subtotal"):</span>
+                            </div>
+                            <div class="col-xs-4">
+                                <span class="ServicePlanSubtotal float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                            </div>
+                        </div>
+
+
+                        <div class="tax-amount-div row margin-TB-5p add_estimate_margin_top">
+                            <div class="col-xs-8">
+                                @Html.DropDownList("ServicetaxType", (List<SelectListItem>)ViewBag.TaxListItem, new { @class = "form-control add_estimate_dropdown_style" })
+                            </div>
+                            <div class="col-xs-4">
+                                <div class="tax float-right Servicetax_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</div>
+                            </div>
+                        </div>
+                        <div class="row balance-due-amount-div">
+                            <div class="col-xs-8">
+                                <span class="float-right subtotal_text">@Localize.T("Total Price"):</span>
+                            </div>
+                            <div class="col-xs-4 custom_pad_add_estimate">
+                                <span class="ServicebalanceDueAmount float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="EstimatorServiceInfoTab">
+        @*@(Model.Estimator.ShowService.Value?"":"hidden")*@
+        <div class="EstimatorServiceInfo">
+            <label>@Localize.T("Monthly Monitoring Fees")</label>
+
+            <table class="CustomerInvoiceTab ticket_add_product_table" id="CustomerServiceTable">
+                <thead>
+                    <tr class="InvoiceTableBorderTop">
+                        <th class="thead-th-style1 tab-index">
+
+                        </th>
+                        <th class="thead-th-style1 tab-Product">
+                            <span>
+                                @Localize.T("Service")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 prod_rate">
+                            <span>
+                                @Localize.T("Rate")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 prod_qty">
+                            <span>
+                                @Localize.T("Qty")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Amount">
+                            <span>
+                                @Localize.T("Price")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Action">
+                            <span>
+                                @*@Localize.T("Action")*@
+                            </span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.estimatorServices != null && Model.estimatorServices.Count > 0)
+                    {
+                        foreach (var item in Model.estimatorServices)
+                        {
+                            <tr data-int-id="@item.Id" data-id="@item.EquipmentId" data-amount="@item.Amount" class="HasItem">
+                                <td valign="middle" class="rowindex"></td>
+                                <td valign="top">
+                                    <input class="ProductName" type="text" onkeydown="SearchKeyDownService(this,event)" onkeyup="SearchKeyUpService(this,event,'Service')" value="@item.EquipmentName" />
+                                    <span class="spnProductName">@item.EquipmentName</span>
+                                </td>
+                                <td valign="top">
+                                    <input type="number" onkeydown='OthersKeyDown(this, event)' value="@Math.Round(item.UnitPrice,2)" class="txtUnitPrice" />
+                                    <span class="spnUnitPrice" data-unitprice="@item.UnitPrice">@Currency@LabelHelper.FormatAmount(item.UnitPrice)</span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this, event)' value="@item.Quantity" class="txtProductQuantity" />
+                                    <span class="spnProductQuantity">@item.Quantity</span>
+                                </td>
+                                <td valign="top">
+                                    <input type="number" onkeydown='OthersKeyDown(this, event)' value="@Math.Round(item.Amount,2)" class="txtProductAmount" />
+                                    <span class="spnProductAmount">@Currency@LabelHelper.FormatAmount(item.Amount)</span>
+                                </td>
+
+                                <td valign="top" class="tableActions">
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.Taxchceckbox))
+                                    {
+                                        <input type="checkbox" title="Is Taxable?" class="chkTaxable" @((item.IsTaxable) ? "checked" : "") style="display:block!important;" />
+                                    }
+                                    <i class="fa fa-trash-o trash-hidden" aria-hidden="true" data-id="@item.Id" title="@Localize.T("Delete")"></i>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+
+                        <tr class="IsService">
+                            <td valign="middle" class="rowindex"></td>
+                            <td valign="top" class="tick_product_name">
+                                <input type="text" class="ProductName" onkeydown="SearchKeyDownService(this,event)" onkeyup="SearchKeyUpService(this,event,'Service')" />
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                <span class="spnProductName"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="number" onkeydown='OthersKeyDown(this, event)' value="" class="txtUnitPrice" />
+                                <span class="spnUnitPrice"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this, event)' value="" class="txtProductQuantity" />
+                                <span class="spnProductQuantity"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="number" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" />
+                                <span class="spnProductAmount"></span>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.Taxchceckbox))
+                                {
+                                    <input type="checkbox" title="Is Taxable?" class="chkTaxable" style="display:block!important;" />
+                                }
+                                <i class="fa fa-trash-o trash-hidden" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                            </td>
+                        </tr>
+                        <tr class="IsService">
+                            <td valign="middle" class="rowindex"></td>
+                            <td valign="top" class="tick_product_name">
+                                <input type="text" class="ProductName" onkeydown="SearchKeyDownService(this,event)" onkeyup="SearchKeyUpService(this,event,'Service')" />
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                <span class="spnProductName"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="number" onkeydown='OthersKeyDown(this, event)' value="" class="txtUnitPrice" />
+                                <span class="spnUnitPrice"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this, event)' value="" class="txtProductQuantity" />
+                                <span class="spnProductQuantity"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="number" onkeydown='OthersKeyDown(this, event)' class="txtProductAmount" />
+                                <span class="spnProductAmount"></span>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.Taxchceckbox))
+                                {
+                                    <input type="checkbox" title="Is Taxable?" class="chkTaxable" style="display:block!important;" />
+                                }
+                                <i class="fa fa-trash-o trash-hidden" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+        </div>
+        <div class="OtherInfos">
+            <div class="col-md-12">
+                <div class="estimate_description_container add_estimate_margin_top add_estimate_bootom_left">
+                    &nbsp;
+                </div>
+                <div class="estimate_middle_container">
+                    <div>&nbsp;</div>
+                </div>
+                <div class="estimate_calculation_div add_estimate_bootom_right">
+                    <div class="InvoiceCalculationsDiv">
+                        <div class="subtotal-amount-div row add_estimate_margin_top">
+                            <div class="col-xs-8">
+                                <span class="float-right subtotal_text">@Localize.T("Subtotal"):</span>
+                            </div>
+                            <div class="col-xs-4">
+                                <span class="ServiceSubTotalWithoutTax float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                            </div>
+                        </div>
+
+                        <div class="subtotal-amount-div ServicePlanItem row add_estimate_margin_top @(Model.Estimator.ShowServicePlan.Value?"":"hidden")">
+                            <div class="col-xs-8">
+                                @*<span class="float-right subtotal_text">@Localize.T("Service Plan"):</span>*@
+                                @Html.DropDownListFor(x => x.Estimator.ServicePlanType, (List<SelectListItem>)ViewBag.ServicePlanTypeList, new { @class = "form-control add_estimate_dropdown_style" })
+                            </div>
+                            <div class="col-xs-4">
+                                <span class="ServicePlan float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                            </div>
+                        </div>
+                        <div class="subtotal-amount-div ServicePlanItem row add_estimate_margin_top @(Model.Estimator.ShowServicePlan.Value?"":"hidden")">
+                            <div class="col-xs-8">
+                                <span class="float-right subtotal_text">@Localize.T("Subtotal"):</span>
+                            </div>
+                            <div class="col-xs-4">
+                                <span class="ServicePlanSubtotal float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                            </div>
+                        </div>
+
+
+                        <div class="tax-amount-div row margin-TB-5p add_estimate_margin_top">
+                            <div class="col-xs-8">
+                                @Html.DropDownList("ServicetaxType", (List<SelectListItem>)ViewBag.TaxListItem, new { @class = "form-control add_estimate_dropdown_style" })
+                            </div>
+                            <div class="col-xs-4">
+                                <div class="tax float-right Servicetax_amount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</div>
+                            </div>
+                        </div>
+                        <div class="row balance-due-amount-div">
+                            <div class="col-xs-8">
+                                <span class="float-right subtotal_text">@Localize.T("Total Price"):</span>
+                            </div>
+                            <div class="col-xs-4 custom_pad_add_estimate">
+                                <span class="ServicebalanceDueAmount float-right subtotal_text">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+
+
+
+<div class="invoice-footer col-md-12 estimator_footer">
+    <div class="cancelbtnDiv">
+
+        <button class="btnInv InvoiceCancelButton desktop_estimate_cancel" onclick="OpenClosingConfirmationMessage()">@Localize.T("Close")</button>
+        <button class="btnInv InvoiceCancelButton mobile_estimate_cancel" onclick="OpenClosingConfirmationMessage()"><i class="fa fa-times"></i></button>
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerEstimateDelete))
+        {
+            <button class="btnInv InvoiceDeleteButton desktop_estimate_delete">@Localize.T("Delete")</button>
+            <button class="btnInv InvoiceDeleteButton mobile_estimate_delete"><i class="fa fa-trash-o"></i></button>
+        }
+        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerEstimatorClone))
+        {
+            <button class="btn green_button DuplicateEstimator" onclick="AddEstimatorClone(IntEstimatorId)" cancelled="false">@Localize.T("Clone")</button>
+        }
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerEstimateApprove))
+            {
+                if (Model.Estimator.IsApproved)
+                {
+                    <div class="ContractTypeDiv">
+                        <div class="form-group clearfix">
+                            <span class="text-custom"><b>@Localize.T("Contract Type")</b></span>
+                            <select id="ContractType" name="ContractType" class="form-control setfirstvalue" datarequired="true">
+
+                                @foreach (SelectListItem option in ViewBag.ContractType)
+                                {
+                                    <option value="@option.Value" @(option.Value == ViewBag.ContractType_customer ? "selected='selected'" : "")>@option.Text </option>
+                                }
+
+                            </select>
+                            @* "Saved Contract Type must display change" :: End*@
+
+                        </div>
+
+                    </div>
+
+                }
+            }
+
+        </div>
+
+    <!--[EstimatorFilterValue]-->
+    <div hidden>
+        <input type="hidden" id="EstimatorFilteId" value="@Model._EstimatorPDFFilter.Id" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.GroupedbyNone == null ? "checked" : Model._EstimatorPDFFilter.GroupedbyNone.HasValue && Model._EstimatorPDFFilter.GroupedbyNone.Value == true ? "checked" : "") id="GroupedbyNoneVal" value="@Model._EstimatorPDFFilter.GroupedbyNone" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.GroupedbyCategory == null ? "" : Model._EstimatorPDFFilter.GroupedbyCategory.HasValue && Model._EstimatorPDFFilter.GroupedbyCategory.Value == true ? "checked" : "") id="GroupedbyCategoryVal" value="@Model._EstimatorPDFFilter.GroupedbyCategory" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.GroupedbyLabor == null ? "" : Model._EstimatorPDFFilter.GroupedbyLabor.HasValue && Model._EstimatorPDFFilter.GroupedbyLabor.Value == true ? "checked" : "") id="GroupedbyLaborVal" value="@Model._EstimatorPDFFilter.GroupedbyLabor" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.GroupedbyLaborAndMaterial == null ? "" : Model._EstimatorPDFFilter.GroupedbyLaborAndMaterial.HasValue && Model._EstimatorPDFFilter.GroupedbyLaborAndMaterial.Value == true ? "checked" : "") id="GroupedbyLaborAndMaterialVal" value="@Model._EstimatorPDFFilter.GroupedbyLaborAndMaterial" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.GroupedbyMaterial == null ? "" : Model._EstimatorPDFFilter.GroupedbyMaterial.HasValue && Model._EstimatorPDFFilter.GroupedbyMaterial.Value == true ? "checked" : "") id="GroupedbyMaterialVal" value="@Model._EstimatorPDFFilter.GroupedbyMaterial" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.GroupedbySupplier == null ? "" : Model._EstimatorPDFFilter.GroupedbySupplier.HasValue && Model._EstimatorPDFFilter.GroupedbySupplier.Value == true ? "checked" : "") id="GroupedbySupplierVal" value="@Model._EstimatorPDFFilter.GroupedbySupplier" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.IncludeCost == null ? "" : Model._EstimatorPDFFilter.IncludeCost.HasValue && Model._EstimatorPDFFilter.IncludeCost.Value == true ? "checked" : "") id="IncludeCostVal" value="@Model._EstimatorPDFFilter.IncludeCost" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.IncludeImage == null ? "checked" : Model._EstimatorPDFFilter.IncludeImage.HasValue && Model._EstimatorPDFFilter.IncludeImage.Value == true ? "checked" : "") id="IncludeImageVal" value="@Model._EstimatorPDFFilter.IncludeImage" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.IncludeManufacturer == null ? "" : Model._EstimatorPDFFilter.IncludeManufacturer.HasValue && Model._EstimatorPDFFilter.IncludeManufacturer.Value == true ? "checked" : "") id="IncludeManufacturerVal" value="@Model._EstimatorPDFFilter.IncludeManufacturer" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.IncludeMargin == null ? "" : Model._EstimatorPDFFilter.IncludeMargin.HasValue && Model._EstimatorPDFFilter.IncludeMargin.Value == true ? "checked" : "") id="IncludeMarginVal" value="@Model._EstimatorPDFFilter.IncludeMargin" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.IncludeOverhead == null ? "" : Model._EstimatorPDFFilter.IncludeOverhead.HasValue && Model._EstimatorPDFFilter.IncludeOverhead.Value == true ? "checked" : "") id="IncludeOverheadVal" value="@Model._EstimatorPDFFilter.IncludeOverhead" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.IncludePDF == null ? "checked" : Model._EstimatorPDFFilter.IncludePDF.HasValue && Model._EstimatorPDFFilter.IncludePDF.Value == true ? "checked" : "") id="IncludePDFVal" value="@Model._EstimatorPDFFilter.IncludePDF" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.IncludeProfit == null ? "" : Model._EstimatorPDFFilter.IncludeProfit.HasValue && Model._EstimatorPDFFilter.IncludeProfit.Value == true ? "checked" : "") id="IncludeProfitVal" value="@Model._EstimatorPDFFilter.IncludeProfit" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.IncludeService == null ? "checked" : Model._EstimatorPDFFilter.IncludeService.HasValue && Model._EstimatorPDFFilter.IncludeService.Value == true ? "checked" : "") id="IncludeServiceVal" value="@Model._EstimatorPDFFilter.IncludeService" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.IncludeVariation == null ? "" : Model._EstimatorPDFFilter.IncludeVariation.HasValue && Model._EstimatorPDFFilter.IncludeVariation.Value == true ? "checked" : "") id="IncludeVariationVal" value="@Model._EstimatorPDFFilter.IncludeVariation" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.WithoutIndividualLaborPricing == null ? "checked" : Model._EstimatorPDFFilter.WithoutIndividualLaborPricing.HasValue && Model._EstimatorPDFFilter.WithoutIndividualLaborPricing.Value == true ? "checked" : "") id="WithoutIndividualLaborPricingVal" value="@Model._EstimatorPDFFilter.WithoutIndividualLaborPricing" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.WithoutIndividualMaterialPricing == null ? "checked" : Model._EstimatorPDFFilter.WithoutIndividualMaterialPricing.HasValue && Model._EstimatorPDFFilter.WithoutIndividualMaterialPricing.Value == true ? "checked" : "") id="WithoutIndividualMaterialPricingVal" value="@Model._EstimatorPDFFilter.WithoutIndividualMaterialPricing" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.WithoutPricing == null ? "" : Model._EstimatorPDFFilter.WithoutPricing.HasValue && Model._EstimatorPDFFilter.WithoutPricing.Value == true ? "checked" : "") id="WithoutPricingVal" value="@Model._EstimatorPDFFilter.WithoutPricing" />
+        <input type="radio" class="hidden" @(Model._EstimatorPDFFilter.OneTimeService == null ? "checked" : Model._EstimatorPDFFilter.OneTimeService.HasValue && Model._EstimatorPDFFilter.OneTimeService.Value == true ? "checked" : "") id="OneTimeServiceVal" value="@Model._EstimatorPDFFilter.OneTimeService" />
+    </div>
+
+    <div class="InnerOptionsDiv">
+        <a class="CheckPrintAndPreview hidden"><i class="fa fa-print"></i></a>
+        <a class="CheckPrintAndOpenEstimatorContract hidden"><i class="fa fa-print"></i></a>
+        <a class="EstPreview hidden" id="EstimatorPrint" href="@(AppConfig.DomainSitePath)/Estimator/GetEstimator?Id=@Model.Estimator.Id"><i class="fa fa-print"></i></a>
+        <a class="EstPreview hidden" id="EstimatorContractPrintPopup" href="@(AppConfig.DomainSitePath)/Estimator/GetEstimatorContractPopup?Id=@Model.Estimator.Id"><i class="fa fa-print"></i></a>
+        <a class="EstPreview hidden" id="EstimatorContractPrintReview" href="@(AppConfig.DomainSitePath)/Estimator/GetEstimatorContractReview?Id=@Model.Estimator.Id"><i class="fa fa-print"></i></a>
+        @if (Model.Estimator.Status == EstimatorStatus.Declined)
+        {
+            <a class="EstPreviewPopup hidden" id="EstimatorPrintpopup" href="@(AppConfig.DomainSitePath)/Estimator/EstimatorFilter?Id=@Model.Estimator.Id"><i class="fa fa-print"></i></a>
+        }
+        else
+        {
+            <a class="EstPreviewPopup" id="EstimatorPrintpopup" href="@(AppConfig.DomainSitePath)/Estimator/EstimatorFilter?Id=@Model.Estimator.Id"><i class="fa fa-print"></i></a>
+        }
+        <a class="EstPreviewSend hidden" id="EstimatorSend" href="@(AppConfig.DomainSitePath)/Estimator/SendEmailEstimator?id=@Model.Estimator.Id&email=@Model.Estimator.EmailAddress"><i class="fa fa-print"></i></a>
+    </div>
+    <div class="SaveaButtonsDiv">
+
+        @if (Model.Estimator.Status == EstimatorStatus.Init
+        || Model.Estimator.Status == EstimatorStatus.Accepted
+        || Model.Estimator.Status == EstimatorStatus.Declined
+        || Model.Estimator.Status == EstimatorStatus.Open
+        || Model.Estimator.Status == EstimatorStatus.Pending
+        || Model.Estimator.Status == EstimatorStatus.SentToCustomer
+        || Model.Estimator.Status == EstimatorStatus.Signed
+        || Model.Estimator.Status == EstimatorStatus.CustomerViewed
+        || Model.Estimator.Status == EstimatorStatus.ResendToCustomer
+        || Model.Estimator.Status == EstimatorStatus.ContractSingned)
+        {
+
+            <!--Duplicate--> @*<button class="btnInv btnCloneEstimate" cancelled="false" data-id="@Model.Estimator.Id" idval="@Model.Estimator.EstimatorId">@Localize.T("Duplicate Estimate")</button>*@ <!--Approve-->
+            if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.CustomerEstimateApprove))
+            {
+                if (Model.Estimator.IsApproved != true && Model.Estimator.Status != EstimatorStatus.Declined)
+                { 
+                    <button class="btnInv btnApprove" data-id="@Model.Estimator.Id" idval="@Model.Estimator.EstimatorId">@Localize.T("Approve")</button>
+                }
+                else if(Model.Estimator.Status == EstimatorStatus.Declined)
+                {
+                    <button class="btnInv btnSendContract hidden" id="CreateAgreement" onclick="RecreateAgreement(CustomerIntId, TicketIntId)">@Localize.T("Send Contract")</button>
+                }
+                else
+                {
+                    <button class="btnInv btnSendContract" id="CreateAgreement" onclick="RecreateAgreement(CustomerIntId, TicketIntId)">@Localize.T("Send Contract")</button>
+                }
+            } <!--Save-->
+            if (Model.Estimator.Status == EstimatorStatus.CustomerViewed || Model.Estimator.Status == EstimatorStatus.SentToCustomer || Model.Estimator.Status == EstimatorStatus.ResendToCustomer || Model.Estimator.Status == EstimatorStatus.ContractSingned)
+            {
+                <button hidden onclick="SaveEstimate('False', 'False', false);" class="btnInv InvoiceSaveButton desktop_estimate_save">@Localize.T("Save")</button>
+                <button hidden onclick="SaveEstimate('False', 'False', false);" class="btnInv InvoiceSaveButton mobile_estimate_save"><i class="fa fa-floppy-o"></i></button>
+            }
+            else
+            {
+                <button  onclick="SaveEstimate('False', 'False', false);" class="btnInv InvoiceSaveButton desktop_estimate_save">@Localize.T("Save")</button>
+                <button  onclick="SaveEstimate('False', 'False', false);" class="btnInv InvoiceSaveButton mobile_estimate_save"><i class="fa fa-floppy-o"></i></button>
+            }
+
+        }
+    </div>
+</div>
+<div class="hidden" style="display:none; visibility:hidden;">
+    <select class="form-control selCategory" id="CateGoryDropDown">
+        @foreach (var Category in EquipmentTypeList)
+        {
+<option value="@Category.Value">@Category.Text</option>
+}
+    </select>
+    <select class="form-control selSupplier" id="SupplierDropdown">
+        @foreach (var Supplier in SupplierList)
+        {
+<option value="@Supplier.Value">@Supplier.Text</option>
+}
+    </select>
+    <select class="form-control selUnit" id="UnitDropdown">
+        @foreach (var Unit in EquipmentUnitList)
+        {
+<option value="@Unit.Value">@Unit.Text</option>
+}
+    </select>
+    <select class="form-control selManufacturer" id="ManufacturerDropdown">
+        @foreach (var Manufacturer in ManufacturerList)
+        {
+<option value="@Manufacturer.Value">@Manufacturer.Text</option>
+}
+    </select>
+    @Html.TextAreaFor(x => x.Estimator.ParentBillingAddress, new { @class = "form-control" })
+</div>
+<a href="" style="display:none" class="FirstEstimatorPageAgreementDocument">@Localize.T("First Page")</a>
+
+
+

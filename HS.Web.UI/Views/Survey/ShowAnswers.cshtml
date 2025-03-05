@@ -1,0 +1,237 @@
+﻿@model IEnumerable<HS.Entities.CustomSurveyAnswer>
+@{ 
+    Layout = null;
+}
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<script>
+
+    var QuestionId = '@ViewBag.QuestionId'
+
+    var UpdateAnsGrid = function () {
+        var url = domainurl + "/Survey/UpdateAnsList";
+
+        var AnsList = [];
+        $("tbody tr").each(function () {
+            var id = $(this).attr('data-id');
+            console.log(id);
+            if (id != undefined) {
+                AnsList.push({
+                    Id: $(this).attr('data-id'),
+                    OrderBy: $(this).find(".DataOrder").val(),
+
+                });
+            }
+
+        });
+        var param = JSON.stringify({ AnsList: AnsList });
+        console.log(param);
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var ApplySort = function () {
+        $(".AnswerItemsTable tbody").sortable({
+            update: function () {
+                var i = 0;
+                $(".DataOrder").each(function () {
+                    $(this).val(i);
+                    i += 1;
+                });
+                console.log("sort");
+                UpdateAnsGrid();
+            }
+        }).disableSelection();
+    };
+
+    var SaveAnswer = function () {
+        var customAnswer = {};
+        customAnswer.QuestionId = QuestionId;
+        customAnswer.Answer = $("#NewAnswerText").val();
+ 
+
+        $.ajax({
+            type: "POST",
+            url: domainurl + "/Survey/AddAnswer",
+            data: '{customAnswer: ' + JSON.stringify(customAnswer) + '}',
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (response) {
+                if (response.result) {
+                    $(".AnsEditModule").load(domainurl + "/Survey/ShowAnswers/?QuestionId=" + QuestionId);
+                        //$("#QuestionList").load("/Survey/ShowQusestions?SurveyId=" + SurveyId);
+                 
+                }
+                else {
+                    OpenErrorMessageNew("Error!", response.message);
+                }
+                //window.location.reload();
+            }
+        });
+    }
+    var DeleteAnsConfirm = function (Id) {
+        console.log("he");
+        var url = domainurl + "/Survey/DeleteAns";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify({
+                Id: Id,
+
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                   
+                    $(".AnsEditModule").load(domainurl + "/Survey/ShowAnswers/?QuestionId=" + QuestionId);
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var DeleteAnswer = function (Id) {
+            DeleteAnsConfirm(Id);
+       
+    }
+    var UiValidationForAnswer = function () {
+            var result = true;
+            if (($("#NewAnswerText").attr('datarequired') == 'true' || $("#NewAnswerText").attr('daterequired') == 'true') && $("#NewAnswerText").is(":visible")) {
+                var check = Validation.ForTextbox($("#NewAnswerText"));
+            if (!check)
+            result = check;
+            
+        }
+        return result;
+    }
+    var UpdateAnswer = function (Id) {
+   
+        var url = domainurl + "/Survey/UpdateAnswer";
+        var NewAns = $(".UpdatedAnsField_"+Id).val();
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify({
+                Id: Id,
+                NewAns: NewAns
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message);
+                    $(".AnsEditModule").load(domainurl + "/Survey/ShowAnswers/?QuestionId=" + QuestionId);
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        ApplySort();
+        $(".LoaderWorkingDiv").hide();
+        $("#AddNewAnswer").click(function () {
+             if (UiValidationForAnswer()) {
+            SaveAnswer();
+            }
+            else {
+
+            }
+        })
+        var height = window.innerHeight - $(".QuesEdit_header").height() - 34;
+        if (window.innerWidth < 421) {
+            $(".answer_item_container").css("height", "auto");
+        }
+        else {
+            $(".answer_item_container").height(height);
+        }
+        
+    })
+    $(window).resize(function () {
+        var height = window.innerHeight - $(".QuesEdit_header").height() - 34;
+        if (window.innerWidth < 421) {
+            $(".answer_item_container").css("height", "auto");
+        }
+        else {
+            $(".answer_item_container").height(height);
+        }
+    })
+</script>
+
+
+<div class="answer_item_container">
+    <div class="answer_item_container_header">@Localize.T("Answer Panel")</div>
+    <div class="answer_item_inner">
+        <table class="AnswerItemsTable">
+            <thead>
+                <tr>
+                    <th>@Localize.T("Answers")</th>
+                    <th>@Localize.T("Display Text")</th>
+                    <th>@Localize.T("Actions")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+
+                    <tr data-id="@item.Id" class='LookupItem'>
+                        <td title="@item.Answer" class="">
+                            <div>@item.Answer</div>
+                            <input type="hidden" class="DataOrder" value="@item.OrderBy" />
+                        </td>
+
+                        <td title="@item.Answer" class="DisplayText"><input class="UpdatedAnsField_@item.Id" type="text" value="@item.Answer" /></td>
+
+                        <td>
+                            <button class="btn red_button" data-toggle="tooltip" onclick="DeleteAnswer(@item.Id)" title="Delete"><i class="fa fa-trash-o"></i></button>
+                            <button class="btn green_button" data-toggle="tooltip" onclick="UpdateAnswer(@item.Id)" title="Update"><i class="fa fa-floppy-o"></i></button>
+
+                        </td>
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="row NewAnswerDiv">
+
+            <div class="col-md-4">
+                <input datarequired="true" type="text" name="NewAnswerText" id="NewAnswerText" placeholder="New Answer" />
+                <label rel="fName" id="fnameError" class="label hidden red position-absolute">*@Localize.T("Answer required.")</label>
+            </div>
+
+            <div class="col-md-2">
+                <button class="btn btn-default" id="AddNewAnswer" style="float:right;"><i class="fa fa-save"></i> @Localize.T("Save")</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+<script src="~/Content/Js/jscolor.js"></script>
+
+

@@ -1,0 +1,180 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+
+<script>
+    var pagenumber = '@ViewBag.PageNumber';
+    //var bsource = '@Html.Raw(Json.Encode(@ViewBag.bsource))';
+    //bsource = JSON.parse(bsource);
+    String.prototype.replaceAll = function (search, replacement) {
+        var target = this;
+        return target.split(search).join(replacement);
+    };
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+
+    var DataTablePageSize = 50;
+    var PayrollStartDatepicker;
+    var PayrollEndDatepicker;
+
+    var NavigateJobReports = function (pagenumber, order) {
+        console.log("NavigateJobReports working");
+        //var searchText = $("#srch-term").val();
+        //$(".Load_Jobs_Report").html(LoaderDom);
+       var StartDate = $(".min-date").val();
+       var EndDate = $(".max-date").val();
+        $(".Load_Jobs_Report").load(domainurl + "/Reports/LoadJobsReportPartial?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&pageno=" + pagenumber + "&pagesize=50" + "&order=" + order + "&BookingSource=" + encodeURI($("#BookingSource").val()));
+    }
+
+    var LoadJobsReportTab = function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".Load_Jobs_Report").html(TabsLoaderText);
+        $(".Load_Jobs_Report").load(domainurl + "/Reports/LoadJobsReportPartial?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&pageno=1&pagesize=50"+ "&BookingSource=" + encodeURI($("#BookingSource").val()));
+    }
+    var FilterJobsReport = function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        //$(".Load_Jobs_Report").html(TabsLoaderText);
+        $(".Load_Jobs_Report").load(domainurl + "/Reports/LoadJobsReportPartial?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&pageno=1&pagesize=50"+ "&BookingSource=" + encodeURI($("#BookingSource").val()));
+    }
+   
+
+
+    var my_date_format = function (input) {
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var ResetFilterList = function () {
+        $("#BookingSource").selectpicker('val', '');
+        LoadJobsReportTab();
+    }
+    $(document).ready(function () {
+        $("#btnDownloadJobReport").click(function () {
+            var StartDate = $(".min-date").val();
+            var EndDate = $(".max-date").val();
+            window.location.href = domainurl + "/Reports/LoadJobsReportPartial?Start=" + encodeURI(StartDate) + "&End=" + encodeURI(EndDate) + "&pageno=1&pagesize=50" + "&GetReport=true" + "&BookingSource=" + encodeURI($("#BookingSource").val());
+        })
+        //$("#BookingSource").selectpicker('val', bsource);
+        $(".convert_cus_report_filter").hide();
+        $("#convert_cus_filterbtn").click(function () {
+            console.log("filter");
+            if ($(".convert_cus_report_filter").is(":visible")) {
+                $(".convert_cus_report_filter").hide();
+
+            } else {
+                $(".convert_cus_report_filter").show();
+
+            }
+        });
+        $(document).click(function (e) {
+            if ($($(e.target).parent().parent()).hasClass('convert_cus_div')
+                        || $($(e.target).parent()).hasClass('convert_cus_div')
+                        || $($(e.target).parent().parent()).hasClass('convert_cus_div')) {
+                return;
+            }
+            else if ($(".convert_cus_report_filter").is(":visible")) {
+                $(".convert_cus_report_filter").hide();
+            }
+        });
+        $(".LoaderWorkingDiv").hide();
+        LoadJobsReportTab();
+
+
+        $(".JobReportTab").click(function () {
+            LoadJobsReportTab();
+        });
+
+        $(".DateFilterContents .btn-apply-Datefilter").click(function () {
+            console.log("date filter aise");
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+            UpdatePtoCookie();
+            FilterJobsReport();
+        });
+
+    });
+
+</script>
+<link href="~/Content/Css/Report/PayrollReport.css" rel="stylesheet" />
+<div class="JobsReportsTitle">
+    <h2> @Localize.T("Report")</h2>
+    <div class="dateviewed">
+        @{Html.RenderAction("DateViewPartial", "Customer");}
+    </div>
+</div>
+
+
+<div class="col-xs-12 Report-Tabs">
+    <div class="nav-detail-contents">
+        <ul class="nav nav-tabs job_report_top_nav" id="myTab">
+            <li class="SalesReportTab active">
+                <a idval="" data-target="#JobReportTab" data-toggle="tab">@Localize.T("Jobs")</a>
+            </li>
+
+        </ul>
+
+        <div class="load_sales_report_partial_top_bar job_report_top_bar">
+            @*<div class="load_sales_report_partial_top_bar_inner convert_cus_div">
+                <div class="input-group add-on">
+                    <input type="text" class="form-control" id="estimate_txt_search" placeholder="Search By Customer, Estimate Id" title="Search By Customer, Estimate Id , Estimate Date, Due date, Balance Due , Total Amount" />
+                    <div class="input-group-btn"> <button class="btn green_button" title="@Localize.T("Search")" id="btn_sales" onclick="FilterEstimateReport1(1)"><i class="glyphicon glyphicon-search"></i></button></div>
+                </div>
+            </div>*@
+            <button class="btn green_button convert_cus_div lilrp_filter_btn" id="convert_cus_filterbtn">
+                <span title="Filter" class="glyphicon glyphicon-filter"></span>
+            </button>
+            <button title="@Localize.T(" Download")" class="report_btn lrp_float_right btn green_button" id="btnDownloadJobReport"><i class="fa fa-download" aria-hidden="true"></i></button>
+
+
+            <div class="convert_cus_report_filter">
+                <div class="convert_cus_report_filte_innerr convert_cus_div">
+                    <div class="form-group clearfix">
+                        @Html.DropDownList("BookingSource", ViewBag.bookingsource as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", Id = "BookingSource", @title = "Source" })
+                    </div>
+                </div>
+                <div class="convert_cus_report_footer convert_cus_div">
+                    <button class="btn green_button" id="apply_btn_filter" onclick="LoadJobsReportTab()">@Localize.T("Apply")</button>
+                    <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilterList()">@Localize.T("Reset")</button>
+                </div>
+            </div>
+        </div>
+        <div class="tab-content reports_tab_content">
+
+            <div class="tab-pane active" id="JobReportTab">
+
+                <div class="Load_Jobs_Report">
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+

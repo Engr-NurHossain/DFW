@@ -1,0 +1,1127 @@
+﻿@{
+    Layout = null;
+}
+@model List<HS.Entities.GridSetting>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionList = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<script src="~/Scripts/CustomerSelect.js"></script>
+<style>
+    .customer_filter_ul {
+        width: 100%;
+        margin-bottom: 0px;
+        float: left;
+        /*overflow-x: hidden;
+        overflow-y: auto;*/
+        height: unset !important;
+    }
+
+        .customer_filter_ul .customer_filter_li span, .customer_filter_ul .customer_filter_li_textarea span {
+            font-weight: 600;
+        }
+
+    .customer_filter_li .text {
+        font-weight: normal !important;
+    }
+
+    .customer_filter_ul .customer_filter_li_textarea {
+        padding-left: 10px;
+        padding-right: 10px;
+        float: left;
+        width: 100%;
+    }
+
+        .customer_filter_ul .customer_filter_li_textarea textarea {
+            height: 100px;
+        }
+
+    .customer_filter_ul .select2-container {
+        z-index: 9999 !important;
+    }
+
+    .footer_sec_filter {
+        width: 100%;
+        float: left;
+        background-color: #fff;
+        padding: 10px;
+        border-top: 1px solid #ccc;
+    }
+
+        .footer_sec_filter button:nth-child(1) {
+            float: left;
+        }
+
+        .footer_sec_filter button:nth-child(2) {
+            float: right;
+        }
+
+        .footer_sec_filter button,
+        .footer_sec_filter button:hover,
+        .footer_sec_filter button:focus {
+            background-color: #2ca01c;
+            color: #fff;
+        }
+
+    .contract_text input {
+        float: left;
+        margin-top: 20px;
+    }
+
+    .customer_filter_no_data {
+        width: 100%;
+        float: left;
+        padding: 5px 10px;
+        color: #797979;
+    }
+</style>
+<script>
+    var ResetFilterData = function () {
+        $("#srch-term").val('');
+        $("#txt_id").val('');
+        $("#txt_firstname").val('');
+        $("#txt_lastname").val('');
+        $("#txt_businessname").val('');
+        $("#txt_emailaddress").val('');
+        $("#txt_street").val('');
+        $("#txt_childof").val('-1');
+        $("#txt_joindate").val('');
+        $("#txt_isactive").val('-1');
+        $("#txt_displayname").val('');
+        $("#txt_followupdate").val('');
+        $("#txt_customerno").val('');
+        $("#txt_customertype").val('-1');
+        $("#txt_primaryphone").val('');
+        $("#txt_secondaryphone").val('');
+        $("#txt_cellno").val('');
+        $("#txt_accountno").val('');
+        $("#txt_dba").val('');
+        $('#txt_platformid').val('');
+        $('#txt_address2').val('');
+        $("#txt_soldby").selectpicker('val', '');
+        $("#txt_saleslocation").selectpicker('val', '');
+        $("#txt_leadsource").selectpicker('val', '');
+        $("#txt_leadstatus").selectpicker('val', '');
+        $("#txt_customerstatus").selectpicker('val', '');
+        $("#txt_branchid").selectpicker('val', '');
+        $("#txt_businessaccounttype").val('-1');
+    }
+    var listSaleslocation = '@Html.Raw(Json.Encode(@ViewBag.SalesLocationList))';
+    listSaleslocation = JSON.parse(listSaleslocation);
+
+    var listLeadSource = '@Html.Raw(Json.Encode(@ViewBag.LeadSourceList))';
+    listLeadSource = JSON.parse(listLeadSource);
+
+    var listSalesperson = '@Html.Raw(Json.Encode(@ViewBag.SalesPersonList))';
+    listSalesperson = JSON.parse(listSalesperson);
+
+    var listbranch = '@Html.Raw(Json.Encode(@ViewBag.BranchIdList))';
+    listbranch = JSON.parse(listbranch);
+
+    var ListStatus = '@Html.Raw(Json.Encode(@ViewBag.StatusList))';
+    ListStatus = JSON.parse(ListStatus);
+
+    var ListCustomerStatus = '@Html.Raw(Json.Encode(@ViewBag.CustomerStatusList))';
+    ListCustomerStatus = JSON.parse(ListCustomerStatus);
+
+    $(document).ready(function () {
+
+
+        InitializeSuburbDropdownChild($('.dropdown_customar_child'));
+        InitializeSuburbDropdown($('.dropdown_customar'));
+        $("#txt_primaryphone").keyup(function () {
+            var PhoneNumber = $(this).val();
+            if (PhoneNumber != undefined && PhoneNumber != null && PhoneNumber != "") {
+                var cleanPhoneNumber = FormatePhoneNumber(PhoneNumber);
+                $(this).val(cleanPhoneNumber);
+            }
+        });
+        $("#txt_cellno").keyup(function () {
+            var cPhoneNumber = $(this).val();
+            if (cPhoneNumber != undefined && cPhoneNumber != null && cPhoneNumber != "") {
+                var ccleanPhoneNumber = FormatCellNumber(cPhoneNumber);
+                $(this).val(ccleanPhoneNumber);
+            }
+        });
+        $("#txt_secondaryphone").keyup(function () {
+            var sPhoneNumber = $(this).val();
+            if (sPhoneNumber != undefined && sPhoneNumber != null && sPhoneNumber != "") {
+                var scleanPhoneNumber = FormatSecondaryNumber(sPhoneNumber);
+                $(this).val(scleanPhoneNumber);
+            }
+        });
+        $("#txt_ssn").keyup(function () {
+            var SSNNumber = $(this).val();
+            if (SSNNumber != undefined && SSNNumber != null && SSNNumber != "") {
+                var cleanSSNNumber = FormateSSNNumber(SSNNumber);
+                $(this).val(cleanSSNNumber);
+            }
+        });
+        $("#txt_contractteam").change(function () {
+            if ($(this).val() == "Custom") {
+                $(".contract_text").removeClass('hidden');
+            }
+            else {
+                $(".contract_text").addClass('hidden');
+            }
+        })
+        $(".btn_reset_cus_filter_active").click(function () {
+            //$(".filter_inp_cus_lead").val("");
+            //$(".filter_drp_cus_lead").val("-1");
+            //$(".filter_drp_cus_lead_guid").val("00000000-0000-0000-0000-000000000000");
+            ResetFilterData();
+            CustomerSearchKeyUp(1);
+        })
+        var totaldiv = $(".customer_filter_ul .customer_filter_li").length;
+        if (parseInt(totaldiv) > 10) {
+            $(".customer_filter_ul").attr("style", "height:195px");
+        }
+        else if (parseInt(totaldiv) > 5) {
+            $(".customer_filter_ul").attr("style", "height:130px");
+        }
+        else {
+            $(".customer_filter_ul").attr("style", "height:65px");
+        }
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_dateofbirth')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_joindate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_salesdate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_installdate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_cutindate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_fundingdate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_reminderdate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_qa1date')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_qa2date')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_servicedate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_firstbilling')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_estclosedate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_projectwalkdate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_movingdate')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#txt_followupdate')[0] });
+
+        if (listLeadSource != null) {
+            if (listLeadSource.length != 0) {
+                $("#txt_saleslocation").selectpicker('val', listLeadSource);
+            }
+            else {
+                $("#txt_saleslocation").selectpicker('val', '');
+            }
+        }
+
+         if (listLeadSource != null) {
+            if (listLeadSource.length != 0) {
+                $("#txt_leadsource").selectpicker('val', listLeadSource);
+            }
+            else {
+                $("#txt_leadsource").selectpicker('val', '');
+            }
+        }
+
+        if (ListStatus != null) {
+            if (ListStatus.length != 0) {
+                $("#txt_leadstatus").selectpicker('val', ListStatus);
+            }
+            else {
+                $("#txt_leadstatus").selectpicker('val', '');
+            }
+        }
+        if (ListCustomerStatus != null) {
+            if (ListCustomerStatus.length != 0) {
+                $("#txt_customerstatus").selectpicker('val', ListCustomerStatus);
+            }
+            else {
+                $("#txt_customerstatus").selectpicker('val', '');
+            }
+        }
+        if (listSalesperson != null) {
+            if (listSalesperson.length != 0) {
+                $("#txt_soldby").selectpicker('val', listSalesperson);
+            }
+            else {
+                $("#txt_soldby").selectpicker('val', '');
+            }
+        }
+
+        if (listbranch != null) {
+            if (listbranch.length != 0) {
+                $("#txt_branchid").selectpicker('val', listbranch);
+            }
+            else {
+                $("#txt_branchid").selectpicker('val', '');
+            }
+        }
+    })
+</script>
+
+@{
+    if (Model != null && Model.Count > 0)
+    {
+        <div class="customer_filter_ul">
+            @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadSearch))
+            {
+               
+            <div class="customer_filter_li">
+                <span>@Localize.T("Search")</span>
+                <div class="info_style_div_lead" title="@Localize.T("Search by Id, Name, Business Name, Address, Cell/Phone, Email Address")">
+                    <i class="fa fa-info" aria-hidden="true"></i>
+                </div>
+                <input class="form-control filter_inp_cus_lead" placeholder="Search" name="srch-term" id="srch-term" type="text">
+            </div>
+            }
+            @{
+                foreach (var item in Model)
+                {
+                    if (item.SelectedColumn.ToLower() == Localize.T("displayname"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Display Name")</span>
+                            <input class="form-control filter_inp_cus_lead" datakey="@item.SelectedColumn" id="txt_displayname" placeholder="@Localize.T("Display Name")" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("customerno"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("CS ID")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_customerno" placeholder="@Localize.T("CS ID")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("id"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("RMR ID")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_id" placeholder="@Localize.T("RMR ID")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("title"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Title")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_title" placeholder="@Localize.T("Title")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("firstname"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("First Name")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_firstname" placeholder="@Localize.T("First Name")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("lastname"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Last Name")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_lastname" placeholder="@Localize.T("Last Name")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("soldby"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Sales Person")</span>
+                            @Html.DropDownList("txt_soldby", (List<SelectListItem>)ViewBag.SalesPerson, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn, @multiple = "multiple", @title = "Select Sales Person" })
+
+
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("passcode"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Passcode")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_passcode" placeholder="@Localize.T("Passcode")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("type"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Customer Type")</span>
+                            @Html.DropDownList("txt_customertype", ViewBag.CustomerType as List<SelectListItem>, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("businessname"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Business Name")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_businessname" placeholder="@Localize.T("Business Name")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("dba"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Doing Business As")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_dba" placeholder="@Localize.T("Doing Business As")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("street"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Street")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_street" placeholder="@Localize.T("Street")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("zipcode"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Zip Code")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_zipcode" placeholder="@Localize.T("Zip Code")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("city"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("City")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_city" placeholder="@Localize.T("City")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("state"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("State")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_state" placeholder="@Localize.T("State")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("county"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("County")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_county" placeholder="@Localize.T("County")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("country"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Country")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_country" placeholder="@Localize.T("Country")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("homeowner"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Home Owner")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_homeowner" placeholder="@Localize.T("Home Owner")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn == "LeadSource")
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Lead Source")</span>
+                            @*@Html.DropDownList("txt_leadsource", (List<SelectListItem>)ViewBag.SourceLead, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })*@
+                            @Html.DropDownList("txt_leadsource", ViewBag.SourceLead as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", @title = "Select Lead Source" })
+                        </div>
+                    }
+                    else if (item.SelectedColumn == "LeadSourceType")
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Lead Source Type")</span>
+                            @Html.DropDownList("txt_leadsourcetype", (List<SelectListItem>)ViewBag.SourceLeadType, new { @class = "form-control filter_drp_cus_lead" })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("referringcustomer"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Referring Customer")</span>
+                            @Html.DropDownList("txt_referringcustomer", (List<SelectListItem>)ViewBag.CustomerList, new { @class = "form-control dropdown_customar filter_drp_cus_lead_guid", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("emailaddress"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Email Address")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_emailaddress" placeholder="@Localize.T("Email Address")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("primaryphone"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Primary Phone")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_primaryphone" placeholder="@Localize.T("Primary Phone")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("cellno"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Cell No")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_cellno" placeholder="@Localize.T("Cell No")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("secondaryphone"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Secondary Phone")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_secondaryphone" placeholder="@Localize.T("Secondary Phone")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("carrier"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Carrier")</span>
+                            @Html.DropDownList("txt_carrier", (List<SelectListItem>)ViewBag.LeadCarrierList, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("phonetype"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Phone Type")</span>
+                            @Html.DropDownList("txt_phonetype", (List<SelectListItem>)ViewBag.PhoneTypeList, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("besttimetocall"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Best Time to Call")</span>
+                            @Html.DropDownList("txt_besttimetocall", (List<SelectListItem>)ViewBag.BestTimeToCallList, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("preferredcontactmethod"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Preferred Contact Method")</span>
+                            @Html.DropDownList("txt_preferredcontactmethod", (List<SelectListItem>)ViewBag.PreferredContactMethod, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("dateofbirth"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Date of Birth")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_dateofbirth" placeholder="@Localize.T("Date of Birth")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("ssn"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("SSN")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_ssn" placeholder="@Localize.T("SSN")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("callingtime"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Calling Time")</span>
+                            @Html.DropDownList("txt_callingtime", (List<SelectListItem>)ViewBag.TimeToCall, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("address"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Site Address")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_address" placeholder="@Localize.T("Site Address")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("address2"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Billing Address")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_address2" placeholder="@Localize.T("Billing Address")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("streetprevious"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Billing Street")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_streetprevious" placeholder="@Localize.T("Billing Street")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("cityprevious"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Billing City")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_cityprevious" placeholder="@Localize.T("Billing City")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("stateprevious"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Billing State")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_stateprevious" placeholder="@Localize.T("Billing State")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("zipcodeprevious"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Billing Zipcode")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_zipcodeprevious" placeholder="@Localize.T("Billing Zipcode")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("countryprevious"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Billing Country")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_countryprevious" placeholder="@Localize.T("Billing Country")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("accountno"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Account No")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_accountno" placeholder="@Localize.T("Account No")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("creditscore"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Credit Score")</span>
+                            @Html.DropDownList("txt_creditscore", (List<SelectListItem>)ViewBag.CreditScore, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("creditscorevalue"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Credit Score Value")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_creditscorevalue" placeholder="@Localize.T("Credit Score Value")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("contractteam"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Contract Term")</span>
+                            @Html.DropDownList("txt_contractteam", (List<SelectListItem>)ViewBag.ContactTerms, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                        <div class="customer_filter_li contract_text hidden">
+                            <input class="form-control filter_inp_cus_lead" id="txt_contractteam_custom" placeholder="@Localize.T("Contract Term")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("fundingcompany"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Funding Company")</span>
+                            @Html.DropDownList("txt_fundingcompany", (List<SelectListItem>)ViewBag.FundingCompany, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("joindate"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Join Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_joindate" placeholder="@Localize.T("Join Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("note"))
+                    {
+                        <div class="customer_filter_li_textarea">
+                            <span>@Localize.T("Note")</span>
+                            <textarea class="form-control filter_inp_cus_lead" id="txt_note" placeholder="@Localize.T("Note")" datakey="@item.SelectedColumn"></textarea>
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("salesdate"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Sales Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_salesdate" placeholder="@Localize.T("Sales Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("installdate"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Install Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_installdate" placeholder="@Localize.T("Install Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("cutindate"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Cut-in Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_cutindate" placeholder="@Localize.T("Cut-in Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("installer"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Installer")</span>
+                            @Html.DropDownList("txt_installer", (List<SelectListItem>)ViewBag.InstallerList, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("fundingdate"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Funding Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_fundingdate" placeholder="@Localize.T("Funding Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("middlename"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Middle Name")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_middlename" placeholder="@Localize.T("Middle Name")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("reminderdate"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Reminder Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_reminderdate" placeholder="@Localize.T("Reminder Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("qa1"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("QA1")</span>
+                            @Html.DropDownList("txt_qa1", (List<SelectListItem>)ViewBag.QualityAssuranceList1, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("qa1date"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("QA1 Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_qa1date" placeholder="@Localize.T("QA1 Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("qa2"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("QA2")</span>
+                            @Html.DropDownList("txt_qa2", (List<SelectListItem>)ViewBag.QualityAssuranceList2, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("qa2date"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("QA2 Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_qa2date" placeholder="@Localize.T("QA2 Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("billamount"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Bill Amount")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_billamount" placeholder="@Localize.T("Bill Amount")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("paymentmethod"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Payment Method")</span>
+                            @Html.DropDownList("txt_paymentmethod", (List<SelectListItem>)ViewBag.paymentmethodrmr, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("billcycle"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Bill Cycle")</span>
+                            @Html.DropDownList("txt_billcycle", (List<SelectListItem>)ViewBag.BillCycle, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("billday"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Bill Day")</span>
+                            @Html.DropDownList("txt_billday", (List<SelectListItem>)ViewBag.BillingDay, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("billnotes"))
+                    {
+                        <div class="customer_filter_li_textarea">
+                            <span>@Localize.T("Bill Note")</span>
+                            <textarea class="form-control filter_inp_cus_lead" id="txt_billnotes" placeholder="@Localize.T("Bill Note")" datakey="@item.SelectedColumn"></textarea>
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("billtax"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Bill Tax")</span>
+                            @Html.DropDownList("txt_billtax", (List<SelectListItem>)ViewBag.BillYesNo, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("billoutstanding"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Outstanding balance")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_billoutstanding" placeholder="@Localize.T("Outstanding balance")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("servicedate"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Service Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_servicedate" placeholder="@Localize.T("Service Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("area"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Area")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_area" placeholder="@Localize.T("Area")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("streettype"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Street Type")</span>
+                            @Html.DropDownList("txt_streettype", (List<SelectListItem>)ViewBag.LeadStreetType, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("appartment"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Apartment")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_apartment" placeholder="@Localize.T("Apartment")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("secondcustomerno"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Second Customer No")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_secondcustomerno" placeholder="@Localize.T("Second Customer No")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("additionalcustomerno"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Additional Customer No")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_additionalcustomerno" placeholder="@Localize.T("Additional Customer No")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("activationfee"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Activation Fee")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_activationfee" placeholder="@Localize.T("Activation Fee")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("firstbilling"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("First Billing")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_firstbilling" placeholder="@Localize.T("First Billing")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("isactive"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Active Status")</span>
+                            @Html.DropDownList("txt_isactive", (List<SelectListItem>)ViewBag.ContractedPrevious, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("monthlymonitoringfee"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Monthly Monitoring Fee")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_monthlymonitoringfee" placeholder="@Localize.T("Monthly Monitoring Fee")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("crossstreet"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Cross Street")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_crossstreet" placeholder="@Localize.T("Cross Street")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("businessaccounttype"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Business Account Type")</span>
+                            @Html.DropDownList("txt_businessaccounttype", (List<SelectListItem>)ViewBag.BussinessAccountType, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("esistingpanel"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Existing Panel")</span>
+                            @Html.DropDownList("txt_esistingpanel", (List<SelectListItem>)ViewBag.PanelType, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("estclosedate"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Estimate Close Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_estclosedate" placeholder="@Localize.T("Estimate Close Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("projectwalkdate"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Project Walk Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_projectwalkdate" placeholder="@Localize.T("Project Walk Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("annualrevenue"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Annual Revenue")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_annualrevenue" placeholder="@Localize.T("Annual Revenue")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("website"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Website")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_website" placeholder="@Localize.T("Website")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("market"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Market")</span>
+                            @Html.DropDownList("txt_market", (List<SelectListItem>)ViewBag.LeadMarket, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("passengers"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Passengers")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_passengers" placeholder="@Localize.T("Passengers")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("budget"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Budget")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_budget" placeholder="@Localize.T("Budget")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("customeraccounttype"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Customer Account Type")</span>
+                            @Html.DropDownList("txt_customeraccounttype", (List<SelectListItem>)ViewBag.CustomerAccountTypeLookup, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("csprovider"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("CS Provider")</span>
+                            @Html.DropDownList("txt_csprovider", (List<SelectListItem>)ViewBag.CSProviderList, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("ownership"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Ownership")</span>
+                            @Html.DropDownList("txt_ownership", (List<SelectListItem>)ViewBag.OwnerShipList, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("purchaseprice"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Purchase Price")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_purchaseprice" placeholder="@Localize.T("Purchase Price")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("contractvalue"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Contract Value")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_contractvalue" placeholder="@Localize.T("Contract Value")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("accessgivento"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Access given to")</span>
+                            @Html.DropDownList("txt_accessgivento", (List<SelectListItem>)ViewBag.AccessAssignedPersons, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+
+                    else if (item.SelectedColumn.ToLower() == Localize.T("saleslocation"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Sales Location")</span>
+                            @*@Html.DropDownList("txt_saleslocation", (List<SelectListItem>)ViewBag.SalesLocation, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })*@
+                            @Html.DropDownList("txt_saleslocation", ViewBag.SalesLocation as List<SelectListItem>, new { @class = "form-control filter_drp_cus_lead", @multiple = "multiple", @title = "Select Sales Location" })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("lead status"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Status")</span>
+                            @*@Html.DropDownList("txt_leadstatus", (List<SelectListItem>)ViewBag.LeadStatus, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })*@
+                            @Html.DropDownList("txt_leadstatus", ViewBag.LeadStatus as List<SelectListItem>, new { @class = "form-control filter_drp_cus_lead", @multiple = "multiple", @title = "Select Status" })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("donotcall"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Do not call")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_donotcall" placeholder="@Localize.T("Do not call")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("customerstatus"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Customer Status")</span>
+                            @*@Html.DropDownList("txt_customerstatus", (List<SelectListItem>)ViewBag.CustomerStatus, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })*@
+                            @Html.DropDownList("txt_customerstatus", ViewBag.CustomerStatus as List<SelectListItem>, new { @class = "form-control filter_drp_cus_lead", @multiple = "multiple", @title = "Select Status" })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("duplicatecustomer"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Duplicate Customer")</span>
+                            @Html.DropDownList("txt_duplicatecustomer", (List<SelectListItem>)ViewBag.DuplicateCustomerList, new { @class = "form-control dropdown_customar filter_drp_cus_lead_guid", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("movingdate"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Moving Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_movingdate" placeholder="@Localize.T("Moving Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("contractedpreviously"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Contract Previously")</span>
+                            @Html.DropDownList("txt_contractedpreviously", (List<SelectListItem>)ViewBag.ContractedPrevious, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("installedstatus"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Installed Status")</span>
+                            @Html.DropDownList("txt_installedstatus", (List<SelectListItem>)ViewBag.InstalledStatus, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("acquiredfrom"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Acquired From")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_acquiredform" placeholder="@Localize.T("Acquired From")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("followupdate"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Follow up Date")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_followupdate" placeholder="@Localize.T("Follow up Date")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("buyoutamountbyads"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Buy out Amount")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_buyoutamountbyads" placeholder="@Localize.T("Buy out Amount")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("buyoutamountbysalesrep"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Buy out Amount Sales Rep")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_buyoutamountbysalesrep" placeholder="@Localize.T("Buy out Amount Sales Rep")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("financedterm"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Financed Term")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_financedterm" placeholder="@Localize.T("Financed Term")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("financedamount"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Financed Amount")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_financedamount" placeholder="@Localize.T("Financed Amount")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("levels"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Levels")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_levels" placeholder="@Localize.T("Levels")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("soldamount"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Sold Amount")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_soldamount" placeholder="@Localize.T("Sold Amount")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("taxexemption"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Tax Exemption")</span>
+                            @Html.DropDownList("txt_taxexemption", (List<SelectListItem>)ViewBag.TaxExemptionList, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("appointmentset"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Appointment Set")</span>
+                            @Html.DropDownList("txt_appointmentset", (List<SelectListItem>)ViewBag.AppoinmentSetList, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("customerfunded"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Customer Funded")</span>
+                            @Html.DropDownList("txt_customerfunded", (List<SelectListItem>)ViewBag.ContractedPrevious, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("maintenance"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Maintenance")</span>
+                            @Html.DropDownList("txt_maintenance", (List<SelectListItem>)ViewBag.ContractedPrevious, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("isalarmcom"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Alarm")</span>
+                            @Html.DropDownList("txt_isalarmcom", (List<SelectListItem>)ViewBag.ContractedPrevious, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("isagreement"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Agreement")</span>
+                            @Html.DropDownList("txt_isagreement", (List<SelectListItem>)ViewBag.ContractedPrevious, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+
+                    else if (item.SelectedColumn.ToLower() == Localize.T("isfireaccount"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Fire Account")</span>
+                            @Html.DropDownList("txt_isfireaccount", (List<SelectListItem>)ViewBag.ContractedPrevious, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("branchid"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Branch")</span>
+                            @Html.DropDownList("txt_branchid", (List<SelectListItem>)ViewBag.BranchList, new { @class = "form-control filter_drp_cus_lead", datakey = @item.SelectedColumn, @multiple = "multiple", @title = "Select Branch" })
+                        </div>
+                    }
+
+                    else if (item.SelectedColumn.ToLower() == Localize.T("platformid"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Platform ID")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_platformid" placeholder="@Localize.T("Platform ID")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("mapscono"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Mapsco Number")</span>
+                            <input class="form-control filter_inp_cus_lead" id="txt_mapscono" placeholder="@Localize.T("Mapsco Number")" datakey="@item.SelectedColumn" />
+                        </div>
+                    }
+                    else if (item.SelectedColumn.ToLower() == Localize.T("childof"))
+                    {
+                        <div class="customer_filter_li">
+                            <span>@Localize.T("Child of")</span>
+                            @Html.DropDownList("txt_childof", (List<SelectListItem>)ViewBag.ChildCustomerList, new { @class = "form-control dropdown_customar_child filter_drp_cus_lead_guid", datakey = @item.SelectedColumn })
+                        </div>
+                    }
+                }
+            }
+        </div>
+        <div class="footer_sec_filter">
+            <button class="btn btn_reset_cus_filter_active">
+                <i class="fa fa-refresh" aria-hidden="true"></i> @Localize.T("Reset")
+            </button>
+            <button class="btn" onclick="CustomerSearchKeyUp(1)">
+                <i class="fa fa-check" aria-hidden="true"></i> @Localize.T("Apply")
+            </button>
+        </div>
+    }
+    else
+    {
+
+        <div class="customer_filter_no_data">@Localize.T("No Filter Available.")</div>
+
+    }
+}
+
+

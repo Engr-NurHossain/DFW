@@ -1,0 +1,242 @@
+﻿@{
+    Layout = null;
+    bool CreatePO = false;
+    bool SubmitPO = false;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.OpenDemandOrderBranchModel
+@using POStat = HS.Web.UI.Helper.LabelHelper.PurchaseOrderStatus
+@Styles.Render("~/styles/AddInvoice")
+<link href="~/Content/Css/Expense/AddVendorBill.css" rel="stylesheet" />
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Js/TinyInvoice.js"></script>
+<script>
+    var DemandOrderId = '@Model.PurchaseOrderBranch.DemandOrderId';
+    var CreateAutoPO = function () {
+        var url = domainurl + "/PurchaseOrder/CreateAutoPO";
+        var param = JSON.stringify({
+            DOId: DemandOrderId
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".AddInvoiceLoader").removeClass('hidden'),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                $(".AddInvoiceLoader").addClass('hidden');
+                OpenSuccessMessageNew("", "PO Created successfully.", function () {
+                    OpenTopToBottomModal(domainurl + "/PurchaseOrder/AddPurchaseOrder/?Id=" + data.POID + "&OpenTab=Ware");
+                });
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".AddInvoiceLoader").addClass('hidden');
+            }
+        });
+    }
+    var DeliverDO = function () {
+        var EquipmentList = [];
+
+        $(".DeliverItem").each(function () {
+            if ($(this).is(":checked")) {
+                EquipmentList.push($(this).attr('dataval'));
+            }
+        });
+        var url = domainurl + "/PurchaseOrder/DeliverDO";
+        var param = JSON.stringify({
+            EquipmentIdList: EquipmentList,
+            DOId: DemandOrderId
+        });
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".AddInvoiceLoader").removeClass('hidden'),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                $(".AddInvoiceLoader").addClass('hidden');
+                CloseTopToBottomModal();
+                OpenSuccessMessageNew("", "", function () {
+                    OpenDemandBranchOrderTab();
+                });
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".AddInvoiceLoader").addClass('hidden');
+            }
+        });
+    }
+</script>
+<div class="avb_div_header">
+    <div class="header_title_avb">
+        Demand Order - @Model.PurchaseOrderBranch.DemandOrderId
+    </div>
+</div>
+<div class="add-invoice-container">
+    <div class="PoContentScroll">
+        <div class="avb_invoice_informations">
+            <div class="avp_row">
+                <div class="invoice-info-left-70p">
+                    <div class="avp_row">
+                        <div class="form-group clearfix width-25p">
+                            <span class="span-style">@Localize.T("Order Date")</span>
+                            @*<input type="text" value="@Model.PurchaseOrderBranch.date.ToString("MM/dd/yyyy")" id="PurchaseOrder_OrderDate" name="PurchaseOrder.OrderDate" class="form-control" />*@
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="avp_table_info_container">
+            <div class="width-100p margin-top-15">
+                <table class="CustomerInvoiceTab" id="CustomerInvoiceTab">
+                    <thead>
+                        <tr>
+                            <th class="thead-th-style1 tab-index">
+                                <span>
+
+                                </span>
+                            </th>
+                            <th class="thead-th-style1 tab-Product">
+                                <span>
+                                    @Localize.T("Product/Service")
+                                </span>
+                            </th>
+                            <th class="thead-th-style2 tab-Desc">
+                                <span>
+                                    @Localize.T("Description")
+                                </span>
+                            </th>
+                            <th class="thead-th-style2 tab-Quantity">
+                                <span>
+                                    @Localize.T("Requested")
+                                </span>
+                            </th>
+                            <th class="thead-th-style2 tab-Quantity">
+                                <span>
+                                    @Localize.T("Send")
+                                </span>
+                            </th>
+                            <th class="thead-th-style2 tab-Quantity">
+                                <span>
+                                    @Localize.T("Available")
+                                </span>
+                            </th>
+                            <th class="thead-th-style2 tab-Quantity">
+                                <span>
+
+                                </span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.PurchaseOrderDetail != null && Model.PurchaseOrderDetail.Count() > 0)
+                        {
+                            foreach (HS.Entities.PurchaseOrderDetail item in Model.PurchaseOrderDetail)
+                            {
+                                var SendQuantity = 0;
+                                if (item.QuantityAvailable >= item.Quantity)
+                                {
+                                    SendQuantity = Convert.ToInt32(item.Quantity);
+                                }
+                                else
+                                {
+                                    SendQuantity = Convert.ToInt32(item.QuantityAvailable);
+                                }
+                                if (!item.RecieveQty.HasValue)
+                                {
+                                    item.RecieveQty = 0;
+                                }
+                                if (item.QuantityAvailable < item.Quantity)
+                                {
+                                    CreatePO = true;
+                                }
+                                <tr data-id="@item.EquipmentId" class="HasItem focusedItem">
+                                    <td valign="top"></td>
+                                    <td valign="top">
+                                        <label class="spnProductName">@item.EquipName</label>
+                                    </td>
+                                    <td valign="top">
+                                        <label class="spnProductDesc">@item.EquipDetail</label>
+                                    </td>
+                                    <td valign="top">
+                                        <label class="spnProductQuantity">@item.Quantity</label>
+                                    </td>
+                                    <td valign="top">
+                                        <label class="spnProductQuantity">@SendQuantity</label>
+                                    </td>
+                                    <td valign="top">
+                                        <label class="spnProductQuantity">@item.QuantityAvailable</label>
+                                    </td>
+                                    <td valign="top">
+                                        @if (item.Quantity <= item.QuantityAvailable && item.Quantity > item.RecieveQty)
+                                        {
+                                            SubmitPO = true;
+                                            <input checked type="checkbox" class="DeliverItem" dataval="@item.EquipmentId" />
+                                        }
+                                        @if (item.Quantity == item.RecieveQty)
+                                        {
+                                            <label>Sent</label>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="OtherInfos">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="width-70p avp_invoice_padd_top">
+                            <div class="col-md-12">
+                                &nbsp;
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="billing_text_align">
+                                        <span>@Localize.T("Description")</span>
+                                    </div>
+                                    <textarea id="PurchaseOrder_Description" maxlength="5000" rows="4" class="InvoiceMessage">@Model.PurchaseOrderBranch.Description</textarea>
+                                    <div class="invoice_message_div">
+                                        <span class="DescStartCount">0</span> out of <span class="DescEndCount">5000</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="col-md-12">
+                &nbsp;
+            </div>
+        </div>
+    </div>
+    <div class="invoice-footer col-md-12">
+        <div class="cancelbtnDiv">
+            <button class="btnInv InvoiceCancelButton" onclick="CloseTopToBottomModal()">@Localize.T("Cancel")</button>
+
+        </div>
+        <div class="InnerOptionsDiv">
+            &nbsp;
+        </div>
+        <div class="SaveaButtonsDiv">
+            @if (CreatePO && Model.PurchaseOrderBranch.Status != "POCreated" && Model.PurchaseOrderBranch.IsBulkPO != true)
+            {
+                <button class="btn btn-default CheckPrintAndSendInvoice" onclick="CreateAutoPO()">@Localize.T("Create PO")</button>
+            }
+            @if (SubmitPO)
+            {
+                <button class="btn btn-default CheckPrintAndSendInvoice" onclick="DeliverDO()">@Localize.T("Submit")</button>
+            }
+        </div>
+    </div>
+    <div class="AddInvoiceLoader hidden">
+        <div class='invoice-loader'><div><div class="lds-css ng-scope"><div style="margin:auto; z-index:99;" class="lds-double-ring"><div></div><div></div></div></div></div></div>
+        @*<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>*@
+    </div>
+</div>

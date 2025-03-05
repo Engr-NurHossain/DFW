@@ -1,0 +1,280 @@
+﻿@{
+    Layout = null;
+}
+@model IEnumerable<HS.Entities.Contact>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using Permissions = HS.Framework.UserPermissions;
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+
+<link href="~/Content/Css/Contacts/contactlist.css" rel="stylesheet" />
+<script>
+    var CreateBadgerAccount = function (Name,AccountUniqueId,PhoneNumber,Email) {
+        var form = new FormData();
+        form.append("Name", Name);
+        form.append("Address", "Usa");
+        form.append("AccountOwner", "155094");
+        form.append("AccountUniqueId", AccountUniqueId);
+        form.append("PhoneNumber", PhoneNumber);
+        form.append("Email", Email);
+        form.append("FollowUpDate", "2/27/2019");
+        form.append("Latitude", "1.43");
+        form.append("Longitude", "1.47");
+
+        var settings = {
+            "async": true,
+            "crossDomain": true,
+            "url": "https://hooks.zapier.com/hooks/catch/4556029/pcbq5p/",
+            "method": "POST",
+            "processData": false,
+            "contentType": false,
+            "mimeType": "multipart/form-data",
+            "data": form
+        }
+
+        $.ajax(settings).done(function (response) {
+            OpenSuccessMessageNew("Success!", "");
+        });
+    }
+    var ShowContactDetails = function (item, e) {
+        //e.preventDefault();
+        if (cntrlIsPressed) {
+            var href = $(item).attr('href');
+            window.open(href, '_blank');
+        } else {
+            var id = $(item).attr('id');
+            var ContactId = $(item).attr('id-val');
+            LoadContactDetail(item);
+            $(".GlobalSearchInp").val("");
+        }
+    }
+    var pageno = '@ViewBag.PageNumber';
+    $(document).ready(function () {
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            NavigatePageListing(pageno, orderval);
+        })
+    });
+</script>
+
+<div class="Contacts_container">
+    @if (ViewBag.OutOfNumber == 0)
+    {
+        @ViewBag.Message;
+    }
+    else
+    {
+        <table class="Contacts_table">
+            <thead>
+                <tr>
+                    <th>
+                        <div>@Localize.T("Name")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/name"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/name"></i></div>
+                    </th>
+                    <th>
+                        <div>@Localize.T("Extension")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ext"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ext"></i></div>
+                    </th>
+                    <th>
+                        <div>@Localize.T("Work")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/work"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/work"></i></div>
+                    </th>
+                    <th>
+                        <div>@Localize.T("Mobile")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/mobile"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/mobile"></i></div>
+                    </th>
+
+                    <th>
+                        <div>@Localize.T("Email")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/email"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/email"></i></div>
+                    </th>
+
+                    <th>
+                        <div>@Localize.T("Created By")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/createdby"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/createdby"></i></div>
+                    </th>
+
+                    <th>
+                        <div>@Localize.T("Created Date")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/createddate"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/createddate"></i></div>
+                    </th>
+                    @if (PermissionChecker.IsPermitted(Permissions.ContactPermissions.BadgerMap))
+                    {
+                        <th>
+                            <div>@Localize.T("Action")</div>
+                        </th>
+                    }
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr class="PrintItem" data-id="@item.Id">
+                        <td>
+                            <div>@Localize.T("Name") <span>:</span></div>
+                            <div> <a class="cus-anchor" onclick="ShowContactDetails(@item.Id,this)" id="@(item.Id)" id-val="@item.ContactId">@item.Name</a></div>
+
+                        </td>
+                        <td>
+                            <div>@Localize.T("Extension") <span>:</span></div>
+                            <div>@item.Ext</div>
+
+                        </td>
+                        <td>
+                            <div>@Localize.T("Work") <span>:</span></div>
+                            <div>@HS.Web.UI.Helper.LabelHelper.PhoneNumFormat.Format(@item.Work)</div>
+                        </td>
+                        <td>
+                            <div>@Localize.T("Mobile") <span>:</span></div>
+                            <div>@HS.Web.UI.Helper.LabelHelper.PhoneNumFormat.Format(@item.Mobile)</div>
+                        </td>
+                        <td>
+                            <div>@Localize.T("Email") <span>:</span></div>
+                            <div title="@item.Email">@item.Email</div>
+                        </td>
+                        <td class="created_by">
+                            <div>@Localize.T("Created By") <span>:</span></div>
+                            <div title="@item.CreatedByName">
+                                <div class="user_profile_pic_div">
+                                    <img src="/EmpShow/W50H50X@(item.CreatedBy)" />
+                                </div>
+                            @item.CreatedByName
+                            </div>
+                        </td>
+                        <td>
+                            <div>@Localize.T("Created Date") <span>:</span></div>
+                            <div>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yy")</div>
+                        </td>
+                        @if (PermissionChecker.IsPermitted(Permissions.ContactPermissions.BadgerMap))
+                        {
+                            <td>
+                                <div>@Localize.T("Action") <span>:</span></div>
+                                <div> <a class="cus-anchor" href="javascript:void(0)" onclick="CreateBadgerAccount('@item.FirstName @item.LastName', '@item.ContactId', '@item.Mobile','@item.Email')">Create Badger</a></div>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+
+        </table>
+        <div class="Contacts_pagination_container">
+            <div class="Contacts_pagination_inner">
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))">1</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons disabledBtn" disabled>Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigatePageListing(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigatePageListing(2)">2</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button class="PaginationButtons" disabled="@(ViewBag.PageNumber == 2 ? "disabled" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 2 ? ViewBag.PageNumber + 1 : ""))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv" id="pagination">
+                        <button class="PaginationButtons @(ViewBag.PageNumber == 1 ? "disabledBtn" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 1 ? ViewBag.PageNumber - 1 : ""))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 1 ? "activeBtn" : "")" onclick="NavigatePageListing(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 2 ? "activeBtn" : "")" onclick="NavigatePageListing(2)">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv" id="pagination">
+                        <button class="NavigationButton @(ViewBag.PageNumber == 3 ? "activeBtn" : "")" onclick="NavigatePageListing(3)">3</button>
+                    </div>
+                    <div class="paginationRightButtondv" id="pagination">
+                        <button disabled="PaginationButtons @(ViewBag.PageNumber == 3 ? "disabled" : "")" onclick="NavigatePageListing(@(ViewBag.PageNumber != 3 ? ViewBag.PageNumber + 1 : ""))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv" id="pagination">
+                            <button class="PaginationButtons" disabled onclick="NavigatePageListing()">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))" id="pagination">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber - 2))" id="pagination">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))" id="pagination">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))" id="pagination">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" disabled onclick="NavigatePageListing()">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton activeBtn" onclick="NavigatePageListing(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv" id="pagination">
+                            <button class="NavigationButton" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv" id="pagination">
+                            <button class="PaginationButtons" onclick="NavigatePageListing(@(ViewBag.PageNumber + 1))">Next</button>
+                        </div>
+
+                    }
+                }
+            </div>
+            <div class="area_zip_code_pagination_inner">
+                @if (ViewBag.PageCount > 0)
+                {
+                    <div class="paginationtextdv">
+                        <span>Showing item @ViewBag.CurrentNumber of @ViewBag.OutOfNumber</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    <input type="hidden" id="FromCustomer" value="@ViewBag.FromCustomer" />
+</div>
+
+

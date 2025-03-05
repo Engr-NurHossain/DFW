@@ -1,0 +1,154 @@
+﻿@model HS.Entities.EmployeeEvaluation
+<script>
+
+    var StartSurvey = function (userId) { 
+        OpenConfirmationMessageNew("Confirm?", "Do you want to Start survey ?", function () {
+            if (typeof (userId) == "undefined") {
+                return;
+            }
+            $.ajax({
+                url: domainurl + "/Survey/StartSurvey",
+                data: { UserId: userId },
+                type: "Post",
+                dataType: "Json",
+                success: function (data) {
+                    if (data.result) {
+                        OpenSuccessMessageNew("Success!", data.message, LoadUserMgmt);
+                    } else {
+                        OpenErrorMessageNew("Error!", data.message);
+                    }
+                }
+            });
+        })
+    }
+
+    var SaveThisHrEvaluation = function () {
+        var url = domainurl + "/Hr/SaveHrEvaluation";
+        var param = JSON.stringify({
+            UserId: userId,
+            EvaluationType: $("#EvaluationType").val(),
+            StrEvaluationReminderDate: $("#EvaluationReminderDate").val(),
+            StrNextEvaluationDate: $("#NextEvaluationDate").val(),
+            StrLastEvaluationDate:$("#LastEvaluationDate").val(),
+        })
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message, function () {
+                        $("#EvaluationLoad").load(domainurl + "/Hr/HrEvaluation?userId=" + userId);
+                    });
+                } else {
+                    OpenErrorMessageNew("Error!", data.message, function () {
+                        $("#EvaluationLoad").load(domainurl + "/Hr/HrEvaluation?userId=" + userId);
+                    });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+
+        $("#EvaluationType").change(function () {
+            if ($("#LastEvaluationDate").val() != "") {
+                if ($("#EvaluationType").val() == "90 Day") {
+                    var LastDate = LastEvaluationDate.getDate();
+                    NextEvaluationDate.setDate(LastDate.addDays(90));
+                }
+                else if ($("#EvaluationType").val() == "Semi-Annually") {
+                    var LastDate = LastEvaluationDate.getDate();
+                    NextEvaluationDate.setDate(LastDate.addDays(180));
+                }
+                else if ($("#EvaluationType").val() == "Annually") {
+                    var LastDate = LastEvaluationDate.getDate();
+                    NextEvaluationDate.setDate(LastDate.addDays(365));
+                }
+                else if ($("#EvaluationType").val() == "Quarterly") {
+                    var LastDate = LastEvaluationDate.getDate();
+                    NextEvaluationDate.setDate(LastDate.addDays(120));
+                }
+            }
+        })
+
+        var LastEvaluationDate = new Pikaday({
+            format: 'MM/DD/YYYY',
+            field: $('#LastEvaluationDate')[0],
+            trigger: $('#LastEvaluationDateCustom')[0],
+            firstDay: 1
+        });
+        var NextEvaluationDate = new Pikaday({
+            format: 'MM/DD/YYYY',
+            field: $('#NextEvaluationDate')[0],
+            trigger: $('#NextEvaluationDateCustom')[0],
+            firstDay: 1
+        });
+        var EvaluationReminderDate = new Pikaday({
+            format: 'MM/DD/YYYY',
+            field: $('#EvaluationReminderDate')[0],
+            trigger: $('#EvaluationReminderDateCustom')[0],
+            firstDay: 1
+        });
+        $("#btnSaveHrEvaluation").click(function () {
+            SaveThisHrEvaluation();
+        });
+        $("#ButtonStartSurvey").click(function () {
+            StartSurvey(userId);
+        });
+    });
+</script>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<div class="Hr_Evaluation_container">
+    <div class="Hr_Evaluation_content">
+        <label>@Localize.T("Last Evaluation Date")</label>
+        <div class="input_group_for_date add-on" id="LastEvaluationDateCustom">
+            @Html.TextBoxFor(x => x.LastEvaluationDate, new { @class = "form-control" })
+            <div class="input-group-btn">
+                <btn class="btn">
+                    <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                </btn>
+            </div>
+        </div>
+       
+    </div>
+    <div class="Hr_Evaluation_content">
+        <label>@Localize.T("Next Evaluation Date")</label>
+        <div class="input_group_for_date add-on" id="NextEvaluationDateCustom">
+                @Html.TextBoxFor(x => x.NextEvaluationDate, new { @class = "form-control" })
+            <div class="input-group-btn">
+                <btn class="btn">
+                    <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                </btn>
+            </div>
+        </div>
+        
+    </div>
+    <div class="Hr_Evaluation_content">
+        <label>@Localize.T("Evaluation Reminder Date")</label>
+        <div class="input_group_for_date add-on" id="EvaluationReminderDateCustom">
+            @Html.TextBoxFor(x => x.EvaluationReminderDate, new { @class = "form-control" })
+            <div class="input-group-btn">
+                <btn class="btn">
+                    <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                </btn>
+            </div>
+        </div>
+    </div>
+    <div class="Hr_Evaluation_content">
+        <label>@Localize.T("Evaluation Type")</label>
+        @Html.DropDownListFor(x => x.EvaluationType, ViewBag.SelectEvaluationType as List<SelectListItem>, new { @class = "form-control" })
+    </div>
+
+    <div class="Hr_Evaluation_content">
+        <button class="StartSurvey style-btn-custom" id="ButtonStartSurvey">@Localize.T("Start Survey")</button>
+        <button class="style-btn-custom" id="btnSaveHrEvaluation"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")</button>
+    </div>
+</div>
+

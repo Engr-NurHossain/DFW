@@ -1,0 +1,682 @@
+﻿@{
+    Layout = null;
+
+}
+@using AppConfig = HS.Framework.Utils.AppConfig;
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.TechTransferRequest
+@using POStat = HS.Web.UI.Helper.LabelHelper.PurchaseOrderStatus
+@using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@Styles.Render("~/styles/AddInvoice")
+<link href="~/Content/Css/Expense/AddVendorBill.css" rel="stylesheet" />
+<script src="~/Content/Js/Site/Validation.js"></script>
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Js/TinyInvoice.js"></script>
+
+<script>
+    var SupplierId = '@Model.Supplier.SupplierId';
+    var IsShowAllPermit = '@PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO)';
+    var PurchaseOrder_int_Id=@Model.PurchaseOrderWarehouse.Id;
+    var SupplierAddress;
+    var POStatus = '@Model.PurchaseOrderWarehouse.Status';
+    var Amount = parseFloat(@Model.PurchaseOrderWarehouse.Amount);
+    var TotalAmount = parseFloat(@Model.PurchaseOrderWarehouse.TotalAmount);
+    var Currency = '@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)';
+    var Receiving = @Model.ReceiveNow.ToString().ToLower();
+    var OpenTab='@ViewBag.OpenTab';
+    var purchaseorderId = '@Model.PurchaseOrderWarehouse.PurchaseOrderId';
+</script>
+
+<script src="~/Content/Js/Inventory/AddTechTransfer.js?@DateTime.Now"></script>
+<link href="~/Content/Css/Inventory/AddTechTransfer.css" rel="stylesheet" />
+
+<div class="hidden" style="display:none;visibility:hidden;height:0px;">
+    @Html.HiddenFor(X => X.PurchaseOrderWarehouse.Id)
+    @Html.HiddenFor(X => X.PurchaseOrderWarehouse.PurchaseOrderId)
+    @Html.HiddenFor(X => X.PurchaseOrderWarehouse.Tax)
+    @Html.HiddenFor(X => X.PurchaseOrderWarehouse.TaxType)
+    @Html.HiddenFor(X => X.PurchaseOrderWarehouse.Deposit)
+    @Html.HiddenFor(X => X.PurchaseOrderWarehouse.BalanceDue)
+    @Html.HiddenFor(X => X.PurchaseOrderWarehouse.Balance)
+    @Html.HiddenFor(X => X.PurchaseOrderWarehouse.ShippingCost)
+    @Html.HiddenFor(X => X.PurchaseOrderWarehouse.ShippingDate)
+    @Html.HiddenFor(X => X.PurchaseOrderWarehouse.TrackingNo)
+</div>
+<div class="avb_div_header">
+    <div class="header_title_avb">
+        Transfer Equipment
+        @if (!string.IsNullOrWhiteSpace(Model.PurchaseOrderWarehouse.EstimatorId))
+        {
+            <span class="cus-anchor green-tooltip" onclick="OpenEstimatorById(@Model.PurchaseOrderWarehouse.EstimatorIntId)">(@Model.PurchaseOrderWarehouse.EstimatorId)</span>
+        }
+    </div>
+</div>
+<div class="add-invoice-container apo_inventory">
+    <div class="PoContentScroll">
+        <div class="avb_invoice_informations">
+            <div class="avp_row po_amount_flex">
+                <div class="invoice-info-left-70p">
+                    <div class="avp_row">
+                        @if (ViewBag.OpenTab == "Ware")
+                        {
+                            <div class="clearfix Vendor_name_insert_div add_purchase_order_content">
+                                <span class="span-style">@Localize.T("Choose a vendor")</span>
+                                @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                                {
+                                    @Html.DropDownListFor(x => x.PurchaseOrderWarehouse.SuplierId, ViewBag.SupplierList as List<SelectListItem>, new { @class = "form-control", @datarequired = "true" })
+                                }
+                                else
+                                {
+                                    @Html.DropDownListFor(x => x.PurchaseOrderWarehouse.SuplierId, ViewBag.SupplierList as List<SelectListItem>, new { @class = "form-control", @datarequired = "true", disabled = "disabled" })
+                                }
+                                @*<input type="text" class="form-control" placeholder="@Localize.T("Search vendor name")" onkeydown="VendorSearchKeyDown(this, event)" onkeyup="VendorSearchKeyUp(this, event)" value="@Model.Supplier.CompanyName" id="VendorList" />
+                                    <div class='tt-menu'>
+                                     <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                                     </div>*@
+                            </div>
+                        }
+                        @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowOrderForInAddPurchaseOrder))
+                        {
+                            <div class="clearfix add_purchase_order_content">
+                                <span class="span-style">@Localize.T("Order for")</span>
+                                @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                                {
+                                    @Html.DropDownListFor(x => x.PurchaseOrderWarehouse.POFor, ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control", @datarequired = "true" })
+                                }
+                                else
+                                {
+                                    @Html.DropDownListFor(x => x.PurchaseOrderWarehouse.POFor, ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control", @datarequired = "true", disabled = "disabled" })
+                                }
+                            </div>
+                        }
+                        <div class="clearfix add_purchase_order_content">
+                            <span class="span-style">@Localize.T("Order Date")</span>
+                            @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                            {
+                                <div class="input_group_for_date add-on" id="AddPurOrDate">
+                                    <input type="text" value="@Model.PurchaseOrderWarehouse.OrderDate.ToString("MM/dd/yy")" id="TransferDate" name="TransferDate" class="form-control" />
+                                    <div class="input-group-btn">
+                                        <btn class="btn">
+                                            <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                        </btn>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="input_group_for_date add-on" id="AddPurOrDate_disabled">
+                                    <input type="text" value="@Model.PurchaseOrderWarehouse.OrderDate.ToString("MM/dd/yy")" disabled="disabled" id="PurchaseOrderWarehouse_OrderDate" name="PurchaseOrderWarehouse.OrderDate" class="form-control" />
+                                    <div class="input-group-btn">
+                                        <btn class="btn" disabled="disabled">
+                                            <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                        </btn>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="clearfix add_purchase_order_content">
+                            <span class="span-style">@Localize.T("From")</span>
+                            @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                            {
+                                <div class="input_group_for_date add-on" id="AddPurOrDate">
+                                    @Html.DropDownList("TechFromList", ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control", @title = "Technician" })
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="input_group_for_date add-on" id="AddPurOrDate_disabled">
+                                    @Html.DropDownList("TechFromList", ViewBag.TechList as List<SelectListItem>, new { @class = "form-control", @title = "Technician" })
+                                </div>
+                            }
+                        </div>
+                        <div class="clearfix add_purchase_order_content">
+                            <span class="span-style">@Localize.T("To")</span>
+                            @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                            {
+                                <div class="input_group_for_date add-on" id="AddPurOrDate">
+                                    @Html.DropDownList("TechToList", ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control", @title = "Technician" })
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="input_group_for_date add-on" id="AddPurOrDate_disabled">
+                                    @Html.DropDownList("TechToList", ViewBag.TechList as List<SelectListItem>, new { @class = "form-control", @title = "Technician" })
+                                </div>
+                            }
+                        </div>
+                        @if (Model.ReceiveNow && Model.PurchaseOrderWarehouse.Status != POStat.Init)
+                        {
+                            if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.PurchaseOrderReceiveBy))
+                            {
+                                <div class="clearfix add_purchase_order_content">
+                                    <span class="span-style">@Localize.T("Receive by")</span>
+                                    @Html.DropDownListFor(x => x.PurchaseOrderWarehouse.RecieveForUid, ViewBag.EmployeeList as List<SelectListItem>, new { @class = "form-control" })
+                                </div>
+                            }
+                            <div class="clearfix add_purchase_order_content">
+                                <span class="span-style">@Localize.T("Received Date")</span>
+                                @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                                {
+                                    <div class="input_group_for_date add-on" id="ReceivedDate">
+                                        <input type="text" value="@(Model.PurchaseOrderWarehouse.RecieveDate.HasValue?Model.PurchaseOrderWarehouse.RecieveDate.Value.ToString("MM/dd/yy"):"")" id="PurchaseOrderWarehouse_RecieveDate" name="PurchaseOrderWarehouse.RecieveDate" class="form-control" />
+                                        <div class="input-group-btn">
+                                            <btn class="btn">
+                                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                            </btn>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="input_group_for_date add-on" id="ReceivedDate_disabled">
+                                        <input type="text" disabled="disabled" value="@(Model.PurchaseOrderWarehouse.RecieveDate.HasValue?Model.PurchaseOrderWarehouse.RecieveDate.Value.ToString("MM/dd/yy"):"")" id="PurchaseOrderWarehouse_RecieveDate" name="PurchaseOrderWarehouse.RecieveDate" class="form-control" />
+                                        <div class="input-group-btn">
+                                            <btn class="btn" disabled="disabled">
+                                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                            </btn>
+                                        </div>
+                                    </div>
+                                }
+
+                            </div>
+                        }
+                    </div>
+
+                </div>
+                <div class="balance-info hidden">
+                    <span class="amount amount-span-style big-amount-top" style="color:#333">@Model.PurchaseOrderWarehouse.Amount</span>
+                </div>
+            </div>
+        </div>
+        <div class="avp_table_info_container">
+            <div class="add_purchase_order_table">
+                <table class="CustomerInvoiceTab apo_table_style" id="CustomerInvoiceTab">
+                    <thead>
+                        <tr>
+                            <th class="thead-th-style1 tab-index">
+                                <span>
+
+                                </span>
+                            </th>
+                            <th class="thead-th-style1 tab-Product">
+                                <span>
+                                    @Localize.T("Description")
+                                </span>
+                            </th>
+                            <th class="thead-th-style2 tab-Desc">
+                                <span>
+                                    @Localize.T("SKU")
+                                </span>
+                            </th>
+                            <th class="thead-th-style2 tab-Quantity">
+                                <span>
+                                    @Localize.T("On Hand")
+                                </span>
+                            </th>
+                            <th class="thead-th-style2 tab-Quantity">
+                                <span>
+                                    @Localize.T("Transfer")
+                                </span>
+                            </th>
+                            <th class="thead-th-style2 tab-Quantity @(Model.ReceiveNow?"":"hidden")">
+                                <span>
+                                    @Localize.T("Receiving")
+                                </span>
+                            </th>
+                            <th class="thead-th-style2 tab-Rate" @(Model.ReceiveNow ? "" : "hidden")>
+                                <span>
+                                    @Localize.T("Rate")
+                                </span>
+                            </th>
+                            <th class="thead-th-style2 tab-Amount" @(Model.ReceiveNow ? "" : "hidden")>
+                                <span>
+                                    @Localize.T("Amount")
+                                </span>
+                            </th>
+                            @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                            {
+                                <th class="thead-th-style2 tab-Action">
+
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.ItemList.Count() > 0)
+                        {
+                            foreach (var item in Model.Items)
+                            {
+                                <tr data-id="@item.EquipmentId" class="HasItem">
+                                    <td valign="top"></td>
+                                    <td valign="top">
+                                        @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                                        {
+                                            <input type="text" class="ProductName" value="@item.Name" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                        }
+                                        else
+                                        {
+                                            <input type="text" class="ProductName" value="@item.Name" disabled="disabled" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                        }
+
+                                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                        <span class="spnProductName">@item.Name</span>
+                                    </td>
+                                    <td valign="top">
+                                        @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                                        {
+                                            <input type="text" onkeydown='OthersKeyDown(this,event)' value="@item.SKU" class="txtSKU" />
+                                        }
+                                        else
+                                        {
+                                            <input type="text" onkeydown='OthersKeyDown(this,event)' disabled="disabled" value="@item.SKU" class="txtSKU" />
+                                        }
+                                        <span class="spnSKU">@item.SKU</span>
+                                    </td>
+
+                                    @if (item.Quantity.ToString().IndexOf("-") > -1)
+                                    {
+                                        <td valign="top" class="">
+                                            <p class="spnProductQuantityOnHand" data-new-added="0" data-is-equipexist="@(item.Quantity)" data-onhand="0">0</p>
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td valign="top" class="">
+                                            <p class="spnProductQuantityOnHand" data-new-added="0" data-is-equipexist="@(item.Quantity)" data-onhand="@item.Quantity">@item.Quantity</p>
+                                        </td>
+                                    }
+                                    <td valign="top">
+                                        @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO) && Model.ReceiveNow == false)
+                                        {
+                                            <input type="text" onkeydown='OthersKeyDown(this,event)' value="@item.Quantity" class="txtProductQuantity" />
+                                        }
+                                        else
+                                        {
+                                            <input type="text" disabled="disabled" onkeydown='OthersKeyDown(this,event)' value="@item.Quantity" class="txtProductQuantity" />
+                                        }
+
+                                        <span class="spnProductQuantity">@item.Quantity</span>
+                                    </td>
+
+                                    <td valign="top" class="@(Model.ReceiveNow?"":"hidden") hover_green_style">
+                                        <input type="text" onkeydown='OthersKeyDown(this,event)' oval="-1" value="0" class="txtProductQuantityReceiving sanitizeit" />
+                                        <span class="spnProductQuantityReceiving">0</span>
+                                    </td>
+                                    <td valign="top" class="@(Model.ReceiveNow?"":"hidden")">
+                                        <div class="pAmount">
+                                            <div class="input-group-prepend">
+                                                <div class="input-group-text">@Currency.MakeCurrency(null)</div>
+                                            </div>
+                                            @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                                            {
+                                                <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductRate" value="@(item.Quantity==0?LabelHelper.FormatTo3DP(item.Quantity):"0.000")" />
+                                            }
+                                            else
+                                            {
+                                                <input type="text" disabled="disabled" onkeydown='OthersKeyDown(this,event)' class="txtProductRate" value="@(item.Quantity==0?LabelHelper.FormatTo3DP(item.Quantity):"0.000")" />
+                                            }
+                                        </div>
+                                        <span class="spnProductRate">@(item.Quantity==0 ? LabelHelper.FormatTo3DP(item.Quantity) : "0.000")</span>
+                                    </td>
+                                    <td valign="top" class="@(Model.ReceiveNow?"":"hidden")">
+                                        <div class="pAmount">
+                                            <div class="input-group-prepend">
+                                                <div class="input-group-text">@Currency.MakeCurrency(null)</div>
+                                            </div>
+                                            @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                                            {
+                                                <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" value="@(item.Quantity==0?LabelHelper.FormatAmount(item.Quantity):"0.00")" />
+                                            }
+                                            else
+                                            {
+                                                <input type="text" disabled="disabled" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" value="@(item.Quantity==0?LabelHelper.FormatAmount(item.Quantity):"0.00")" />
+                                            }
+
+                                        </div>
+
+                                        <span class="spnProductAmount">@(item.Quantity==0? LabelHelper.FormatAmount(item.Quantity) : "0.00")</span>
+                                    </td>
+                                    @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                                    {
+                                        <td valign="top" class="tableActions">
+                                            <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                                        </td>
+                                    }
+
+                                </tr>
+                            }
+
+                            if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+                            {
+                                <tr>
+                                    <td valign="top"></td>
+                                    <td valign="top">
+                                        <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                        <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                        <span class="spnProductName"></span>
+                                    </td>
+                                    <td valign="top">
+                                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtSKU" />
+                                        <span class="spnSKU"></span>
+                                    </td>
+                                    <td valign="top" class="">
+                                        <p class="spnProductQuantityOnHand" data-new-added="0" data-is-equipexist="0" data-onhand="0">0</p>
+                                    </td>
+                                    @*@if (item..ToString().IndexOf("-") > -1)
+                                        {
+                                            <td valign="top" class="">
+                                                <p class="spnProductQuantityOnHand" data-new-added="0" data-is-equipexist="@(Model.QuantityOnHand)" data-onhand="0">0</p>
+                                            </td>
+                                        }
+                                        else
+                                        {
+                                            <td valign="top" class="">
+                                                <p class="spnProductQuantityOnHand" data-new-added="0" data-is-equipexist="@(Model.QuantityOnHand)" data-onhand="@Model.QuantityOnHand">@Model.QuantityOnHand</p>
+                                            </td>
+                                        }*@
+                                    <td valign="top">
+                                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductQuantity" />
+                                        <span class="spnProductQuantity"></span>
+                                    </td>
+
+                                    <td valign="top" class="@(Model.ReceiveNow ? "" : "hidden")">
+                                        <input type="text" onkeydown='OthersKeyDown(this,event)' oval="-1" class="txtProductQuantityReceiving sanitizeit" />
+                                        <span class="spnProductQuantityReceiving"></span>
+                                    </td>
+                                    <td valign="top" class="@(Model.ReceiveNow ? "" : "hidden")">
+                                        <div class="pAmount">
+                                            <div class="input-group-prepend">
+                                                <div class="input-group-text">@Currency.MakeCurrency(null)</div>
+                                            </div>
+                                            <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductRate" />
+                                        </div>
+                                        <span class="spnProductRate"></span>
+                                    </td>
+                                    <td valign="top" class="@(Model.ReceiveNow ? "" : "hidden")">
+                                        <div class="pAmount">
+                                            <div class="input-group-prepend">
+                                                <div class="input-group-text">@Currency.MakeCurrency(null)</div>
+                                            </div>
+                                            <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" />
+                                        </div>
+
+                                        <span class="spnProductAmount"></span>
+                                    </td>
+                                    <td valign="top" class="tableActions">
+                                        <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                                    </td>
+                                </tr>
+                            }
+
+                        }
+                        else
+                        {
+                            <tr>
+                                <td valign="top"></td>
+                                <td valign="top">
+                                    <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                    <span class="spnProductName"></span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtSKU" />
+                                    <span class="spnSKU"></span>
+                                </td>
+                                <td valign="top" class="">
+                                    <p class="spnProductQuantityOnHand" data-new-added="0" data-is-equipexist="0" data-onhand="0">0</p>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductQuantity" />
+                                    <span class="spnProductQuantity"></span>
+                                </td>
+
+                                <td valign="top" class="@(Model.ReceiveNow?"":"hidden")">
+                                    <input type="text" onkeydown='OthersKeyDown(this,event)' oval="-1" class="txtProductQuantityReceiving sanitizeit" />
+                                    <span class="spnProductQuantityReceiving"></span>
+                                </td>
+                                <td valign="top" class="@(Model.ReceiveNow ? "" : "hidden")">
+                                    <div class="pAmount">
+                                        <div class="input-group-prepend">
+                                            <div class="input-group-text">@Currency.MakeCurrency(null)</div>
+                                        </div>
+                                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductRate" />
+                                    </div>
+                                    <span class="spnProductRate"></span>
+                                </td>
+                                <td valign="top" class="@(Model.ReceiveNow ? "" : "hidden")">
+                                    <div class="pAmount">
+                                        <div class="input-group-prepend">
+                                            <div class="input-group-text">@Currency.MakeCurrency(null)</div>
+                                        </div>
+                                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" />
+                                    </div>
+                                    <span class="spnProductAmount"></span>
+                                </td>
+                                <td valign="top" class="tableActions">
+                                    <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td valign="top"></td>
+                                <td valign="top">
+                                    <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                    <span class="spnProductName"></span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtSKU" />
+                                    <span class="spnSKU"></span>
+                                </td>
+                                <td valign="top" class="">
+                                    <p class="spnProductQuantityOnHand" data-new-added="0" data-is-equipexist="0" data-onhand="0">0</p>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductQuantity" />
+                                    <span class="spnProductQuantity"></span>
+                                </td>
+
+                                <td valign="top" class="@(Model.ReceiveNow?"":"hidden")">
+                                    <input type="text" onkeydown='OthersKeyDown(this,event)' oval="-1" class="txtProductQuantityReceiving sanitizeit" />
+                                    <span class="spnProductQuantityReceiving"></span>
+                                </td>
+                                <td valign="top" class="@(Model.ReceiveNow ? "" : "hidden")">
+                                    <div class="pAmount">
+                                        <div class="input-group-prepend">
+                                            <div class="input-group-text">@Currency.MakeCurrency(null)</div>
+                                        </div>
+                                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductRate" />
+                                    </div>
+                                    <span class="spnProductRate"></span>
+                                </td>
+                                <td valign="top" class="@(Model.ReceiveNow ? "" : "hidden")">
+                                    <div class="pAmount">
+                                        <div class="input-group-prepend">
+                                            <div class="input-group-text">@Currency.MakeCurrency(null)</div>
+                                        </div>
+                                        <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" />
+                                    </div>
+                                    <span class="spnProductAmount"></span>
+                                </td>
+                                <td valign="top" class="tableActions">
+                                    <i class="fa fa-trash-o" aria-hidden="true" title="@Localize.T("Delete")"></i>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="OtherInfos hidden">
+
+
+                <div class="col-md-12">
+                    <div class="invoive_description_container  avp_invoice_padd_top">
+                        <div class="col-md-12">
+                            &nbsp;
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="billing_text_align">
+                                    <span>@Localize.T("Description")</span>
+                                </div>
+                                <textarea id="PurchaseOrderWarehouse_Description" maxlength="5000" rows="4" class="InvoiceMessage">@Model.PurchaseOrderWarehouse.Description</textarea>
+                                <div class="invoice_message_div">
+                                    <span class="DescStartCount">0</span> out of <span class="DescEndCount">5000</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div>
+                                    <span>@Localize.T("Message displayed on purchase order")</span>
+                                </div>
+                                <textarea id="PurchaseOrderWarehouse_Message" maxlength="1000" rows="4" class="InvoiceMessage">@Model.PurchaseOrderWarehouse.Message</textarea>
+                                <div class="invoice_message_div">
+                                    <span class="MsgStartCount">0</span> out of <span class="MsgEndCount">5000</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="FileUpload">
+                            <div class="clearfix">
+                                &nbsp;
+                            </div>
+                            <div class="form-group clearfix">
+                                <span class="">@Localize.T("Allowed file types: doc, docx, xls, xlsx, jpg, jpeg, gif, png, rtf, pdf, txt") </span><br />
+                                <span class="">@Localize.T("(max file size: 20 mb)")</span>
+                            </div>
+                            <div>
+                                <br />
+                            </div>
+                            <div class="txt-form Upload_Doc hidden">
+                                <div class="col-md-12 padding-left-0">
+                                    <div class="apo_image_add">
+                                        <div class="fileborder border_none">
+                                            <img id="UploadCustomerFileBtn" class="cursor-pointer custom-file" src="~/Content/Icons/blank_thumb_file.png" />
+                                        </div>
+                                        @*<input class="deleteDoc" type="image" src="~/Content/Icons/cross_update.png" />*@
+                                        <div class="deleteDoc cursor-pointer hidden">
+                                            <img src="~/Content/Icons/cross-image-delete.png" />
+                                        </div>
+                                        <div class="change-picture-logo white-color cursor-pointer">
+                                            @*<button class="btn chooseFilebtn"> @Localize.T("Choose File to Upload")</button>*@
+                                            <button class="btn changeFilebtn hidden chooseFilebtn">@Localize.T("Change File")</button>
+                                        </div>
+
+                                        <div class="LoadPreviewDocument hidden">
+                                            <div class="show-image PropertyLogoPreviewPic">
+                                                <div class="image-delete" data-id="">
+                                                    <img src="~/Content/Icons/cross-image-delete.png" />
+                                                </div>
+                                                <img class="Preview_Doc T360image-photo T360image" src="" />
+                                            </div>
+                                            <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                                                <span><img src="~/Content/Icons/edit-icon.png" /> @Localize.T("Change File")</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group clearfix">
+                                        <textarea id="Bill_file_description"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-12 progress-container file-progress" style="display:none; padding-left:0; padding-right:0; margin-top: 15px;">
+                                    <div class="progress progress-striped active">
+                                        <div class="progress-bar progress-bar-success" style="width:0%">
+                                            <span> 0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <label class="label red position-relative hidden" id="uploadfileerror">*@Localize.T("File required")</label>
+
+                            </div>
+
+                            <div class="LoadPreviewDocument hidden">
+                                <div class="show-image">
+                                    <img id="Preview_Doc" src="" />
+                                    <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                                </div>
+                                <div class="change-picture-logo white-color cursor-pointer text-align-center T360image">
+                                    <span><img src="~/Content/Icons/edit-icon.png" /></span>
+                                </div>
+                            </div>
+                            <div class="LoadPreviewDocument1 hidden">
+                                <div class="show-image">
+                                    <iframe id="Frame_Doc" src="" width="319" height="455"></iframe>
+                                    <input class="deleteDoc" type="image" title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png" />
+                                </div>
+                            </div>
+                            <div class="UploadedVideo hidden">
+                                <div class="show-image">
+                                    <span>Click save button for add this video</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-snote" id="SaveBillFile"><i class="fa fa-floppy-o" aria-hidden="true"></i> Save</button>
+                    </div>
+
+                    <div class="invoive_calculation_div ">
+                        <div class="InvoiceCalculationsDiv hidden">
+                            <div class="subtotal-amount-div row margin-TB-5p">
+                                <div class="col-xs-8 avp_invoice_text_style">
+                                    <label class="float-right">@Localize.T("Subtotal"):</label>
+                                </div>
+                                <div class="col-xs-4 avb_invoice_allign subtotal_text">
+                                    <span class="amount avp_amount_subtotal" id="_subtotal_amount_po">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.PurchaseOrderWarehouse.Amount)</span>
+                                </div>
+                            </div>
+                            @*<div class="balance-due-amount-div row margin-TB-5p">
+                                    <div class="col-xs-7 avp_invoice_text_style">
+                                        <label class="float-right">@Localize.T("Balance Due"):</label>
+                                    </div>
+                                    <div class="col-xs-5 avb_invoice_allign">
+                                        <span class="balanceDueAmount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                                    </div>
+                                </div>*@
+                        </div>
+                    </div>
+                    <div class="LoadBillFiles">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="invoice-footer col-md-12">
+        <div class="po_cancelbtnDiv">
+            <button class="btnInv InvoiceCancelButton add_purchase_order_btn_desktop" onclick="CloseTopToBottomModal()">@Localize.T("Cancel")</button>
+            <button class="btnInv InvoiceCancelButton add_purchase_order_btn_mobile" onclick="CloseTopToBottomModal()"><i class="fa fa-times"></i></button>
+
+            @if (Model.PurchaseOrderWarehouse.Status == POStat.Created)
+            {
+                <button class="btnInv PurchaseOrderDeleteButton add_purchase_order_btn_desktop">@Localize.T("Delete")</button>
+                <button class="btnInv PurchaseOrderDeleteButton add_purchase_order_btn_mobile"><i class="fa fa-trash-o"></i></button>
+            }
+        </div>
+        <div class="po_InnerOptionsDiv">
+            <a class="CheckPrintAndPreview"><i class="fa fa-print"></i></a>
+            <a class="InvEstPreview" id="InvoicePrintAndPreview" href="@(AppConfig.DomainSitePath)/PurchaseOrder/GetPurchaseOrder"><i class="fa fa-print"></i></a>
+        </div>
+
+        <div class="po_SaveaButtonsDiv">
+            <button class="btnInv InvoiceSaveButton add_purchase_order_btn_desktop" onclick="SaveTechTransferRequest(false)">@Localize.T("Save")</button>
+            <button class="btnInv InvoiceSaveButton add_purchase_order_btn_mobile" onclick="SaveTechTransferRequest(false)"><i class="fa fa-floppy-o"></i></button>
+
+
+        </div>
+    </div>
+
+    <div class="AddInvoiceLoader hidden">
+        <div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>
+    </div>
+</div>
+<div class="">
+    <input type="hidden" id="UploadedPath" value="" />
+    <input type="file" name="BillFiles" class="hidden" id="UploadedFile" />
+
+</div>
+

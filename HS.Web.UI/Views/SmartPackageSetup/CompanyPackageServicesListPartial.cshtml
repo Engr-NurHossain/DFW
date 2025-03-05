@@ -1,0 +1,300 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+
+@model HS.Entities.PackageEquipmentServiceModel
+
+<link href="~/Content/Css/PackageSettings/PackageDeviceListPartial.css" rel="stylesheet" />
+@*<link href="~/Content/Css/PackageSettings/bootstrap-toggle.min.css" rel="stylesheet" />
+    @*<script src="~/Content/Js/PackageSetup/SmartPackageServicesList.js"></script>
+    <script src="~/Content/Js/PackageSetup/bootstrap-toggle.min.js"></script>*@
+<script>
+    var DataTablePageSize = 50;
+    var PacakgeDeleteId = 0;
+    var PageNo = '@ViewBag.PageNumber';
+    var statusval = '@ViewBag.status';
+    //var table = $('#packageServicesListTable').DataTable({
+    //    "pageLength": DataTablePageSize,
+    //    "destroy": true,
+    //    "language": {
+    //        "emptyTable": "No data available"
+    //    }
+    //});
+    //var ManageService= function (packageId) {
+    //    OpenTopToBottomModal("/SmartPackageSetup/SmartServiceView?id=" + packageId);
+    //}
+    $('#serviceStatus').on('change', function () {
+        //console.log(table + " hi " + this.value);
+        //var val = this.value;
+        //if (this.value == '-1') {
+        //    val = '';
+        //}
+        //table.column(2)
+        //    .search(val)
+        //    .draw();
+        var status = $(this).val();
+        LoadPackageServiceList(1, status);
+    });
+    var LoadPackageServiceList = function (pageno, status) {
+        if (typeof (pageno) == "undefined" && pageno == null && pageno == "") {
+            pageno = 1;
+        }
+        $(".company-package-services-list-div").load(domainurl + "/SmartPackageSetup/CompanyPackageServicesListPartial?pageno=" + pageno + "&pagesize=" + DataTablePageSize + "&status=" + status);
+    }
+    var DeletePackageDevice = function () {
+        $.ajax({
+            url: domainurl + "/SmartPackageSetup/DeleteSmartPackageEquipmentService",
+            data: { id: PacakgeDeleteId },
+            type: "Post",
+            dataType: "Json"
+        }).done(function () {
+            LoadPackageServiceList(PageNo);
+        });
+    }
+
+    $(document).ready(function () {
+        parent.$('.close').click(function () {
+            parent.$(".modal-body").html('');
+        })
+        $(".edit-package-Service").click(function () {
+            var PackageId = $(this).attr("idval");
+            OpenRightToLeftModal(domainurl + "/SmartPackageSetup/AddCompanyPackageServicesPartial/?Id=" + PackageId);
+        })
+
+        $(".delete-package-Service").click(function () {
+            var PackageId = $(this).attr("idval");
+            PacakgeDeleteId = PackageId;
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this item?", DeletePackageDevice);
+        })
+
+        //$('.toggle-service').bootstrapToggle();
+        ////$('#toggle-two').bootstrapToggle({
+        ////    on: 'Enabled',
+        ////    off: 'Disabled'
+        ////});
+
+        $(".toggle-service").unbind("onchange");
+        var it = $('.toggle-service:checkbox')
+          .map(function () {
+              console.log(this.id);
+              if ($("#status_" + this.id).text() == "Active") {
+                  //$("#" + this.id).bootstrapToggle('on');
+                  $("#" + this.id).attr('checked', true);
+              }
+              //else {
+              //    $("#" + this.id).bootstrapToggle('off');
+              //}
+          }).get().join();
+        console.log(it);
+        $(".toggle-service").on("change", function () {
+            var pid = $(this).attr("idval");
+            console.log(pid);
+            $.ajax({
+                url: domainurl + "/SmartPackageSetup/SmartServiceStatusChange",
+                data: { id: pid },
+                type: "Post",
+                dataType: "Json"
+            }).done(function () {
+                LoadPackageServiceList(PageNo);
+            });
+        });
+        if (statusval == '') {
+            $('#serviceStatus').val("-1");
+        }
+        else {
+            $('#serviceStatus').val(statusval);
+        }
+    })
+
+</script>
+
+<div class="packageServicesListTableContainer">
+    <div class="service_status_div">
+        <div>Service Status: </div>
+        <select class="form-control" id="serviceStatus" name="serviceStatus">
+            <option value="-1">All</option>
+            <option value="Active">Active</option>
+            <option value="Deactive">Deactive</option>
+        </select>
+    </div>
+    <table id="packageServicesListTable" style="width:100%">
+        <thead>
+            <tr>
+                <th>@Localize.T("Service Name")</th>
+                <th>@Localize.T("RMR")</th>
+                <th>@Localize.T("Status")</th>
+                <th>&nbsp; &nbsp;@Localize.T("Activate/Deactivate")</th>
+                <th>&nbsp; &nbsp;@Localize.T("Last Edited")</th>
+                <th>&nbsp; &nbsp;@Localize.T("Action")</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var item in Model.ListSmartPackageEquipmentService)
+            {
+                <tr>
+                    <td><a class="edit-package-Service" idval="@item.Id">@item.EquipmentName</a></td>
+                    <td>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Price.Value)</td>
+                    @if (item.Status == true)
+                    {
+                        <td class="cplp_info_allign" id="status_editor_@item.Id">Active</td>
+                    }
+                    else
+                    {
+                        <td class="cplp_info_allign" id="status_editor_@item.Id">Deactive</td>
+                    }
+
+                    <td class="cplp_info_allign"><input type="checkbox" @(item.Status == true ? "checked" : "") class="toggle-service" idval="@item.Id" id="editor_@item.Id" @*onchange="StatusChange(@item.Id)"*@ @*data-toggle="toggle" data-on="Activate" data-off="Deactivate" data-onstyle="success" data-offstyle="danger"*@></td>
+                    <td class="cplp_info_allign">@item.LastUpdatedName, @HS.Framework.DateTimeExtension.UTCToClientTime(item.LastUpdatedDate).ToString("MM/dd/yyyy") @HS.Framework.DateTimeExtension.UTCToClientTime(item.LastUpdatedDate).ToString("hh:mm tt")</td>
+                    @if (item.Status == false)
+                    {
+                        <td class="cplp_info_allign">
+                            <a class="delete-package" idval="@item.Id" title="@Localize.T("Delete")"><i class="fa fa-trash-o"></i></a>
+                            @*<a class="delete-package" onclick="ManageService(@item.Id)">View</a>*@
+                        </td>
+                    }
+                    else
+                    {
+                        <td class="cplp_info_allign">
+                            @*<a class="delete-package" onclick="ManageService(@item.Id)">View</a>*@
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="AgentListPagination">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="LoadPackageServiceList(@(ViewBag.PageNumber))">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadPackageServiceList(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadPackageServiceList(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadPackageServiceList(2)">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="LoadPackageServiceList(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadPackageServiceList(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadPackageServiceList(1)">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadPackageServiceList(2)">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="LoadPackageServiceList(3)">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="LoadPackageServiceList(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadPackageServiceList(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadPackageServiceList(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadPackageServiceList(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="LoadPackageServiceList(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="LoadPackageServiceList()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadPackageServiceList(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadPackageServiceList(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadPackageServiceList(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="LoadPackageServiceList(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadPackageServiceList(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadPackageServiceList(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadPackageServiceList(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="LoadPackageServiceList(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadPackageServiceList(@(ViewBag.PageNumber-1))">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadPackageServiceList(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="LoadPackageServiceList(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadPackageServiceList(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="LoadPackageServiceList(@(ViewBag.PageNumber+1))">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+

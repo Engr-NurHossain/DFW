@@ -1,0 +1,371 @@
+﻿@{
+    Layout = null; 
+
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+<link href="~/Content/Css/Customer/DateViewPartial.css" rel="stylesheet" />
+<script>
+    var StartDateDatepicker;
+    var EndDateDatepicker;
+    var my_date_format = function (input) {
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var StartDateFilter = '@ViewBag.StartDate';
+    var EndDateFilter = '@ViewBag.EndDate';
+    var SetDate = '@ViewBag.SetDate';
+    var FirstDayOfWeek = '@ViewBag.FirstDayOfWeek';
+    var FilterStartDate = '@ViewBag.FilterStartDate';
+    var DropDownDateTime = function () {
+        if ($('.dropdown-filter').is(":visible")) {
+            $(".dropdown-filter").hide();
+        }
+        else {
+            $(".dropdown-filter").show();
+        }
+    }
+    var UpdatePtoCookie = function () {
+        var FirstDayStr = $("#PayrollFilterStartDate").val();
+        var EndDayStr = $("#PayrollFilterEndDate").val();
+       
+        var PTOFilterStr = $("#DateRange").val();
+        var NewCookie = String.format("{0},{1},{2}", FirstDayStr, EndDayStr, PTOFilterStr);
+        console.log(NewCookie);
+        $.cookie("_DateViewFilter", NewCookie, { expires: 1 * 60 * 24, path: '/' });
+    }
+
+    $(document).ready(function () {
+        console.log('Date Range');
+        StartDateDatepicker = new Pikaday({
+            field: $('#PayrollFilterStartDate')[0],
+            format: 'MM/DD/YYYY',
+            yearRange: [2016, 2030],
+            defaultDate: '01/01/01'
+            //minDate: new Date('1-1-2020'),
+        });
+        EndDateDatepicker = new Pikaday({
+            field: $('#PayrollFilterEndDate')[0],
+            format: 'MM/DD/YYYY',
+            yearRange: [2016, 2030],
+            defaultDate: '01/01/01'
+            //minDate: new Date('1-1-2020'),
+        });
+        $("body").on('click', function (evt) {
+
+            console.log(evt);
+            console.log('datetime view body click');
+            var clickClass = $(evt.target || evt.srcElement).attr("class");
+            var clickId = $(evt.target || evt.srcElement).attr("id");
+            console.log(clickId);
+            //if (clickClass != "dateTable" && clickClass != "date-start _GAmC" && clickClass != "_GArn" && clickClass != "clearfix fixed_header custom_top" && clickClass != "fa fa-caret-down" && clickClass != "_GAjo" && clickClass != "caret_style") {
+            //        //if ($('.dropdown-filter').is(":visible")) {
+            //        //    $(".dropdown-filter").hide();
+            //        //}
+            //}
+            if (clickId == 'PayrollFilterStartDate' || clickId == 'PayrollFilterEndDate') {
+                return false;
+            }
+            if (clickClass != "dateTable" && clickClass != "date-start _GAmC" && clickClass != "_GArn" && clickClass != "clearfix fixed_header custom_top" && clickClass != "fa fa-caret-down" && clickClass != "_GAjo" && clickClass != "caret_style" && clickClass != "date-start _GAmC" && clickClass != "date-end _GAaC" && clickClass != "_GArn" && clickClass != "clearfix fixed_header custom_top" && clickClass != "fa fa-caret-down" && clickClass != "_GAjo" && clickClass != "caret_style"
+                && clickClass != "dropdown-filter" && clickClass != "form-control select_leaduser daterangeList" && clickClass != "form-control date-range-filter min-date" && clickClass != "form-control date-range-filter max-date" && clickClass != "undefined") {
+                if ($('.dropdown-filter').is(":visible")) {
+                    $(".dropdown-filter").hide();
+                }
+            }
+
+        });
+        $(".dropdown-filter").hide();
+        $(".dateTable").click(function () {
+            if ($('.dropdown-filter').is(":visible")) {
+                $(".dropdown-filter").hide();
+            }
+            else {
+                $(".dropdown-filter").show();
+            }
+
+        })
+
+        $("#PayrollFilterStartDate").blur(function () {
+            $("#DateRange").val("Custom");
+        })
+        $("#PayrollFilterEndDate").blur(function () {
+            $("#DateRange").val("Custom");
+        })
+        $("#DateRange").change(function () {
+            console.log("hlw");
+            if ($(this).val() == "Today") {
+                var Today = new Date();
+                StartDateDatepicker.setDate(Today);
+                EndDateDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "Yesterday") {
+                var Today = new Date();
+                EndDateDatepicker.setDate(Today.addDays(-1));
+                StartDateDatepicker.setDate(Today);
+            }
+            else if ($(this).val() == "ThisWeek") {
+                var Today = new Date();
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDateDatepicker.setDate(StartDay);
+                EndDateDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "LastWeek") {
+                var Today = new Date();
+                Today = Today.addDays(-7);
+
+                var Week = Today.getWeek();
+                var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                StartDateDatepicker.setDate(StartDay);
+                EndDateDatepicker.setDate(StartDay.addDays(6));
+            }
+            else if ($(this).val() == "ThisMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() + 1, 0);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+
+            }
+            else if ($(this).val() == "LastMonth") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() - 1, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 0);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "Last30Days") {
+
+                var Today = new Date();
+                Today = Today.addDays(-30); 
+
+                StartDateDatepicker.setDate(Today);
+                EndDateDatepicker.setDate(Today.addDays(30)); 
+            }
+            else if ($(this).val() == "ThisYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear(), 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear(), 11, 31);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "LastYear") {
+                var Today = new Date();
+
+                var FirstDayOfMonth = new Date(Today.getFullYear() - 1, 0, 1);
+                var LastDayOfMonth = new Date(Today.getFullYear() - 1, 11, 31);
+
+                StartDateDatepicker.setDate(FirstDayOfMonth);
+                EndDateDatepicker.setDate(LastDayOfMonth);
+            }
+            else if ($(this).val() == "AllTime") {
+                $("#PayrollFilterStartDate").val("");
+                $("#PayrollFilterEndDate").val("");
+            }
+            else if ($(this).val() == "Last90Days") {
+                var date = new Date();
+                var last90 = new Date(new Date().setDate(date.getDate() - 90));
+                StartDateDatepicker.setDate(last90);
+                EndDateDatepicker.setDate(date);
+            }
+            else if ($(this).val() == "Last30Days") {
+                var Today = new Date();
+                Today = Today.addDays(-30);
+
+                StartDateDatepicker.setDate(Today);
+                EndDateDatepicker.setDate(Today.addDays(30));  
+            }
+            else if ($(this).val() == "Custom") {
+                $("#PayrollFilterStartDate").val("");
+                $("#PayrollFilterEndDate").val("");
+            }
+        });
+
+        if (StartDateFilter == "NaN undefined, NaN") {
+
+            StartDateFilter = "All Time";
+            EndDateFilter = "";
+        }
+        console.log("dfsdf")
+        if (StartDateFilter == "01/01/0001" && EndDateFilter == "01/01/0001") {
+            if (SetDate != '' && SetDate != '-1' && SetDate != "AllTime") {
+                if (SetDate == "Today") {
+                    var Today = new Date();
+                    StartDateDatepicker.setDate(Today);
+                    EndDateDatepicker.setDate(Today);
+                    $("#DateRange").val("Today");
+                }
+                else if (SetDate == "Yesterday") {
+                    var Today = new Date();
+                    EndDateDatepicker.setDate(Today.addDays(-1));
+                    StartDateDatepicker.setDate(Today);
+                    $("#DateRange").val("Yesterday");
+                }
+                else if (SetDate == "ThisWeek") {
+                    var Today = new Date();
+                    var Week = Today.getWeek();
+                    var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                    StartDateDatepicker.setDate(StartDay);
+                    EndDateDatepicker.setDate(StartDay.addDays(6));
+                    $("#DateRange").val("ThisWeek");
+                }
+                else if (SetDate == "LastWeek") {
+                    var Today = new Date();
+                    Today = Today.addDays(-7);
+
+                    var Week = Today.getWeek();
+                    var StartDay = getDateOfISOWeek(Week, Today.getFullYear());
+
+                    StartDateDatepicker.setDate(StartDay);
+                    EndDateDatepicker.setDate(StartDay.addDays(6));
+                    $("#DateRange").val("LastWeek");
+                }
+                else if (SetDate == "ThisMonth") {
+                    var Today = new Date();
+
+                    var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 1);
+                    var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() + 1, 0);
+
+                    StartDateDatepicker.setDate(FirstDayOfMonth);
+                    EndDateDatepicker.setDate(LastDayOfMonth);
+                    $("#DateRange").val("ThisMonth");
+
+                }
+                else if (SetDate == "LastMonth") {
+                    var Today = new Date();
+
+                    var FirstDayOfMonth = new Date(Today.getFullYear(), Today.getMonth() - 1, 1);
+                    var LastDayOfMonth = new Date(Today.getFullYear(), Today.getMonth(), 0);
+
+                    StartDateDatepicker.setDate(FirstDayOfMonth);
+                    EndDateDatepicker.setDate(LastDayOfMonth);
+                    $("#DateRange").val("LastMonth");
+                }
+                else if (SetDate == "Last30Days") {
+                    var Today = new Date();
+                    Today = Today.addDays(-30);
+
+                    StartDateDatepicker.setDate(Today);
+                    EndDateDatepicker.setDate(Today.addDays(30)); 
+                    $("#DateRange").val("Last30Days");
+                }
+                else if (SetDate == "ThisYear") {
+                    var Today = new Date();
+
+                    var FirstDayOfMonth = new Date(Today.getFullYear(), 0, 1);
+                    var LastDayOfMonth = new Date(Today.getFullYear(), 11, 31);
+
+                    StartDateDatepicker.setDate(FirstDayOfMonth);
+                    EndDateDatepicker.setDate(LastDayOfMonth);
+                    $("#DateRange").val("ThisYear");
+                }
+                else if (SetDate == "LastYear") {
+                    var Today = new Date();
+
+                    var FirstDayOfMonth = new Date(Today.getFullYear() - 1, 0, 1);
+                    var LastDayOfMonth = new Date(Today.getFullYear() - 1, 11, 31);
+
+                    StartDateDatepicker.setDate(FirstDayOfMonth);
+                    EndDateDatepicker.setDate(LastDayOfMonth);
+                    $("#DateRange").val("LastYear");
+                }
+
+                StartDateFilter = my_date_format($("#PayrollFilterStartDate").val());
+                EndDateFilter = my_date_format($("#PayrollFilterEndDate").val());
+
+            }
+            else {
+                StartDateFilter = "All Time"
+                EndDateFilter = "";
+                $("#PayrollFilterStartDate").val("");
+                $("#PayrollFilterEndDate").val("");
+                $("#DateRange").val("AllTime");
+            }
+
+        }
+        else {
+
+            if (StartDateFilter != "01/01/0001") {
+                StartDateFilter = my_date_format(StartDateFilter);
+
+            }
+            else {
+                console.log("dfsdf")
+
+                StartDateFilter = "All Time"
+                $("#PayrollFilterStartDate").val("");
+
+            }
+            if (EndDateFilter != "01/01/0001") {
+                EndDateFilter = my_date_format(EndDateFilter);
+            }
+            else {
+                EndDateFilter = "";
+                $("#PayrollFilterEndDate").val("");
+            }
+        } 
+        $(".DateFilterContents .date-start").html("");
+        $(".DateFilterContents .date-end").html("");
+        $(".DateFilterContents .date-start").html(StartDateFilter);
+        $(".DateFilterContents .date-end").html(EndDateFilter);
+        if (SetDate == "Last30Days") {
+            $("#DateRange").val("Last30Days");
+        }
+        else if (SetDate == "Today") {
+            $("#DateRange").val("Today");
+        }
+    });
+
+</script>
+<div class="DateFilterContents">
+    <table class="dateTable">
+        <tbody>
+            <tr>
+                <td class="_GArn">
+                    <span class="date-start _GAmC" dir="ltr">All Time</span>
+                    <span class="_GAjo">-</span>
+                    <span class="date-end _GAaC" dir="ltr"></span>
+                </td>
+                <td class="caret_style">
+                    <i class="fa fa-caret-down"></i>
+                    @*<i class="fa fa-caret-up"></i>*@
+                </td>
+            </tr>
+
+        </tbody>
+    </table>
+    <div class="dropdown-filter">
+        <div class="filter-by-status sub-list">
+            <span>@Localize.T("Date Range")</span>
+            @Html.DropDownList("DateRange", (List<SelectListItem>)ViewBag.DateRangeList, new { @class = "form-control select_leaduser daterangeList", id = "DateRange" })
+        </div>
+
+        <div class="filter-by-equipmentClass sub-list">
+            <span>@Localize.T("Date Range")</span>
+            <div class="input-group input-daterange">
+
+                <input type="text" value="@ViewBag.StartDate"  autocomplete="off" id="PayrollFilterStartDate" class="form-control date-range-filter min-date" data-date-format="yyyy-mm-dd" placeholder="From:">
+
+                <div class="input-group-addon">to</div>
+
+                <input type="text" value="@ViewBag.EndDate"  autocomplete="off" id="PayrollFilterEndDate" class="form-control date-range-filter max-date" data-date-format="yyyy-mm-dd" placeholder="To:">
+
+            </div>
+        </div>
+            <button class="btn btn-apply-Datefilter">
+                <i class="fa fa-check" aria-hidden="true"></i>  @Localize.T("Apply")
+            </button>
+    </div>
+</div>
+    

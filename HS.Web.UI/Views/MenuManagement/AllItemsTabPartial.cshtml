@@ -1,0 +1,199 @@
+﻿@model HS.Entities.ItemReportsModel
+    @{ 
+        Layout = null;
+        var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+    }
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@Styles.Render("~/styles/UserList")
+<link href="~/Content/Css/Lead/EmergencyContactListPartial.css" rel="stylesheet" />
+
+<style>
+    #TblEmergencyContactList_menuitem {
+        width: 100%;
+    }
+    .filter_all_menu_item{
+        width:30% !important;
+        float:left !important;
+    }
+    .btnfilterallitemtab{
+        float:left;
+    }
+    .btn_create_all_item_tab{
+        float:right;
+        background-color:#2ca01c;
+        border-color:#2ca01c;
+        color:white;
+    }
+    .input_group_left_item{
+        width:60%;
+        float:left;
+    }
+    .all_items_reports_block{
+        float:left;
+        width:100%;
+        height:60px;
+        border:1px solid white;
+    }
+    .total_active_items_bar{
+        float:left;
+        width:33.33%;
+        height:50px;
+        background-color:#777777ba;
+        cursor:pointer;
+    }
+    .total_items_bar{
+        float:left;
+        width:33.33%;
+        height:50px;
+        background-color:#ec8e08;
+        cursor:pointer;
+    }
+    .avg_price_items_bar {
+        float: left;
+        width: 33.33%;
+        height: 50px;
+        background-color: #1897d6;
+        cursor: pointer;
+    }
+    .items_bar_txt {
+        font-size: 15px;
+        font-weight: 600;
+        color: white;
+    }
+    .items_bar_content{
+        padding:13px;
+    }
+    .items_bar_count{
+        color:white;
+    }
+    .total_active_items_bar:hover,
+    .total_items_bar:hover,
+    .avg_price_items_bar:hover{
+        height:60px;
+    }
+    .btn_del_all_items{
+        float: right;
+    background-color: #2ca01c;
+    border-color: #2ca01c;
+    color: white;
+    margin-left:10px;
+    }
+</style>
+<script>
+    var MenuList = '@Html.Raw(Json.Encode(@ViewBag.listmenu))';
+    MenuList = JSON.parse(MenuList);
+    var categoryList = '@Html.Raw(Json.Encode(@ViewBag.listcategory))';
+    categoryList = JSON.parse(categoryList);
+    var TextSearch = '@ViewBag.TextSearch';
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+    var OpenMenuItemTabById = function (id, menuid) {
+        OpenTopToBottomModal("/MenuManagement/AddMenuItem?menuId=" + menuid + "&miId=" + id + "&edititem=true");
+    }
+    var LoadAllItemsList = function (IsStatus) {
+        $(".LoadAllItemsList").html(TabsLoaderText);
+        $(".LoadAllItemsList").load("/MenuManagement/AllItemsTabListPartial?MenuList=" + MenuList + "&TextSearch=" + encodeURI(TextSearch) + "&categoryList=" + categoryList + "&IsStatus=" + IsStatus);
+    }
+    var LoadAllItemsListSearch = function (IsStatus) {
+        MenuList = $("#menulist").val();
+        categoryList = $("#categorylist").val();
+        TextSearch = $("#txt_search_all_item_tab").val();
+        $(".LoadAllItemsList").html(TabsLoaderText);
+        $(".LoadAllItemsList").load("/MenuManagement/AllItemsTabListPartial?MenuList=" + MenuList + "&TextSearch=" + encodeURI(TextSearch) + "&categoryList=" + categoryList + "&IsStatus=" + IsStatus);
+    }
+    var DeleteMenuItemById = function (miId) {
+    $.ajax({
+        url: domainurl + "/MenuManagement/DeleteMenuItem",
+        data: { Id: miId },
+        type: "Post",
+        dataType: "Json",
+        success: function (data) {
+            if (data.result) {
+                OpenIeateryPopupModal("Success", data.message);
+                var MenuList = $("#menulist").val();
+                    var categoryList = $("#categorylist").val();
+                    var TextSearch = $("#txt_search_all_item_tab").val();
+                    $(".LoadAllItemsList").load("/MenuManagement/AllItemsTabListPartial?MenuList=" + MenuList + "&TextSearch=" + encodeURI(TextSearch) + "&categoryList=" + categoryList);
+            } else {
+                OpenErrorMessageNew("Error!", data.message)
+            }
+        }
+    });
+}
+var DeleteAllItems = function () {
+    $.ajax({
+        url: domainurl + "/MenuManagement/DeleteAllItems",
+        data: {},
+        type: "Post",
+        dataType: "Json",
+        success: function (data) {
+            if (data) {
+                window.location.reload();
+            }
+        }
+    });
+}
+var DeleteMenuItem = function (DeleteId) {
+    OpenConfirmationMessageNew("Confirm?", "Do you want to delete this from the list?", function () {
+        DeleteMenuItemById(DeleteId);
+    })
+}
+    $(document).ready(function () {
+        $(".selectpicker").selectpicker();
+        LoadAllItemsList();
+        $("#txt_search_all_item_tab").keyup(function (event) {
+            event.preventDefault();
+            if (event.keyCode == 13) {
+                LoadAllItemsListSearch();
+            }
+        });
+        if (typeof (MenuList) != "undefined" && MenuList != null && MenuList != "") {
+            $("#menulist").selectpicker("val", MenuList);
+        }
+        if (typeof (TextSearch) != "undefined" && TextSearch != null && TextSearch != "") {
+            $("#txt_search_all_item_tab").val(TextSearch);
+        }
+        if (typeof (categoryList) != "undefined" && categoryList != null && categoryList != "") {
+            $("#categorylist").selectpicker("val", categoryList);
+        }
+    })
+</script>
+<div class="all_items_reports_container">
+    <div class="all_items_reports_block">
+        <div class="total_active_items_bar">
+            <div class="items_bar_content" onclick="LoadAllItemsList(true)">
+                <span class="items_bar_txt">Active Items: </span>
+                <span class="items_bar_count">@Model.TotalActive</span>
+            </div>
+        </div>
+        <div class="total_items_bar">
+            <div class="items_bar_content" onclick="LoadAllItemsList()">
+                <span class="items_bar_txt">Total Items: </span>
+                <span class="items_bar_count">@Model.TotalItems</span>
+            </div>
+        </div>
+        <div class="avg_price_items_bar">
+            <div class="items_bar_content" onclick="LoadAllItemsList(true)">
+                <span class="items_bar_txt">Average Price: </span>
+                <span class="items_bar_count">$@HS.Web.UI.Helper.LabelHelper.FormatAmount(Model.AveragePrice)</span>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="customer-emergency-list-container">
+    <div class="filter_all_item_tab">
+        <div class="input-group add-on input_group_left_item">
+            @Html.DropDownList("menulist", ViewBag.menulist as List<SelectListItem>, new { @class = "form-control selectpicker filter_all_menu_item", @multiple = "multiple" })
+            @Html.DropDownList("categorylist", ViewBag.categorylist as List<SelectListItem>, new { @class = "form-control selectpicker filter_all_menu_item", @multiple = "multiple" })
+            <input class="form-control filter_all_menu_item" placeholder="Search" id="txt_search_all_item_tab" />
+            <div class="input-group-btn btnfilterallitemtab">
+                <button class="btn" id="btnfilterallitemtab" onclick="LoadAllItemsListSearch()"><i class="fa fa-search"></i></button>
+            </div>
+        </div>
+        @if (CurrentUser != null && (CurrentUser.UserRole.ToLower() == "sysadmin" || CurrentUser.UserRole.ToLower() == "admin"))
+        {
+            <button class="btn btn_del_all_items" id="btn_del_all_items" onclick="OpenConfirmationMessageNew('Confirmation', 'Are you sure, you want to delete all items?', function () { DeleteAllItems() })">Delete All Items</button>
+        }
+        <button class="btn btn_create_all_item_tab" onclick="OpenMenuItemTabById(0, 0)"><i class="fa fa-plus"></i> New</button>
+    </div>
+    <div class="LoadAllItemsList"></div>
+</div>

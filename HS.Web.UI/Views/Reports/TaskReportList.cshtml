@@ -1,0 +1,317 @@
+﻿@model HS.Entities.TaskModel
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework
+<style>
+    .nt_text_st {
+            width: 100%;
+    float: left;
+           overflow: hidden;
+    /*display: -webkit-box;*/
+    /*-webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;*/
+    }
+    .nt_text_btn {
+             float: left;
+    font-size: 12px;
+    color: #2ca01c;
+    font-weight: bold;
+    cursor: pointer;
+    }
+    .lessContent {
+        color:#d71920;
+    }
+</style>
+<script>
+     var pageno = '@ViewBag.PageNumber';
+
+    $(document).ready(function(){
+         $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            TaskReportListLoad(pageno, orderval);
+         })
+        $(".lessContent").hide();
+    $(".nt_text_st").attr("style", "max-height: 100px !important;");
+    $(".nt_text_st").each(function () {
+        console.log($($(this).find("div")[0]).height())
+        var idval = $(this).attr('data-id');
+        if (parseInt($($(this).find("div")[0]).height()) > 100) {
+            $(".moreContent_" + idval).show();
+        }
+        else {
+            $(".moreContent_" + idval).hide();
+        }
+    })
+        $(".moreContent").click(function () {
+        var IdVal = $(this).attr('id-val');
+        $(".moreContent_" + IdVal).hide();
+        $(".lessContent_" + IdVal).show();
+        $(".nt_text_st_" + IdVal).attr("style", "max-height: unset !important;");
+    })
+    $(".lessContent").click(function () {
+        var IdVal = $(this).attr('id-val');
+        $(".moreContent_" + IdVal).show();
+        $(".lessContent_" + IdVal).hide();
+        $(".nt_text_st_" + IdVal).attr("style", "max-height: 100px !important;");
+    })
+    })
+      
+</script>
+<table class="loadticketreportlist_table strl_table">
+    <thead class="table-head-border">
+        <tr>
+            @*<th class="thead-th-style"> <div>@Localize.T("Ticket")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ticketid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ticketid"></i></div></th>*@
+            <th class="thead-th-style task_note">
+                <div>Task</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/taskid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/taskid"></i></div>
+            </th>
+            <th class="thead-th-style">
+                <div>Task Details</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/taskid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/taskid"></i></div>
+            </th>
+
+            <th class="thead-th-style">
+                <div>Active</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/taskid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/taskid"></i></div>
+            </th>
+            <th class="thead-th-style">
+                <div>Created</div>
+                <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/taskid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/taskid"></i></div>
+            </th>
+            
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.TaskList)
+        {
+        <tr class="tr-style">
+            @*<td class="table-body-td-style" valign="top">
+                <div class="ticket_list_partial_device_header">@Localize.T("Note")<span>:</span></div>
+                <div class="ticket_list_partial_device_info">  <a class="cus-anchor" onclick="OpenTicketById(@item.TicketId)" href="javascript:void(0)">@item.TicketId</a></div>
+            </td>
+            <td class="table-body-td-style" valign="top">
+                <div class="ticket_list_partial_device_header">@Localize.T("Customer")<span>:</span></div>
+                <div class="ticket_list_partial_device_info">*@
+                    @*<div class="ins_track_report_sp_head">@Localize.T("ID")<span>:</span></div>*@
+                    @*<a class="cus-anchor" href="/Customer/CustomerDetail/?id=@item.Id" target="_blank">@item.CustomerName</a>
+                </div>
+
+            </td>*@
+
+            <td class="table-body-td-style" valign="top">
+                <div class="notes_device_info">
+                    <div class="nt_text_st nt_text_st_@item.Id" data-id="@item.Id">
+                            <div>
+                                <div>@Html.Raw(item.Notes)</div>
+                            </div>
+                    </div>
+                    <span class="nt_text_btn moreContent moreContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show More")">@Localize.T("Show More >>")</span>
+                    <span class="nt_text_btn lessContent lessContent_@item.Id" id-val="@item.Id" title="@Localize.T("Show Less")">@Localize.T("<< Show Less")</span>
+                </div>
+            </td>
+            <td class="table-body-td-style" valign="top">
+                    <div class="width-100p">
+                        <div class="notes_device_info">
+                            <span class="notes_header_custom">@Localize.T("Task On"):</span>
+                            @if (item.ReminderDate!= null && item.ReminderDate != new DateTime())
+                            {
+                                <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.ReminderDate.Value).ToString("M/d/yy") at @HS.Framework.DateTimeExtension.UTCToClientTime(item.ReminderDate.Value).ToString("hh:mm tt")</span>
+                                if (item.IsEmail == true)
+                                {
+                                    <span class="glyphicon glyphicon-envelope btn-follow-envelope" id="btn-follow-envelope" data-id="@item.AssignName" idval="@item.Id" style="cursor: pointer;float:right;"></span>
+                                }
+                                if (item.IsText == true)
+                                {
+                                    <span class="glyphicon glyphicon-phone" id="btn-phn" data-id="@item.Id" style="float:right;padding-right:10px;"></span>
+                                    <a href="" class="phnClick"></a>
+                                }
+                            }
+                            else
+                            {
+                                <span>@Localize.T("-")</span>
+                            }
+                        </div>
+                    </div>
+                        <div class="width-100p">
+                            <div class="notes_device_info">
+                                <span class="notes_header_custom">@Localize.T("Attn Required By"):</span>
+                                @if (item.ReminderEndDate.Value != null && item.ReminderEndDate.Value != new DateTime())
+                                {
+                                    <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.ReminderEndDate.Value).ToString("M/d/yy")</span>
+                                }
+                                else
+                                {
+                                    <span>@Localize.T("-")</span>
+                                }
+                            </div>
+                        </div>
+                @if (!string.IsNullOrEmpty(item.AssignName))
+                {
+                    <div class="width-100p">
+                        <div class="notes_device_info">
+                            <span class="notes_header_custom">@Localize.T("Assign User"):</span>
+                            <span>@item.AssignName</span>
+                        </div>
+                    </div>
+                }
+            </td>
+
+            <td class="table-body-td-style" valign="top">
+                <div class="ticket_list_partial_device_header">@Localize.T("Active")<span>:</span></div>
+                @if (item.IsShedule == true)
+                {
+                    <span>Yes</span>
+                }
+                else
+                {
+                    <span>No</span>
+                }
+                </td>
+            <td class="table-body-td-style" valign="top">
+                <div class="width-100p">
+                    <div class="notes_device_info">
+                            <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("M/d/yy")</span>
+                    </div>
+                </div>
+            </td>
+        </tr>
+
+        }
+    </tbody>
+</table>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="TaskReportListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="TaskReportListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButtonq  @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="TaskReportListLoad(1, '@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="TaskReportListLoad(2,'@(ViewBag.order)')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="TaskReportListLoad(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="TaskReportListLoad(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="TaskReportListLoad(1,'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="TaskReportListLoad(2,'@(ViewBag.order)')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="TaskReportListLoad(3,'@(ViewBag.order)')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="TaskReportListLoad(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TaskReportListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaskReportListLoad(@(ViewBag.PageNumber-2),'@(ViewBag.order)')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaskReportListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="TaskReportListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="TaskReportListLoad()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TaskReportListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaskReportListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaskReportListLoad(@(ViewBag.PageNumber + 2),'@(ViewBag.order)')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TaskReportListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TaskReportListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaskReportListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaskReportListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TaskReportListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="TaskReportListLoad(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaskReportListLoad(@(ViewBag.PageNumber - 1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="TaskReportListLoad(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="TaskReportListLoad(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="TaskReportListLoad(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+
+

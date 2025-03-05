@@ -1,0 +1,370 @@
+﻿@model HS.Entities.CreateCustomerInvoice
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using System.Collections;
+
+
+<script>
+    var PdfLocation = '@ViewBag.pdfLocation';
+    var LeadId = '@Model.CustomerId';
+    var EstimateId = '@Model.Invoice.Id';
+</script>
+
+@Styles.Render("~/styles/SendEmailEstimateCS")
+@Scripts.Render("~/scripts/SendEmailEstimateJS")
+
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+
+<script src="~/Content/Select2/Select2.min.js"></script>
+
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Tiny/tiny.js"></script>
+<script>
+    var UserFileUploadjqXHRData;
+    var invoiceid = '@Model.Invoice.InvoiceId';
+//var ReloadFIlesTab = function () {
+//    $("#FilesTab").load("/File/CustomerFiles/" + customerId);
+//}
+var SaveCustomerFile = function () {
+    var url = domainurl + "/File/SaveCustomerFile/";
+    var param = JSON.stringify({
+        File: $("#UploadedPath").val(),
+        CustomerId: parent.CustomerLoadId,
+        Description: $("#description").val(),
+        InvoiceId: invoiceid
+    });
+    $.ajax({
+        type: "POST",
+        ajaxStart: $(".loader-div").show(),
+        url: url,
+        data: param,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+        success: function (data) {
+            //OpenSuccessMessageNew("Success!", "", function () {
+            if (data.result) {
+                $("#description").val('');
+                $("#UploadedPath").val('');
+                UserFileUploadjqXHRData = "";
+                $('#AttachmentsEstimate').append($("<option selected></option>").attr("value", data.fileid).text(data.filedescription));
+            }
+
+                //CustomerFileLoad();
+                //OpenFilesTab();
+                //$("#Right-To-Left-Modal-Body .close").click();
+            //});
+            //$(".customer-files-modal-head .close").click();
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(errorThrown);
+        }
+    });
+
+}
+$(document).ready(function () {
+
+    //$("#SaveCustomerFiles").click(function () {
+    //    if (CommonUiValidation() && $("#UploadedPath").val() != "") {
+    //        SaveCustomerFile();
+    //        $(".fileborder").removeClass('red-border');
+    //    }
+    //    if ($("#UploadedPath").val() == "") {
+    //        $("#uploadfileerror").removeClass("hidden");
+    //        $(".fileborder").addClass('red-border');
+    //    }
+    //});
+    $("#UploadCustomerFileBtn").click(function () {
+        console.log("sdfdsf");
+        $("#UploadedFile").click();
+        //SaveCustomerFile();
+        //$("#UploadSuccessMessage").addClass('hidden');
+    });
+    //$(".change-picture-logo").click(function () {
+    //    $("#UploadedFile").click();
+    //    $("#UploadSuccessMessage").addClass('hidden');
+    //});
+    $('#UploadedFile').fileupload({
+        pasteZone: null,
+        url: domainurl + '/File/UploadCustomerFile?CustomerId=' + parent.CustomerLoadId, /* CustomerId*/
+        dataType: 'json',
+        add: function (e, data) {
+            var ext = data.files[0].name.split(".");
+            if ($("#description").val() == "") {
+                var filename = data.fileInput[0].value.split('\\').pop();
+                console.log(filename);
+                $("#description").val(filename);
+            }
+            if (ext[1].toLowerCase() == 'doc' || ext[1].toLowerCase() == 'docx' || ext[1].toLowerCase() == 'xls' || ext[1].toLowerCase() == 'xlsx' || ext[1].toLowerCase() == 'jpeg' || ext[1].toLowerCase() == 'jpg' || ext[1].toLowerCase() == 'gif' || ext[1].toLowerCase() == 'png' || ext[1].toLowerCase() == 'rtf' || ext[1].toLowerCase() == 'pdf' || ext[1].toLowerCase() == 'txt' || ext[1].toLowerCase() == 'mp4' || ext[1].toLowerCase() == 'mov')
+            {
+
+                if (data.files[0].size <= 50000000)
+                {
+                    UserFileUploadjqXHRData = data;
+                }
+                else {
+                    parent.OpenErrorMessageNew("Error!", "File size is more then 50 mb.", function () {
+                        $(".close").click();
+                        $("#description").val('');
+                        $("#UploadedPath").val('');
+                        UserFileUploadjqXHRData = "";
+                    })
+                }
+
+            }
+            else {
+                parent.OpenErrorMessageNew("Error!", "File format not valid.", function () {
+                    $(".close").click();
+                    $("#description").val('');
+                    $("#UploadedPath").val('');
+                    UserFileUploadjqXHRData = "";
+                })
+            }
+
+        },
+        progress: function (e, data) {
+            var percentVal = parseInt(data.loaded / data.total * 100, 10);
+            $(".file-progress").show();
+            $(".file-progress .progress-bar").animate({
+                width: percentVal + "%"
+            }, 40);
+            $(".file-progress .progress-bar span").text(percentVal + '%');
+        },
+        done: function (event, data) {
+            console.log("dfdf");
+            setTimeout(function () {
+                $(".file-progress").hide();
+                $(".file-progress .progress-bar").animate({
+                    width: 0 + "%"
+                }, 0);
+                $(".file-progress .progress-bar span").text(0 + '%');
+            }, 500);
+
+            if ((typeof (data.result.isUploaded) != "undefined") && data.result.isUploaded == true) {
+                //$("#UploadSuccessMessage").removeClass('hidden');
+                //$("#UploadCustomerFileBtn").addClass('hidden');
+                $("#UploadedPath").val(data.result.filePath);
+                var spfile = data.result.FullFilePath.split('.');
+                //if (spfile[1] == "png" || spfile[1] == "jpg" || spfile[1] == "jpeg") {
+                //    $(".Upload_Doc").addClass('hidden');
+
+                //    $(".LoadPreviewDocument").removeClass('hidden');
+                //    $("#Preview_Doc").attr('src', data.result.FullFilePath);
+                //}
+                $(".fileborder").removeClass('red-border');
+                $("#uploadfileerror").addClass("hidden");
+
+                var index = spfile.length - 1;
+                if (spfile[index] == "png" || spfile[index] == "PNG" || spfile[index] == "jpg" || spfile[index] == "JPG" || spfile[index] == "jpeg" || spfile[index] == "JPEG") {
+                    //$(".Upload_Doc").addClass('hidden');
+                    //$(".LoadPreviewDocument").removeClass('hidden');
+                    //$("#Preview_Doc").attr('src', data.result.FullFilePath);
+                    $("#UploadCustomerFileBtn").attr('src', data.result.FullFilePath)
+                    $(".chooseFilebtn").addClass("hidden");
+                    $(".changeFilebtn").removeClass("hidden");
+                    $(".deleteDoc").removeClass("hidden");
+                    $("#UploadCustomerFileBtn").addClass('custom-file');
+                    $("#UploadCustomerFileBtn").removeClass('otherfileposition');
+                    $(".fileborder").addClass('border_none');
+                }
+                else if (spfile[index] == "pdf") {
+                    $(".chooseFilebtn").addClass("hidden");
+                    $(".changeFilebtn").removeClass("hidden");
+                    $(".deleteDoc").removeClass("hidden");
+                    $("#UploadCustomerFileBtn").attr('src', domainurl+ '/Content/Icons/pdf.png');
+                    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                    $(".fileborder").removeClass('border_none');
+                }
+                else if (spfile[index] == "doc" || spfile[index] == "docx") {
+                    $(".chooseFilebtn").addClass("hidden");
+                    $(".changeFilebtn").removeClass("hidden");
+                    $(".deleteDoc").removeClass("hidden");
+                    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+                    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                    $(".fileborder").removeClass('border_none');
+                }
+                else if (spfile[index] == "mp4" || spfile[index] == "mov")
+                {
+                    $(".chooseFilebtn").addClass("hidden");
+                    $(".changeFilebtn").removeClass("hidden");
+                    $(".deleteDoc").removeClass("hidden");
+                    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/mp4.png');
+                    //$("#UploadCustomerFileBtn").addClass('otherfileposition');
+                    //$("#UploadCustomerFileBtn").removeClass('custom-file');
+                    $(".fileborder").removeClass('border_none');
+                }
+                else {
+                    $(".chooseFilebtn").addClass("hidden");
+                    $(".changeFilebtn").removeClass("hidden");
+                    $(".deleteDoc").removeClass("hidden");
+                    $("#UploadCustomerFileBtn").attr('src', '/Content/Icons/docx.png');
+                    $("#UploadCustomerFileBtn").addClass('otherfileposition');
+                    $("#UploadCustomerFileBtn").removeClass('custom-file');
+                    $(".fileborder").removeClass('border_none');
+                }
+                if ($("#UploadedPath").val() != "") {
+                    SaveCustomerFile();
+                }
+                
+                //else {
+                //    $(".Upload_Doc").addClass('hidden');
+                //    $(".LoadPreviewDocument").addClass('hidden');
+                //    $(".LoadPreviewDocument1").removeClass('hidden');
+                //    $("#Frame_Doc").attr('src', data.result.FullFilePath);
+                //}
+
+            }
+        },
+        fail: function (event, data) {
+            //if (data.files[0].error) {
+            //    //alert(data.files[0].error);
+            //}
+        }
+    });
+    $("#UploadedFile").on("change",function () {
+        if (UserFileUploadjqXHRData) {
+            UserFileUploadjqXHRData.submit();
+        }
+        return false;
+    });
+});
+</script>
+@*<link href="~/Content/Css/Estimate/SendEmailEstimate.css" rel="stylesheet" />*@
+@{
+    Hashtable datatemplate = new Hashtable();
+    datatemplate.Add("CustomerName", Model.CustomerName);
+    datatemplate.Add("ExpirationDate", Model.Invoice.DueDate);
+    datatemplate.Add("SalesPhone Number", ViewBag.SalesPhone);
+    datatemplate.Add("CompanyName", Model.CompanyName);
+    datatemplate.Add("SalesGuy", ViewBag.SalesGuy);
+    datatemplate.Add("url", ViewBag.url);
+    string emailtemplate = HS.Web.UI.Helper.LabelHelper.ParserHelper(Model.EmailTemplate.BodyContent, datatemplate);
+}
+
+
+<div class="send_mail_estimate_container">
+
+    <div class="send_mail_estimate_header">
+        @Localize.T("Send email")
+        <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+            <img title="@Localize.T("Close")" src="~/Content/Icons/cross_update.png">
+        </div>
+    </div>
+
+    <div class="width-100p">
+        <div class="width_50p_firstdiv">
+            <div class="row">
+                <div class="col-md-6">
+                    @Localize.T("Email")
+                </div>
+                <div class="col-md-6">
+                    @*@Model.CustomerEmailAddress*@
+                    <input type="text" id="EmailAddress" value="@Model.CustomerEmailAddress" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    @Localize.T("Cc")
+                </div>
+                <div class="col-md-6">
+                    <input type="text" value="" class="EmailSubject" placeholder="Add cc email by ';' separator" id="CCEmail">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    @Localize.T("Subject")
+                </div>
+                <div class="col-md-6">
+                    <input type="text" value="New Estimate from @Model.CompanyName: @Model.Invoice.InvoiceId" class="EmailSubject" placeholder="Subject" id="EmailSubject">
+                </div>
+            </div>
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.SendAttachmentsWithEstimate))
+            {
+                <div class="row">
+                    <div class="col-md-6">
+                        @Localize.T("Attachment")
+                        <div style="float:right;">
+                            <button class="btn green_button" id="UploadCustomerFileBtn" title="Attachment" style="float:right;">
+                                <svg x="0px" y="0px"
+                                     width="20" height="20"
+                                     viewBox="0 0 172 172"
+                                     style=" fill:#000000;"><g fill="none" fill-rule="nonzero" stroke="none" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" stroke-dasharray="" stroke-dashoffset="0" font-family="none" font-weight="none" font-size="none" text-anchor="none" style="mix-blend-mode: normal"><path d="M0,172v-172h172v172z" fill="none"></path><g><path d="M2.65391,86c0,-46.02344 37.32266,-83.34609 83.34609,-83.34609c46.02344,0 83.34609,37.32266 83.34609,83.34609c0,46.02344 -37.32266,83.34609 -83.34609,83.34609c-46.02344,0 -83.34609,-37.32266 -83.34609,-83.34609z" fill="#2ca01c"></path><path d="M131.51953,72.05859h-31.74609v-31.54453c0,-1.34375 -1.075,-2.41875 -2.41875,-2.41875h-22.87734c-1.34375,0 -2.41875,1.075 -2.41875,2.41875v31.54453h-31.54453c-1.34375,0 -2.41875,1.075 -2.41875,2.41875v23.24687c0,1.34375 1.075,2.41875 2.41875,2.41875h31.54453v31.37656c0,1.34375 1.075,2.41875 2.41875,2.41875h22.87734c1.34375,0 2.41875,-1.075 2.41875,-2.41875v-31.37656h31.74609c1.34375,0 2.41875,-1.075 2.41875,-2.41875v-23.24687c0,-1.34375 -1.10859,-2.41875 -2.41875,-2.41875z" fill="#ffffff"></path></g></g></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        @Html.DropDownList("AttachmentsEstimate", (List<SelectListItem>)ViewBag.CustomerFileList, new { @class = "form-control AttachmentsEstimate", @multiple = "multiple", id = "AttachmentsEstimate" })
+                    </div>
+                </div>
+            }
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="emailbody">@Localize.T("Body")</div>
+                    <textarea class="txtEmailbody tinymce" id="EmailDescription" name="Description">@emailtemplate</textarea>
+                </div>
+            </div>
+
+            <div class="">
+                <h4>@Localize.T("Send TEXT MSG")</h4>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    @Localize.T("Contact Number")
+                </div>
+                <div class="col-md-6">
+                    <input class="ContactNumber" type="text" value="@Model.CustomerContactNumber" placeholder="Contact Number" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="emailbody">@Localize.T("SMS Body")</div>
+                    <textarea rows="3" id="SMSDescription" name="SMSDescription">@Model.SMSBody</textarea>
+                    @*<label class="label black">Localize.T("'##url##' will be replaced by actual url.")</label>*@
+                </div>
+            </div>
+        </div>
+
+        @if (Request.Browser.IsMobileDevice)
+        {
+            <object data='@ViewBag.pdfLocation'>
+                <p>Oops! You don't support PDFs!</p>
+                <button class="btn btnPdfDownLoadForMo"><a href="@ViewBag.pdfLocation" download>Download Instead </a></button>
+
+            </object>
+        }
+        else
+        {
+            <div class="width_50p_pdf" id="pdfView">
+                <iframe class="pdf_styles_send_mail_estimate @(string.IsNullOrWhiteSpace(ViewBag.pdfLocation)?"hidden":"")" id="iframePdf" src="@ViewBag.pdfLocation"></iframe>
+            </div>
+        }
+
+
+
+    </div>
+
+    <div class="send_email_estimate_footerContents">
+        <button onclick="parent.ClosePopup()" class="btnCancel">@Localize.T("Cancel")</button>
+
+        <button class="btn btnSaveAndClose">@Localize.T("Send Email")</button>
+        @*<button class="btn btnSaveAndNew">@Localize.T("Send and new")</button>*@
+        <button class="btn btnSendEmailAndClose">@Localize.T("Send TEXT MSG")</button>
+        <button class="btn btnSendToBoth">@Localize.T("Send To Both")</button>
+    </div>
+</div>
+<div class="">
+    <input type="hidden" id="UploadedPath" value="" />
+    <input type="file" name="CustomerFile" class="hidden" id="UploadedFile" />
+    <input type="hidden" id="description" />
+</div> 

@@ -1,0 +1,301 @@
+﻿@using AppConfig = HS.Framework.Utils.AppConfig;
+@{
+    Layout = null;
+    string DomainURL = AppConfig.DomainSitePath;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+ <style>
+     .green-tooltip + .tooltip > .tooltip-inner {
+        background-color: #2ca01c;
+    }
+ </style>
+<script>
+    var contactTab = '@ViewBag.contactTab';
+    var my_date_format = function (input) {
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    function FormatePhoneNumber(Value) {
+        console.log("dfdsf");
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-()  ]/g, '');
+            if (Value.length == 10) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+                $("#Mobile").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 10) {
+                ValueClean = Value;
+                $("#Mobile").css({ "border": "1px solid red" });
+            }
+            else {
+                $("#Mobile").css({ "border": "1px solid red" });
+                ValueClean = Value;
+            }
+        }
+        return ValueClean;
+    }
+    function FormateWorkNumber(Value) {
+        var ValueClean = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-()  ]/g, '');
+            if (Value.length == 10) {
+                ValueClean = Value.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+                $("#Work").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 10) {
+                ValueClean = Value;
+                $("#Work").css({ "border": "1px solid red" });
+            }
+            else {
+                $("#Work").css({ "border": "1px solid red" });
+                ValueClean = Value;
+            }
+        }
+        return ValueClean;
+    }
+    var PrintContact = function () {
+        //$(".PrintItem").each(function () {
+        //    idsAll += $(this).attr("data-id") + ",";
+        //})
+        //console.log(idsAll);
+        var Mobile = $("#Mobile").val();
+        var Work = $("#Work").val();
+        var Email = $(".Email").val();
+        var DateFrom = $(".DateFrom").val();
+        var DateTo = $(".DateTo").val();
+        var searchText = $(".srch-term").val();
+        var PdfUrl = "/Contact/GetContactFilterList?&Mobile=" + Mobile + "&Work=" + Work + "&Email=" + Email + "&DateFrom=" + DateFrom + "&DateTo=" + DateTo + "&searchText=" + searchText;
+        window.open(PdfUrl, '_blank');
+
+    }
+    var EditContact = function (id) {
+        OpenTopToBottomModal("@(DomainURL)/Contact/AddContact?id=" + id + "&contactTab=" + contactTab);
+    }
+
+    //var ShowContactDetails = function (id) {
+    //    window.load.href = "/Contact/ContactDetails?Id="+id
+    //}
+
+    var NavigatePageListing = function (pagenumber, order) {
+        var searchText = $(".srch-term").val();
+        var DateFrom = $(".min-date").val();
+        var DateTo = $(".max-date").val();
+        $("#LoadContactList").load("@(DomainURL)/Contact/LoadContactList", { PageNumber: pagenumber, SearchText: searchText, Order: order, DateFrom: DateFrom, DateTo: DateTo, Identifier: $("#taglist").val() });
+    }
+    var ContactImportFile = function () {
+        OpenRightToLeftModal("@(AppConfig.DomainSitePath)/File/AddContactImportFile");
+    }
+
+    $(document).ready(function () {
+        $(".contact_fixed_header").width($(".contact_list_container").width());
+        var pagenumber = 1;
+        $(".LoaderWorkingDiv").hide();
+        $(".Contact_filter_list").hide();
+        $(".btn-apply-filter").click(function () {
+            if (typeof (pagenumber) == "undefined") {
+                return;
+            }
+            var Mobile = $("#Mobile").val();
+            var Work = $("#Work").val();
+            var Email = $(".Email").val();
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+
+            $("#LoadContactList").load("@(DomainURL)/Contact/LoadContactList", { PageNumber: pagenumber, Mobile: Mobile, Work: Work, Email: Email, DateFrom: DateFrom, DateTo: DateTo, Identifier: $("#taglist").val() });
+        })
+        $(".btn-apply-Datefilter").click(function () {
+            if (typeof (pagenumber) == "undefined") {
+                return;
+            }
+            var Mobile = $("#Mobile").val();
+            var Work = $("#Work").val();
+            var Email = $(".Email").val();
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+
+            $("#LoadContactList").load("@(DomainURL)/Contact/LoadContactList", { PageNumber: pagenumber, Mobile: Mobile, Work: Work, Email: Email, DateFrom: DateFrom, DateTo: DateTo, Identifier: $("#taglist").val() });
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+            UpdatePtoCookie();
+        })
+
+        $("#Mobile").keyup(function () {
+            var PhoneNumber = $(this).val();
+            if (PhoneNumber != undefined && PhoneNumber != null && PhoneNumber != "") {
+                var cleanPhoneNumber = FormatePhoneNumber(PhoneNumber);
+                $(this).val(cleanPhoneNumber);
+            }
+        });
+        $("#Work").keyup(function () {
+            var PhoneNumber = $(this).val();
+            if (PhoneNumber != undefined && PhoneNumber != null && PhoneNumber != "") {
+                var cleanPhoneNumber = FormateWorkNumber(PhoneNumber);
+                $(this).val(cleanPhoneNumber);
+            }
+        });
+        $(".btn-reset-filter").click(function () {
+            $("#Mobile").val("");
+            $("#Work").val("");
+            $(".Email").val("");
+            $(".DateFrom").val("");
+            $(".DateTo").val("");
+        })
+        var DateFrom = new Pikaday({
+            field: $('.DateFrom')[0],
+            format: 'MM/DD/YYYY'
+        });
+        var DateTo = new Pikaday({
+            field: $('.DateTo')[0],
+            format: 'MM/DD/YYYY'
+        });
+        $(".btn_customerlist_filter").click(function () {
+            console.log("df")
+            if ($(".Contact_filter_list").is(":visible")) {
+                $(".Contact_filter_list").hide();
+
+            } else {
+                $(".Contact_filter_list").show();
+
+            }
+        });
+        var DateFrom = $(".min-date").val();
+        var DateTo = $(".max-date").val();
+        $("#LoadContactList").load("@(DomainURL)/Contact/LoadContactList", { PageNumber: pagenumber, DateFrom: DateFrom, DateTo: DateTo, Identifier: $("#taglist").val() });
+        $('.SearchContact').click(function () {
+            NavigatePageListing(pagenumber);
+        })
+        $("#btnAddContacts").click(function () {
+            OpenTopToBottomModal("@(DomainURL)/Contact/AddContact?id=0&contactTab=" + contactTab);
+        });
+        $("#ExcelImport").click(function () {
+            window.location.href = "/Reports/NewReport/?ReportFor=Contact";
+        })
+        $("#DatabaseImport").click(function () {
+            window.location.href = "/Reports/NewReport/?ReportFor=ContactDatabase";
+        })
+        $("#contact_search").keyup(function (e) {
+            e.preventDefault();
+            if (e.keyCode == 13) {
+                if (typeof (pagenumber) == "undefined") {
+                    return;
+                }
+                var Mobile = $("#Mobile").val();
+                var Work = $("#Work").val();
+                var Email = $(".Email").val();
+                var DateFrom = $(".min-date").val();
+                var DateTo = $(".max-date").val();
+                var SearchText = $(this).val();
+
+                $("#LoadContactList").load("@(DomainURL)/Contact/LoadContactList", { PageNumber: pagenumber, Mobile: Mobile, Work: Work, Email: Email, DateFrom: DateFrom, DateTo: DateTo, SearchText: SearchText, Identifier: $("#taglist").val() });
+            }
+        })
+    });
+    $(window).resize(function () {
+        $(".contact_fixed_header").width($(".contact_list_container").width());
+    })
+</script>
+
+<link href="~/Content/Css/Contacts/contactlist.css" rel="stylesheet" />
+
+<div class="contact_list_container contact_container_main">
+    <div class="contact_fixed_header">
+        <div class="contact_main_header_left">@Localize.T("Contacts")</div>
+        <div class="contact_main_header_right">
+            <div class="btn-group contact_right_allign">
+                <button id="btnAddContacts" class="btn btn_addPTO"><i class="fa fa-plus-circle" aria-hidden="true" title="@Localize.T("Add Contact")" data-placement="bottom"></i> @Localize.T("New")</button>
+                <button data-toggle="dropdown" class="btn dropdown-toggle customer-btn-dropdown" type="button" aria-expanded="false" title="@Localize.T("Import Contact")">
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu customer-dropdown-ul-style contact_import_drop">
+                    <li><a href="javascript:void(0)" onclick="ContactImportFile()">@Localize.T("Import Contact")</a></li>
+                </ul>
+            </div>
+
+
+            <div class="dropdown contact_export">
+                <button class="btn addView_button dropdown-toggle" data-toggle="dropdown"><i class="glyphicon glyphicon-download-alt green-tooltip" data-toggle="tooltip" title="@Localize.T("Download")" data-placement="bottom"></i></button>
+                <ul class="dropdown-menu ImportPanel">
+                    <li>
+                        <button class="btn" id="DatabaseImport"><i class="fa fa-file-excel-o"></i> @Localize.T("All Database Record")</button>
+                    </li>
+                    <li>
+                        <button class="btn" id="PdfImport" onclick="PrintContact()"><i class="fa fa-file-pdf-o"></i> @Localize.T("Pdf") </button>
+                    </li>
+                    <li>
+                        <button class="btn" id="ExcelImport"><i class="fa fa-file-excel-o"></i> @Localize.T("Excel")</button>
+                    </li>
+
+
+                </ul>
+            </div>
+            <div class="dateviewed">
+                @{Html.RenderAction("DateViewPartial", "Customer");}
+            </div>
+        </div>
+    </div>
+    <div id="contact_search_container">
+        <div id="searchbardiv">
+            <div class="input-group add-on">
+               
+                <input class="form-control srch-term" placeholder="@Localize.T("Find Contacts")" type="text" id="contact_search">
+                @if (ViewBag.CotactTag == "true")
+                {
+                    @Html.DropDownList("taglist", ViewBag.taglist as List<SelectListItem>, new { @class = "form-control", style = "width:300px;" })
+                }
+                <div class="input-group-btn">
+                    <button class="btn btn-default custom-btn SearchContact green_button" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search" title="@Localize.T("Search")" data-placement="bottom"></i></button>
+                </div>
+            </div>
+        </div>
+        
+        <button class="btn btn-filter btn_customerlist_filter">
+            <span class="glyphicon glyphicon-filter" title="@Localize.T("Filter")" data-placement="bottom"></span>
+        </button>
+    </div>
+    <div class="Contact_filter_list customer-fliter-list_Toggle">
+        <div class="filter-by-type box_category">
+            @*<span>@Localize.T("Sales")</span>*@
+            @*@Html.DropDownList("UserList", (List<SelectListItem>)ViewBag.LeadUserList, new { @class = "form-control select_leaduser UserList", id = "UserList" })*@
+            <input class="form-control" id="Work" name="PrimaryPhone" placeholder="Work" type="text" value="">
+        </div>
+        <div class="filter-by-status box_category ">
+            @*<span>@Localize.T("Sales")</span>*@
+            <input class="form-control" id="Mobile" name="PrimaryPhone" placeholder="Mobile" type="text" value="">
+        </div>
+
+        <div class="filter-by-equipmentClass box_category">
+            <input class="form-control Email"  placeholder="Email"  type="text" value="">
+        </div>
+      
+      
+
+        <div class="btn_category">
+            <button class="btn btn-apply-filter">
+                <i class="fa fa-check" aria-hidden="true"></i> @Localize.T("Apply")
+            </button>
+            <button class="btn btn-reset-filter">
+                <i class="fa fa-refresh" aria-hidden="true"></i>
+            </button>
+        </div>
+        @*<div class="sub-list-btn">
+
+            </div>*@
+    </div>
+    <div id="LoadContactList">
+
+    </div>
+</div>

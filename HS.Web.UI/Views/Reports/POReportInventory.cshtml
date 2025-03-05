@@ -1,0 +1,316 @@
+﻿
+@{
+    Layout = null;
+}
+@model HS.Entities.POListModel
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@*<link href="~/Content/Css/Inventory/PurchaseOrderPartial.css" rel="stylesheet" />*@
+<style>
+   
+</style>
+
+<script>
+
+    var listSelet = '@Html.Raw(Json.Encode(@ViewBag.selectsts))';
+    var EstimatorId = '@ViewBag.EstimatorId';
+    listSelet = JSON.parse(listSelet);
+
+    var my_date_format = function (input) {
+        console.log(input + " r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+
+    $(document).on('click', "#reset_btn_filter03POI", function () {
+        $(".PurchaseOrderNewReportTable").html(TabsLoaderText);
+        ResetFilter();
+    });
+    var ResetFilter = function () {
+        console.log("ResetFilter function called.");
+        $(".min-date").val("");
+        $(".max-date").val("");
+        $("#txtPOReportInventory").val('');
+
+        $('#StatusPoNewPOI').val('');
+        $('#StatusPoNewPOI').selectpicker('refresh');
+        $('#SupplierListponewI').val('');
+        $('#SupplierListponewI').selectpicker('refresh');
+        $('#eqpCategoryponewI').val('');
+        $('#eqpCategoryponewI').selectpicker('refresh');
+        $('#manufacturerListPOnewPOI').val('');
+        $('#manufacturerListPOnewPOI').selectpicker('refresh');
+        $('#Equipment_SKU_ListPoI').val('');
+        $('#Equipment_SKU_ListPoI').selectpicker('refresh');
+        $(".bi_single_filte_info_container").hide();
+        $(".PurchaseOrderNewReportTable").html('');
+        CreatedPOReportLoad(1, null);
+    };
+    var CreatedPOReportLoad = function (pageNo, order) {
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+
+            var targetDataId = 'SupplierListponewI';
+            var $targetElements = $('[data-id="' + targetDataId + '"]');
+
+            $targetElements.each(function (index, element) {
+                SupplierList = $(element).attr('title');
+
+            });
+
+        var targetDataId = 'manufacturerListPOnewPOI';
+            var $targetElements = $('[data-id="' + targetDataId + '"]');
+
+            $targetElements.each(function (index, element) {
+                ManufListPo = $(element).attr('title');
+                console.log(ManufListPo)
+            });
+
+            var targetDataId = 'eqpCategoryponewI';
+            var $targetElements = $('[data-id="' + targetDataId + '"]');
+
+            $targetElements.each(function (index, element) {
+                Categoryponew = $(element).attr('title');
+
+            });
+
+        var targetDataId = 'Equipment_SKU_ListPoI';
+            var $targetElements = $('[data-id="' + targetDataId + '"]');
+
+            $targetElements.each(function (index, element) {
+                SKU = $(element).attr('title');
+
+            });
+
+
+        var targetDataId = 'StatusPoNewPOI';
+            var $targetElements = $('[data-id="' + targetDataId + '"]');
+            var titleValue = 'init';
+            $targetElements.each(function (index, element) {
+                titleValue = $(element).attr('title');
+
+            });
+
+        if (typeof (pageNo) != "undefined") {
+            var searchTextValue = $("#txtPOReportInventory").val();
+            //console.log("Search Text Value:", searchTextValue);
+            var LoadUrl = domainurl + "/Reports/POReportInventoryPartial/?Searchtext=" + encodeURIComponent(searchTextValue) + "&Start=" + StartDateVal + "&End=" + EndDateVal
+                + "&PageNo=" + pageNo + "&order=" + order + "&EstimatorId=" + EstimatorId + "&selectsts=" + encodeURIComponent(titleValue)
+                + "&supplier=" + encodeURIComponent(SupplierList) + "&Category=" + encodeURIComponent(Categoryponew) + "&Manufeturelist=" + encodeURIComponent(ManufListPo) +
+                "&SKU=" + encodeURIComponent(SKU);
+            console.log(LoadUrl);
+            $(".PurchaseOrderNewReportTable").html(TabsLoaderText);
+            $(".PurchaseOrderNewReportTable").load(LoadUrl);
+            console.log("this done")
+        }
+
+    }
+    $(document).ready(function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+
+        if (StartDate != "" && EndDate != "") {
+            StartDate = my_date_format(StartDate);
+            EndDate = my_date_format(EndDate);
+            console.log(StartDate + " " + EndDate);
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+        else {
+            $(".DateFilterContents .date-start").html("All Time");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .dropdown-filter").hide();
+        }
+
+
+        $('.selectpicker').selectpicker();
+
+        $(".POReportInventory").click(function () {
+              CreatedPOReportLoad(1, null);
+        });
+
+        $(".btn-apply-Datefilter").click(function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            var pageNo = 1;
+            var order = "";
+            var LoadUrl = domainurl + "/Reports/POReportInventoryPartial/?SearchText=" + encodeURI($(".POnewSearchText").val()) + "&Start=" + StartDateVal + "&End=" + EndDateVal
+                + "&PageNo=" + pageNo + "&order=" + order;
+            $(".PurchaseOrderNewReportTable").html(TabsLoaderText);
+            $(".PurchaseOrderNewReportTable").load(LoadUrl);
+            CreatedPOReportLoad(1, null);
+        });
+
+
+
+        $(document).on('click', '#btnCreatedPOReportDownload01', function () {
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            var searchTextValue = $("#txtPOReportInventory").val();
+
+            var targetDataId = 'StatusPoNewPOI';
+            var $targetElements = $('[data-id="' + targetDataId + '"]');
+            var titleValue = 'init';
+            $targetElements.each(function (index, element) {
+                titleValue = $(element).attr('title');
+
+            });
+            var targetDataId = 'Equipment_SKU_ListPoI';
+            var $targetElements = $('[data-id="' + targetDataId + '"]');
+
+            $targetElements.each(function (index, element) {
+                SKU = $(element).attr('title');
+
+            });
+            var targetDataId = 'SupplierListponewI';
+            var $targetElements = $('[data-id="' + targetDataId + '"]');
+
+            $targetElements.each(function (index, element) {
+                SupplierList = $(element).attr('title');
+
+            });
+
+            var targetDataId = 'manufacturerListPOnewPOI';
+            var $targetElements = $('[data-id="' + targetDataId + '"]');
+
+            $targetElements.each(function (index, element) {
+                ManufListPo = $(element).attr('title');
+                console.log(ManufListPo)
+            });
+
+            var targetDataId = 'eqpCategoryponewI';
+            var $targetElements = $('[data-id="' + targetDataId + '"]');
+
+            $targetElements.each(function (index, element) {
+                Categoryponew = $(element).attr('title');
+
+            });
+            var pageNo = 1;
+            location.href = domainurl + "/Reports/POReportInventoryDownload/?Start=" + StartDateVal + "&End=" + EndDateVal + "&serchtext=" + encodeURIComponent(searchTextValue) + "&PageNo=" + pageNo
+                + "&selectsts=" + encodeURIComponent(titleValue) + "&SKU=" + encodeURIComponent(SKU)
+                + "&supplier=" + encodeURIComponent(SupplierList) + "&Category=" + encodeURIComponent(Categoryponew) + "&Manufeturelist=" + encodeURIComponent(ManufListPo);
+
+        });
+
+        $('.selectpicker').selectpicker();
+        $(".bi_single_filte_info_container").hide();
+        $(".btn-filter").click(function () {
+
+            if ($(".bi_single_filte_info_container").is(":visible")) {
+                $(".bi_single_filte_info_container").hide();
+
+            } else {
+                $(".bi_single_filte_info_container").show();
+
+            }
+        });
+
+
+
+        $("#btnsearchtextPOReportInventory").on('click', function () {
+            console.log('btnsearchtextDOnew');
+            console.log($('#txtPOReportInventory').val())
+            CreatedPOReportLoad(1, null);
+        });
+        CreatedPOReportLoad(1, null);
+
+    });
+</script>
+
+
+
+<div class="purchase_order_partial_container">
+
+    <div class="row leads_report_top_bar">
+        <div class="single_filter_div_container">
+            <div class="input-group add-on" style="width:500px;">
+                <input class="form-control POnewSearchText" id="txtPOReportInventory" type="text" placeholder="Search by PO#, Description, Equipment Description and Received For " />
+
+                <div class="input-group-btn">
+                    <button class="btn search_PO_btn green_button" id="btnsearchtextPOReportInventory">
+                        <i class="glyphicon glyphicon-search"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="single_filter_div_style filter_fill">
+                <button class="btn btn-filter green_button" title="Filter">
+                    <i class="glyphicon glyphicon-filter"></i>
+                </button>
+            </div>
+        </div>
+        @if (PermissionChekcer.IsPermitted(Permissions.ReportsPermissions.LeadsReportDownload))
+        {
+            <button class="report_btn lrp_float_right" id="btnCreatedPOReportDownload01"><i class="fa fa-download"></i></button>
+        }
+    </div>
+
+    <div class="bi_single_filte_info_container" style="padding-top: 10px; height: 130px;">
+        <div class="bi_single_filter_info_inner_content col-md-2" style="margin-left:-15px;">
+            <div class="btn-group bootstrap-select show-tick form-control">
+                <select id="StatusPoNewPOI" class="selectpicker" multiple data-live-search="true" data-actions-box="true" data-dropup-auto="false" data-none-selected-text="Status">
+                    @foreach (var status in ViewBag.POStatus as List<SelectListItem>)
+                    {
+                        <option value="@status.Value">@status.Text</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="col-md-2">
+            @Html.DropDownList("EquipmentSKU", ViewBag.EquipmentSKU as List<SelectListItem>, new { @class = "selectpicker", @title = "SKU", Id = "Equipment_SKU_ListPoI", data_live_search = "true", data_actions_box = "true", multiple = "multiple" })
+        </div>
+        <div class="col-md-2">
+
+            @Html.DropDownList("EquipmentCategory", ViewBag.eqpCategory as List<SelectListItem>, new { @class = "selectpicker", @title = "Category(s)", id = "eqpCategoryponewI", data_live_search = "true", data_actions_box = "true", multiple = "multiple" })
+        </div>
+        <div class="col-md-3">
+
+            @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowAllTechnicianPO))
+            {
+                @Html.DropDownList("SuplierId", ViewBag.SupplierList as List<SelectListItem>, new { @class = "selectpicker", @title = "Vendor(s)", Id = "SupplierListponewI", data_live_search = "true", data_actions_box = "true", multiple = "multiple" }) }
+            else
+            {
+                @Html.DropDownList("SuplierId", ViewBag.SupplierList as List<SelectListItem>, new { @class = "form-control ", @datarequired = "true", disabled = "disabled" })
+            }
+
+        </div>
+        <div class="col-md-3">
+
+            @Html.DropDownList("manufacturer_tech", ViewBag.manufacturer as List<SelectListItem>, new { @class = "selectpicker", @title = "Manufacturer(s)", id = "manufacturerListPOnewPOI", data_live_search = "true", data_actions_box = "true", multiple = "multiple" })
+        </div>
+
+        @if (PermissionChekcer.IsPermitted(Permissions.InventoryPermissions.ShowEstimatorIdFilter))
+        {
+            <div class="bi_single_filter_info_inner_content col-md-4">
+                @Html.DropDownList("EstimatorId", ViewBag.EstimatorIdList as List<SelectListItem>, new { @class = "selectpicker", @title = "Estimate Id" })
+            </div>
+        }
+
+        <div>
+            <div class="bi_single_filter_info_footer" style=" width: 100%; float: left; background-color: #fff; padding: 27px 10px; text-align: right;">
+                <button class="btn search_BI_btn green_button POReportInventory" title="@Localize.T("Apply Filter")"><i class="fa fa-check" aria-hidden="true"></i>@Localize.T(" Apply")</button>
+                <button class="btn red_button" id="reset_btn_filter03POI" onclick="ResetFilter()">@Localize.T("Reset")</button>
+
+            </div>
+
+        </div>
+
+
+    </div>
+</div>
+<div class="PurchaseOrderNewReportTable table_container_device">
+</div>

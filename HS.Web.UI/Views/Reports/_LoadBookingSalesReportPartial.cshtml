@@ -1,0 +1,393 @@
+﻿@model List<HS.Entities.BookingReportModel> 
+@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script>
+    var Currency = "@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)";
+    var bsource = '@Html.Raw(Json.Encode(@ViewBag.bsource))';
+    bsource = JSON.parse(bsource);
+    var count = 1;
+    var orderval = '@ViewBag.orderval';
+    var pagesize;
+    var Totalpagesize = '@ViewBag.Totalpagesize';
+    var invstatus = '@Html.Raw(Json.Encode(@ViewBag.invstatus))';
+    invstatus = JSON.parse(invstatus);
+    var CurrentNumber = '@ViewBag.CurrentNumber';
+    var PageNumber = '@ViewBag.PageNumber';
+    var SearchText = '@ViewBag.searchtxt';
+    var TotalBookingIDCount = '@ViewBag.OutOfNumber';
+       $(document).ready(function () {
+            $("#sales_txt_search").keydown(function (e) {
+
+        if (e.which == 13) {
+            FilterSalesReport1(1);
+        }
+    });
+    })
+</script>
+@Styles.Render("~/styles/_LoadBookingSalesReportPartialCS")
+@Scripts.Render("~/scripts/_LoadBookingSalesReportPartialJS")
+
+
+<div class="sales_container">
+    <div class="row  ">
+        <div class="col-md-12 no_paddingright_report" style="text-align:left">
+            <div class="row lrp_bottom_border">
+                <div class="lead_total_color"> @Localize.T("Total Booking:") @string.Format("{0:#,###}", ViewBag.OutOfNumber)</div>
+            </div>
+        </div>
+        @*<div class="col-md-6" style="text-align:right">
+            <div class="row lrp_bottom_border">
+                <div class=""> @Localize.T("Total Amount Due:") @string.Format("${0:#,###}", ViewBag.TotalAmount)</div>
+            </div>
+        </div>*@
+
+    </div>
+
+    <div class="page-content-wrap cus-padding-top10p invoicelist">
+        <div class="row leads_report_top_bar ld_book_sales_rpt_top_bar">
+
+            <div class="input-group add-on">
+                <input type="text" class="form-control" id="sales_txt_search" placeholder="Search" />
+
+
+                <div class="input-group-btn"> <button class="btn green_button" id="btn_sales" onclick="FilterSalesReport1(1)"><i class="glyphicon glyphicon-search"></i></button></div>
+            </div>
+            <div class="convert_cus_filterbtn_div">
+                <button class="btn green_button convert_cus_div lilrp_filter_btn" id="convert_cus_filterbtn">
+                    <span title="Filter" class="glyphicon glyphicon-filter"></span>
+                </button>
+                <div class="convert_cus_report_filter">
+                    <div class="convert_cus_report_filte_innerr convert_cus_div">
+                        <div class="form-group clearfix">
+                            @Html.DropDownList("BookingSource", ViewBag.bookingsource as List<SelectListItem>, new { @class = "form-control", @multiple = "multiple", Id = "BookingSource", @title = "Source" })
+                        </div>
+                    </div>
+                    <div class="convert_cus_report_footer convert_cus_div">
+                        <button class="btn green_button" id="apply_btn_filter" onclick="FilterSalesReport1(1)">@Localize.T("Apply")</button>
+                        <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilterList()">@Localize.T("Reset")</button>
+                    </div>
+                </div>
+            </div>
+
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.SalesReportBookingDownLoadButton))
+            {
+
+                <button title="@Localize.T(" Download")" class="report_btn lrp_float_right" id="btnDownloadSalesReport"><i class="fa fa-download" aria-hidden="true"></i></button>
+
+            }
+            
+
+
+        </div>
+        <div class="col-md-12">&nbsp;</div>
+        <div class="invoice-table">
+            <table class="loadticketreportlist_table booking_report_table">
+                <thead class="table-head-border">
+                    <tr>
+                        <th class="thead-th-style lbsrp_first_two"> <div>@Localize.T("Booking Id")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/bookingid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/bookingid"></i></div></th>
+                        <th class="thead-th-style"> <div>@Localize.T("Customer")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/customerid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/customerid"></i></div></th>
+                        <th class="thead-th-style lbsrp_first_two"> <div>@Localize.T("InvoiceId")</div><div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/invoiceid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/invoiceid"></i></div></th>
+                        <th class="thead-th-style">
+                            <div>@Localize.T("Source")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/bookingid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/bookingid"></i></div>
+                        </th>
+                        <th class="thead-th-style">
+                            <div>@Localize.T("Payment Method")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/paymentmethod"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/paymentmethod"></i></div>
+                        </th>
+                        <th class="thead-th-style lbsrp_rug_size">
+                            <div>@Localize.T("Rug Size")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/rugtype"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/rugtype"></i></div>
+                        </th>
+                        <th class="thead-th-style">
+                            <div>@Localize.T("Amount Paid")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/amountpaid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/amountpaid"></i></div>
+                        </th>
+                        <th class="thead-th-style">
+                            <div>@Localize.T("Amount Due")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/balancedue"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/balancedue"></i></div>
+                        </th>
+                        <th class="thead-th-style book_tick_id">
+                            <div>@Localize.T("Ticket Id")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/tickettype"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/tickettype"></i></div>
+                        </th>
+                        <th class="thead-th-style">
+                            <div>@Localize.T("Notes")</div>
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/message"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/message"></i></div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                    <tr class="tr-style">
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Booking Id")</div>
+                            @*<a class="cus-anchor" href="javascript:void(0)" onclick="OpenBkById(78)">BK00000078</a>*@
+
+                            <div class="booking_list_partial_device_info"> <a style="cursor:pointer;color:#2ca01c;" onclick="OpenBkById(@item.BookingIntId)" @*href="/Customer/CustomerDetail/?id=@item.Id" target="_blank"*@>@item.BookingId</a></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Customer")</div>
+                            <div class="booking_list_partial_device_info">
+                                <a style="cursor:pointer;color:#2ca01c;" href="/Customer/CustomerDetail/?id=@item.CustomerIntId" target="_blank">
+                                    @item.FirstName
+                                </a> <br> Street: @item.Street,<br> City: @item.City,<br>State: @item.State,<br>ZipCode: @item.ZipCode
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("InvoiceId")</div>
+                            <div class="booking_list_partial_device_info"> <a style="cursor:pointer;color:#2ca01c;" onclick="OpenTicketInvoice(@item.InvoiceIntId)" @*href="/Customer/CustomerDetail/?id=@item.Id"*@ @*target="_blank"*@>@item.InvoiceId</a></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Source")</div>
+                            <div class="booking_list_partial_device_info">
+                                @if (item.BookingSource.ToLower() == "online")
+                                {
+                                    <span>@item.BookingSource</span>
+                                }
+                                else
+                                {
+                                    <span>System Generated</span>
+                                }
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Payment Method")</div>
+                            <div class="booking_list_partial_device_info"> <a @*style="cursor:pointer;color:#2ca01c;"*@ @*href="/Customer/CustomerDetail/?id=@item.Id"*@ @*target="_blank"*@>@item.PaymentMethod</a></div>
+                            @*<div class="booking_list_partial_device_info">
+                @{
+                    if (item.TotalTax > 0)
+                    {
+                        <span>$@string.Format("{0:#,###.00}", item.TotalTax)</span>
+                    }
+                    else
+                    {
+                        <span>$0.00</span>
+                    }
+                }
+
+            </div>*@
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Rug Size")</div>
+                            <div class="booking_list_partial_device_info"> <span @*style="cursor:pointer;color:#2ca01c;"*@ @*href="/Customer/CustomerDetail/?id=@item.Id"*@ @*target="_blank"*@> @item.RugType </span></div>
+                            @*<div class="booking_list_partial_device_info">
+                @{
+                    if (item.SalesAfterTax > 0)
+                    {
+                        <span>$@string.Format("{0:#,###.00}", item.SalesAfterTax)</span>
+                    }
+                    else
+                    {
+                        <span>$0.00</span>
+                    }
+                }
+
+            </div>*@
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Amount Paid")</div>
+                            <div class="booking_list_partial_device_info">
+                                @{
+                                    if (item.TotalAmount > 0 && item.BalanceDue > 0)
+                                    {
+                                        <span>@Currency@string.Format("{0:#,###.00}", item.AmountPaid)</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@Currency@string.Format("{0:#,###.00}", (0.00))</span>
+                                    }
+                                }
+
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Amount Due")</div>
+                            <div class="booking_list_partial_device_info">
+                                @{
+                                    if (item.BalanceDue > 0)
+                                    {
+                                        <span>@Currency@string.Format("{0:#,###.00}", item.BalanceDue)</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@Currency@string.Format("{0:#,###.00}", (0.00))</span>
+                                    }
+                                }
+
+                            </div>
+                        </td>
+
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Ticket Id")</div>
+                            <div class="booking_list_partial_device_info"> @Html.Raw(item.TicketType) </div>
+                        </td>
+
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Notes")</div>
+                            <div class="booking_list_partial_device_info"> <a @*style="cursor:pointer;color:#2ca01c;"*@ @*href="/Customer/CustomerDetail/?id=@item.Id"*@ @*target="_blank"*@> @item.Message </a></div>
+                        </td>
+
+
+                    </tr>
+                }
+                    <tr class="table_total_bg">
+                        <td colspan="6"  class="table-body-td-style" valign="top">
+                            <b class="float_right">@Localize.T("Total")</b>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Total Amount Paid")</div>
+                            <div class="booking_list_partial_device_info">
+                                <b title="@Localize.T("Total Amount Paid")">$@Model.Sum(i => i.AmountPaid).ToString("N2")</b>
+                            </div>                        
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="ticket_list_partial_device_header">@Localize.T("Total Amount Due")</div>
+                            <div class="booking_list_partial_device_info">
+                                <b title="@Localize.T("Total Amount Due")">$@Model.Sum(i => i.BalanceDue).ToString("N2")</b>
+                            </div>                        
+                        </td>
+                        <td colspan="2" class="table-body-td-style" valign="top">
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="AgentListPagination inv1">
+            <div class="paginationContainer">
+                @if (ViewBag.PageCount > 0)
+                {
+                    <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+                }
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons disabledBtn">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="FilterSalesReport(@(ViewBag.PageNumber),'@(ViewBag.order)')">1</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FilterSalesReport(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButtonq  @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FilterSalesReport(1, '@(ViewBag.order)')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FilterSalesReport(2,'@(ViewBag.order)')">2</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="FilterSalesReport(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="FilterSalesReport(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="FilterSalesReport(1,'@(ViewBag.order)')">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="FilterSalesReport(2,'@(ViewBag.order)')">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="FilterSalesReport(3,'@(ViewBag.order)')">3</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="FilterSalesReport(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="FilterSalesReport(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterSalesReport(@(ViewBag.PageNumber-2),'@(ViewBag.order)')">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterSalesReport(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="FilterSalesReport(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons disabledBtn" onclick="FilterSalesReport()">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="FilterSalesReport(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterSalesReport(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterSalesReport(@(ViewBag.PageNumber + 2),'@(ViewBag.order)')">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="FilterSalesReport(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 2)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="FilterSalesReport(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterSalesReport(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterSalesReport(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="FilterSalesReport(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="FilterSalesReport(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterSalesReport(@(ViewBag.PageNumber - 1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="FilterSalesReport(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="FilterSalesReport(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationButtons" onclick="FilterSalesReport(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+</div>
+

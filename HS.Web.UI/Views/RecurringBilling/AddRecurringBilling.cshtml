@@ -1,0 +1,1121 @@
+﻿@{
+    Layout = null;
+    var Count = 1;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+    string advanceshow = Model.Schedule.ShowDayInAdvance.ToString().ToLower();
+    string lineitemshow = Model.Schedule.ShowLineItem.ToString().ToLower();
+    string billdateshow = Model.Schedule.ShowBillDate.ToString().ToLower();
+    string newlineitembuttonhow = Model.Schedule.ShowAddNewLineItemButton.ToString().ToLower();
+    double Percent = Model.Schedule.TaxPercentage;
+    double salestax = Model.SalesTax;
+    bool isDisable = Model.Schedule.PreviousDate.HasValue && Model.Schedule.PreviousDate.Value != new DateTime() ? true : false;
+    DateTime today = (DateTime)ViewBag.today;
+    DateTime tomorrowday = today.AddDays(1);
+    DateTime StartDate = Model.Schedule.StartDate.HasValue ? Model.Schedule.StartDate.Value : tomorrowday;
+    if(tomorrowday < StartDate) { StartDate = tomorrowday; }
+    }
+    @using LabelHelper = HS.Web.UI.Helper.LabelHelper
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.ReurringBillingScheduleModel
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<script type="text/javascript">
+var stDate = '@StartDate.ToString("MM/dd/yyyy")';
+</script>
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Js/TinyInvoice.js"></script>
+<script src="~/Content/Js/AddRecurringBilling/AddRecurringBillingScript2.js"></script>
+<script>
+    @*var ToDate = '@(Model.Schedule.StartDate.ToString("MM/dd/yyyy"))';*@
+    
+    var StartDatepicker = new Pikaday({
+        field: $('#StartDate')[0],
+        trigger: $('#StartDateArea')[0],
+        format: 'MM/DD/YYYY',
+        minDate: new Date(stDate),
+        firstDay: 1
+    });
+    var EndDatepicker = new Pikaday({
+        field: $('#EndDate')[0],
+        trigger: $('#EndDateArea')[0],
+        minDate: new Date(stDate),
+        format: 'MM/DD/YYYY',
+        firstDay: 1
+    });
+
+    //var PaymentCollectionDatepicker = new Pikaday({
+    //    field: $('#PaymentCollectionDate')[0],
+    //    trigger: $('#PaymentCollectionDateArea')[0],
+
+    //    format: 'MM/DD/YYYY',
+    //    firstDay: 1
+    //});
+   
+    var PaymentDropdownLoad = function (ev) {
+        var customerId = $("#CustomerId").val();
+        var url = domainurl + "/RecurringBilling/PaymentDromdownLoading";
+        var param = JSON.stringify({
+            CustomerId: customerId
+        });
+
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result == true) {
+                    $('#CustomerPaymentProfileIdVal').html('');
+                    for (var i = 0; i < data.PaymentMethodList.length; i++) {
+                        var opt = '';
+                        if (data.PaymentMethodList[i].Value == ev) {
+                            opt = new Option(data.PaymentMethodList[i].Text, data.PaymentMethodList[i].Value, true, true);
+                        }
+                        else {
+                            opt = new Option(data.PaymentMethodList[i].Text, data.PaymentMethodList[i].Value);
+                        }
+                        $('#CustomerPaymentProfileIdVal').append(opt);
+                    }
+                  
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        })
+    }
+
+    var SetBillDayAsStartDate = function () {
+        var date = new Date($("#StartDate").val());
+        var bill = date.getDate();
+        if (bill > 28) {
+            bill = 01;
+        }
+        $("#BillDay").val(bill);
+        SetPaymentDayAsStartDate();
+    }
+    var SetPaymentDayAsStartDate = function () {
+        var billDate = parseInt($("#BillDay").val()),
+            starttimestamp = Date.parse($("#StartDate").val()),
+            formatdate = null,
+            dayVal = 1,
+            monthValue = '01';
+        if (!isNaN(starttimestamp)) {
+            formatdate = new Date(starttimestamp);
+            var selectedMonth = parseInt(formatdate.getMonth()) + 1;
+            var selectedDay = parseInt(formatdate.getDate());
+            if (isNaN(selectedDay)) { selectedDay = 1; }
+            if (isNaN(billDate)) { billDate = 1; }
+            if (selectedDay > billDate) {
+                selectedMonth++;
+            }
+            if (selectedMonth < 10) { monthValue = '0' + selectedMonth; }
+            else { monthValue = selectedMonth; }
+
+            if (billDate > 0 && billDate < 29) {
+                if (billDate < 10) { dayVal = String('0' + billDate); }
+                else { dayVal = String(billDate); }
+            }
+            formatdate = formatdate.getFullYear() + "-" + monthValue + "-" + dayVal;
+            $("#PaymentCollectionDate").val(formatdate);
+        }
+    }
+    if (@Percent == @salestax) {
+            $("#taxType").val(@salestax);
+        }
+        else{
+            $("#taxType").val("Custom");
+    }
+
+    $(document).ready(function () {
+        updateBillingMethodFromPaymentMethod(); // Manually update Billing Method on page load
+
+        // When the Payment Method dropdown changes, update the Billing Method
+        $('#CustomerPaymentProfileIdVal').on('change', function () {
+            updateBillingMethodFromPaymentMethod(); // Call the function when the Payment Method is changed
+        });
+        $(".recurring_bill_container").height(window.innerHeight - 89);
+        if ($("#taxType").val() == "Custom") {
+            $(".CustomerTaxPercentageDiv").removeClass('hidden');
+        }
+        else {
+            $(".CustomerTaxPercentageDiv").addClass('hidden');
+        }
+      
+
+        //$(".CustomerTaxPercentageDiv").addClass('hidden');
+        //var Tax = $("#taxType").val();
+        //$("#CustomerTaxPercentage").text(Tax);
+
+        // Field Validation
+        $('#Advance').keyup(function () {
+            this.value = this.value.replace(/[^0-9.]/g, '');
+        });
+        $('#Advance').change(function () {
+            var num = parseInt(this.value.replace(/[^0-9.]/g, ''));
+            if (isNaN(num)) { num = 0; }
+            if (num > 5) { num = 5; }
+            else if (num < 0) { num = 0; }
+            this.value = num;
+        });
+        $('#BillDay').change(function () {
+            SetPaymentDayAsStartDate();
+        });
+        $('.EffectiveDate').each(function (index, element) {
+
+            if (!$(element)[0]._pikaday) {
+                var existingDate = $(element).val();
+                var defaultDate = existingDate ? new Date(existingDate) : null;
+
+
+                var pikadayInstance = new Pikaday({
+                    field: element,
+                    format: 'MM/DD/YYYY',
+                    minDate: new Date(stDate),
+                    firstDay: 1,
+                    defaultDate: defaultDate,
+                    setDefaultDate: !!defaultDate,
+                    onSelect: function (date) {
+                        var currentValue = $(element).val();
+                        var newValue = pikadayInstance.toString();
+
+
+                        if (currentValue !== newValue) {
+                            $(element).val(newValue);
+                        }
+                    }
+                });
+
+
+                $(element)[0]._pikaday = pikadayInstance;
+            }
+        });
+
+
+        $('.CycleStartDate').each(function (index, element) {
+
+            if (!$(element)[0]._pikaday) {
+                var existingDate = $(element).val();
+                var defaultDate = existingDate ? new Date(existingDate) : null;
+                var pikadayInstance = new Pikaday({
+                    field: element,
+                    format: 'MM/DD/YYYY',
+                    firstDay: 1,
+                    minDate: new Date(stDate),
+                    defaultDate: defaultDate,
+                    setDefaultDate: !!defaultDate,
+                    onSelect: function (date) {
+                        var currentValue = $(element).val();
+                        var newValue = pikadayInstance.toString();
+
+
+                        if (currentValue !== newValue) {
+                            $(element).val(newValue);
+                        }
+                    }
+                });
+
+                $(element)[0]._pikaday = pikadayInstance;
+            }
+        });
+
+        //$('#Month').keyup(function () {
+        //    this.value = this.value.replace(/[^0-9.]/g, '');
+        //});
+        $('#Occurrence').keyup(function () {
+            this.value = this.value.replace(/[^0-9.]/g, '');
+        });
+        $('.txtRetailPrice').keyup(function () {
+            this.value = this.value.replace(/[^0-9.-]/g, '');
+        });
+        $('.txtTotalRetailPrice').keyup(function () {
+            this.value = this.value.replace(/[^0-9.-]/g, '');
+        });
+
+        $('.txtProductQuantity').keyup(function () {
+            this.value = this.value.replace(/[^0-9.]/g, '');
+        });
+        //End
+        // CC/BCC
+        var Cc = String($("#CCEmail").val());
+        var arr = Cc.split(',');
+        if (Cc == "") {
+            arr.length = 0;
+        }
+        var CcCount = $(this).find('span.CounterCC');
+        if (arr.length != 0) {
+            $(CcCount).text('(' + arr.length + ')');
+        }
+        else {
+            $(CcCount).text('');
+        }
+
+
+        var Bcc = String($("#BCCEmail").val());
+        var arr = Bcc.split(',');
+        if (Bcc == "") {
+            arr.length = 0;
+        }
+        var BccCount = $(this).find('span.CounterBCC');
+        if (arr.length != 0) {
+            $(BccCount).text('(' + arr.length + ')');
+        }
+        else {
+            $(BccCount).text('');
+        }
+
+        $("#CCEmailPopup").click(function () {
+            if ($(".popup").is(":visible")) {
+                $(".popup").addClass("hidden");
+            }
+            else {
+                $(".popup").removeClass("hidden");
+            }
+        });
+        $(".CancelPopup").click(function () {
+            if ($(".popup").is(":visible")) {
+                    $("#CCEmail").val("");
+                    $("#BCCEmail").val("");
+                    $(this).parent().parent().parent().find('span.CounterCC').text('');
+                    $(this).parent().parent().parent().find('span.CounterBCC').text('');
+                    $(".popup").addClass("hidden");
+            }
+        });
+
+        $(".DonePopup").click(function () {
+            if ($(".popup").is(":visible")) {
+                var Cc = String($("#CCEmail").val());
+                var arr = Cc.split(',');
+                if (Cc == "") {
+                    arr.length = 0;
+                }
+                var CcCount = $(this).parent().parent().parent().find('span.CounterCC');
+                if (arr.length != 0) {
+                    $(CcCount).text('(' + arr.length + ')');
+                }
+                else {
+                    $(CcCount).text('');
+                }
+
+
+                var Bcc = String($("#BCCEmail").val());
+                var arr = Bcc.split(',');
+                if (Bcc == "") {
+                    arr.length = 0;
+                }
+                var BccCount = $(this).parent().parent().parent().find('span.CounterBCC');
+                if (arr.length != 0) {
+                    $(BccCount).text('(' + arr.length + ')');
+                }
+                else {
+                    $(BccCount).text('');
+                }
+
+                $(".popup").addClass("hidden");
+            }
+        });
+        // End
+
+        // Online Peyments
+        //$("#OnlinePay").click(function () {
+        //    if ($("#OnlinePay").prop("checked") == true) {
+        //        $(".PaymentSection").removeClass("hidden");
+        //    }
+        //    else {
+        //        $(".PaymentSection").addClass("hidden");
+        //    }
+        //});
+        //if ($("#OnlinePay").prop("checked") == true) {
+        //    $(".PaymentSection").removeClass("hidden");
+        //}
+
+        $("#AddCCPayment").click(function () {
+            OpenRightToLeftModal(domainurl + "/SmartLeads/CCAddViewPaymentMethod?customerid=" + CustomerLoadGuid + "&type=Customer");
+        });
+        $("#AddACHPayment").click(function () {
+            OpenRightToLeftModal(domainurl + "/SmartLeads/ACHAddViewPaymentMethod?customerid=" + CustomerLoadGuid + "&type=Customer");
+        });
+
+        $("#Recurringsetting").click(function () {
+            OpenRightToLeftModal(domainurl + "/RecurringBilling/RecurringTempSettingsPartial");
+        });
+
+        $("#StartDate").change(function () {
+            SetBillDayAsStartDate();
+        });
+        if ($("#RMRStatus").val() == "Init") {
+            SetBillDayAsStartDate();
+        }
+        //$("#taxType").change(function () {
+        //    var Tax = $("#taxType").val();
+        //    $("#CustomerTaxPercentage").text('('+ Tax+'%)');
+        //});
+
+        if ('@advanceshow' == 'true') {
+            $(".dayidadvance").show();
+        }
+        else {
+            $(".dayidadvance").hide();
+            $("#Advance").val(0);
+        }
+        if ('@billdateshow' == 'true') {
+            $("#bill-date-div").show();
+        }
+        else {
+            $("#bill-date-div").hide();
+        }
+        if ('@lineitemshow' == 'true') {
+            $("#recurring_line_item_info").show();
+        }
+        else {
+            $("#recurring_line_item_info").hide();
+        }
+        if ('@newlineitembuttonhow' == 'true') {
+            $("#AddRowButton").show();
+        }
+        else {
+            $("#AddRowButton").hide();
+        }
+    });
+    function updateBillingMethodFromPaymentMethod() {
+        var selectedPaymentMethodText = $('#CustomerPaymentProfileIdVal').find('option:selected').text(); // Get the selected text of Payment Method
+        var billingMethodDropdown = $('#RMRBillingMethod');
+        console.log("Selected Payment Method Text:", selectedPaymentMethodText);
+
+       
+        var billingMethodText = selectedPaymentMethodText.split('_')[0].trim().toUpperCase();
+
+        var matchFound = false;
+
+       
+        billingMethodDropdown.find('option').each(function () {
+            var optionText = $(this).text().trim().toUpperCase();
+
+            
+            if (optionText === billingMethodText) {
+                billingMethodDropdown.val($(this).val());
+                matchFound = true;
+                return false;
+            }
+        });
+
+       
+        if (!matchFound) {
+            billingMethodDropdown.val('Invoice');
+        }
+    }
+</script>
+
+<style>
+    .EstPreview {
+        display: none;
+    }
+    .text-Required-sign {
+        font-weight: bolder;
+        color: red;
+    }
+    .recurring_bill_container .popup {
+        right: auto !important;
+    }
+
+    .rb_bottom_row .bottom_first select {
+        width: 250px !important;
+    }
+
+    .EstimatePrintAndSend {
+        border: 1px solid #2ca01c;
+        color: white;
+        background-color: #2ca01c;
+    }
+
+    #mceu_15-body, #mceu_22-body, #mceu_29-body, .mce-menubar, #mceu_54-body, #mceu_61-body {
+        display: none;
+    }
+
+    .C_S.I_G {
+        position: relative;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -ms-flex-wrap: wrap;
+        flex-wrap: wrap;
+        -webkit-box-align: stretch;
+        -ms-flex-align: stretch;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .C_S .input-group-prepend {
+        width: 30%;
+        float: left;
+    }
+
+    .C_S .input-group-text {
+        padding-top: 5px;
+        height: 32px;
+        color: #495057;
+        text-align: center;
+        background-color: #e9ecef;
+        border: 1px solid #ced4da;
+    }
+
+    .C_S.I_G > .input-group-prepend > .input-group-text {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .C_S.I_G > .txtProductAmount, .C_S.I_G > .txtProductRate, .C_S.I_G > .txtTotalRetailPrice,
+    .C_S.I_G > .txtRetailPrice {
+        position: relative;
+        -webkit-box-flex: 1;
+        -ms-flex: 1 1 auto;
+        flex: 1 1 auto;
+        width: 70%;
+        float: left;
+        margin-bottom: 0;
+    }
+    .invoice-info-left-70p {
+        margin-left: 15px;
+        margin-top: 15px;
+    }
+    .add-invoice-container .width-25p {
+        padding-right: unset!important;
+        margin-left: 15px;
+    }
+    .Recurring_BillingTab .tt-menu {
+        width: 40% !important;
+    }
+    #Recurring_BillingTab .txtProductQuantity {
+        width: 55px;
+    }
+    #Recurring_BillingTab thead th {
+        white-space:nowrap;
+    }
+</style>
+
+@Styles.Render("~/styles/AddEstimate")
+@*@Scripts.Render("~/scripts/AddInvoice")*@
+
+<div onclick="ClosingConfirmationMessage()" class="close-div estimate-close">
+    <img class="close_btn_size" title="Close" src="/Content/Icons/cross_update.png">
+</div>
+<input type="hidden" value="@Model.Schedule.Id" id="RecurringIntId" />
+<input type="hidden" value="@Model.Schedule.ScheduleId" id="ScheduleGuidId" />
+<input type="hidden" value="@Model.Schedule.CustomerId" id="CustomerId" />
+<input type="hidden" value="@ViewBag.Today" id="TodayDate" />
+<input type="hidden" value="@Model.Schedule.PaymentCollectionDate" id="PaymentCollectionDate" />
+<input type="hidden" value="@Model.Schedule.Status" id="RMRStatus" />
+
+<input type="hidden" value="MMR" id="Payfor" />
+<input type="hidden" value="" id="RecurringBillPaymentId" />
+<div class="add-invoice-container">
+    <div class="div-header clearfix recurring_bill_header">
+        <div class="header-title">
+            <span class="custom-title-span">
+                @Localize.T("RMR for")<a target="_blank" href="/Customer/Customerdetail/?id=@Model.Schedule.CustomerIntId" class="custom-title-span cus-anchor">@Model.Schedule.CustomerName</a>
+            </span>
+            @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.RMRTemplateSettingsShowEnable))
+            {
+                <button id="Recurringsetting" class="Settingin" data-toggle="dropdown"><i class="fa fa-cog cus-setting" aria-hidden="true"></i></button>
+            }
+            <span class="custom-title-span BillingSave_Message" style="color:green">
+            </span>
+        </div>
+
+    </div>
+    <div class="invoie_contents_scroll recurring_bill_container">
+        <div class="div-body-contents">
+
+            <div class="invoice-informations">
+                <div class="estimate_invoice_balance_info">
+
+                    <div class="rb_top_row">
+                        <div class="form-group clearfix">
+                            <span class="span-style">@Localize.T("Template Name")</span>
+                            @if (!string.IsNullOrEmpty(Model.Schedule.TemplateName) && !string.IsNullOrWhiteSpace(Model.Schedule.TemplateName))
+                            {
+                                @Html.TextBoxFor(x => x.Schedule.TemplateName, new { @class = "form-control", id = "TemplateName", placeholder = "Recurring Billing" })
+                            }
+                            else
+                            {
+                                <input class="form-control" id="TemplateName" name="Schedule.TemplateName" type="text" value="Recurring Billing">
+
+                            }
+
+                        </div>
+                        <div class="form-group clearfix dayidadvance">
+                            <span> Create</span>
+                            <input type="number" min="0" max="5" id="Advance" value="@Model.Schedule.DayInAdvance" class="form-control">
+                            <span>days in advance</span>
+                        </div>
+                    </div>
+
+                    <div class="rb_middle_row">
+                        <div class="first_block">
+                            @*<div class="span-style">@Localize.T("Customer")</div>
+            <div class="form-group clearfix customer_name_insert_div">
+
+                <input type="text" class="form-control" value="@Model.Schedule.CustomerName" id="CustomerName" />
+                <div class='tt-menu'>
+                    <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                </div>
+
+            </div>*@
+                            <div class="span-style">@Localize.T("Email Address")<span class="text-Required-sign" title="Required"> *</span></div>
+                            <div class="form-group clearfix">
+
+                                @Html.TextBoxFor(x => x.Schedule.EmailAddress, new { @class = "form-control", id = "EmailAddress", placeholder = "Email Address" })
+                                <a id="CCEmailPopup" style="cursor:pointer">Cc<span class="CounterCC"></span>/Bcc<span class="CounterBCC"></span></a>
+
+                                <div class="popup hidden">
+                                    <div>
+                                        <span class="span-style">@Localize.T("Cc")</span>
+                                        <input type="text" id="CCEmail" name="CCEmail" class="form-control" placeholder="Email(Separate emails with a comma)" value="@Model.Schedule.CCEmail" />
+                                    </div>
+                                    <div>
+                                        <span class="span-style">@Localize.T("Bcc")</span>
+                                        <input type="text" id="BCCEmail" name="BCCEmail" class="form-control" placeholder="Email(Separate emails with a comma)" value="@Model.Schedule.BCCEmail" />
+                                    </div>
+                                    <div>
+                                        <button class="btn red_button CancelPopup" style="text-align:left">@Localize.T("Cancel")</button>
+                                        <button class="btn green_button DonePopup" style="text-align:right">@Localize.T("Done")</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="third_block">
+                            <div class="span-style">@Localize.T("Email Options")</div>
+                            <div class="form-group clearfix" id="e-InvoiceCheck">
+                                <label for="e-Invoice" class="label-cbx">
+                                    <input id="e-Invoice" type="checkbox" @(Model.Schedule.IsEInvoice == true ? "checked" : "") style="position:relative;" class="cus-checkBox invisible " autocomplete="off">
+                                    <div class="checkbox">
+                                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                            <polyline points="4 11 8 15 16 6"></polyline>
+                                        </svg>
+                                    </div>
+                                </label>
+                                @Localize.T("e-Invoice")
+                            </div>
+                            <div class="form-group clearfix" id="e-ReceiptCheck">
+                                <label for="e-Receipt" class="label-cbx">
+                                    <input id="e-Receipt" type="checkbox" @(Model.Schedule.IsEReceipt == true ? "checked" : "") style="position:relative;" class="cus-checkBox invisible " autocomplete="off">
+                                    <div class="checkbox">
+                                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                            <polyline points="4 11 8 15 16 6"></polyline>
+                                        </svg>
+                                    </div>
+                                </label>
+                                @Localize.T("e-Receipt")
+                            </div>
+                            @*<div class="form-group clearfix" id="PaperlessBillingCheck">
+                <label for="PaperlessBilling" class="label-cbx">
+                    <input id="PaperlessBilling" type="checkbox" @(Model.Schedule.AutomaticallySendEmail == true ? "checked" : "") style="position:relative;" class="cus-checkBox invisible " autocomplete="off">
+                    <div class="checkbox">
+                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                            <polyline points="4 11 8 15 16 6"></polyline>
+                        </svg>
+                    </div>
+                </label>
+                @Localize.T("Paperless Billing")
+            </div>*@
+                        </div>
+                        @*<div class="third_block">
+            <div class="span-style">@Localize.T("Outstanding Amount")</div>
+            <div class="form-group clearfix" id="UnbilledChargesCheck">
+                <label for="UnbilledCharges" class="label-cbx">
+                    <input id="UnbilledCharges" type="checkbox" @(Model.Schedule.IncludeOpenInvoices == true ? "checked" : "") style="position:relative;" class="cus-checkBox invisible " autocomplete="off">
+                    <div class="checkbox">
+                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                            <polyline points="4 11 8 15 16 6"></polyline>
+                        </svg>
+                    </div>
+                </label>
+                @Localize.T("Include RMR Unpaid Bills")
+            </div>
+            <div class="form-group clearfix" id="OthersUnbilledChargesCheck">
+                <label for="OthersUnbilledCharges" class="label-cbx">
+                    <input id="OthersUnbilledCharges" type="checkbox" @(Model.Schedule.OthersUnpaidBill == true ? "checked" : "") style="position:relative;" class="cus-checkBox invisible " autocomplete="off">
+                    <div class="checkbox">
+                        <svg width="20px" height="20px" viewBox="0 0 20 20">
+                            <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                            <polyline points="4 11 8 15 16 6"></polyline>
+                        </svg>
+                    </div>
+                </label>
+                @Localize.T("Include Other Unpaid Bills")
+            </div>
+        </div>*@
+                    <div class="fourth_block">
+
+                        <div class="span-style">@Localize.T("Payment Method")<span class="text-Required-sign" title="Required"> *</span></div>
+                        <div class="form-group clearfix">
+                            @Html.DropDownListFor(x => x.Schedule.PaymentMethod, (List<SelectListItem>)ViewBag.PaymentMethod, new { @class = "form-control", id = "CustomerPaymentProfileIdVal", })
+                            <a id="AddCCPayment" class="cus-anchor margin_left_5">Add credit card</a>
+                            <a id="AddACHPayment" class="cus-anchor padding-left-15">Add ACH</a>
+                        </div>
+                    </div>
+                    <div class="fourth_block">
+                        <div class="span-style">@Localize.T("Billing Method")</div>
+
+                        <div class="form-group clearfix">
+                            @Html.DropDownList("RMRBillingMethod", new SelectList(ViewBag.RMRBillingMethod, "Value", "Text"), new { @class = "form-control" })
+                        </div>
+                    </div>
+
+                   
+                     
+                    </div>
+
+                    @*<div class="rb_bottom_row">
+                        <div class="bottom_first">*@
+                    <div class="rb_middle_row">
+                        <div class="first_block">
+                            <div class="span-style">@Localize.T("Interval")<span class="text-Required-sign" title="Required"> *</span></div>
+                            <div class="form-group clearfix" id="BillCycle">
+
+                                @Html.DropDownListFor(x => x.Schedule.BillCycle, (List<SelectListItem>)ViewBag.Cycle, new { @class = "form-control", id = "BillCycleVal", })
+
+                                <span class="span-style hidden">@Localize.T("Month")</span>
+                                @*<span>of every</span>
+                                    @if (@Model.Schedule.Interval > 0)
+                                    {
+                                        <input type="number" min="1" id="Month" value="@Model.Schedule.Interval" name="Month" class="form-control">
+                                    }
+                                    else
+                                    {
+                                        <input type="number" min="1" id="Month" value="1" name="Month" class="form-control">
+                                    }
+                                    <span>month(s)</span>*@
+                            </div>
+                        </div>
+                        @*<div class="bottom_second">*@
+                        <div class="second_block">
+                            <div class="form-group clearfix" id="StartDateArea">
+                                <div class="span-style">@Localize.T("Start Date")<span class="text-Required-sign" title="Required"> *</span></div>
+                                <div class="input_group_for_date add-on">
+                                    @Html.TextBoxFor(x => x.Schedule.StartDate, "{0:MM/dd/yy}", @isDisable ? (object) new { @class = "form-control", id = "StartDate", placeholder = "Start Date", autocomplete = "off", @disabled = "disabled", @readonly = "readonly" } : (object) new { @class = "form-control", id = "StartDate", placeholder = "Start Date", autocomplete = "off" })
+                                    <div class="input-group-btn">
+                                        <btn class="btn"><i class="fa fa-calendar" aria-hidden="true"></i></btn>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @*<div class="third_block">
+                            <div class="form-group clearfix" id="EndDateArea">
+                                <span class="span-style">@Localize.T("End Date")</span>
+                                <div class="input_group_for_date add-on">
+                                    @Html.TextBoxFor(x => x.Schedule.EndDate, "{0:MM/dd/yy}", new { @class = "form-control", id = "EndDate", placeholder = "End Date", autocomplete = "off" })
+                                    <div class="input-group-btn">
+                                        <btn class="btn"><i class="fa fa-calendar" aria-hidden="true"></i></btn>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>*@
+                        <div class="fourth_block" id="bill-date-div">
+                            @*<div class="form-group clearfix" id="PaymentCollectionDateArea">
+        <span class="span-style">@Localize.T("Payment Collection Date")</span>
+        <div class="form-group clearfix">*@
+                            @*@Html.TextBoxFor(x => x.Schedule.PaymentCollectionDate, "{0:MM/dd/yy}", new { @class = "form-control", id = "PaymentCollectionDate", placeholder = "Payment Collection Date", autocomplete = "off" })*@                           
+                            @*<div class="input-group-btn">
+            <btn class="btn"><i class="fa fa-calendar" aria-hidden="true"></i></btn>
+        </div>*@
+                            <!--</div>
+    </div>-->
+                                <div class="span-style">@Localize.T("Bill Day")</div>
+                                <div class="form-group clearfix" id="BillDays">
+
+                                    @Html.DropDownListFor(x => x.BillDay, (List<SelectListItem>)ViewBag.BillingDay, new { @class = "form-control", id = "BillDay" })
+
+                                    @*<span class="span-style hidden">@Localize.T("Month")</span>*@
+                                </div>
+                        </div>
+                    </div>
+                <div class="invoice-info-left-70p top_pad_for_add_invoice margin-top-10 invoice_billing_info">
+                    <div class="form-group clearfix add_estimate_info_div_device BillingAddress_rb">
+                        <span class="span-style">@Localize.T("Billing Address")</span>
+                        @Html.TextAreaFor(x => x.Schedule.BillingAddress, new { @class = "BillingAddress form-control tinymce", id = "BillingAddress" })
+                    </div>
+
+                    <div class="form-group clearfix width-25p add_estimate_info_div_device">
+                        <div class="span-style">@Localize.T("Billing Status")<span class="text-Required-sign" title="Required"> *</span></div>
+                        @Html.DropDownListFor(x => x.Schedule.Status, (List<SelectListItem>)ViewBag.Status, new { @class = "form-control", id = "BillingStatus" })
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div class="add_estimate_table_info" id="recurring_line_item_info">
+        <table class="table Recurring_BillingTab" id="Recurring_BillingTab">
+            <thead>
+                <tr>
+                    <th class="thead-th-style1 tab-index">
+                        <span>
+
+                        </span>
+                    </th>
+                    <th class="thead-th-style1 tab-Product">
+                        <div>
+                            @Localize.T("Service") <span class="text-Required-sign" title="Required"> *</span>
+                        </div>
+                    </th>
+                    <th class="thead-th-style2 tab-Desc">
+                        <span>
+                            @Localize.T("Description")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2">
+                        <span>
+                            <div class="span-style">@Localize.T("Effective Date")</div>
+
+                        </span>
+                    </th>
+                    <th class="thead-th-style2">
+                        <span>
+                            <div class="span-style">@Localize.T("Cycle Date")<span class="text-Required-sign" title="Required"> *</span></div>
+
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Quantity">
+                        <span>
+                            @Localize.T("QTY")
+                        </span>
+                    </th>
+
+                    <th class="thead-th-style2 tab-Quantity retail_area">
+                        <span>
+                            @Localize.T("Rate")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Quantity retail_area">
+                        <span>
+                            @Localize.T("Amount")
+                        </span>
+                    </th>
+                    <th class="thead-th-style2 tab-Action">
+
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.ScheduleItems.Count() > 0)
+                {
+                    foreach (var item in Model.ScheduleItems)
+                    {
+                        <tr class="HasItem">
+                            <td valign="top">@Count</td>
+                            <td valign="top">
+                                <input type="text" class="txtProductName" value="@item.ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                <span class="spnProductName"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" value="@item.Description" class="txtProductDesc" />
+                            </td>
+                            <td valign="top">
+                                    <input type="text" class="form-control EffectiveDate" placeholder="Effective Date" autocomplete="off"
+                                           value="@(item.EffectiveDate.HasValue ? item.EffectiveDate.Value.ToString("yyyy-MM-dd") : "")" />
+                            </td>
+                            <td valign="top">
+                                @if (item.CycleStartDate.HasValue && item.CycleStartDate.Value <= today)
+                                {
+                                    <input type="text" class="form-control CycleStartDate" placeholder="Cycle Date" autocomplete="off" readonly="readonly" disabled="disabled"
+                                           value="@(item.CycleStartDate.HasValue ? item.CycleStartDate.Value.ToString("yyyy-MM-dd") : "")" />
+                                }
+                                else
+                                {
+                                    <input type="text" class="form-control CycleStartDate" placeholder="Cycle Date" autocomplete="off"
+                                           value="@(item.CycleStartDate.HasValue ? item.CycleStartDate.Value.ToString("yyyy-MM-dd") : "")" />
+                                }
+                            </td>
+                            <td valign="top" class="retail_area">
+                                <input type="number" min="0" class="txtProductQuantity" value="@item.Qty" />
+
+                            </td>
+
+
+
+
+
+
+                            <td valign="top" class="retail_area">
+                                <div class="C_S I_G">
+                                    <div class="input-group-prepend">
+                                        <div class="input-group-text">@Currency</div>
+                                    </div>
+                                    <input type="text" class="txtRetailPrice" value="@item.Rate.ToString("#,##0.00")" />
+                                </div>
+                            </td>
+                            <td valign="top" class="retail_area">
+
+                                <div class="C_S I_G">
+                                    <div class="input-group-prepend">
+                                        <div class="input-group-text">@Currency</div>
+                                    </div>
+                                    <input type="text" class="txtTotalRetailPrice" value="@item.Amount.ToString("#,##0.00")" />
+                                </div>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                <div class="estimate_action_div">
+
+                                    <input style="display:block;" type="checkbox" title="Taxable" class="chkTaxable" @(item.IsTaxable == true ? "checked" : "") />
+
+                                    @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.RMRTemplateEditDeleteIconShow))
+                                    {
+                                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                        Count = Count + 1;
+                    }
+                    if (Model.ScheduleItems.Count() < 2)
+                    {
+            <tr class="HasItem">
+                <td valign="top">2</td>
+                <td valign="top">
+                    <input type="text" class="txtProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                    <span class="spnProductName"></span>
+                </td>
+                <td valign="top">
+                    <input type="text" class="txtProductDesc" />
+                </td>
+                <td valign="top">
+                    <input type="text" class="form-control EffectiveDate" placeholder="Effective Date"
+                           autocomplete="off"
+                           value="" />
+                </td>
+                <td valign="top">
+                    <input type="text" class="form-control CycleStartDate" placeholder="Cycle Date"
+                           autocomplete="off"
+                           value="" />
+                </td>
+                <td valign="top" class="retail_area">
+                    <input type="number" min="0" class="txtProductQuantity" />
+                </td>
+
+
+                <td valign="top" class="retail_area">
+                    <div class="C_S I_G">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">@Currency</div>
+                        </div>
+                        <input type="text" class="txtRetailPrice" value="" />
+                    </div>
+                </td>
+                <td valign="top" class="retail_area">
+
+                    <div class="C_S I_G">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">@Currency</div>
+                        </div>
+                        <input type="text" class="txtTotalRetailPrice" value="" />
+                    </div>
+                </td>
+
+                <td valign="top" class="tableActions">
+                    <div class="estimate_action_div">
+
+                        <input type="checkbox" style="display:block;" title="Taxable" class="chkTaxable" />
+                        @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.RMRTemplateEditDeleteIconShow))
+                        {
+                            <i class="fa fa-trash-o" aria-hidden="true"></i>
+                        }
+                      
+                    </div>
+                </td>
+            </tr>
+                    }
+                }
+                else
+                {
+            <tr class="HasItem">
+                <td valign="top">1</td>
+                <td valign="top">
+                    <input type="text" class="txtProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                    <span class="spnProductName"></span>
+                </td>
+                <td valign="top">
+                    <input type="text" class="txtProductDesc" />
+                </td>
+                <td valign="top">
+                    <input type="text" id="EffectiveDate1" class="form-control EffectiveDate" placeholder="Effective Date" autocomplete="off" required />
+
+                </td>
+                <td valign="top">
+                    <input type="text" id="CycleStartDate1" class="form-control CycleStartDate" placeholder="Cycle Date" autocomplete="off" required />
+
+                </td>
+                <td valign="top" class="retail_area">
+                    <input type="number" min="0" class="txtProductQuantity" value="" />
+                </td>
+
+
+                <td valign="top" class="retail_area">
+                    <div class="C_S I_G">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">@Currency</div>
+                        </div>
+                        <input type="text" class="txtRetailPrice" value="" />
+                    </div>
+                </td>
+                <td valign="top" class="retail_area">
+
+                    <div class="C_S I_G">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">@Currency</div>
+                        </div>
+                        <input type="text" class="txtTotalRetailPrice" value="" />
+                    </div>
+                </td>
+
+                <td valign="top" class="tableActions">
+                    <div class="estimate_action_div">
+
+                        <input type="checkbox" style="display:block;" title="Taxable" class="chkTaxable" />
+
+                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                    </div>
+                </td>
+            </tr>
+
+            <tr class="HasItem">
+                <td valign="top">2</td>
+                <td valign="top">
+                    <input type="text" class="txtProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                    <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                    <span class="spnProductName"></span>
+                </td>
+                <td valign="top">
+                    <input type="text" class="txtProductDesc" />
+                </td>
+                <td valign="top">
+                    <input type="text" id="EffectiveDate2" class="form-control EffectiveDate" placeholder="Effective Date" autocomplete="off" required />
+
+                </td>
+                <td valign="top">
+                    <input type="text" id="CycleStartDate2" class="form-control CycleStartDate" placeholder="Cycle Date" autocomplete="off" />
+
+                </td>
+                <td valign="top" class="retail_area">
+                    <input type="number" min="0" class="txtProductQuantity" value="" />
+                </td>
+
+                <td valign="top" class="retail_area">
+                    <div class="C_S I_G">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">@Currency</div>
+                        </div>
+                        <input type="text" class="txtRetailPrice" value="" />
+                    </div>
+                </td>
+                <td valign="top" class="retail_area">
+
+                    <div class="C_S I_G">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">@Currency</div>
+                        </div>
+                        <input type="text" class="txtTotalRetailPrice" value="" />
+                    </div>
+                </td>
+
+
+                <td valign="top" class="tableActions">
+                    <div class="estimate_action_div">
+
+                        <input type="checkbox" style="display:block;" title="Taxable" class="chkTaxable" />
+
+                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                    </div>
+                </td>
+            </tr>
+                }
+            </tbody>
+        </table>
+        <button class="btn AddRow green_button" id="AddRowButton" style="float:left">@Localize.T("(+) Add Service")</button>
+    </div>
+    <div class="OtherInfos">
+        <div class="col-md-12">
+            <div class="estimate_description_container add_estimate_margin_top add_estimate_bootom_left">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="billing_text_align">
+                            <span>@Localize.T("Recurring Billing Description")</span>
+                        </div>
+                        <textarea id="RecurringDescription" maxlength="5000" rows="4" class="InvoiceMessage">@Model.Schedule.MessageOnInvoice</textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="estimate_calculation_div add_estimate_bootom_right">
+                <div class="InvoiceCalculationsDiv">
+                    <div class="subtotal-amount-div row add_estimate_margin_top">
+                        <div class="col-xs-8">
+                            <span class="float-right subtotal_text">@Localize.T("Bill Amount"):</span>
+                        </div>
+                        <div class="col-xs-4">
+                            <span class="CustomerBillingAmount float-right" id="CustomerBillingAmount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.Schedule.BillAmount.ToString("#,##0.00")</span>
+                        </div>
+                    </div>
+
+                    <div class="row balance-due-amount-div">
+                        <div class="col-xs-8 currency_style">
+                            @*<span class="float-right subtotal_text">@Localize.T("Tax Percentage"):</span>*@
+
+                            <div class="input-group CustomerTaxPercentageDiv">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">
+                                        %
+                                    </span>
+                                </div>
+                                <input type="text" value="@Model.Schedule.TaxPercentage" class="CustomerTaxPercentage form-control" id="CustomerTaxPercentage" />
+                            </div>
+                            @Html.DropDownList("taxType", (List<SelectListItem>)ViewBag.TaxListItem, new { @class = "form-control add_estimate_dropdown_style" })
+                        </div>
+                        <div class="col-xs-4 custom_pad_add_estimate" id="CustomerTaxAmount">
+                            <span class="CustomerTaxAmount float-right" id="CustomerTaxAmount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.Schedule.TaxAmount.ToString("#,##0.00")</span>
+                        </div>
+                        <!--<div class="col-xs-4 custom_pad_add_estimate">
+                            <span class="CustomerTaxPercentage float-right" id="CustomerTaxPercentage"></span>-->
+                            @*<input type="text" class="form-control CustomerTaxPercentage" value="@Model.Schedule.TaxPercentage" id="CustomerTaxPercentage" />*@
+                        <!--</div>-->
+                    </div>
+
+                    @*<div class="row balance-due-amount-div">
+                        <div class="col-xs-8">
+                            <span class="float-right subtotal_text">@Localize.T("Tax Amount"):</span>
+
+                        </div>
+                        <div class="col-xs-4 custom_pad_add_estimate" id="CustomerTaxAmount">
+                            <span class="CustomerTaxAmount float-right" id="CustomerTaxAmount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.Schedule.TaxAmount.ToString("#,##0.00")</span>
+                        </div>
+                    </div>*@
+
+                    <div class="row balance-due-amount-div">
+                        <div class="col-xs-8">
+                            <span class="float-right subtotal_text">@Localize.T("Total Billing Amount"):</span>
+                        </div>
+                        <div class="col-xs-4 custom_pad_add_estimate" id="TotalBillingAmount">
+                            <span class="TotalBillingAmount float-right">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@Model.Schedule.TotalBillAmount.ToString("#,##0.00")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<div class="invoice-footer col-md-12">
+
+    <button class="btn BillingSaveButton desktop_estimate_save green_button" style="float:right">@Localize.T("Save")</button>
+
+</div>

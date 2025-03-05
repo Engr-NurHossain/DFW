@@ -1,0 +1,271 @@
+﻿@model HS.Entities.CreateCustomerBooking
+@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using System.Collections;
+
+<link href="~/Content/Bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+<link href="~/Content/Css/GetBooking/GetBooking.css" rel="stylesheet" />
+<script src="~/Content/Jquery-ui/jquery.js"></script>
+<script src="~/Content/Js/GetBooking/GetBooking.js"></script>
+
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+<script src="~/Content/Tiny/tiny.js"></script>
+@{
+    Hashtable datatemplate = new Hashtable();
+    datatemplate.Add("CustomerName", Model.CustomerName);
+    datatemplate.Add("SalesPhone Number", ViewBag.SalesPhone);
+    datatemplate.Add("CompanyName", Model.CompanyName);
+    datatemplate.Add("SalesGuy", ViewBag.SalesGuy);
+    datatemplate.Add("url", ViewBag.url);
+    string emailtemplate = HS.Web.UI.Helper.LabelHelper.ParserHelper(Model.EmailTemplate.BodyContent, datatemplate);
+}
+<style>
+    .black{
+        color:black;
+    }
+    .txtEmailbody {
+        outline: none;
+        height: 123px;
+        border: 1px solid rgb(186, 190, 197);
+        padding: 8px 8px;
+        border-radius: 2px;
+        -webkit-border-radius: 2px;
+        -moz-border-radius: 2px;
+        transition-property: border;
+        transition-duration: 0.35s;
+        font-size: 13px;
+        background-color: rgb(255, 255, 255);
+        box-sizing: border-box;
+        -webkit-appearance: none;
+        width: 100%;
+        vertical-align: middle;
+        margin-top: 5px;
+    }
+
+    .EmailSubject,.ContactNumber {
+        outline: none;
+        height: 32px;
+        border: 1px solid #babec5;
+        padding: 0 8px;
+        -webkit-border-radius: 2px;
+        -moz-border-radius: 2px;
+        border-radius: 2px;
+        transition-property: border;
+        transition-duration: 0.35s;
+        font-size: 13px;
+        background-color: #ffffff;
+        box-sizing: border-box;
+        -webkit-appearance: none;
+        width: 100%;
+        vertical-align: middle;
+        margin-top: 5px;
+    }
+
+    .btnSaveEmailAndClose {
+        float: right;
+        margin-right: 30px;
+    }
+
+    .btnSaveAndNew {
+        float: right;
+        margin-right: 15px;
+    }
+    .btnSendSmsAndClose{
+        float:right;
+        margin-right:15px;
+    }
+    .btnSendToBoth {
+            float: right;
+            margin-right: 15px;
+        }
+
+</style>
+<script> 
+    var PdfLocation = '/@ViewBag.PdfLocation';
+    var LeadId = '@Model.CustomerId';
+    var BookedId = '@Model.Booking.Id';
+
+    var BothSMSAndEmailFunction = function () {
+        var url = "/SMS/SendBookingText";
+        var param = JSON.stringify({
+            CustomerId: LeadId,
+            BookingId: BookedId,
+            ContactNumber: $(".ContactNumber").val(),
+            Message: $("#SMSDescription").val()
+        });
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                if (data.result) {
+                    var EmailDes = tinyMCE.get('EmailDescription').getContent();
+                    var EmailSub = $("#EmailSubject").val();
+                    //window.SaveBooking();
+                    parent.SaveBooking(true, false, "", EmailDes, EmailSub);
+                    parent.ClosePopup();
+                } else {
+                    parent.OpenErrorMessageNew("Error", data.message, function () {
+
+                    });
+                }
+            }
+        });
+    }
+
+    var SendBothEmailAndSMS = function () {
+        if ($(".ContactNumber").val().trim() == ""
+           || $("#SMSDescription").val().trim() == "") {
+            parent.OpenErrorMessageNew("Error", "Contact number and SMS body can't be empty.");
+        }
+        else {
+            BothSMSAndEmailFunction();
+        }
+    }
+
+    $(document).ready(function () {
+        $('.send_email_booking_inner').height(window.innerHeight - $('.HeadContents_send_email').height() - $('.footerContents_sendemail').height() -50);
+       
+        //Email Send And Close Button Action 
+        $(".btnSaveEmailAndClose").click(function () {
+            //parent.SaveAndClose();
+            //parent.ClosePopup();
+            var EmailDes = tinyMCE.get('EmailDescription').getContent();
+            var EmailSub = $("#EmailSubject").val();
+            var ccEmail = $("#CCEmail").val();
+            parent.SaveBooking(true, false, "", EmailDes, EmailSub, ccEmail);
+            parent.ClosePopup();
+        });
+        $(".btnSaveAndNew").click(function () {
+            parent.SaveAndNew();
+            parent.ClosePopup();
+        });
+        //SMS Send And Close Button Action 
+        $(".btnSendSmsAndClose").click(function () {
+            if ($(".ContactNumber").val().trim() == "" || $("#SMSDescription").val().trim() == "") {
+                parent.OpenErrorMessageNew("Error", "Contact number and SMS body can't be empty.");
+            } else {
+                var url = "/SMS/SendBookingText";
+                var param = JSON.stringify({
+                    CustomerId: LeadId,
+                    BookingId: BookedId,
+                    ContactNumber: $(".ContactNumber").val(),
+                    Message: $("#SMSDescription").val()
+                });
+                $.ajax({
+                    type: "POST",
+                    url: url,
+                    data: param,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.result) {
+                            parent.OpenSuccessMessageNew("Success", data.message, function () {
+                                parent.CloseTopToBottomModal();
+                                parent.OpenLeadBookTab();
+                                parent.ClosePopup();
+                            });
+                        } else {
+                            parent.OpenErrorMessageNew("Error", data.message, function () {
+
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+        $(".btnSendToBoth").click(function () {
+            SendBothEmailAndSMS();
+        })
+       
+      
+    });
+    $(window).resize(function () {
+        $('.send_email_booking_inner').height(window.innerHeight - $('.HeadContents_send_email').height() - $('.footerContents_sendemail').height());
+       
+    });
+
+</script>
+<div class="send_email_booking">
+    <div class="CloseButtonDiv" onclick="parent.ClosePopup()">
+        <img src="/Content/Icons/cross_update.png">
+    </div>
+    <div class="HeadContents_send_email">
+        <h4>@Localize.T("Send email")</h4>
+    </div>
+
+    <div class="send_email_booking_inner">
+        <div class="width-50p-firstdiv">
+            <div class="row">
+                <div class="col-md-6 send_email_info_header">
+                    @Localize.T("Email")
+                </div>
+                <div class="col-md-6">
+                    @Model.CustomerEmailAddress
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 send_email_info_header">
+                    @Localize.T("CC Email")
+                </div>
+                <div class="col-md-6">
+                    <input type="text" value="" class="EmailSubject" placeholder="Add cc email by ';' separator" id="CCEmail">
+                </div>
+                <div class="col-md-6 send_email_info_header">
+                    @Localize.T("Subject")
+                </div>
+                <div class="col-md-6">
+                    <input type="text" value="New Booking from @Model.CompanyName: @Model.Booking.BookingId" class="EmailSubject" placeholder="Subject" id="EmailSubject">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="emailbody send_email_info_header">@Localize.T("Body")</div>
+                    <div style="width:97%;">
+                        <textarea class="txtEmailbody tinymce" id="EmailDescription" name="Description">
+                            @emailtemplate
+                        </textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="">
+                <h4>@Localize.T("Send SMS")</h4>
+            </div>
+            <div class="row">
+                <div class="col-md-6 send_email_info_header">
+                    @Localize.T("Contact Number")
+                </div>
+                <div class="col-md-6">
+                    <input class="ContactNumber" type="text" value="@Model.CustomerContactNumber" placeholder="Contact Number" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="emailbody send_email_info_header">@Localize.T("SMS Body")</div>
+                    <div><textarea class="form-control" rows="3" id="SMSDescription" name="SMSDescription">@Model.SMSBody</textarea></div>
+                    @*<label class="label black">Localize.T("'##url##' will be replaced by actual url.")</label>*@
+                </div>
+            </div>
+        </div>
+
+        <div class="send_email_preview">
+            <iframe class="pdf-styles @(string.IsNullOrWhiteSpace(ViewBag.PdfLocation)?"hidden":"")" id="iframePdf" src="/@ViewBag.PdfLocation"></iframe>
+        </div>
+    </div>
+
+    <div class="footerContents_sendemail">
+        <button onclick="parent.ClosePopup()" class="btnCancel">@Localize.T("Cancel")</button>
+        <button class="btn btnSaveEmailAndClose">@Localize.T("Send Email")</button>
+        @*<button class="btn btnSaveAndNew">@Localize.T("Send and new")</button>*@
+        <button class="btn btnSendSmsAndClose">@Localize.T("Send SMS")</button>
+        <button class="btn btnSendToBoth">@Localize.T("Send To Both")</button>
+    </div>
+</div>
+  

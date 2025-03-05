@@ -1,0 +1,158 @@
+﻿@model IEnumerable<HS.Entities.CustomSurveyQuestion>
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@{ 
+    Layout = null;
+}
+<script>
+    var UpdateQuesGrid = function () {
+        var url = domainurl + "/Survey/UpdateQuesList";
+
+        var QuesList = [];
+        $("tbody tr").each(function () {
+            var id = $(this).attr('data-id');
+            console.log(id);
+            if (id != undefined)
+            {
+                QuesList.push({
+                    Id: $(this).attr('data-id'),
+                    OrderBy: $(this).find(".DataOrder").val(),
+
+                });
+            }
+        
+        });
+        var param = JSON.stringify({ QuesList: QuesList });
+        console.log(param);
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var ApplySort = function () {
+        $(".Questiontable tbody").sortable({
+            update: function () {
+                var i = 0;
+                $(".DataOrder").each(function () {
+                    $(this).val(i);
+                    i += 1;
+                });
+                console.log("sort");
+                UpdateQuesGrid();
+            }
+        }).disableSelection();
+    };
+    $(document).ready(function () {
+        ApplySort();
+        $(".QuesItem").click(function (e) {
+            $(".QuesItem").removeClass("active_data");
+            $(e.target).addClass("active_data");
+            var key = $(e.target).attr('data-key');
+            var Type = $(e.target).attr('data-type');
+            var Question = $(e.target).attr('data-Question');
+            $("#Question").val(Question);
+            $("#QuestionType").val(Type);
+            $("#QuestionId").val(key);
+           
+            $("#btn-SetQuestions").show();
+            console.log(Type);
+            SelectedDataKey = key;
+            if (Type != "Text" && Type != "TextArea")
+            {
+                $(".AnsEditModule").show(); 
+                $(".AnsEditModule").load(domainurl + "/Survey/ShowAnswers/?QuestionId=" + key);
+            }
+            else {
+                $(".AnsEditModule").hide();
+            }
+           
+        });
+
+       
+    });
+  
+
+    var DeleteQuesConfirm = function (questionId) {
+        console.log("he");
+        var url = domainurl + "/Survey/DeleteQuestion";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify({
+                QuestionId: questionId,
+            
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message);
+                    $("#QuestionList").load(domainurl + "/Survey/ShowQusestions?SurveyId=" + SurveyId);
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var DeleteQuestion = function (questionId) {
+      
+        OpenConfirmationMessageNew("Confirm?", "Are you really want to delete this question?", function () {
+          
+            DeleteQuesConfirm(questionId);
+        }); 
+    }
+</script>
+
+<table class="Questiontable">
+    <thead>
+        <tr>
+
+            <th>
+                @Localize.T("Question")
+            </th>
+            <th>
+                @Localize.T("Question type")
+            </th>
+            <th>@Localize.T("Actions")</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+                <tr class="ques_row" data-id="@item.Id">
+
+                <td>
+                    <div class="QuesItem cus-anchor" data-type="@item.QuestionType" data-Question="@item.Question" data-key="@item.QuestionId">@Localize.T(item.Question)</div>
+                    <input type="hidden" class="DataOrder" value="@item.OrderBy" />
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.QuestionType)
+                </td>
+                <td>
+                    <button class="btn btn-default red_button" data-toggle="tooltip" onclick="DeleteQuestion('@item.QuestionId')" title="Delete"><i class="fa fa-trash-o"></i></button>
+                </td>
+
+            </tr>
+
+        }
+    </tbody>
+
+
+
+</table>

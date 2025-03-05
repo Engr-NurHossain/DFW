@@ -1,0 +1,160 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.AdjustmentRule> 
+@using AppConfig = HS.Framework.Utils.AppConfig;
+ 
+<script>
+    var DataTablePageSize = 50;
+    var changeval;
+    var sval;
+    var AdjustmentRuleFilter = function () {
+        var url = "@(AppConfig.DomainSitePath)/Adjusment/FilterAdjustmentRule";
+        $.ajax({
+            url: url,
+            data: { changeval: changeval, sval: sval },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result == true) {
+                    $(".table-adjustmentrule").hide();
+                    $(".filter-adjustment-div").load("@(AppConfig.DomainSitePath)/Adjusment/FilterAdjustmentRulePartial?id=" + data.valrange + "&sid=" + data.srange);
+                }
+            },
+            error: function () {
+            }
+        });
+    }
+    var selectedDeleteId = 0;
+    var DeleteAdjustmentRule = function () {
+        var delitem = selectedDeleteId;
+        $.ajax({
+            url: "@(AppConfig.DomainSitePath)/Adjusment/DeleteAdjustmentRule",
+            data: { Id: delitem },
+            type: "Post",
+            dataType: "Json",
+            success: function (result) {
+                parent.$("#AdjustmentRuleTab").load("@(AppConfig.DomainSitePath)/Adjusment/AdjustmentRulePartial");
+            },
+            error: function () {
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $(".LoaderWorkingDiv").hide();
+        var table = $('#tblArule').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        $('#tblArule tbody').on('click', 'tr', function () {
+            if ($(this).hasClass('selected')) {
+                $(this).removeClass('selected');
+            }
+            else {
+                table.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+            }
+        });
+        $("#Adjustmentrule-srch-term").keyup(function () {
+            $("#tblArule_filter input").val($("#Adjustmentrule-srch-term").val());
+            $("#tblArule_filter input").trigger('keyup');
+        });
+        $("#AddAdjustmentRule").click(function () {
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/Adjusment/AddAdjustmentRule?id=0");
+        })
+        $(".item-deleterule").click(function () {
+            selectedDeleteId = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this Adjustment Rule?", DeleteAdjustmentRule);
+        })
+        $(".item-editrule").click(function () {
+            var typeval = $(this).attr('data-id');
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/Adjusment/AddAdjustmentRule?id=" + typeval);
+        })
+        $("#btnadjustmentrule-filter").on('click', function () {
+            changeval = $("#ListSchemerule").val();
+            sval = $("#ListSeasonrule").val();
+            if ($("#ListSchemerule").val() != "-1" || $("#ListSeasonrule").val() != "-1") {
+                AdjustmentRuleFilter();
+            }
+            else {
+                $(".table-adjustmentrule").show();
+                $(".table-adjustmentrule1").hide();
+            }
+        })
+    })
+</script>
+
+<div class="Adjustment_rule_partial_container">
+    <div class="Adjustment_rule_partial_top_bar">
+        <div class="Search_div">
+            <div class="input-group add-on">
+                <input class="form-control" placeholder="Find a adjustment rule" name="srch-term" id="Adjustmentrule-srch-term" type="text">
+                <div class="input-group-btn">
+                    <button class="btn custom-btn green_button" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="AdjustmentRulePartial_filter">
+            <div class="input-group add-on">
+                @Html.DropDownList("ListSchemerule", ViewBag.SchemeAdjustment as List<SelectListItem>, new { @class = "form-control" })
+                @Html.DropDownList("ListSeasonrule", ViewBag.SessionCommission as List<SelectListItem>, new { @class = "form-control" })
+                <div class="input-group-btn">
+                    <button class="btn btn-primary" id="btnadjustmentrule-filter" title="@Localize.T("Filter")">
+                        <span class="glyphicon glyphicon-filter"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-primary btnCommissionType" id="AddAdjustmentRule"><i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T("New")</button>
+    </div>
+    
+    <div class="table-adjustmentrule">
+        <table id="tblArule" class="ui celled table" cellspacing="0">
+            <thead>
+                <tr>
+                    <th class="thead-th-style">@Localize.T("Season")</th>
+                    <th class="thead-th-style">@Localize.T("Scheme")</th>
+                    <th class="thead-th-style">@Localize.T("Table Name")</th>
+                    <th class="thead-th-style">@Localize.T("Column Name")</th>
+                    <th class="thead-th-style">@Localize.T("Column Value")</th>
+                    <th class="thead-th-style">@Localize.T("Data Type")</th>
+                    <th class="thead-th-style">@Localize.T("Command Type")</th>
+                    <th class="thead-th-style">@Localize.T("Action")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    foreach (var item in Model)
+                    {
+                        <tr class="tr-style">
+                            <td class="table-body-td-style" valign="top">@item.SessionName</td>
+                            <td class="table-body-td-style" valign="top">@item.SchemeName</td>
+                            <td class="table-body-td-style" valign="top">@item.TableName</td>
+                            <td class="table-body-td-style" valign="top">@item.ColumnName</td>
+                            <td class="table-body-td-style" valign="top">@item.ColumnValue</td>
+                            <td class="table-body-td-style" valign="top">@item.DataType</td>
+                            <td class="table-body-td-style" valign="top">@item.CommandType</td>
+                            <td class="table-body-td-style" valign="top">
+                                <a href="javascript:void(0)" class="item-editrule" data-id="@item.Id"><i class="fa fa-edit" aria-hidden="true"></i>@Localize.T("Edit")</a>
+                                <a href="javascript:void(0)" class="item-deleterule" data-id="@item.Id" title="@Localize.T("Delete")">
+                                    <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="filter-adjustment-div"></div>
+</div>
+
+
+
+

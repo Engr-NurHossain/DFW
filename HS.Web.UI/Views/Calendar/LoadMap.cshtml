@@ -1,0 +1,140 @@
+﻿@{
+    Layout = "~/Views/Shared/_PrivateLayout.cshtml";
+    ViewBag.Title = "Calendar Map";
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HS.Framework.Utils;
+<script>
+        var IsEditPermition = '@PermissionChekcer.IsPermitted(Permissions.SchedulePermission.MapPointerEditPermission)';
+        var address, ZoomLevel;
+        var loadDomainUrl = '@AppConfig.DomainSitePath';
+        var markers = [];
+        var InfoListMarkers = [];
+        var InfoMarkers = [];
+        var marker, i, geocoder, currentformatedAddress, DestinationCusAddress;
+        var IsPreviousDate = '@PermissionChekcer.IsPermitted(Permissions.SchedulePermission.PreviousDateSchedulePermission)';
+        var IsPermissionToAddDayOff = '@PermissionChekcer.IsPermitted(Permissions.TimeClockPtoPermission.EmployeesListShowForAddDayOff)';
+        var IsClickedPermition = '@PermissionChekcer.IsPermitted(Permissions.SchedulePermission.ScheduleCalendarPermission)';
+        var Scheduler, selectrdDate = '@ViewBag.Currentday';
+        var UserVal = '@Html.Raw(Json.Encode(@ViewBag.UserValValueList))';
+            UserVal = JSON.parse(UserVal);
+        var typeval = '@Html.Raw(Json.Encode(@ViewBag.typevalList))';
+            typeval = JSON.parse(typeval);
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=@ViewBag.GoogleMapAPIKey"></script>
+@Styles.Render("~/styles/CalendarPartial")
+@Scripts.Render("~/scripts/LoadCalenerMap")
+<div class="calender_container">
+    <div class="row hidden">
+    </div>
+
+    <div class="calendar_header_top">
+        <div class="row">
+            <div class="col-md-5">
+                <div class="row">
+                    <div class="col-sm-3">
+                        <div class="row btn-group" role="group">
+                            <button type="button" class="btn btn-default" onclick="CalendarPreviousButton()"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span></button>
+                            <button type="button" class="btn btn-default" onclick="CalendarNextButton()"><span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></button>
+                        </div>
+                    </div>
+                    <div class="col-sm-9">
+                        <div id="DateTilteHide"><span id="titleDate">@ViewBag.DateTitle</span><div class='edit_date_header_schedule'><i class='fa fa-edit' onclick='EditDateHeader()'></i></div></div>
+                        <div style='float:left; display:none;' id="DateTitleShow">
+                            <div class="input-group add-on">
+                                <input type='date' class='form-control' id='eventDate' onchange='CalendarDateChange(this)' />
+                                <div class="input-group-btn">
+                                    <button class='btn' id='btn_close_date_header' style='float:left;cursor:pointer;' onclick='CloseDateHeader()' title='Cancel'><i class='fa fa-close'></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="row">
+                    <div class="row btn-group" role="group">
+                        <button type="button" class="btn btn-default active" id="btnDay" >@Localize.T("Day")</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="row">
+                    <div class="LoadSchedule">
+                        <div class="col-sm-12">
+                            <div class="input-group top_group_style">
+                                @Html.DropDownList("ListTicketType", ViewBag.TicketType as List<SelectListItem>
+                                    , new { @class = "form-control selectpicker_type", @multiple = "multiple", title = "Select Ticket Type" })
+                                @Html.DropDownList("ListEmployee", ViewBag.ListEmployee as List<SelectListItem>
+                                    , new { @class = "form-control selectpicker_user", @multiple = "multiple", title = "Select User", name = "selUser" })
+                                <div class="input-group-btn">
+                                    <button title="Search" onclick="CalendarSearchFilter()" class="btn green_button" id="cal_search_btn"><i class="fa fa-search"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="row btn-group" role="group" id="detailspopup1"><div class="ticket_status_div_container" id="detailsdata1"></div></div>
+<div class="row btn-group" role="group" id="detailspopup2"><div class="ticket_status_div_container" id="detailsdata2"></div></div>
+<div class="calendar_color_container" role="group">
+
+    @if (((List<HS.Entities.CustomCalendarTicketStatus>
+        )ViewBag.StatusTicket) != null && ((List<HS.Entities.CustomCalendarTicketStatus>
+            )ViewBag.StatusTicket).Count > 0)
+    {
+        <div class="ticket_status_div_container">
+            @if (((List<HS.Entities.CustomCalendarTicketTypes>
+               )ViewBag.TicketStatus) != null && ((List<HS.Entities.CustomCalendarTicketTypes>
+                   )ViewBag.TicketStatus).Count > 0)
+            {
+                <div class="ticket_type_container">
+                    <label>@Localize.T("Ticket Type Colors"): </label>
+                    @foreach (var item in ((List<HS.Entities.CustomCalendarTicketTypes>
+                        )ViewBag.TicketStatus))
+                    {
+                        if (item.DataValue != "-1")
+                        {
+                            if (!string.IsNullOrWhiteSpace(item.AlterDisplayText))
+                            {
+                                <div class="ticket_type_div"><span class="ticket_status_div" style="background-color:#@item.AlterDisplayText;"></span><span><a class="cus-anchor filter-class" data-filter="@item.DataValue">@item.DisplayText</a></span></div>
+                            }
+                            else
+                            {
+                                <div class="ticket_type_div"><span class="ticket_status_div"></span><span><a class="cus-anchor filter-class" data-filter="@item.DataValue">@item.DisplayText</a></span></div>
+                            }
+                        }
+                    }
+                </div>
+            }
+
+            <label>@Localize.T("Ticket Status/Border Colors"): </label>
+            @foreach (var item in ((List<HS.Entities.CustomCalendarTicketStatus>
+                )ViewBag.StatusTicket))
+            {
+                if (!string.IsNullOrWhiteSpace(item.TicketStatusColor))
+                {
+                    <div class="ticket_type_div"><span class="ticket_status_div" style="background-color:@item.TicketStatusColor;"></span><span><a class="cus-anchor filter-class" data-filter="@item.TicketStatus">@item.TicketStatus</a></span></div>
+                }
+                else
+                {
+                    <div class="ticket_type_div"><span class="ticket_status_div"></span><span><a class="cus-anchor filter-class" data-filter="@item.TicketStatus">@item.TicketStatus</a></span></div>
+                }
+            }
+
+        </div>
+    }
+</div>
+<div style="display:none" id="map_initial"></div>
+<div id="googleMapId" style="width:100%;height:100%;"></div>
+<input type="hidden" id="htmlValue" />
+<input type="hidden" id="ChangeResult" />
+<input type="hidden" id="selectedDate" value="@ViewBag.Currentday" />
+<input type="hidden" id="SelectedDateReload" value="@ViewBag.SelectedDateReload" />

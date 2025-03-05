@@ -1,0 +1,125 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.Partner>
+@Styles.Render("~/styles/_PartnerReportCS")
+@Scripts.Render("~/scripts/_PartnerReportsJS")
+
+
+
+    <link href="~/Content/Css/Report/PartnerReports.css" rel="stylesheet" />
+@helper GetTreeView(List<HS.Entities.Partner> partners,Guid ParentId)
+{
+    foreach(var i in partners.Where(x => x.SupervisorId.Equals(ParentId)))
+    {
+    <li>
+        @{ var submenu = partners.Where(x => x.SupervisorId.Equals(i.UserId)).Count();}
+        @if (submenu > 0)
+        {
+            <span class="collapse collapsible">&nbsp;</span>
+        }
+        else
+        {
+            <span style="width:15px; display:inline-block">&nbsp;</span>
+        }
+        <span>
+            <label for="IsCheckValForPartner"><input  type="checkbox" checked="checked" class="User IsCheckValForPartner" data-value="@i.UserId" value="@i.UserId" />@i.FirstName @i.LastName</label>
+        </span>
+        @if (submenu > 0)
+        {
+            <ul>
+                @GetTreeView(partners, i.UserId)
+                @* Recursive  Call for Populate Sub items here*@
+            </ul>
+        }
+    </li>
+    }
+}
+
+<script>
+    $(document).ready(function () {
+        //$(".treeview li>ul").css('display', 'none'); // Hide all 2-level ul
+        
+        $(".collapsible").click(function (e) {
+            e.preventDefault();
+            $(this).toggleClass("collapse expand");
+            $(this).closest('li').children('ul').slideToggle();
+        });
+
+        $(".IsCheckValForPartner").change(function () {
+            console.log("hlw");
+            if ($(this).is(':checked')) {
+                $(this).closest('li').find('.IsCheckValForPartner').each(function () {
+                    $(this).prop('checked', true);
+                });
+            }
+            else {
+                $(this).closest('li').find('.IsCheckValForPartner').each(function () {
+                    $(this).prop('checked', false);
+                });
+            }
+        });
+
+
+
+    });
+</script>
+
+<div class="ReportsTitle">
+    @Localize.T("Reports")
+    <div class="dateviewed">
+        @{Html.RenderAction("DateViewPartial", "Customer");}
+    </div>
+</div>
+
+
+<div class="col-xs-12 Report-Tabs">
+    <div class="col-xs-3 report_tree_container">
+        <div class="report_tree_header_container">
+            <div class="report_tree_header"><span><i class="fa fa-arrow-down" aria-hidden="true"></i></span>@Localize.T("Employee List")</div>
+            <button class="btn partner_report_emp_list">@Localize.T("View List")</button>
+        </div>
+        @*@foreach(var item in Model)
+        {
+            <label data-id="@item.UserId"><input type="radio" /> @item.FirstName @item.LastName</label><br />
+        }*@
+        <div class="treeview_cont">
+            <div class="treeview">
+                @if (Model != null && Model.Count() > 0 && Model.Where(x => x.UserId == CurrentUser.UserId).Count() > 0)
+            {
+                    <ul>
+                        <li>
+                            <span class="collapse collapsible">&nbsp;</span>
+                            <span>
+                                <label for="IsCheckValForPartner" ><input  type="checkbox" checked="checked" class="User IsCheckValForPartner" data-value="@CurrentUser.UserId" value="@CurrentUser.UserId" />@CurrentUser.GetFullName()</label>
+                            </span>
+                            <ul>
+                                @GetTreeView(Model, Model.FirstOrDefault().UserId)
+                            </ul>
+                        </li>
+                    </ul>
+                }
+            </div>
+            <div class="report_tree_footer"><button class="btn btnPartnerFilter">@Localize.T("Apply")</button></div>
+        </div>
+    </div>
+    <div class="nav-detail-contents col-xs-9">
+
+        <div class="tab-content reports_tab_content">
+            <div class="PartnerReportBarBox">
+            </div>
+        </div>
+
+
+        <div class="tab-content reports_tab_content">
+            <div class="tab-pane active" id="PartnerReportTab">
+                <div class="Partner_Report">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+

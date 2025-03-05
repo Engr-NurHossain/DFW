@@ -1,0 +1,240 @@
+﻿@{
+    Layout = null;
+
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@model HS.Entities.RouteListModel
+
+<link href="~/Content/Css/Inventory/PurchaseOrderPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<script>
+    var Currency = "@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)";
+    var pageno = '@ViewBag.PageNumber';
+
+    var EditRoute = function (id) {
+        OpenRightToLeftModal("/Customer/AddRoute?Id=" + id);
+    };
+    var ShowCustomerList = function (Id){
+        OpenTopToBottomModal("/Customer/RouteCustomerList?RouteId=" + Id);
+    };
+    var DeleteRouteFromList = function (Id) {
+        OpenConfirmationMessageNew("", "Do You Want To Delete Route?", function () {
+        var url = "/Customer/DeleteRoute";
+        var param = JSON.stringify({ RouteId: Id })
+
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                location.reload();
+            },
+
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        })
+        }, function () {
+
+        });
+    };
+    $(document).ready(function () {
+
+        $(".icon_sort_timeclock").click(function () {
+            var orderval = $(this).attr('data-val');
+            console.log(orderval)
+            GetAllRoute(pageno, orderval);
+        });
+    });
+</script>
+
+<table class="table" id="AllRouteTable">
+    <thead class="table-head-border">
+        <tr>
+            <th class="th_timeclock_pre">
+                <div>@Localize.T("Name")</div>
+            </th>
+            <th class="th_timeclock_pre arpl_size">
+                <div>@Localize.T("Action")</div>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.RouteList)
+        {
+            <tr>
+                <td class="table-body-td-style">
+                    <div class="ticket_list_partial_device_header"> @Localize.T("Name") <span>:</span></div>
+                    <div class="rws_mb_info">
+                        @if (ViewBag.EmployeeRole != "Employee")
+                        {
+                            if (item.Name != null)
+                            {
+                                <div><a class="cus-anchor" onclick="EditRoute(@item.Id)">@item.Name</a></div>
+                            }
+                        }
+                        else
+                        {
+                            if (item.Name != null)
+                            {
+                                <div>@item.Name</div>
+                            }
+                        }
+
+                    </div>
+                </td>
+                <td class="table-body-td-style">
+                    <div class="ticket_list_partial_device_header">@Localize.T("Action")  <span>:</span></div>
+                    <div class="rws_mb_info">
+                        <span><a class="btn green_button" onclick="ShowCustomerList('@item.RouteId')"><span>Customer List</span></a></span>
+                      @if (PermissionChekcer.IsPermitted(Permissions.CustomerPermissions.DeleteRouteButton))
+                      {
+                        <span><a title="Delete" class="btn red_button" onclick="DeleteRouteFromList('@item.RouteId')">
+                                  <i class="fa fa-trash" aria-hidden="true"></i>
+                            </a></span>
+                      }
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+            {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+            {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="GetAllRoute(@(ViewBag.PageNumber), @(ViewBag.order))">1</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn">Next</button>
+                </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="GetAllRoute(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="GetAllRoute(1, @(ViewBag.order))">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="GetAllRoute(2, @(ViewBag.order))">2</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="GetAllRoute(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+                </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="GetAllRoute(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""), @(ViewBag.order))">Previous</button>
+            </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="GetAllRoute(1, @(ViewBag.order))">1</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="GetAllRoute(2, @(ViewBag.order))">2</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="GetAllRoute(3, @(ViewBag.order))">3</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="GetAllRoute(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""), @(ViewBag.order))">Next</button>
+                </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="GetAllRoute(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="GetAllRoute(@(ViewBag.PageNumber-2), @(ViewBag.order))">@(ViewBag.PageNumber - 2)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="GetAllRoute(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="GetAllRoute(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons disabledBtn" onclick="GetAllRoute()">Next</button>
+                    </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="GetAllRoute(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="GetAllRoute(@(ViewBag.PageNumber+1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="GetAllRoute(@(ViewBag.PageNumber + 2), @(ViewBag.order))">@(ViewBag.PageNumber + 2)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="GetAllRoute(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                    </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="GetAllRoute(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="GetAllRoute(@(ViewBag.PageNumber-1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="GetAllRoute(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="GetAllRoute(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                    </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="GetAllRoute(@(ViewBag.PageNumber-1), @(ViewBag.order))">Previous</button>
+                </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="GetAllRoute(@(ViewBag.PageNumber - 1), @(ViewBag.order))">@(ViewBag.PageNumber - 1)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton activeBtn" onclick="GetAllRoute(@(ViewBag.PageNumber), @(ViewBag.order))">@(ViewBag.PageNumber)</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton" onclick="GetAllRoute(@(ViewBag.PageNumber + 1), @(ViewBag.order))">@(ViewBag.PageNumber + 1)</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationButtons" onclick="GetAllRoute(@(ViewBag.PageNumber+1), @(ViewBag.order))">Next</button>
+                    </div>
+            }
+        }
+    </div>
+</div>
+
+

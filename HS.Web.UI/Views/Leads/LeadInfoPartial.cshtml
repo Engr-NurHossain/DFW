@@ -1,0 +1,874 @@
+﻿@model HS.Entities.Customer
+@{
+    Layout = null;
+    string Currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+    string Address = HS.Web.UI.Helper.AddressHelper.MakeAddress(Model);
+    List<HS.Entities.GridSetting> LeadUiSettingList = (List<HS.Entities.GridSetting>)ViewBag.LeadUiSetting;
+    var CheckSaveNew = LeadUiSettingList.Where(x => x.SelectedColumn == "CheckSaveNew");
+    var ReportPdfLink = "";
+    int ReportPdfId = 0;
+    if (Model.CreditCheck != null)
+    {
+        ReportPdfLink = Model.CreditCheck.ReportPdfLink;
+        ReportPdfId = Model.CreditCheck.Id;
+    }
+    int Index = 1;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionList = HS.Framework.UserPermissions
+@using PermissionChecker = HS.Web.UI.Helper.PermissionHelper
+@Styles.Render("~/styles/LeadVerificationPartialCS")
+
+<link href="~/Content/Css/LeadDetails/LeadDetailsCustom.css" rel="stylesheet" />
+<link href="~/Content/Css/Lead/AddLeadVerifyInfo/AddLeadVerifyInfo.css" rel="stylesheet" />
+<link href="~/Content/Css/CityStateZipAutoFill.css" rel="stylesheet" />
+<script src="~/Content/Js/CityStateZipAutoFill.js"></script>
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script src="~/Content/Select2/Select2.min.js"></script>
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<script src="~/Scripts/CustomerSelect.js"></script>
+<script src="~/Content/Js/Popups/HomeOwnerVerification.js"></script>
+<script>
+    var leadversion = $("#LeadVersion2").val();
+
+    var leadsource = '@Model.LeadSource';
+    var IDvalue = '@ViewBag.VerifyID';
+    var LeadsCarrier = '@Model.Carrier';
+    var cusId = '@Model.Id';
+    var CustomerGuidId = '@Model.CustomerId';
+    var installval;
+    var selectedID = 0;
+    var ExistingPanel = '@Model.EsistingPanel';
+    var streetType = '@Model.StreetType';
+    var isVerified = false;
+    var preContactMethod = '@Model.PreferredContactMethod';
+    var SalesLocation = '@Model.SalesLocation';
+    var EmpSalesLocation = '@ViewBag.EmpSalesLocation';
+    var HasCreditCheck = '@ViewBag.HasCreditCheck';
+    var ReportPdfLink = '@ReportPdfLink';
+    var ReportPdfId = '@ReportPdfId';
+    var CreditScoreValue = '@ViewBag.CreditScoreValue';
+    var leadsourcerequired = '@ViewBag.LeadSourceRequired';
+    var InstalledStatusval = '@Model.InstalledStatus';
+    var accountType = '@Html.Raw(Json.Encode(Model.CustomerAccountTypeList))';
+    var creditGrade = '@ViewBag.CreditGrade';
+    var CreditScoreGradeId = '@Model.CreditScore';
+    var BrinksCreditCheck = '@ViewBag.BrinksCreditCheck';
+    var HasDiffrentCreditContact = '@ViewBag.HasDiffrentCreditContact';
+    accountType = JSON.parse(accountType);
+
+    function FormateFax(Value) {
+        var CleanValue = "";
+        if (Value != undefined && Value != "" && Value != null) {
+            Value = Value.replace(/[-  ]/g, '');
+            if (Value.length == 10) {
+                CleanValue = Value.replace(/(\d{3})\-?(\d{3})\-?(\d{4})/, "$1-$2-$3");
+                $("#Fax").css({ "border": "1px solid #babec5" });
+            }
+            else if (Value.length > 10) {
+                CleanValue = Value;
+                $("#Fax").css({ "border": "1px solid red" });
+            }
+            else {
+                $("#Fax").css({ "border": "1px solid red" });
+                CleanValue = Value;
+            }
+        }
+        return CleanValue;
+    }
+
+    $(document).ready(function () {
+
+        });
+
+    $(document).ready(function () {
+        console.log($("#LeadVersion2").val());
+        $("#Fax").keyup(function () {
+            var Fax = $(this).val();
+            if (Fax != undefined && Fax != null && Fax != "") {
+                var cleanFax = FormateFax(Fax);
+                $(this).val(cleanFax);
+            }
+        });
+        $("#Soldby").change(function () {
+            $("#SalesLocation").val($("#Soldby").find(':selected').attr('salesloc'));
+            $("#SalesLocation").select2();
+        });
+        if (typeof (accountType) != "undefined" && accountType != null && accountType != "")
+        {
+            $(".CustomerAccountTypeselectpicker").selectpicker('val', accountType);
+        }
+        else if (window.location.pathname != "/SmartLeadSetup/") {
+            $(".CustomerAccountTypeselectpicker").selectpicker();
+        }
+           $("#FirstName").keyup(function () {
+
+               if ($("#FirstName").val() != "") {
+                   $("#FirstName").removeClass("required");
+
+                   $("#firstnamemessage").hide();
+               }
+               else {
+                   $("#FirstName").addClass("required");
+
+                   $("#firstnamemessage").show();
+               }
+
+
+        })
+        $("#LastName").keyup(function () {
+
+               if ($("#LastName").val() != "") {
+                   $("#LastName").removeClass("required");
+
+                   $("#lastnamemessage").hide();
+               }
+               else {
+                   $("#LastName").addClass("required");
+
+                   $("#lastnamemessage").show();
+               }
+
+
+        })
+              $("#ZipCode").keyup(function () {
+
+               if ($("#ZipCode").val() != "") {
+                   $("#ZipCode").removeClass("required");
+
+                   $("#zipcodemessage").hide();
+               }
+               else {
+                   $("#ZipCode").addClass("required");
+
+                   $("#zipcodemessage").show();
+               }
+
+
+              })
+
+          $("#LeadSource").change(function () {
+
+               if ($("#LeadSource").val() != "" && $("#LeadSource").val() != "-1") {
+                   $("#LeadSource").removeClass("required");
+
+                   $("#leadsourcemessage").hide();
+               }
+               else {
+                   $("#LeadSource").addClass("required");
+                   $("#leadsourcemessage").removeClass("required");
+
+                   $("#leadsourcemessage").show();
+               }
+
+
+          })
+          $(".EmailAddress").keyup(function () {
+
+               if ($(".EmailAddress").val() != "") {
+                   $(".EmailAddress").removeClass("required");
+
+                   $("#emailmessage").hide();
+               }
+               else {
+                   $(".EmailAddress").addClass("required");
+
+                   $("#emailmessage").show();
+               }
+
+
+          })
+          $("#CellNo").keyup(function () {
+
+               if ($("#CellNo").val() != "") {
+                   $("#CellNo").removeClass("required");
+
+                   $("#cellnomsg").hide();
+               }
+               else {
+                   $("#CellNo").addClass("required");
+
+                   $("#cellnomsg").show();
+               }
+
+
+        })
+        //$("#CSProvider").change(function () {
+
+        //    if ($("#CSProvider").val() != "" && $("#CSProvider").val() != "-1") {
+        //        $("#CSProvider").removeClass("required");
+
+        //        $("#csprovidermessage").hide();
+        //    }
+        //    else {
+        //        $("#CSProvider").addClass("required");
+        //        $("#csprovidermessage").removeClass("required");
+
+        //        $("#csprovidermessage").show();
+        //    }
+        //});
+        //$("#Ownership").change(function () {
+
+        //    if ($("#Ownership").val() != "" && $("#Ownership").val() != "-1") {
+        //        $("#Ownership").removeClass("required");
+
+        //        $("#ownershipmessage").hide();
+        //    }
+        //    else {
+        //        $("#Ownership").addClass("required");
+        //        $("#ownershipmessage").removeClass("required");
+
+        //        $("#ownershipmessage").show();
+        //    }
+        //});
+
+
+
+            });
+</script>
+<script src="~/Content/Js/AddLead/AddLeadVerifyInfo/AddLeadverifyInfo.js"></script>
+<link href="~/Content/Css/LeadVerificationPartial/LeadVerificationPartial.css" rel="stylesheet" />
+<script src="~/Content/Js/LeadVerificationPartial/LeadVerification.js"></script>
+<script src="~/Content/Js/LeadDetails/LeadDetails.js"></script>
+
+@Html.HiddenFor(x => x.CustomerSystemInfo.Id, new { id = "sysid" })
+@Html.HiddenFor(x => x.SSN, new { id = "SSN" })
+@Html.HiddenFor(x => x.MoveCustomerId, new { id = "MoveCustomerId" })
+<input type="hidden" id="id" value="@Model.Id">
+
+<div class="page-wrap lead_verification_partial_container">
+    <div class="container-fluid">
+
+        <div class="lead_info_partial_new_header">
+            @if (Model.Id > 0)
+            {
+                @Localize.T("Lead Information")
+            }
+            else
+            {
+                @Localize.T("Create Lead")
+            }
+        </div>
+        <div class="custom-fieldset AccInfo_field">
+            <div class="custom_container">
+                <div class="customer_info_container">
+                    <div class="customer_info_content">
+                        <div class="customer_info_content_block">
+                            <div class="customer_info_content_block_header">
+                                @Localize.T("Contact Info")
+                            </div>
+
+                            <div class="customer_info_content_block_inner">
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("First Name")<span class="red">*</span></span>
+                                    @Html.TextBoxFor(x => x.FirstName, new { @class = "form-control", id = "FirstName", placeholder = "First Name", name = "FirstName", tabindex = Index, datarequired = "true" })
+                                    <label class="label hidden red absolute" rel="FirstName" id="firstnamemessage">*@Localize.T("Please enter first name"). </label>
+
+
+                                </div>
+
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Last Name")<span class="red">*</span></span>
+                                    @Html.TextBoxFor(x => x.LastName, new { @class = "form-control", id = "LastName", name = "LastName", placeholder = "Last Name", tabindex = Index, datarequired = "true" })
+                                    <label class="label hidden red absolute" rel="LastName" id="lastnamemessage">*@Localize.T("Please enter last name"). </label>
+
+
+                                </div>
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Type")<span class="red">*</span></span>
+                                    @Html.DropDownListFor(x => x.Type, (List<SelectListItem>)ViewBag.CustomerTypeList, new { @class = "form-control", name = "Type", id = "Type", tabindex = Index })
+                                    <label class="label hidden red absolute" rel="Type">*@Localize.T("Please select Type"). </label>
+
+                                </div>
+
+                                <div class="form-group clearfix width-33p CityState_insert_div">
+                                    <span class="span-style">@Localize.T("Zip")<span class="red">*</span></span>
+                                    <input type="text" class="form-control" onkeydown="CityStateSearchKeyDown(this,event)" onkeyup="CityStateSearchKeyUpwithrestrictedzipcode(this,event)" value="@Model.ZipCode" id="ZipCode" placeholder="Zip Code" tabindex="@Index" datarequired="true" />
+
+                                    <div class='tt-menu'>
+                                        <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                                    </div>
+                                    <label class="label hidden red absolute" rel="CrossStreet" id="zipcodemessage">*@Localize.T("Please enter ZipCode"). </label>
+                                </div>
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("City")</span>
+                                    @Html.TextBoxFor(x => x.City, new { @class = "form-control cityList-select2", id = "City", name = "City", style = "width:100%;text-transform:capitalize", tabindex = Index, placeholder = Localize.T("City") })
+                                    <label class="label hidden red absolute" rel="City">*@Localize.T("Please enter City"). </label>
+                                </div>
+
+                                <div class="form-group clearfix width-33p">
+                                    <span class="span-style">@Localize.T("State")</span>
+                                    @Html.TextBoxFor(x => x.State, new { @class = "form-control stateList-select2", id = "State", name = "State", tabindex = Index, placeholder = Localize.T("State") })
+                                    <label class="label hidden red absolute" rel="State">*@Localize.T("Please enter State"). </label>
+                                </div>
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("County")</span>
+                                    @Html.TextBoxFor(x => x.County, new { @class = "form-control stateList-select2", id = "County", name = "County", tabindex = Index, placeholder = Localize.T("County") })
+                                    <label class="label hidden red absolute" rel="County">*@Localize.T("Please enter County"). </label>
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Street")<span class="red">*</span></span>
+                                    @Html.TextBoxFor(x => x.Street, new { @class = "form-control", id = "Street", name = "Street", placeholder = Localize.T("Street"), tabindex = Index, datarequired = "true" })
+                                    <label class="label hidden red absolute" rel="Street" id="streetmessage">*@Localize.T("Please enter Street"). </label>
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Customer No")</span>
+                                    @Html.TextBoxFor(x => x.CustomerNo, new { @class = "form-control", id = "CustomerNum", tabindex = Index, name = "CustomerNo", placeholder = Localize.T("Customer No") })
+                                    <label class="label hidden red absolute" rel="CustomerNo">*@Localize.T("Please select Customer No"). </label>
+                                </div>
+
+                                @*<div class="form-group clearfix">
+                                        <span class="span-style">@Localize.T("Account No")</span>
+
+                                        @Html.TextBoxFor(x => x.AccountNo, new { @class = "form-control", id = "AccountNo", tabindex = Index, placeholder = Localize.T("Account No") })
+
+                                    </div>*@
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Alternate ID")</span>
+                                    @Html.TextBoxFor(x => x.SecondCustomerNo, new { @class = "form-control", id = "SecondCustomerNo", tabindex = Index, placeholder = Localize.T("Alternate ID") })
+                                </div>
+
+
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Business Name")</span>
+                                    @Html.TextBoxFor(x => x.BusinessName, new { @class = "form-control", id = "BusinessName", name = "BusinesssName", placeholder = Localize.T("Business Name"), tabindex = Index })
+                                    <label class="label hidden red absolute" rel="BusinesssName">*@Localize.T("Please enter Business Name"). </label>
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Doing Business As (DBA)")</span>
+                                    @Html.TextBoxFor(x => x.DBA, new { @class = "form-control", placeholder = Localize.T("DBA"), tabindex = Index })
+                                </div>
+
+
+
+
+
+
+
+
+
+
+                                @*Street 2*@
+
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Home Owner")</span>
+                                    <div class="input-group add-on">
+                                        @Html.TextBoxFor(x => x.HomeOwner, new { @class = "form-control", id = "homeowner", name = "homeowner", placeholder = Localize.T("Home Owner"), @readonly = "readonly" })
+                                        <label class="label hidden red absolute" rel="homeowner">*@Localize.T("Please select homeowner"). </label>
+
+                                        <div class="input-group-btn"><button class="btn" title="Check Home Owner" style="float:right" id="checkCellPhone" onclick="CheckHomeOwner()"><i class="fa fa-check" aria-hidden="true" style="cursor:pointer;"></i></button></div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">
+                                        @Localize.T("Email")<span class="red">*</span>
+                                        <span title="Email address is verified." class="verifiedEmailAddress @((Model.EmailVerified.HasValue && Model.EmailVerified == true) ? "" : "hidden")" id="verifiedemail"> <i class="fa fa-check-circle"></i></span>
+
+                                        <span title="Please verify the email address." class="notVerifiedEmailAddress @((!Model.EmailVerified.HasValue || Model.EmailVerified == false) ? "" : "hidden")" id="notverifiedemail"> <i class="fa fa-times-circle"></i></span>
+                                    </span>
+                                    <div class="add_lead_email_style">
+
+                                        <input type="text" value="@Model.EmailAddress" class="form-control EmailAddress" name="EmailAddress" @*id = "EmailAddress",*@ placeholder="Email Address" dataformat="email" tabindex="@Index" datarequired="true" />
+                                        <label class="label hidden red absolute" style="bottom:-22px; left:0px" rel="EmailAddress" id="emailmessage">*@Localize.T("Please enter Email"). </label>
+
+
+                                        <button class="btn" title="Check Email" id="checkEmail"><i class="fa fa-check" aria-hidden="true" style="cursor:pointer;"></i></button>
+
+                                        <label class="label hidden red absolute" style="bottom:-22px; left:0px" rel="EmailAddress">*@Localize.T("Please enter Your Valid Email Address"). </label>
+                                    </div>
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Date of Birth")</span>
+                                    <div class="input_group_for_date add-on" id="DateofBirth_custom">
+
+                                        <input type="datetime" value="@Model.DateofBirth" placeholder="Date of Birth" id="DateofBirth" class="form-control" name="DateofBirth" />
+                                        <label class="label hidden red absolute" rel="DateofBirth">*@Localize.T("Please enter Date of Birth"). </label>
+
+                                        <div class="input-group-btn">
+                                            <btn class="btn">
+                                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                            </btn>
+                                        </div>
+                                    </div>
+
+                                </div>
+                                @{
+                                    var SSN = "";
+                                    if (!string.IsNullOrEmpty(Model.SSN) && Model.SSN.Length > 4)
+                                    {
+                                        var FormateSSN = Model.SSN.Substring(Model.SSN.Length - 4);
+                                        int SSNInt = 0;
+                                        if (Int32.TryParse(FormateSSN, out SSNInt) && SSNInt > 0)
+                                        {
+                                            SSN = String.Format("{0:XXX-XX-0000}", SSNInt);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        SSN = "XXX-XX-XXXX";
+                                    }
+
+
+                                    <div class="form-group clearfix">
+                                        <span class="span-style">@Localize.T("SSN")</span>
+                                        <input type="text" id="SSN2" name="SSN2" placeholder="@Localize.T(SSN)" class="form-control" tabindex="@Index" />
+                                        @*@Html.TextBoxFor(x => x.SSN, new { @class = "form-control", id = "SSN", tabindex = Index, placeholder = "xxx-xx-xxxx" })*@
+                                    </div>
+                                }
+
+
+
+                                <div class="form-group clearfix">
+
+                                    <span class="span-style">@Localize.T("Site Phone")</span>
+                                    <span title="Phone number is verified." class="verifiedSitePhoneNumber @((Model.IsPrimaryPhoneVerified.HasValue && Model.IsPrimaryPhoneVerified == true) ? "" : "hidden")" id=""> <i class="fa fa-check-circle"></i></span>
+
+                                    <span title="Please verify the phone number." class="notVerifiedSitePhoneNumber @((!Model.IsPrimaryPhoneVerified.HasValue || Model.IsPrimaryPhoneVerified == false) ? "" : "hidden")" id="notverified"> <i class="fa fa-times-circle"></i></span>
+                                    <div class="input-group add-on">
+
+                                        @Html.TextBoxFor(x => x.PrimaryPhone, new { @class = "form-control input-phone-format", id = "PrimaryPhone", name = "PrimaryPhone", placeholder = "xxx-xxx-xxxx", tabindex = Index })
+                                        <label class="label hidden red absolute" rel="PrimaryPhone">*@Localize.T("Please enter Valid No."). </label>
+
+                                        <div class="input-group-btn"><button class="btn" title="Check Site Phone Number" id="checkSitePhone" onclick="CheckPrimaryPhone('@Model.CustomerId')"><i class="fa fa-check" aria-hidden="true" style="cursor:pointer;"></i></button></div>
+
+                                    </div>
+                                    <label class="label hidden red absolute" rel="PrimaryPhone">*@Localize.T("Please enter Valid No."). </label>
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Cell Phone") <span class="red">*</span></span>
+                                    <span title="Phone number is verified." class="verifiedCellPhoneNumber @((Model.IsCellNoVerified.HasValue && Model.IsCellNoVerified == true) ? "" : "hidden")" id=""> <i class="fa fa-check-circle"></i></span>
+
+                                    <span title="Please verify the phone number." class="notVerifiedCellPhoneNumber @((!Model.IsCellNoVerified.HasValue || Model.IsCellNoVerified == false) ? "" : "hidden")" id="notverified"> <i class="fa fa-times-circle"></i></span>
+                                    <div class="input-group add-on">
+
+                                        @Html.TextBoxFor(x => x.CellNo, new { @class = "form-control input-phone-format CellPhone", id = "CellNo", placeholder = "xxx-xxx-xxxx", tabindex = Index, datarequired = "true" })
+                                        <label class="label hidden red absolute" style="bottom:-22px; left:0px" rel="CellNo" id="cellnomsg">*@Localize.T("Please Enter Cell No"). </label>
+
+                                        <div class="input-group-btn"><button class="btn" title="Check Cell Phone Number" id="checkCellPhone" onclick="CheckCellPhone('@Model.CustomerId')"><i class="fa fa-check" aria-hidden="true" style="cursor:pointer;"></i></button></div>
+
+                                    </div>
+                                    <label class="label hidden red absolute" rel="PrimaryPhone">*@Localize.T("Please enter Valid No."). </label>
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Phone Type")</span>
+
+                                    @Html.DropDownListFor(x => x.PhoneType, ViewBag.PhoneTypeList as List<SelectListItem>, new { @class = "form-control", tabindex = Index, name = "PhoneType" })
+                                    <label class="label hidden red absolute" rel="PhoneType">*@Localize.T("Please select phone type"). </label>
+
+                                </div>
+                                <div class="form-group clearfix">
+
+                                    <span class="span-style">@Localize.T("Secondary FirstName")</span>
+                                    @Html.TextBoxFor(x => x.CustomerExtended.SecondaryFirstName, new { @class = "form-control", id = "CustomerExtended_SecondaryFirstName", placeholder = "Secondary FirstName", tabindex = Index })
+                                    <label class="label hidden red absolute" rel="SecondaryFirstName">*@Localize.T("Please enter secondary firstName"). </label>
+
+                                </div>
+                                <div class="form-group clearfix">
+
+                                    <span class="span-style">@Localize.T("Secondary LastName")</span>
+                                    @Html.TextBoxFor(x => x.CustomerExtended.SecondaryLastName, new { @class = "form-control", id = "CustomerExtended_SecondaryLastName", placeholder = "Secondary LastName", name = "FirstName", tabindex = Index })
+                                    <label class="label hidden red absolute" rel="SecondaryLastName">*@Localize.T("Please enter secondary lastname"). </label>
+
+                                </div>
+                                <div class="form-group clearfix">
+
+
+                                    <span class="span-style">@Localize.T("Secondary Email")</span>
+                                    @Html.TextBoxFor(x => x.CustomerExtended.SecondaryEmail, new { @class = "form-control", id = "CustomerExtended_SecondaryEmail", placeholder = "Secondary Email", name = "SecondaryEmail", tabindex = Index })
+                                    <label class="label hidden red absolute" rel="SecondaryEmail">*@Localize.T("Please enter secondary email"). </label>
+
+                                </div>
+                                @{
+
+                                    var SecondarySSN = "";
+                                    if (Model.CustomerExtended != null && !string.IsNullOrEmpty(Model.CustomerExtended.SecondarySSN) && Model.CustomerExtended.SecondarySSN.Length > 4)
+                                    {
+                                        var FormateSSN = Model.CustomerExtended.SecondarySSN.Substring(Model.CustomerExtended.SecondarySSN.Length - 4);
+                                        int SSNInt = 0;
+                                        if (Int32.TryParse(FormateSSN, out SSNInt) && SSNInt > 0)
+                                        {
+                                            SecondarySSN = String.Format("{0:XXX-XX-0000}", SSNInt);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        SecondarySSN = "XXX-XX-XXXX";
+                                    }
+
+                                    <div class="form-group clearfix">
+
+
+                                        <span class="span-style">@Localize.T("Secondary SSN")</span>
+                                        <input type="text" id="CustomerExtended_SecondarySSN2" name="SSN2" placeholder="@Localize.T(SecondarySSN)" class="form-control" tabindex="@Index" />
+                                        <label class="label hidden red absolute" rel="SSN2">*@Localize.T("Please enter SSN"). </label>
+
+                                    </div>
+                                }
+
+
+                                <div class="form-group clearfix">
+
+
+                                    <span class="span-style">@Localize.T("Secondary BirthDate")</span>
+                                    <div class="input_group_for_date add-on" id="Secondary_DateofBirth_custom">
+                                        @if (Model.CustomerExtended != null && Model.CustomerExtended.SecondaryBirthDate.HasValue && Model.CustomerExtended.SecondaryBirthDate.Value.ToString("MM/dd/yy") != "01/01/00")
+                                        {
+                                            @Html.TextBoxFor(x => x.CustomerExtended.SecondaryBirthDate, new { @class = "form-control", id = "CustomerExtended_SecondaryBirthDate", tabindex = Index, placeholder = Localize.T("Secondary BirthDate") })
+                                        }
+                                        else
+                                        {
+                                            <input type="datetime" placeholder="Date of Birth" id="CustomerExtended_SecondaryBirthDate" class="form-control" />
+                                            <label class="label hidden red absolute" rel="SecondaryBirthDate">*@Localize.T("Please enter Secondary BirthDate"). </label>
+
+                                        }
+                                    </div>
+
+                                </div>
+                                <div class="form-group clearfix">
+
+
+                                    <span class="span-style">@Localize.T("Passcode")</span>
+                                    <input type="text" value="@Model.Passcode" id="Passcode" name="SSN2" placeholder="PassCode" class="form-control" tabindex="@Index" />
+                                    <label class="label hidden red absolute" rel="Passcode">*@Localize.T("Please enter Passcode"). </label>
+
+                                </div>
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Ownership")</span>
+
+
+                                    @Html.DropDownListFor(x => x.Ownership, (List<SelectListItem>)ViewBag.OwnerShipList, new { @class = "form-control", name = "Ownership", id = "Ownership" })
+
+
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                        <div class="customer_info_content_block">
+                            <div class="customer_info_content_block_header">
+                                @Localize.T("Lead / Marketing Info")
+                            </div>
+                            <div class="customer_info_content_block_inner">
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Lead Source")<span class="red">*</span></span>
+                                    @Html.DropDownListFor(x => x.LeadSource, ViewBag.LeadSource as List<SelectListItem>, new { @class = "form-control source", name = "LeadSource", tabindex = Index, datarequired = "true" })
+                                    <label class="label hidden red absolute" rel="LeadSource" id="leadsourcemessage">*@Localize.T("Please select Lead Source"). </label>
+
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Sales Person")<span class="red">*</span></span>
+
+                                    <select class="form-control" id="Soldby" tabindex="@Index" datarequired="true">
+                                        @if (ViewBag.EmployeeList != null)
+                                        {
+                                            foreach (var SoldByItem in (List<HS.Entities.Employee>)ViewBag.EmployeeList)
+                                            {
+                                                <option @(ViewBag.SelectSoldby == SoldByItem.UserId.ToString() ? "selected" : "") value="@SoldByItem.UserId" salesloc="@(SoldByItem.SalesCommissionStructure != "" ? SoldByItem.SalesCommissionStructure : "-1")">@SoldByItem.FirstName @SoldByItem.LastName</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Sales Location")</span>
+
+                                    @Html.DropDownListFor(x => x.SalesLocation, ViewBag.SalesCommisssion as List<SelectListItem>, new { @class = "form-control", name = "SalesLocation", id = "SalesLocation", tabindex = Index })
+                                    <label class="label hidden red absolute" rel="SalesLocation">*@Localize.T("Please select SalesLocation"). </label>
+
+                                </div>
+
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Sales Person 2")</span>
+
+                                    @Html.DropDownListFor(x => x.SoldBy2, ViewBag.SalesPerson as List<SelectListItem>, new { @class = "form-control", name = "SoldBy2", tabindex = Index })
+                                    <label class="label hidden red absolute" rel="SoldBy2">*@Localize.T("Please select SoldBy2"). </label>
+
+                                </div>
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Sales Person 3")</span>
+
+                                    @Html.DropDownListFor(x => x.SoldBy3, ViewBag.SalesPerson as List<SelectListItem>, new { @class = "form-control", name = "SoldBy3", tabindex = Index })
+                                    <label class="label hidden red absolute" rel="SoldBy3">*@Localize.T("Please select SoldBy3"). </label>
+
+                                </div>
+                                <div class="form-group clearfix z_index_custom">
+                                    <span class="span-style">@Localize.T("Referring Customer")</span>
+                                    @Html.DropDownListFor(x => x.ReferringCustomer, (List<SelectListItem>)ViewBag.CustomerList, new { @class = "form-control dropdown_customar", name = "ReferringCustomer", tabindex = Index })
+                                    <label class="label hidden red absolute" rel="ReferringCustomer">*@Localize.T("Please select Referring Customer"). </label>
+
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Lead Status")</span>
+                                    @Html.DropDownListFor(x => x.Status, ViewBag.LeadStatus as List<SelectListItem>, new { @class = "form-control", name = "LeadStatus", tabindex = Index })
+                                    <label class="label hidden red absolute" rel="LeadStatus">*@Localize.T("Please select Lead Status"). </label>
+
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("CS Provider")</span>
+                                    @Html.DropDownListFor(x => x.CSProvider, ViewBag.CSProviderList as List<SelectListItem>, new { @class = "form-control", name = "CSProviderList", tabindex = Index })
+
+                                </div>
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Branch")</span>
+
+                                    @Html.DropDownListFor(x => x.BranchId, ViewBag.BranchList as List<SelectListItem>, new { @class = "form-control", tabindex = Index })
+                                    <label class="label hidden red absolute" rel="BranchId">*@Localize.T("Please select branch"). </label>
+
+                                </div>
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Est Closing Date")</span>
+                                    <div class="input_group_for_date add-on" id="EstCloseDate_custom">
+
+                                        @Html.TextBoxFor(x => x.EstCloseDate, new { @class = "form-control stateList-select2", name = "EstCloseDate", id = "EstCloseDate", tabindex = Index, placeholder = Localize.T("Est Closing Date") })
+                                        <label class="label hidden red absolute" rel="EstCloseDate">*@Localize.T("Please enter EstCloseDate"). </label>
+
+                                        <div class="input-group-btn">
+                                            <btn class="btn">
+                                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                            </btn>
+                                        </div>
+                                    </div>
+                                    <label class="label hidden red absolute" rel="PrimaryPhone">*@Localize.T("Please enter Valid No."). </label>
+                                </div>
+
+                                @*Inspection Date*@
+
+
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Moving Date")</span>
+                                    @Html.TextBoxFor(x => x.MovingDate, new { @class = "form-control", placeholder = Localize.T("Moving Date"), id = "MovingDate" })
+                                </div>
+                                <div class="form-group clearfix z_index_custom">
+                                    <span class="span-style">@Localize.T("Inspection Company")</span>
+                                    @Html.TextBoxFor(x => x.InspectionCompany, new { @class = "form-control", id = "InspectionCompany", name = "InspectionCompany", tabindex = Index, placeholder = Localize.T("Inspection Company") })
+                                    <label class="label hidden red absolute" rel="InspectionCompany">*@Localize.T("Please select Inspection Company"). </label>
+
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Best Time to Call")</span>
+
+                                    @Html.DropDownListFor(x => x.BestTimeToCall, ViewBag.BestTimeToCallList as List<SelectListItem>, new { @class = "form-control", name = "BestTimeToCall", tabindex = Index })
+                                    <label class="label hidden red absolute" rel="BestTimeToCall">*@Localize.T("Please select best time to call"). </label>
+
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Do Not Call")</span>
+
+                                    @Html.TextBoxFor(x => x.DoNotCall, new { @class = "form-control", id = "DoNotCall", tabindex = Index, placeholder = Localize.T("Do Not Call") })
+
+
+                                </div>
+                                <div class="form-group clearfix width-33p group-style custom_width_div">
+                                    <span class="span-style">@Localize.T("Credit Grade")</span>
+                                    @Html.DropDownListFor(x => x.CreditScore, (List<SelectListItem>)ViewBag.CreditScore, new { @class = "form-control", id = "CreditScoreValue", style = "width:100%" })
+                                    <label class="label hidden red absolute" rel="CreditGrade">*@Localize.T("Please select Credit Grade"). </label>
+
+                                </div>
+
+                                <div class="form-group clearfix">
+
+                                    <span class="span-style">@Localize.T("Credit Score Value")</span>
+                                    @Html.TextBoxFor(x => x.CreditScoreValue, new { @class = "form-control", id = "CustomerCreditScore", tabindex = Index, placeholder = Localize.T("Credit Score Value") })
+                                    <label class="label hidden red absolute" rel="CreditScoreValue">*@Localize.T("Please select Credit Score Value"). </label>
+
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Reps Assigned Date")</span>
+                                    <div class="input_group_for_date add-on" id="RepsAssignedDate_custom">
+
+
+                                        @Html.TextBoxFor(x => x.CustomerExtended.RepsAssignedDate, new { @class = "form-control", id = "RepsAssignedDate", tabindex = Index, placeholder = Localize.T("Reps Assigned Date") })
+
+                                        <div class="input-group-btn">
+                                            <btn class="btn">
+                                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                            </btn>
+                                        </div>
+                                    </div>
+
+                                </div>
+                                @*@Html.TextBoxFor(x => x.CustomerExtended.LeadVersion, new { @class = "form-control", id = "LeadVersion2", value ="V220", type="hidden", tabindex = Index, placeholder = Localize.T("Reps Assigned Date") })*@
+
+                            </div>
+                        </div>
+                        <div class="customer_info_content_block">
+                            <div class="customer_info_content_block_header">
+                                @Localize.T("Additional Financial Info")
+                            </div>
+                            <div class="customer_info_content_block_inner">
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Contacted Previously")</span>
+                                    @Html.DropDownListFor(x => x.ContactedPerviously, (List<SelectListItem>)ViewBag.ContractedPrevious, new { @class = "form-control", id = "ContactedPerviously" })
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Acquired From")</span>
+                                    @Html.TextBoxFor(x => x.AcquiredFrom, new { @class = "form-control", id = "AcquiredFrom", tabindex = Index, placeholder = Localize.T("Acquired From") })
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Follow Up Date")</span>
+                                    <div class="input_group_for_date add-on" id="FollowUpDate_custom">
+                                        @Html.TextBoxFor(x => x.FollowUpDate, new { @class = "form-control", id = "FollowUpDate", tabindex = Index, placeholder = Localize.T("Follow Up Date") })
+                                        <div class="input-group-btn">
+                                            <btn class="btn">
+                                                <i class="fa fa-calendar" aria-hidden="true" style="cursor:pointer;"></i>
+                                            </btn>
+                                        </div>
+                                    </div>
+
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Buyout Amount By ADS")</span>
+                                    @Html.TextBoxFor(x => x.BuyoutAmountByADS, new { @class = "form-control", id = "BuyoutAmountByADS", tabindex = Index, placeholder = Localize.T("Buyout Amount By ADS"), type = "number" })
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Buyout Amount By Sales Rep")</span>
+                                    @Html.TextBoxFor(x => x.BuyoutAmountBySalesRep, new { @class = "form-control", id = "BuyoutAmountBySalesRep", tabindex = Index, placeholder = Localize.T("Buyout Amount By Sales Rep"), type = "number" })
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Financed Term")</span>
+                                    @Html.TextBoxFor(x => x.FinancedTerm, new { @class = "form-control", id = "FinancedTerm", tabindex = Index, placeholder = Localize.T("Financed Term"), type = "number" })
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Financed Amount")</span>
+                                    @Html.TextBoxFor(x => x.FinancedAmount, new { @class = "form-control", id = "FinancedAmount", tabindex = Index, placeholder = Localize.T("Financed Amount"), type = "number" })
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Sold Amount")</span>
+                                    @Html.TextBoxFor(x => x.SoldAmount, new { @class = "form-control", id = "SoldAmount", tabindex = Index, placeholder = Localize.T("Sold Amount"), type = "number" })
+                                </div>
+                                <div class="form-group clearfix">
+                                    <span class="span-style">@Localize.T("Monthly Finance Rate")</span>
+
+                                    @Html.TextBoxFor(x => x.CustomerExtended.MonthlyFinanceRate, new { @class = "form-control", id = "CustomerExtended_MonthlyFinanceRate", tabindex = Index, placeholder = Localize.T("Monthly Finance Rate") })
+
+                                </div>
+                                <div class="form-group clearfix">
+
+                                    <span class="span-style">@Localize.T("Finance Company")</span>
+                                    @Html.DropDownListFor(x => x.CustomerExtended.FinanceCompany, (List<SelectListItem>)ViewBag.FinanceCompanyList, new { @class = "form-control", id = "CustomerExtended_FinanceCompany" })
+
+                                </div>
+                                <div class="form-group clearfix">
+
+                                    <span class="span-style">@Localize.T("Is Financed?")</span>
+                                    @Html.DropDownListFor(x => x.CustomerExtended.IsFinanced, ViewBag.IsFinancedList as List<SelectListItem>, new { @class = "form-control", tabindex = Index, id = "CustomerExtended_IsFinanced" })
+
+                                </div>
+                            </div>
+
+                        </div>
+
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+        @if (Model.Id > 0)
+        {
+            <div class="lead_detail_bottom_btn">
+                <button type="button" class="btn" id="btnVerifyOnly"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+                <button type="button" class="btn" id="btnVerifyOnly2"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save & Close")</button>
+
+                @if (PermissionChecker.IsPermitted(PermissionList.CustomerPermissions.LeadDetailsLeadVerificationDeleteButton))
+                {
+                    <button type="button" class="btn btn-danger" id="btnDeleteLead" data-id="@Model.Id"><i class="fa fa-trash-o" aria-hidden="true"></i>@Localize.T(" Delete")</button>
+                }
+
+
+                @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.SoftCreditCheckEFX))
+                {
+                    <button class="btn green_button" title="Check Credit" id="EFXCheckCreditSoft" style="margin-top:10px;">Soft Credit (EFX) </button>
+                }
+                @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.HardCreditCheckEFX))
+                {
+                    <button class="btn green_button" title="Check Credit" id="EFXCheckCreditHard" style="margin-top:10px;">Hard Credit (EFX)</button>
+                }
+                @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.SoftCreditCheckTU))
+                {
+                    <button class="btn green_button" title="Check Credit" id="TUCheckCreditSoft" style="margin-top:10px;">Soft Credit (TU) </button>
+                }
+                @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.HardCreditCheckTU))
+                {
+                    <button class="btn green_button" title="Check Credit" id="TUCheckCreditHard" style="margin-top:10px;">Hard Credit (TU)</button>
+                }
+                @if (PermissionChecker.IsPermitted(PermissionList.CustomerPermissions.UseSecondaryContact))
+                {
+                    <label class="different_contact_block">
+                        <input type="checkbox" id="UseDiffAddress" style="margin-left:10px;" />
+                        <label for="UseDiffAddress" style="cursor:pointer;">Use Different Contact</label>
+                    </label>
+                    <div id="SecondaryContactList">
+
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="add_verify_info_btn_container" style="float:right;">
+                @if (CheckSaveNew.Count() > 0 && CheckSaveNew.FirstOrDefault().FormActive == true)
+                {
+                    <button type="button" class="btn" id="btnVerify" style="margin-top: 14px;margin-right: 10px;">
+                        <i class="fa fa-check" aria-hidden="true"></i>  @Localize.T("Save/New")
+                    </button>
+                }
+                <button type="button" class="btn" id="btnVerifyOnly"><i class="fa fa-floppy-o" aria-hidden="true"></i> @Localize.T("Save")</button>
+                <button type="button" class="btn" id="btnVerifyOnly2"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save & Close")</button>
+            </div>
+        }
+
+
+
+
+
+
+    </div>
+    @*<div class="button_for_map">
+            @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadDetailsVerifyInfo))
+            {
+                <div class="button_map_position"><button class="btn btn-verify" id="verifybtn"><i class="fa fa-check" aria-hidden="true"></i>@Localize.T(" Verify")</button></div>
+            }
+            @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadSetupAfterCreate))
+            {
+                <div class="button_map_position"><button class="btn btn-grey" id="cussetupbtn"><i class="fa fa-user" aria-hidden="true"></i>@Localize.T(" Customer Setup")</button></div>
+            }
+            @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadDocumentCenter))
+            {
+                <div class="button_map_position"><button class="btn btn-grey" id="documentbtn"><i class="fa fa-file" aria-hidden="true"></i>@Localize.T(" Document Center")</button></div>
+            }
+            @if (PermissionChecker.IsPermitted(PermissionList.LeadPermissions.LeadRequestTech))
+            {
+                <div class="button_map_position"><button class="btn btn-grey" id="btnRequestTechLead"><i class="fa fa-cog" aria-hidden="true"></i>@Localize.T(" Request Technician")</button></div>
+            }
+        </div>*@
+
+</div>
+
+<input type="hidden" id="LeadVersion2" value="V2">
+
+<input type="hidden" id="isSecondaryPhoneVerified" value="">
+<input type="hidden" id="isSitePhoneVerified" value="">
+<input type="hidden" id="isCellPhoneVerified" value="">
+<div class="displayNone">
+    <a href="" class="MapManufacturerMagnific">@Localize.T("Address in Map")</a>
+    <a href="" class="MapManufacturerMagnificPrevious">@Localize.T("Address in Map")</a>
+</div>

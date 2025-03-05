@@ -1,0 +1,178 @@
+﻿@{
+    Layout = null;
+    var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+<link href="~/Content/Bootstrap/MultipleSelect/bootstrap-select.css" rel="stylesheet" />
+<script src="~/Content/Bootstrap/MultipleSelect/bootstrap-select.js"></script>
+<link href="~/Content/Select2/select2.css" rel="stylesheet" />
+<script src="~/Content/Select2/Select2.min.js"></script>
+
+<script>
+
+    String.prototype.replaceAll = function (search, replacement) {
+        var target = this;
+        return target.split(search).join(replacement);
+    };
+    var TabsLoaderText = "<div class='invoice-loader'><div><div class='lds-css ng-scope'><div style='margin:auto; z-index:99;' class='lds-double-ring'><div></div><div></div></div></div></div></div>";
+
+    var DataTablePageSize = 50;
+    var PayrollStartDatepicker;
+    var PayrollEndDatepicker;
+    var startTab = '@ViewBag.StartTab'
+    var firstdate = '@ViewBag.firstdate';
+    var lastdate = '@ViewBag.lastdate';
+    var LoadOrdersTab = function (pageno) {
+        if (typeof (pageno) == "undefined" && pageno == null && pageno == "") {
+            pageno = 1;
+        }
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".Load_Orders").html(TabsLoaderText);
+        $(".Load_Orders").load(domainurl + "/Order/LoadOrdersPartial?PageNo=" + pageno + "&PageSize=10" + "&SearchText=&order=&startdate=" + StartDate + "&enddate=" + EndDate + "&filter=" + $("#filter_order_opt").val());
+    }
+
+    var LoadReservationsTab = function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".Load_Reservations").html(TabsLoaderText);
+        $(".Load_Reservations").load(domainurl + "/Order/LoadReservationsPartial?PageNo=1&PageSize=50");
+    }
+
+    var LoadCateringsTab = function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".Load_Caterings").html(TabsLoaderText);
+        $(".Load_Caterings").load(domainurl + "/Order/LoadCateringsPartial?PageNo=1&PageSize=50");
+    }
+
+    var LoadPhoneOrdersTab = function () {
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".Load_phoneorders").html(TabsLoaderText);
+        $(".Load_phoneorders").load(domainurl + "/Order/LoadPhoneOrdersTracking?pageno=1&pagesize=21&mindate=" + StartDate + "&maxdate=" + EndDate);
+    }
+
+    var my_date_format = function (input) {
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    $(document).ready(function () {
+        if (typeof (firstdate) != "undefined" && firstdate != null && firstdate != "" && typeof (lastdate) != "undefined" && lastdate != null && lastdate != "") {
+            $(".min-date").val(firstdate);
+            $(".max-date").val(lastdate);
+        }
+        $(".LoaderWorkingDiv").hide();
+        //LoadSalesReportTab();
+
+        if (startTab == "OrdersTab") {
+
+            LoadOrdersTab(1);
+        }
+        else if (startTab == "ReservationsTab") {
+            $("#ReservationsTab").addClass('active');
+            $(".ReservationsTab").addClass('active');
+            LoadReservationsTab();
+        }
+        else if (startTab == "CateringsTab") {
+            $("#CateringsTab").addClass('active');
+            $(".CateringsTab").addClass('active');
+            LoadCateringsTab();
+        }
+        
+
+        $(".OrdersTab").click(function () {
+            LoadOrdersTab(1);
+        });
+        $(".ReservationsTab").click(function () {
+            LoadReservationsTab();
+        });
+        $(".CateringsTab").click(function () {
+            LoadCateringsTab();
+        });
+        $(".PhoneOrdersTab").click(function () {
+            LoadPhoneOrdersTab(1);
+        });
+
+
+        $("#sales_txt_search").keyup(function (event) {
+            event.preventDefault();
+            if (event.keyCode == 13) {
+                FilterSalesReport1(1)
+            }
+        })
+
+    });
+
+</script>
+@*<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />*@
+<link href="~/Content/Css/Report/ReportsPartial.css" rel="stylesheet" />
+<div class="ReportsTitle">
+    @Localize.T("Orders")
+    <div class="dateviewed">
+        @{Html.RenderAction("DateViewPartial", "Customer");}
+    </div>
+</div>
+
+
+<div class="col-xs-12 Report-Tabs">
+    <div class="nav-detail-contents">
+        <ul class="nav nav-tabs payroll_report_top_nav" id="myTab">
+
+            @if (PermissionChekcer.IsPermitted(Permissions.OrderPermissions.OrdersTab))
+            {
+                <li class="OrdersTab active">
+                    <a idval="" data-target="#OrdersTab" data-toggle="tab">@Localize.T("Online Orders")</a>
+                </li>
+            }
+            @if (CurrentUser.UserRole.ToLower().IndexOf("sysadmin") > -1)
+            {
+                <li class="PhoneOrdersTab">
+                    <a idval="" data-target="#PhoneOrdersTab" data-toggle="tab">@Localize.T("Phone Orders")</a>
+                </li>
+            }
+
+
+        </ul>
+        <div class="tab-content reports_tab_content">
+           @if (PermissionChekcer.IsPermitted(Permissions.OrderPermissions.OrdersTab))
+            {
+            <div class="tab-pane active" id="OrdersTab">
+
+                <div class="Load_Orders">
+
+                </div>
+
+            </div>
+           }
+            @if (PermissionChekcer.IsPermitted(Permissions.OrderPermissions.ReservationsTab))
+            {
+                <div class="tab-pane" id="ReservationsTab">
+                    <div class="Load_Reservations">
+
+                    </div>
+                </div>
+            }
+            @if (PermissionChekcer.IsPermitted(Permissions.OrderPermissions.CateringsTab))
+            {
+                <div class="tab-pane" id="CateringsTab">
+                    <div class="Load_Caterings">
+
+                    </div>
+                </div>
+            }
+        <div class="tab-pane" id="PhoneOrdersTab">
+            <div class="Load_phoneorders">
+
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+

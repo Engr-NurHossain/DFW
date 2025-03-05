@@ -1,0 +1,169 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model List<HS.Entities.Commision>
+@using AppConfig = HS.Framework.Utils.AppConfig;
+
+@Styles.Render("~/styles/DataTableBundles")
+@Scripts.Render("~/scripts/DataTableBundles")
+<link href="~/Content/Css/Commission/CommissionPartial.css" rel="stylesheet" />
+<script>
+    var DataTablePageSize = 50;
+    var changeval;
+    var sval;
+    var CommissionFilterTypeSeason = function () {
+        var url = "@(AppConfig.DomainSitePath)/Commission/FilterCommission";
+        $.ajax({
+            url: url,
+            data: { changeval: changeval, sval: sval },
+            type: "Post",
+            dataType: "Json",
+            success: function (data) {
+                if (data.result == true) {
+                    $(".table-Commission").hide();
+                    $(".filter-commission").load("@(AppConfig.DomainSitePath)/Commission/FilterCommissionPartial?id=" + data.valrange + "&sid=" + data.srange);
+                }
+            },
+            error: function () {
+            }
+        });
+    }
+    var selectedDeleteId = 0;
+    var DeleteCommission = function () {
+        var delitem = selectedDeleteId;
+        $.ajax({
+            url: "@(AppConfig.DomainSitePath)/Commission/DeleteCommission",
+            data: { Id: delitem },
+            type: "Post",
+            dataType: "Json",
+            success: function (result) {
+                parent.$("#CommissionTab").load("@(AppConfig.DomainSitePath)/Commission/CommissionPartial");
+            },
+            error: function () {
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $("#btn-commission-filter").on('click', function () {
+            changeval = $("#ListTypecommission").val();
+            sval = $("#ListSeasoncommission").val();
+            if ($("#ListTypecommission").val() != "-1" || $("#ListSeasoncommission").val() != "-1") {
+                CommissionFilterTypeSeason();
+            }
+            else {
+                $(".table-Commission").show();
+                $(".table-Commission1").hide();
+            }
+        })
+        $(".LoaderWorkingDiv").hide();
+        var table = $('#tblC').DataTable({
+            "pageLength": DataTablePageSize,
+            "destroy": true,
+            "language": {
+                "emptyTable": "No data available"
+            }
+        });
+        $('#tblC tbody').on('click', 'tr', function () {
+            if ($(this).hasClass('selected')) {
+                $(this).removeClass('selected');
+            }
+            else {
+                table.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+            }
+        });
+        $("#Commission_srch-term").keyup(function () {
+            $("#tblC_filter input").val($("#Commission_srch-term").val());
+            $("#tblC_filter input").trigger('keyup');
+        });
+        $("#AddCommission").click(function () {
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/Commission/AddCommission?id=0");
+        })
+        $(".item-deletecom").click(function () {
+            selectedDeleteId = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirm?", "Are you sure you want to delete this Commission?", DeleteCommission);
+        })
+        $(".item-edit-com").click(function () {
+            var typeval = $(this).attr('data-id');
+            OpenRightToLeftModal("@(AppConfig.DomainSitePath)/Commission/AddCommission?id=" + typeval);
+        })
+    })
+</script>
+
+
+<div class="commission-type-wrap">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="commission_partial_left_content">
+                <div class="commission_partial_search_div">
+                    <div class="input-group add-on">
+                        <input class="form-control" placeholder="Find a commission" name="srch-term" id="Commission_srch-term" type="text">
+                        <div class="input-group-btn">
+                            <button class="btn custom-btn green_button" type="submit" title="@Localize.T("Search")"><i class="glyphicon glyphicon-search"></i></button>
+                        </div>
+                    </div>
+                </div>  
+            </div>
+            <div class="commission_partial_middle_content">
+                <div class="commission_partial_filter_left">
+                    <label>@Localize.T("Type Filter")</label>
+                    @Html.DropDownList("ListTypecommission", ViewBag.TypeCommission as List<SelectListItem>, new { @class = "form-control commission_partial_filter_border_left" })
+                </div>
+                <div class="commission_partial_filter_middle">
+                    <label>@Localize.T("Season Filter")</label>
+                    @Html.DropDownList("ListSeasoncommission", ViewBag.SessionCommission as List<SelectListItem>, new { @class = "form-control commission_partial_filter_border_middle" })
+                </div>
+                <div class="commission_partial_filter_right">
+                    <button class="btn btn-primary commission_partial_filter_button" id="btn-commission-filter"><i class="fa fa-filter" aria-hidden="true"></i></button>
+                </div>
+            </div>
+            <div class="commission_partial_right_content">
+                <button class="btn btn-primary btnCommissionType" id="AddCommission"><i class="fa fa-plus-circle" aria-hidden="true"></i> @Localize.T("New")</button>
+            </div>
+        </div>
+    </div>
+    <div class="table-Commission">
+        <table id="tblC" class="ui celled table" cellspacing="0">
+            <thead>
+                <tr>
+                    <th class="thead-th-style">@Localize.T("Type")</th>
+                    <th class="thead-th-style">@Localize.T("Season")</th>
+                    <th class="thead-th-style">@Localize.T("Name")</th>
+                    <th class="thead-th-style">@Localize.T("Time")</th>
+                    <th class="thead-th-style">@Localize.T("Active")</th>
+                    <th class="thead-th-style">@Localize.T("Action")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    foreach (var item in Model)
+                    {
+                        <tr class="tr-style">
+                            <td class="table-body-td-style" valign="top">@item.TypeName</td>
+                            <td class="table-body-td-style" valign="top">@item.SessionName</td>
+                            <td class="table-body-td-style" valign="top">@item.Name</td>
+                            <td class="table-body-td-style" valign="top">@item.TimeFrame</td>
+                            @if (item.IsActive == true)
+                            {
+                                <td class="table-body-td-style" valign="top">@Localize.T("Yes")</td>
+                            }
+                            else
+                            {
+                                <td class="table-body-td-style" valign="top">@Localize.T("No")</td>
+                            }
+                            <td class="table-body-td-style" valign="top">
+                                <a href="javascript:void(0)" class="item-edit-com" data-id="@item.Id"><i class="fa fa-edit" aria-hidden="true"></i>@Localize.T("Edit")</a>
+                                <a href="javascript:void(0)" class="item-deletecom" data-id="@item.Id" title="@Localize.T("Delete")">
+                                    <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="filter-commission"></div>
+</div>

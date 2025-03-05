@@ -1,0 +1,315 @@
+﻿@{
+    Layout = null;
+}
+@model HS.Entities.TechSchedule
+
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@Styles.Render("~/styles/AddSchedule")
+@Scripts.Render("~/scripts/AddSchedule")
+<style>
+    .add-invoice-container .tt-menu {
+    background: white;
+    min-width: 320px;
+    font-size: 12px;
+    max-height: 230px;
+   -webkit-box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    margin-top: 0px;
+    position: absolute;
+    left: 5px;
+    z-index: 100;
+    display: none;
+    width: 450px;
+    overflow-y:scroll;
+}
+
+.add-invoice-container .tt-dataset-autocomplete {
+    margin-top: -5px;
+}
+
+.add-invoice-container .tt-suggestion {
+    min-height: 36px;
+    display: block;
+    padding: 10px 10px 9px 15px;
+    position: relative;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 1px solid #ccc;
+}
+
+.add-invoice-container .tt-menu p, .search-bar-container .twitter-typeahead > i p {
+    margin: 0;
+}
+
+.add-invoice-container .tt-sug-text {
+    width: 90%;
+    font-size: 14px;
+    text-overflow: ellipsis;
+}
+
+.add-invoice-container .tt-suggestion u {
+    text-decoration: none;
+    color: #aa2121;
+}
+
+.add-invoice-container .tt-suggestion.active {
+    background-color: #f2f2f2;
+}
+
+.add-invoice-container .tt-sug-desc {
+    width: 100%;
+    color: #999;
+    padding-top: 2px;
+    display: block;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.add-invoice-container .tt-sug-type {
+    position: absolute;
+    right: 17px;
+    top: 11px;
+    color: #999;
+    font-style: italic;
+}
+
+.add-invoice-container .tt-eq-price {
+    float: right;
+}
+.add-invoice-container .tt-eq-name {
+    float: left;
+}
+</style>
+<script>
+    var CustomerSuggestiontemplate =
+               "<div class='tt-suggestion tt-selectable' data-address='{0}' data-address1='{1}' data-street='{2}' data-street1='{3}' data-city='{4}' data-city1='{5}' data-state='{6}' data-state1='{7}' data-zipcode='{8}' data-zipcode1='{9}' data-Bussiness ='{10}' data-firstName='{11}' data-lastName='{12}' data-emailAddress='{13}' data-customerId='{14}' data-type='{15}' >"
+
+                  + "<p class='tt-sug-text'>"
+                      + "{16}"
+                      + " <em class='tt-eq-price'>{6}</em>"
+                  + "</p> "
+               + "</div>";
+    var CustomerSearchKeyDown = function (item, event) {
+        if (event.keyCode == 13) {
+            var selectedTTMenu = $(event.target).parent().find('.tt-suggestion.active');
+            if (selectedTTMenu.length > 0) {
+                setTimeout(function () { $(selectedTTMenu).click(); }, 10)
+                $('.tt-menu').hide();
+            }
+        }
+        if (event.keyCode == 40) {
+            var ttSugstionDom = $(event.target).parent().find('.tt-suggestion');
+            var ttSugActive = $(event.target).parent().find('.tt-suggestion.active');
+            if ($(ttSugstionDom).length > 0) {
+                if ($(ttSugActive).length == 0) {
+                    $($(ttSugstionDom).get(0)).addClass('active');
+                    $(item).val($($(ttSugstionDom).get(0)).attr('data-select'))
+                }
+                else {
+                    var suggestionlist = $(ttSugstionDom);
+                    var activesuggestion = $(ttSugActive);
+                    var indexactive = -1;
+                    for (var id = 0; id < suggestionlist.length; id++) {
+                        if ($(suggestionlist[id]).hasClass('active'))
+                            indexactive = id;
+                    }
+                    if (indexactive < suggestionlist.length - 1) {
+                        $(ttSugstionDom).removeClass('active');
+                        var possibleactive = $(ttSugstionDom).get(indexactive + 1);
+                        $($(ttSugstionDom).get(indexactive + 1)).addClass('active');
+                        $(possibleactive).addClass('active');
+                        $(item).val($(possibleactive).attr('data-select'));
+                    }
+                }
+                event.preventDefault();
+            }
+        }
+        if (event.keyCode == 38) {
+            var ttSugstionDom = $(event.target).parent().find('.tt-suggestion');
+            var ttSugActive = $(event.target).parent().find('.tt-suggestion.active');
+            if ($(ttSugstionDom).length > 0 && $(ttSugActive).length > 0) {
+                var suggestionlist = $(ttSugstionDom);
+                var activesuggestion = $(ttSugActive);
+                var indexactive = -1;
+                for (var id = 0; id < suggestionlist.length; id++) {
+                    if ($(suggestionlist[id]).hasClass('active'))
+                        indexactive = id;
+                }
+                if (indexactive > 0) {
+                    $(ttSugstionDom).removeClass('active');
+                    var possibleactive = $(ttSugstionDom).get(indexactive - 1);
+                    $(possibleactive).addClass('active');
+                    $(item).val($(possibleactive).attr('data-select'))
+                }
+                event.preventDefault();
+            }
+        }
+    }
+    var CustomerSearchKeyUp = function (item, event) {
+        if (event.keyCode == 40 || event.keyCode == 38 || event.keyCode == 13)
+            return false;
+        $.ajax({
+            url: domainurl + "/Invoice/GetCustomerListByKey",
+            data: {
+                key: $(item).val()
+            },
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var resultparse = JSON.parse(data.result);
+
+                if (resultparse.length > 0) {
+                    var searchresultstring = "<div class='NewProjectSuggestion'>";
+                    for (var i = 0; i < resultparse.length; i++) {
+                        if (resultparse[i].Type == "Commercial") {
+                            var name = resultparse[i].BusinessName;
+                        }
+                        else {
+                            var name = resultparse[i].FirstName + ' ' + resultparse[i].LastName;
+                        }
+
+                        searchresultstring = searchresultstring + String.format(CustomerSuggestiontemplate,
+                            resultparse[i].Address,/*0*/
+                            resultparse[i].Address1,/*1*/
+                            resultparse[i].Street, /*2*/
+                            resultparse[i].Street1,/*3*/
+                            resultparse[i].City,/*4*/
+                            resultparse[i].City1,/*5*/
+                            resultparse[i].State == "-1" ? "" : resultparse[i].State,/*6*/
+                            resultparse[i].State1,/*7*/
+                            resultparse[i].ZipCode,/*8*/
+                            resultparse[i].ZipCode1,/*9*/
+                            resultparse[i].BusinessName,/*10*/
+                            resultparse[i].FirstName,/*11*/
+                            resultparse[i].LastName,/*12*/
+                            resultparse[i].EmailAddress,/*13*/
+                            resultparse[i].CustomerId,/*14*/
+                            resultparse[i].Type,/*15*/
+                            name);
+                    }
+                    searchresultstring += "</div>";
+                    var ttdom = $($(item).parent()).find('.tt-menu');
+                    var ttdomComplete = $($(item).parent()).find('.tt-dataset-autocomplete');
+                    $(ttdomComplete).html(searchresultstring);
+                    $(ttdom).show();
+
+                    InvoiceCustomerclickbind(item);
+                    if (resultparse.length > 5) {
+                        $(".customer_name_insert_div .NewProjectSuggestion").height(200);
+                        //$(".NewProjectSuggestion").css('position', 'relative');
+                    }
+                }
+                if (resultparse.length == 0)
+                    $('.tt-menu').hide();
+            }
+        });
+    }
+    var InvoiceCustomerclickbind = function (item) {
+        $('.customer_name_insert_div .tt-suggestion').click(function () {
+            var clickitem = this;
+            $('.customer_name_insert_div .tt-menu').hide();
+
+            var selectedEmail = $(clickitem).attr("data-emailAddress").trim();
+
+            var BussiName = $(clickitem).attr("data-Bussiness").trim();
+            var Customerfnum = $(clickitem).attr("data-firstName").trim();
+            var Customerlnum = $(clickitem).attr("data-lastName").trim();
+            var CustomerGuId = $(clickitem).attr("data-customerId").trim();
+            var CustomerType = $(clickitem).attr("data-type").trim();
+            console.log(CustomerType);
+            if (CustomerType == "Commercial") {
+                var displayname = BussiName;
+            }
+            else {
+                var displayname = Customerfnum + " " + Customerlnum;
+            }
+            $("#CustomerList").val(displayname);
+            $("#CustomerIdVal").val(CustomerGuId);
+        });
+        $('.customer_name_insert_div .tt-suggestion').hover(function () {
+            var clickitem = this;
+            $('.tt-suggestion').removeClass("active");
+            $(clickitem).addClass('active');
+        });
+    }
+</script>
+<div class="add_schedule_tech_header">@Localize.T("Add New Schedule Tech")</div>
+<div class="container-fluid add-invoice-container">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.IsSchedule)
+    <input type="hidden" id="CompanyIdVal" value="@ViewBag.CompanyId" />
+    <input type="hidden" id="EmployeeIdVal" value="@ViewBag.EmployeeId" />
+    @*@Html.HiddenFor(x=>x.CompanyId)
+        @Html.HiddenFor(x=>x.EmployeeId)*@
+    @if (Model.IsSchedule != null && !string.IsNullOrWhiteSpace(Model.IsSchedule) && Model.IsSchedule == "true")
+    {
+        if (!string.IsNullOrWhiteSpace(Model.CustomerName))
+        {
+            <input type="hidden" id="CustomerIdVal" value="" />
+            <div class="col-md-12 ats_margin_top customer_name_insert_div">
+                <label>@Localize.T("Customer")</label>
+                <input type="text" class="form-control" onkeydown="CustomerSearchKeyDown(this,event)" onkeyup="CustomerSearchKeyUp(this,event)" value="@Model.CustomerName" id="CustomerList" />
+                <div class='tt-menu'>
+                    <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <input type="hidden" id="CustomerIdVal" value="" />
+            <div class="col-md-12 ats_margin_top customer_name_insert_div">
+                <label>@Localize.T("Customer")</label>
+                <input type="text" class="form-control" onkeydown="CustomerSearchKeyDown(this,event)" onkeyup="CustomerSearchKeyUp(this,event)" value="" id="CustomerList" />
+                <div class='tt-menu'>
+                    <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <input type="hidden" id="CustomerIdVal" value="@ViewBag.CustomerId" />
+    }
+    <div class="col-md-12 ats_margin_top">
+        <label>@Localize.T("Technician")</label>
+        @Html.DropDownListFor(model => model.EmployeeId, (List<SelectListItem>)ViewBag.TechnicianList, new { @class = "form-control select_search ats_margin", id = "FirstName", })
+    </div>
+    <div class="col-md-12 ats_margin_top">
+        <label>@Localize.T("Install Date")</label>
+        @Html.TextBoxFor(model => model.InstallDate, "{0:MM/dd/yy}", new { @class = "form-control datepicker ats_margin", id = "InstallDate", daterequired = "true" })
+    </div>
+    <div class="col-md-12 ats_margin_top">
+        <label>@Localize.T("Arrival Time")</label>
+        @Html.DropDownListFor(model => model.ArrivalTime, (List<SelectListItem>)ViewBag.Arrival, new { @class = "form-control select_search ats_margin", id = "ArrivalTime", datarequired = "true" })
+    </div>
+    <div class="col-md-12 ats_margin_top">
+        <label>@Localize.T("Departure Time")</label>
+        @Html.DropDownListFor(model => model.DepartureTime, (List<SelectListItem>)ViewBag.Arrival, new { @class = "form-control select_search ats_margin", id = "DepartureTime", datarequired = "true" })
+    </div>
+    <div class="col-md-12 ats_margin_top">
+        <label>@Localize.T("Estimated Time")</label>
+        @Html.DropDownListFor(model => model.EstimatedArrival, (List<SelectListItem>)ViewBag.EstimatedArrival, new { @class = "form-control select_search ats_margin", id = "EstimatedArrival" })
+    </div>
+
+    @*<div class="">
+            <div class="row">
+                <div class="col-md-6">
+                    <h3 class="txt-form">Check is Installer</h3>
+                </div>
+                <div class="col-md-6 col-check">
+                    <input class="item-check" type="checkbox" id="chkStatus" />
+                </div>
+            </div>
+
+
+        </div>*@
+    <section class="footer-section">
+        <footer class="footer">
+            <div class="SaveCancelDiv">
+                <button class="btn btn-save" id="SaveScheduleTech"><i class="fa fa-floppy-o" aria-hidden="true"></i>@Localize.T(" Save")</button>
+
+            </div>
+        </footer>
+    </section>
+</div>

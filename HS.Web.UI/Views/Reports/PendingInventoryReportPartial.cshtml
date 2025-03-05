@@ -1,0 +1,194 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+
+@model HS.Entities.EquipmentListWithCountModel
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+
+<script>
+    var DataTablePageSize = 50;
+    var LeadsStartDatepicker;
+    var LeadsEndDatepicker;
+    var listcategory = '@Html.Raw(Json.Encode(@ViewBag.listcategory))';
+    listcategory = JSON.parse(listcategory);
+    var listmanu = '@Html.Raw(Json.Encode(@ViewBag.listmanu))';
+    listmanu = JSON.parse(listmanu);
+    var pageno = '@ViewBag.PageNumber';
+    var listtech = '@Html.Raw(Json.Encode(@ViewBag.listtech))';
+    listtech = JSON.parse(listtech);
+    var my_date_format = function (input) {
+        console.log(input+" r");
+        var d = new Date(Date.parse(input.replace(/-/g, "/")));
+        var month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var date = d.getDate() + " " + month[d.getMonth()] + ", " + d.getFullYear();
+
+        return (date);
+    };
+    var FilterPendingInventoryReport = function (pageno,order) {
+        var StartDateVal = $(".min-date").val();
+        var EndDateVal = $(".max-date").val();
+        var category = encodeURI($("#eqpCategory_Pending").val());
+        var manufacturer = encodeURI($("#manufacturer_Pending").val());
+        var tecnician = encodeURI($("#tech_user_Pending").val());
+        var searchtext = $(".PendingInventoryInventoryReport_search").val();
+        var Pendingred_Date_From = $("#Pendingred_Date_From").val();
+        var Pendingred_Date_To = $("#Pendingred_Date_To").val();
+
+        $(".PendingInvetory_report_table").html(TabsLoaderText);
+        
+
+        var _RequestURL = "/Reports/PendingInventoryReportPartialList/?Transferred_Date_FromStr=" + encodeURIComponent(StartDateVal) + "&Transferred_Date_ToStr=" + encodeURIComponent(EndDateVal) + "&order=" + order + "&category=" + category + "&manufact=" + manufacturer + "&PageNo=" + pageno + "&PageSize=" + DataTablePageSize + "&technician=" + tecnician + "&SearchText=" + encodeURI(searchtext) + "&isPendingInventoryReport=true";
+        console.log(_RequestURL);
+        $(".PendingInvetory_report_table").load(domainurl + _RequestURL);
+    }
+        var ResetFilter = function () {
+
+        $("#tech_user_Pending").selectpicker("val", "");
+        $("#manufacturer_Pending").selectpicker("val", "");
+        $("#eqpCategory_Pending").selectpicker("val", "");
+
+        $(".PendingInventoryInventoryReport_search").val("");
+        FilterPendingInventoryReport(1);
+    }
+    $(document).ready(function () {
+
+        $(".truck_single_filte_info_container").hide();
+        $(".btn-filter").click(function () {
+
+            if ($(".truck_single_filte_info_container").is(":visible")) {
+                $(".truck_single_filte_info_container").hide();
+
+            } else {
+                $(".truck_single_filte_info_container").show();
+
+            }
+        });
+
+        var StartDate = $(".min-date").val();
+        var EndDate = $(".max-date").val();
+        $(".LoaderWorkingDiv").hide();
+        $("#LeadReportTab .invoice-loader").hide();
+                $(".DateFilterContents .btn-apply-Datefilter").unbind().click(function () {
+            var DateFrom = $(".min-date").val();
+            var DateTo = $(".max-date").val();
+              UpdatePtoCookie();
+            FilterPendingInventoryReport(1, null);
+            var StartDate = my_date_format($(".DateFilterContents .min-date").val());
+            var EndDate = my_date_format($(".DateFilterContents .max-date").val())
+            if (StartDate == "NaN undefined, NaN") {
+                StartDate = "All Time";
+                EndDate = "";
+            }
+
+            $(".DateFilterContents .date-start").html("");
+            $(".DateFilterContents .date-end").html("");
+            $(".DateFilterContents .date-start").html(StartDate);
+            $(".DateFilterContents .date-end").html(EndDate);
+            $(".DateFilterContents .dropdown-filter").hide();
+
+
+
+        });
+        $("#btnDownloadLeadsReport_Pending").click(function () {
+
+            var category = encodeURI($("#eqpCategory_Pending").val());
+            var manufacturer = encodeURI($("#manufacturer_Pending").val());
+            var tecnician = encodeURI($("#tech_user_Pending").val());
+            var searchtext = $(".PendingInventoryInventoryReport_search").val();
+            var StartDateVal = $(".min-date").val();
+            var EndDateVal = $(".max-date").val();
+            var Pendingred_Date_From = $("#Pendingred_Date_From").val();
+            var Pendingred_Date_To = $("#Pendingred_Date_To").val();
+            if (StartDate.trim().length == 10 && EndDate.trim().length == 10) {
+                StartDate = StartDate.replaceAll('/', '_');
+                EndDate = EndDate.replaceAll('/', '_');
+                location.href = domainurl + "/Reports/PendingInventoryReportPartialList/?Transferred_Date_FromStr=" + StartDateVal + "&Transferred_Date_ToStr=" + EndDateVal + "&GetReport=true" + "&category=" + category + "&manufact=" + manufacturer + "&pageno=" + 0 + "&pagesize=" + 0 + "&technician=" + tecnician + "&RepType=Pending" + "&SearchText=" + encodeURI(searchtext)  + "&isPendingInventoryReport=true";
+            } else {
+                location.href = domainurl + "/Reports/PendingInventoryReportPartialList/?GetReport=true" + "&category=" + category + "&manufact=" + manufacturer + "&pageno=" + 0 + "&pagesize=" + 0 + "&technician=" + tecnician + "&RepType=Pending" + "&SearchText=" + encodeURI(searchtext) + "&Transferred_Date_FromStr=" + StartDateVal + "&Transferred_Date_ToStr="+ EndDateVal + "&isPendingInventoryReport=true";
+            }
+        });
+
+
+        if (listmanu.length != 0) {
+            $("#manufacturer_Pending").selectpicker('val', listmanu);
+        }
+        else {
+            $("#manufacturer_Pending").selectpicker('val', '');
+        }
+        if (listcategory.length != 0) {
+            $("#eqpCategory_Pending").selectpicker('val', listcategory);
+        }
+        else {
+            $("#eqpCategory_Pending").selectpicker('val', '');
+        }
+        if (listtech.length != 0) {
+            $("#tech_user_Pending").selectpicker('val', listtech);
+        }
+        else {
+            $("#tech_user_Pending").selectpicker('val', '');
+        }
+              FilterPendingInventoryReport(1);
+
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#Pendingred_Date_From')[0] });
+        new Pikaday({ format: 'MM/DD/YYYY', field: $('#Pendingred_Date_To')[0] });
+            $(".PendingInventoryInventoryReport_search").keydown(function (e) {
+
+                if (e.which == 13) {
+                    FilterPendingInventoryReport(1);
+                }
+            });
+    });
+</script>
+
+<link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
+<link href="~/Content/Css/Ticket/TicketListPartial.css" rel="stylesheet" />
+
+<div class="row lrp_bottom_border">
+    <div class="lead_total_color"> </div>
+</div>
+
+
+<div class="row leads_report_top_bar">
+    <div class="ticket_search_filter truck_inv_srch_filter">
+        <div class="truck_single_filter_div_container">
+            <div class="input-group add-on">
+                <input class="form-control PendingInventoryInventoryReport_search" placeholder="Search" type="text" title="Category, Manufacturer, Description, SKU">
+                <div class="input-group-btn">
+                    <button class="btn search_ticket_btn green_button" id="btnsearchtext" title="@Localize.T("Search")" onclick="FilterPendingInventoryReport(1)"><i class="glyphicon glyphicon-search"></i></button>
+                </div>
+            </div>
+            <div class="truck_single_filter_div_style filter_fill">
+                <button class="btn btn-filter green_button" title="Filter">
+                    <i class="glyphicon glyphicon-filter"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <button title="@Localize.T(" Download")" class="report_btn lrp_float_right" id="btnDownloadLeadsReport_Pending"><i class="fa fa-download" aria-hidden="true"></i></button>
+</div>
+<div class="truck_single_filte_info_container">
+    <div class="truck_single_filter_info_inner">
+        <div class="truck_single_filter_info_inner_content">
+            @Html.DropDownList("tech_user_Pending", ViewBag.techlist as List<SelectListItem>, new { @class = "form-control border_radius_0 TicketFor_search trans_technician", @multiple = "multiple", @title = "Select Technician" })
+        </div>
+        <div class="truck_single_filter_info_inner_content">
+            @Html.DropDownList("eqpCategory_Pending", ViewBag.eqpCategory as List<SelectListItem>, new { @class = "form-control border_radius_0 trans_category", @multiple = "multiple", @title = "Select Category" })
+        </div>
+        <div class="truck_single_filter_info_inner_content">
+            @Html.DropDownList("manufacturer_Pending", ViewBag.manufacturer as List<SelectListItem>, new { @class = "form-control border_radius_0 trans_manufac", @multiple = "multiple", @title = "Select Manufacturer" })
+        </div>
+    </div>
+    <div class="truck_single_filter_info_footer">
+        <button class="btn search_ticket_btn green_button" id="btnsearchtext" title="@Localize.T("Filter")" onclick="FilterPendingInventoryReport(1)"><i class="fa fa-check" aria-hidden="true"></i>@Localize.T("Apply")</button>
+        <button class="btn red_button" id="reset_btn_filter" onclick="ResetFilter()">@Localize.T("Reset")</button>
+
+    </div>
+</div>
+<div class="PendingInvetory_report_table">
+
+</div>

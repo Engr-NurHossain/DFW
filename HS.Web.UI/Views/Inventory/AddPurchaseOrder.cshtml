@@ -1,0 +1,355 @@
+﻿@{
+    Layout = null;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@model HS.Entities.PurchaseOrder
+
+@Styles.Render("~/styles/AddInvoice")
+<link href="~/Content/Css/Expense/AddVendorBill.css" rel="stylesheet" />
+
+<script>
+    var vendorid ;
+    var VendorAddress;
+    var VendorSuggestiontemplate =
+               "<div class='tt-suggestion tt-selectable' data-street = '{0}' data-city = '{1}' data-state = '{2}' data-zip = '{3}' data-name = '{4}' data-vendorid = '{5}' data-companyname = '{6}' >"
+
+                  + "<p class='tt-sug-text'>"
+                      + "{6}"
+                  + "</p> "
+               + "</div>";
+    var Vendorclickbind = function (item) {
+        $('.Vendor_name_insert_div .tt-suggestion').click(function () {
+            var clickitem = this;
+            $('.Vendor_name_insert_div .tt-menu').hide();
+            var VendorNum = $(clickitem).attr("data-companyname").trim();
+            $("#VendorList").val(VendorNum);
+            var VendorCity = $(clickitem).attr("data-city").trim();
+            var VendorState = $(clickitem).attr("data-state").trim();
+            VendorAddress = $(clickitem).attr("data-street").trim() + "\n" + $(clickitem).attr("data-city").trim() + ", " + $(clickitem).attr("data-state").trim() + " " + $(clickitem).attr("data-zip").trim();
+
+            //$("#SupplierAddress").val(VendorAddress);
+            $("#BillingAddress").val(VendorAddress);
+            vendorid = $(clickitem).attr("data-vendorid").trim();
+        });
+        $('.Vendor_name_insert_div .tt-suggestion').hover(function () {
+            var clickitem = this;
+            $('.tt-suggestion').removeClass("active");
+            $(clickitem).addClass('active');
+        });
+    }
+    var VendorSearchKeyDown = function (item, event) {
+        if (event.keyCode == 13) {
+            var selectedTTMenu = $(event.target).parent().find('.tt-suggestion.active');
+            if (selectedTTMenu.length > 0) {
+                setTimeout(function () { $(selectedTTMenu).click(); }, 10)
+                $('.tt-menu').hide();
+            }
+        }
+        if (event.keyCode == 40) {
+            var ttSugstionDom = $(event.target).parent().find('.tt-suggestion');
+            var ttSugActive = $(event.target).parent().find('.tt-suggestion.active');
+            if ($(ttSugstionDom).length > 0) {
+                if ($(ttSugActive).length == 0) {
+                    $($(ttSugstionDom).get(0)).addClass('active');
+                    $(item).val($($(ttSugstionDom).get(0)).attr('data-select'))
+                }
+                else {
+                    var suggestionlist = $(ttSugstionDom);
+                    var activesuggestion = $(ttSugActive);
+                    var indexactive = -1;
+                    for (var id = 0; id < suggestionlist.length; id++) {
+                        if ($(suggestionlist[id]).hasClass('active'))
+                            indexactive = id;
+                    }
+                    if (indexactive < suggestionlist.length - 1) {
+                        $(ttSugstionDom).removeClass('active');
+                        var possibleactive = $(ttSugstionDom).get(indexactive + 1);
+                        $($(ttSugstionDom).get(indexactive + 1)).addClass('active');
+                        $(possibleactive).addClass('active');
+                        $(item).val($(possibleactive).attr('data-select'));
+                    }
+                }
+                event.preventDefault();
+            }
+        }
+        if (event.keyCode == 38) {
+            var ttSugstionDom = $(event.target).parent().find('.tt-suggestion');
+            var ttSugActive = $(event.target).parent().find('.tt-suggestion.active');
+            if ($(ttSugstionDom).length > 0 && $(ttSugActive).length > 0) {
+                var suggestionlist = $(ttSugstionDom);
+                var activesuggestion = $(ttSugActive);
+                var indexactive = -1;
+                for (var id = 0; id < suggestionlist.length; id++) {
+                    if ($(suggestionlist[id]).hasClass('active'))
+                        indexactive = id;
+                }
+                if (indexactive > 0) {
+                    $(ttSugstionDom).removeClass('active');
+                    var possibleactive = $(ttSugstionDom).get(indexactive - 1);
+                    $(possibleactive).addClass('active');
+                    $(item).val($(possibleactive).attr('data-select'))
+                }
+                event.preventDefault();
+            }
+        }
+    }
+    var VendorSearchKeyUp = function (item, event) {
+        console.log("click");
+        if (event.keyCode == 40 || event.keyCode == 38 || event.keyCode == 13)
+            return false;
+        $.ajax({
+            url: "/Expense/GetVendorListByKey",
+            data: {
+                key: $(item).val()
+            },
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var resultparse = JSON.parse(data.result);
+
+                if (resultparse.length > 0) {
+
+                    console.log('NewProjectSuggestion2');
+                    var searchresultstring = "<div class='NewProjectSuggestion'>";
+                    for (var i = 0; i < resultparse.length; i++) {
+                        var name = resultparse[i].Name;
+
+                        searchresultstring = searchresultstring + String.format(VendorSuggestiontemplate,
+                            resultparse[i].Street,
+                            resultparse[i].City == "-1" ? "" : resultparse[i].City,
+                            resultparse[i].State == "-1" ? "" : resultparse[i].State,
+                            resultparse[i].Zipcode,
+                            resultparse[i].Name,
+                            resultparse[i].Id,
+                            resultparse[i].CompanyName);
+                    }
+                    searchresultstring += "</div>";
+                    var ttdom = $($(item).parent()).find('.tt-menu');
+                    var ttdomComplete = $($(item).parent()).find('.tt-dataset-autocomplete');
+                    $(ttdomComplete).html(searchresultstring);
+                    $(ttdom).show();
+
+                    Vendorclickbind(item);
+                    if (resultparse.length > 0) {
+                        $(".Vendor_name_insert_div .NewProjectSuggestion").height(200);
+                        //$(".NewProjectSuggestion").css('position', 'relative');
+                    }
+                }
+                if (resultparse.length == 0)
+                    $('.tt-menu').hide();
+            }
+        });
+    }
+    $(document).ready(function () {
+        $("#VendorList").focusout(function () {
+            setTimeout(function () {
+                $(".Vendor_name_insert_div .tt-menu").hide();
+            }, 200);
+        });
+    })
+</script>
+
+<div class="avb_div_header">
+    <div class="header_title_avb">
+        Purchase Order - @Model.PurchaseOrderId
+    </div>
+</div>
+<div class="add-invoice-container">
+    <div class="avb_invoice_informations">
+        <div class="avp_row">
+            <div class="invoice-info-left-70p">
+                <div class="avp_row">
+                    <div class="form-group clearfix width-30p Vendor_name_insert_div">
+                        <span class="span-style">@Localize.T("Choose a vendor")</span>
+                        @*<input type="hidden" id="SupplierId" value="@Model.SuplierId" />*@
+                        <input type="text" class="form-control" onkeydown="VendorSearchKeyDown(this, event)" onkeyup="VendorSearchKeyUp(this, event)" value="" id="VendorList" />
+                        <div class='tt-menu'>
+                            <div class='tt-dataset tt-dataset-autocomplete'> </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="avp_row">
+                    <div class="invoice-info-left-100p">
+                        <div class="form-group clearfix width-25p">
+                            <span class="span-style">@Localize.T("Mailing Address")</span>
+                            @Html.TextAreaFor(mm => mm.BillingAddress, new { @class = "form-control", id = "BillingAddress" })
+                        </div> 
+                        <div class="form-group clearfix width-25p">
+                            <span class="span-style">@Localize.T("Shipping Address")</span>
+                            @Html.TextAreaFor(mm => mm.ShippingAddress, new { @class = "form-control", id = "ShippingAddress" })
+                        </div>
+                        <div class="form-group clearfix width-25p">
+                            <span class="span-style">@Localize.T("Ship Via")</span>
+                            @Html.TextAreaFor(mm => mm.ShippingVia, new { @class = "form-control", id = "ShippingVia" })
+                        </div>
+                        <div class="form-group clearfix width-25p">
+                            <span class="span-style">@Localize.T("Sales Rep")</span>
+                            @Html.TextAreaFor(mm => mm.SoldBy, new { @class = "form-control", id = "SoldBy" })
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="balance-info">
+                <span class="amount amount-span-style big-amount-top" style="color:#333">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+            </div>
+        </div>
+    </div>
+    <div class="avp_table_info_container">
+        <div class="width-100p margin-top-15">
+            <table class="CustomerInvoiceTab SupplierBillTab" id="SupplierBillTab">
+                <thead>
+                    <tr>
+                        <th class="thead-th-style1 tab-index">
+                            <span>
+
+                            </span>
+                        </th>
+                        <th class="thead-th-style1 tab-Product">
+                            <span>
+                                @Localize.T("Account")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Desc">
+                            <span>
+                                @Localize.T("Description")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Amount">
+                            <span>
+                                @Localize.T("Amount")
+                            </span>
+                        </th>
+                        <th class="thead-th-style2 tab-Action">
+
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    @if (Model.PurchaseOrderDetail != null && Model.PurchaseOrderDetail.Count() > 0)
+                    {
+                        foreach (var item in Model.PurchaseOrderDetail)
+                        {
+                            
+                        }
+                    }
+
+                    else
+                    {
+                        <tr>
+                            <td valign="top"></td>
+                            <td valign="top">
+                                <input type="hidden" value="" class="hdnaccounttypeId" />
+                                <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                <span class="spnProductName"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDesc" />
+                                <span class="spnProductDesc"></span>
+                            </td>
+                            @*<td valign="top">
+                                    <input type="number" onkeydown='OthersKeyDown(this,event)' class="txtProductQuantity" />
+                                    <span class="spnProductQuantity avb_invoice_allign"></span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductRate" />
+                                    <span class="spnProductRate avb_invoice_allign"></span>
+                                </td>*@
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" />
+                                <span class="spnProductAmount avb_invoice_allign"></span>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top"></td>
+                            <td valign="top">
+                                <input type="hidden" value="" class="hdnaccounttypeId" />
+                                <input type="text" class="ProductName" onkeydown="SearchKeyDown(this,event)" onkeyup="SearchKeyUp(this,event)" />
+                                <div class='tt-menu'><div class='tt-dataset tt-dataset-autocomplete'> </div> </div>
+                                <span class="spnProductName"></span>
+                            </td>
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductDesc" />
+                                <span class="spnProductDesc"></span>
+                            </td>
+                            @*<td valign="top">
+                                    <input type="number" onkeydown='OthersKeyDown(this,event)' class="txtProductQuantity" />
+                                    <span class="spnProductQuantity avb_invoice_allign"></span>
+                                </td>
+                                <td valign="top">
+                                    <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductRate" />
+                                    <span class="spnProductRate avb_invoice_allign"></span>
+                                </td>*@
+                            <td valign="top">
+                                <input type="text" onkeydown='OthersKeyDown(this,event)' class="txtProductAmount" />
+                                <span class="spnProductAmount avb_invoice_allign"></span>
+                            </td>
+                            <td valign="top" class="tableActions">
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+
+        <div class="OtherInfos">
+            @*<div class="col-md-12">
+                    &nbsp;
+                </div>*@
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="width-70p avp_invoice_padd_top">
+                        <div class="InvoiceMgmtDiv">
+                            <button class="btnAddLines">@Localize.T("Add Lines")</button>
+                            <button class="btnClearLines">@Localize.T("Clear Lines")</button>
+                            <button class="btnAddSubtotal hidden">@Localize.T("Add Subtotal")</button>
+                        </div>
+                        <div class="col-md-12">
+                            &nbsp;
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div>
+                                    <span>@Localize.T("Message displayed on bill")</span>
+                                </div>
+                                <textarea id="InvoiceMessage" maxlength="1000" rows="4" class="InvoiceMessage"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="width-30p avp_amount_calc_pad">
+                        <div class="InvoiceCalculationsDiv">
+                            <div class="subtotal-amount-div row margin-TB-5p">
+                                <div class="col-xs-7 avp_invoice_text_style">
+                                    <label class="float-right">@Localize.T("Subtotal"):</label>
+                                </div>
+                                <div class="col-xs-5 avb_invoice_allign">
+                                    <span class="amount avp_amount_subtotal">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                                </div>
+                            </div>
+
+                            <div class="balance-due-amount-div row margin-TB-5p">
+                                <div class="col-xs-7 avp_invoice_text_style">
+                                    <label class="float-right">@Localize.T("Balance Due"):</label>
+                                </div>
+                                <div class="col-xs-5 avb_invoice_allign">
+                                    <span class="balanceDueAmount">@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-md-12">
+            &nbsp;
+        </div>
+    </div>
+</div>
+

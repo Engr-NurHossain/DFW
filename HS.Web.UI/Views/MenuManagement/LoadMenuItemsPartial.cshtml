@@ -1,0 +1,271 @@
+﻿@model HS.Entities.MenuItemListModel
+@{
+    Layout = null;
+    var currency = HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null);
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HtmlAgilityPack;
+@Styles.Render("~/styles/MenuListPartial")
+<script>
+    var OpenMenuItemById = function (menuId) {
+        OpenTopToBottomModal(domainurl + "/MenuManagement/AddMenu/?Id=" + menuId);
+    }
+    var DeleteMenuItemByItemId = function(id){
+        var url = "/MenuManagement/DeleteMenuItem";
+        var param = JSON.stringify({
+            id: id
+        })
+        $.ajax({
+            type: "POST",
+            ajaxStart: $(".loader-div").show(),
+            url: url,
+            data: param,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if(data.result){
+                    OpenSuccessMessageNew("Success", data.message, function () {
+                        LoadMenuItemsTab(1);
+                    });
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                $(".loader-div").hide();
+                console.log(errorThrown);
+            }
+        });
+    }
+    $(document).ready(function () {
+        $(".del_items_menu").click(function () {
+            var idval = $(this).attr('data-id');
+            OpenConfirmationMessageNew("Confirmation", "Are you sure, you want to delete this item?", function() {
+                DeleteMenuItemByItemId(idval);
+            });
+        })
+        $("#btnsearchtext_menuitem").click(function () {
+            var searchtext = $("#menuitem_search").val();
+            $(".Load_MenuItems").html(TabsLoaderText);
+            $(".Load_MenuItems").load(domainurl + "/MenuManagement/LoadMenuItemsPartial?PageNo=" + 1 + "&PageSize=50" + "&SearchText=" + encodeURI(searchtext));
+        })
+        $(".icon_sort_timeclock").click(function () {
+            var searchtext = $("#menuitem_search").val();
+            var orderval = $(this).attr('data-val');
+            $(".Load_MenuItems").html(TabsLoaderText);
+            $(".Load_MenuItems").load(domainurl + "/MenuManagement/LoadMenuItemsPartial?PageNo=" + 1 + "&PageSize=50" + "&SearchText=" + encodeURI(searchtext) + "&order=" + encodeURI(orderval));
+        })
+    })
+</script>
+
+<div class="menulist_container">
+    <div class="menulist_search_filter">
+        <div class="input-group add-on">
+            <input value="@Model.Searchtext" class="form-control filterinput border_radius_0 menu_search_text" placeholder="Search" id="menuitem_search">
+            <div class="input-group-btn"><button title="Search" class="btn search_menu_btn" id="btnsearchtext_menuitem"><i class="glyphicon glyphicon-search"></i></button></div>
+        </div>
+    </div>
+
+
+    <div class="menu-table">
+        <table class="display all_menu menu_list_partial_info" id="tblMenu">
+            <thead class="table-head-border">
+                <tr>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Photo")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/photo"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/photo"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Item Name")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menuname"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menuname"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Menu Name")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/itemname"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/itemname"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Item Price")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/itemprice"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/itemprice"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Days Available")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menustatus"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menustatus"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Time Available")</div>
+                        <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/menustatus"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/menustatus"></i></div>
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Action")</div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.MenuItems)
+                {
+                    <tr class="tr-style CheckItems" idval="@item.Id">
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Photo")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"> <img src="@item.Photo" width="50" height="50" /></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Item Name")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"><a class="cus-anchor" onclick="OpenMenuItemById(@item.MenuId)" href="javascript:void(0)">@item.ItemName</a></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Menu Name")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"><span title="@item.MenuName">@item.MenuName</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Item Price")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Price)</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Days Available")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"><span title="@item.DaysAvailable">@item.DaysAvailable</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Time Available")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"><span>@item.TimeAvailable</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Action")<span>:</span></div>
+                            <div class="menu_list_partial_device_info">
+                                <span><i class="fa fa-trash-o del_items_menu cus-anchor" data-id="@item.Id"></i></span>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="AgentListPagination inv1">
+    <div class="paginationContainer">
+        @if (ViewBag.PageCount > 0)
+        {
+            <div class="paginationtextdv"><span>@HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.CurrentNumber) of @HS.Web.UI.Helper.LabelHelper.NumberFormat(ViewBag.OutOfNumber)</span></div>
+        }
+        @if (ViewBag.PageCount == 1)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons disabledBtn">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton activeBtn" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber),'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons disabledBtn">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 2)
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadMenuItemsTab(1, '@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadMenuItemsTab(2,'@(ViewBag.order)')">2</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+        {
+            <div class="paginationMiddleButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""),'@(ViewBag.order)')">Previous</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="LoadMenuItemsTab(1,'@(ViewBag.order)')">1</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="LoadMenuItemsTab(2,'@(ViewBag.order)''@(ViewBag.order)')">2</button>
+            </div>
+            <div class="NavigatonButtonsDiv">
+                <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="LoadMenuItemsTab(3,'@(ViewBag.order)')">3</button>
+            </div>
+            <div class="paginationRightButtondv">
+                <button class="PaginationButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""),'@(ViewBag.order)')">Next</button>
+            </div>
+        }
+        else if (ViewBag.PageCount > 3)
+        {
+            if (ViewBag.PageNumber == ViewBag.PageCount)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber-2),'@(ViewBag.order)')">@(ViewBag.PageNumber - 2)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons disabledBtn" onclick="LoadMenuItemsTab()">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 1)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber + 2),'@(ViewBag.order)')">@(ViewBag.PageNumber + 2)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else if (ViewBag.PageNumber == 2)
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+            else
+            {
+                <div class="paginationMiddleButtondv">
+                    <button class="PaginationButtons" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber-1),'@(ViewBag.order)')">Previous</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber - 1),'@(ViewBag.order)')">@(ViewBag.PageNumber - 1)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton activeBtn" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber),'@(ViewBag.order)')">@(ViewBag.PageNumber)</button>
+                </div>
+                <div class="NavigatonButtonsDiv">
+                    <button class="NavigationButton" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber + 1),'@(ViewBag.order)')">@(ViewBag.PageNumber + 1)</button>
+                </div>
+                <div class="paginationRightButtondv">
+                    <button class="PaginationButtons" onclick="LoadMenuItemsTab(@(ViewBag.PageNumber+1),'@(ViewBag.order)')">Next</button>
+                </div>
+            }
+        }
+    </div>
+</div>

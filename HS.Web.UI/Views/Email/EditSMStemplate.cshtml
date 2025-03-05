@@ -1,0 +1,179 @@
+﻿@model HS.Entities.SMSTemplate
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using AppConfig = HS.Framework.Utils.AppConfig; 
+<script src="~/Content/Tiny/jquery.tinymce.min.js"></script>
+<script src="~/Content/Tiny/tinymce.min.js"></script>
+
+<script>
+
+    var SaveChanges = function (IsDefault) {
+        var Param = {
+            Id: $("#TemplateId").val(),
+            RestoreDefault: IsDefault,
+            CompanyId: $("#TemplateCompanyId").val(),
+            TemplateKey: $("#TemplateKey").val(),
+            Name: $("#TemplateName").val(),
+            Description: $("#Description").val(),
+            Body: $('#BodyContent').val()
+        };
+        var url = "@(AppConfig.DomainSitePath)/Email/EditSMSTemplate";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message, function () {
+                        CloseTopToBottomModal();
+                    });
+                    //LoadEmailTemplates(true)
+                    OpenTextTemplateTab();
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+    var SendTestSMS = function () {
+        var Param = {
+            ContactNumber: $("#ToTestNumber").val(),
+            TemplateKey: $("#TemplateKey").val(),
+            BodyContent: $("#BodyContent").val(),
+
+        };
+        var url = "@(AppConfig.DomainSitePath)/Email/SendTestSMS";
+        $.ajax({
+            type: "POST",
+            ajaxStart: function () { },
+            url: url,
+            data: JSON.stringify(Param),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            cache: false,
+            success: function (data) {
+                if (data.result) {
+                    OpenSuccessMessageNew("Success!", data.message);
+                    //LoadEmailTemplates(true)
+                    OpenTextTemplateTab();
+                }
+                else {
+                    OpenErrorMessageNew("Error!", data.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $("#SaveChanges").click(function () {
+            SaveChanges(false);
+        });
+        $("#RestoreDefault").click(function () {
+            SaveChanges(true);
+        });
+
+        $("#SendTestSMS").click(function () {
+            if ($("#ToTestNumber").val().trim() == ""
+               || $("#BodyContent").val().trim() == "") {
+                parent.OpenErrorMessageNew("Error!", "Contact number and SMS body can't be empty.");
+            }
+            else
+            {
+                SendTestSMS();
+            }
+        });
+    });
+</script>
+<style>
+    .EditEmailTemplate .row {
+        margin-bottom: 15px;
+    }
+
+    .EmailTemplateDescription {
+        width: 100%;
+    }
+
+    .TemplateEditorMainDiv {
+        height: 100vh;
+        overflow-y: scroll;
+        background-color: #f4f5f8;
+    }
+
+    .margin-bottom-5 {
+        margin-bottom: 5px;
+    }
+</style>
+
+
+<div class="hidden">
+    <input type="hidden" value="@Model.Id" id="TemplateId" />
+    <input type="hidden" value="@Model.CompanyId" id="TemplateCompanyId"/>
+    <input type="hidden" value="@Model.TemplateKey" id="TemplateKey" />
+    <input type="hidden" value="@Model.Name" id="TemplateName" />
+    
+</div>
+<div class="container-fluid TemplateEditorMainDiv">
+    <div class="EditEmailTemplate">
+
+        <div class="row">
+            <div class="col-md-12">
+                <h3>@Localize.T("Edit SMS Template")</h3>
+            </div>
+        </div>
+        <div class="row">
+            @*<div class="col-md-4">
+                <label>@Localize.T("Template Name")</label>
+                <input type="text" id="tmpName" name="ToEmail" placeholder="Template name" value="@Model.Name" />
+            </div>
+            <div class="col-md-4">
+                <label>@Localize.T("Template Key")</label>
+                <input type="text" id="tmpKey" name="ToEmail" placeholder="Template key" value="@Model.TemplateKey" />
+            </div>*@
+        </div>
+       
+      
+      
+        <div class="row">
+            <div class="BodyContentDiv col-md-12">
+                <label>@Localize.T("Body")</label><br />
+                <textarea  rows="8" cols="55" id="BodyContent"  >@Model.Body</textarea>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div>
+                    <label>@Localize.T("Description")</label>
+                    <textarea type="text" rows="3" class="EmailTemplateDescription" id="Description" name="Description" placeholder="Description">@Model.Description</textarea>
+                </div>
+                <div class="SaveChangesDiv">
+                    <button class="btn btn-default" id="SaveChanges">Save Changes</button>
+                    <button class="btn btn-default" id="RestoreDefault">Restore Default</button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="margin-bottom-5">
+                    <label>@Localize.T("Send Test SMS To")</label>
+                    <input type="text" placeholder="Number" id="ToTestNumber" />
+                </div>
+                <div>
+                    <button id="SendTestSMS" class="btn btn-default">@Localize.T("Send Test SMS")</button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+
+        </div>
+    </div>
+</div>
+
+

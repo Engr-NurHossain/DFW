@@ -1,0 +1,355 @@
+﻿@model List<HS.Entities.ResturantOrder>
+@{
+    Layout = null;
+    var QtyTotal = 0;
+    var CountInProg = 0;
+    var CountReject = 0;
+    var CountComplete = 0;
+    var AmountAvg = 0.0;
+    var RevTotal = 0.0;
+}
+@using Localize = HS.Web.UI.Helper.LanguageHelper
+@using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
+@using Permissions = HS.Framework.UserPermissions
+@using HtmlAgilityPack;
+<link href="~/Content/Css/Pagination.css" rel="stylesheet" />
+@Styles.Render("~/styles/MenuListPartial")
+@Scripts.Render("~/scripts/MenuList")
+<style>
+    .ieatery_isview_input {
+        width: 40px !important;
+        height: 20px;
+        color: white;
+        background-color: #2ca01c !important;
+        float: left;
+        margin-right: 5px;
+    }
+
+    .ieatery_order_customer_anchor {
+        color: #2ca01c;
+    }
+
+        .ieatery_order_customer_anchor:hover {
+            color: #2ca01c;
+            text-decoration: underline;
+        }
+</style>
+<script>
+    var pageno = '@ViewBag.PageNumber';
+    var currentnumber = '@ViewBag.CurrentNumber';
+    var outnumber = '@ViewBag.OutOfNumber';
+    var IeateryIsviewChange = function (id) {
+        var url = "/Order/IeateryIsviewChange";
+        var param = JSON.stringify({
+            id: id
+        });
+        $.ajax({
+        type: "POST",
+        ajaxStart: $(".AddInvoiceLoader").removeClass('hidden'),
+        url: url,
+        data: param,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        cache: false,
+            success: function (data) {
+                if (data) {
+                    $("#ieatery_isview_input_" + id).addClass("hidden");
+                }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(errorThrown);
+            $(".AddInvoiceLoader").addClass('hidden');
+        }
+    });
+    }
+    $(document).ready(function () {
+        if (currentnumber == outnumber) {
+        $(".PaginationrightButtons").hover(function () {
+            $(this).css("cursor", "not-allowed");
+            $(this).attr("disabled", "disabled");
+        })
+    }
+    if (pageno == "1") {
+        $(".PaginationButtons").hover(function () {
+            $(this).css("cursor", "not-allowed");
+            $(this).attr("disabled", "disabled");
+        })
+        }
+        $(".ieatery_isview_change").click(function () {
+            var idval = $(this).attr("data-id");
+            IeateryIsviewChange(idval);
+        })
+    })
+</script>
+
+<div class="menulist_container">
+    <div class="order_partial_block">
+        <table class="display all_menu menu_list_partial_info" id="tblMenu">
+            <thead class="table-head-border">
+                <tr>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Order")</div>
+                        @if (ViewBag.order == "ascending/orderid" || ViewBag.order == "descending/orderid")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                        }
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Order Date")</div>
+                        @if (ViewBag.order == "ascending/orderid" || ViewBag.order == "descending/orderid")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i style="color: darkred; font-weight: bold " class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/orderid"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/orderid"></i></div>
+
+                        }
+                    </th>
+                    @*<th class="thead-th-style">
+                        <div>@Localize.T("Customer")</div>
+                        @if (ViewBag.order == "ascending/ordercustomer" || ViewBag.order == "descending/ordercustomer")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i></div>
+
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordercustomer"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordercustomer"></i></div>
+
+                        }
+                    </th>*@
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Order Type")</div>
+                        @if (ViewBag.order == "ascending/ordertype" || ViewBag.order == "descending/ordertype")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordertype"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordertype"></i></div>
+
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/ordertype"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/ordertype"></i></div>
+
+                        }
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Amount")</div>
+                        @if (ViewBag.order == "ascending/amount" || ViewBag.order == "descending/amount")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/amount"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/amount"></i></div>
+
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/amount"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/amount"></i></div>
+
+                        }
+                    </th>
+                    <th class="thead-th-style">
+                        <div>@Localize.T("Status")</div>
+                        @if (ViewBag.order == "ascending/status" || ViewBag.order == "descending/status")
+                        {
+                            <div><i style="color:darkred;font-weight: bold" class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i style="color:darkred;font-weight: bold" class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+
+                        }
+                        else
+                        {
+                            <div><i class="fa fa-angle-up icon_sort_timeclock" data-val="ascending/status"></i> <i class="fa fa-angle-down icon_sort_timeclock" data-val="descending/status"></i></div>
+
+                        }
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr class="tr-style CheckItems" idval="@item.Id">
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Order")<span>:</span></div>
+                            <div class="menu_list_partial_device_info">
+                                @if (item.IsViewed == false)
+                                {
+                                    <input type="text" class="form-control ieatery_isview_input" id="ieatery_isview_input_@item.Id" readonly="readonly" value="New" />
+                                }
+                                <a class="cus-anchor ieatery_isview_change" data-id="@item.Id" onclick="OpenTopToBottomModal('/Order/OrderDetailPartial/?id=@item.Id')">#@item.Id</a>
+                            </div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Order Date")<span>:</span></div>
+                            @{
+                                if (item.CreatedDate != new DateTime())
+                                {
+                                    <div class="menu_list_partial_device_info">
+                                        <span>@HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("MM/dd/yyyy") @HS.Web.UI.Helper.LabelHelper.TimeFormatUsingDateTime.ForHoursStringSingleFormat(HS.Framework.DateTimeExtension.UTCToClientTime(item.CreatedDate).ToString("hh:mm tt"))</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="menu_list_partial_device_info">
+                                        <span>-</span>
+                                    </div>
+                                }
+                            }
+
+                        </td>
+                        @*<td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Customer")<span>:</span></div>
+                            <div class="menu_list_partial_device_info">
+                                <span><a class="ieatery_order_customer_anchor" href="/Customer/CustomerDetail?id=@item.CustomerIntId">@item.CustomerName</a></span>
+                            </div>
+                        </td>*@
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Order Type")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"><span>@item.OrderType</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Amount")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"><span>@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)@HS.Web.UI.Helper.LabelHelper.FormatAmount(item.Amount)</span></div>
+                        </td>
+                        <td class="table-body-td-style" valign="top">
+                            <div class="menu_list_partial_device_header">@Localize.T("Status")<span>:</span></div>
+                            <div class="menu_list_partial_device_info"><span>@item.Status</span></div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="AgentListPagination">
+            <div class="paginationContainer">
+                @if (ViewBag.PageCount == 1)
+                {
+                    <div class="pagination_start_div">
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons disabledBtn">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="OpenOrderTab(@(ViewBag.PageNumber))">1</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons disabledBtn">Next</button>
+                        </div>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 2)
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="OpenOrderTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="OpenOrderTab(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="OpenOrderTab(2)">2</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationrightButtons @(ViewBag.PageNumber==2? "disabledBtn" : "")" onclick="OpenOrderTab(@(ViewBag.PageNumber!=2?ViewBag.PageNumber+1:""))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount == 3 || (ViewBag.PageNumber == 1 && ViewBag.PageCount == 3))
+                {
+                    <div class="paginationMiddleButtondv">
+                        <button class="PaginationButtons @(ViewBag.PageNumber==1?"disabledBtn":"")" onclick="OpenOrderTab(@(ViewBag.PageNumber!=1?ViewBag.PageNumber-1:""))">Previous</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==1?"activeBtn":"")" onclick="OpenOrderTab(1)">1</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==2?"activeBtn":"")" onclick="OpenOrderTab(2)">2</button>
+                    </div>
+                    <div class="NavigatonButtonsDiv">
+                        <button class="NavigationButton @(ViewBag.PageNumber==3?"activeBtn":"")" onclick="OpenOrderTab(3)">3</button>
+                    </div>
+                    <div class="paginationRightButtondv">
+                        <button class="PaginationrightButtons @(ViewBag.PageNumber==3?"disabledBtn":"")" onclick="OpenOrderTab(@(ViewBag.PageNumber!=3?ViewBag.PageNumber+1:""))">Next</button>
+                    </div>
+                }
+                else if (ViewBag.PageCount > 3)
+                {
+                    if (ViewBag.PageNumber == ViewBag.PageCount)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="OpenOrderTab(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="OpenOrderTab(@(ViewBag.PageNumber-2))">@(ViewBag.PageNumber - 2)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="OpenOrderTab(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="OpenOrderTab(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons disabledBtn" onclick="OpenOrderTab()">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 1)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="OpenOrderTab(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="OpenOrderTab(@(ViewBag.PageNumber+1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="OpenOrderTab(@(ViewBag.PageNumber + 2))">@(ViewBag.PageNumber + 2)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons" onclick="OpenOrderTab(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                    else if (ViewBag.PageNumber == 2)
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="OpenOrderTab(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="OpenOrderTab(@(ViewBag.PageNumber-1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="OpenOrderTab(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons" onclick="OpenOrderTab(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="paginationMiddleButtondv">
+                            <button class="PaginationButtons" onclick="OpenOrderTab(@(ViewBag.PageNumber-1))">Previous</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="OpenOrderTab(@(ViewBag.PageNumber - 1))">@(ViewBag.PageNumber - 1)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton activeBtn" onclick="OpenOrderTab(@(ViewBag.PageNumber))">@(ViewBag.PageNumber)</button>
+                        </div>
+                        <div class="NavigatonButtonsDiv">
+                            <button class="NavigationButton" onclick="OpenOrderTab(@(ViewBag.PageNumber + 1))">@(ViewBag.PageNumber + 1)</button>
+                        </div>
+                        <div class="paginationRightButtondv">
+                            <button class="PaginationrightButtons" onclick="OpenOrderTab(@(ViewBag.PageNumber+1))">Next</button>
+                        </div>
+                    }
+                }
+            </div>
+            @if (ViewBag.PageCount > 0)
+            {
+                <div class="paginationtextdv"><span>@string.Format("{0:0,0}", ViewBag.CurrentNumber) of @string.Format("{0:0,0}", ViewBag.OutOfNumber)</span></div>
+            }
+        </div>
+    </div>
+</div>

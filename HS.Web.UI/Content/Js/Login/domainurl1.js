@@ -1,0 +1,1 @@
+﻿var domainurl = '';var test='';
