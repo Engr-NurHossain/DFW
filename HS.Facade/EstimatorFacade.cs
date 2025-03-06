@@ -349,7 +349,7 @@ namespace HS.Facade
         }
         public List<EstimatorService> GetEstimatorServicesByEstimatorId(string estimatorId)
         {
-            return _EstimatorServiceDataAccess.GetByQuery(string.Format(" EstimatorId='{0}'",estimatorId));
+            return _EstimatorServiceDataAccess.GetByQuery(string.Format(" EstimatorId='{0}' and IsOneTimeService = 0", estimatorId));
         }
         public List<EstimatorService> GetEstimatorOneTimeServicesByEstimatorId(string estimatorId)
         {

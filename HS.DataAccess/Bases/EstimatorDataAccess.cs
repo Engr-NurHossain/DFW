@@ -80,6 +80,8 @@ namespace HS.DataAccess
 			AddParameter(cmd, pNVarChar(EstimatorBase.Property_EstimatorSignature, 250, estimatorObject.EstimatorSignature));
 			AddParameter(cmd, pNVarChar(EstimatorBase.Property_ParentEstimatorRef, 100, estimatorObject.ParentEstimatorRef));
 			AddParameter(cmd, pBool(EstimatorBase.Property_IsApproved, estimatorObject.IsApproved));
+			AddParameter(cmd, pDouble(EstimatorBase.Property_OneTimeServiceTaxAmount, estimatorObject.OneTimeServiceTaxAmount));
+			AddParameter(cmd, pDouble(EstimatorBase.Property_OneTimeServiceTotalAmount, estimatorObject.OneTimeServiceTotalAmount));
 		}
 		#endregion
 		
@@ -325,7 +327,9 @@ namespace HS.DataAccess
 				if(!reader.IsDBNull(40)) estimatorObject.EstimatorSignature = reader.GetString( start + 40 );			
 				if(!reader.IsDBNull(41)) estimatorObject.ParentEstimatorRef = reader.GetString( start + 41 );			
 				estimatorObject.IsApproved = reader.GetBoolean( start + 42 );			
-			FillBaseObject(estimatorObject, reader, (start + 43));
+				if(!reader.IsDBNull(43)) estimatorObject.OneTimeServiceTaxAmount = reader.GetDouble( start + 43 );			
+				if(!reader.IsDBNull(44)) estimatorObject.OneTimeServiceTotalAmount = reader.GetDouble( start + 44 );			
+			FillBaseObject(estimatorObject, reader, (start + 45));
 
 			
 			estimatorObject.RowState = BaseBusinessEntity.RowStateEnum.NormalRow;	

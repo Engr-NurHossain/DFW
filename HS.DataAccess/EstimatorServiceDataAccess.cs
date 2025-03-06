@@ -18,7 +18,7 @@ namespace HS.DataAccess
         public EstimatorServiceDataAccess(string ConStr) : base(ConStr) { }
         public bool DeleteEstimatorServiceByEstimatorId(string estimatorId)
 		{
-            string SqlQuery = @"delete from EstimatorService where EstimatorId ='{0}' ";
+            string SqlQuery = @"delete from EstimatorService where EstimatorId ='{0}' and IsOneTimeService = 0 OR  IsOneTimeService is null";
             SqlQuery = string.Format(SqlQuery, estimatorId);
             try
             {

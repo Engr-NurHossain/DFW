@@ -17,6 +17,12 @@ var TotalTaxablePriceService = 0;
 var ServiceTaxAmount = 0;
 var TotalServicePriceWithTax = 0;
 
+var TotalOneTimeServicePrice = 0;
+var TotalTaxablePriceOneTimeService = 0;
+var OneTimeServiceTaxAmount = 0;
+var TotalOneTimeServicePriceWithTax = 0;
+
+
 var CompletionDateDatepicker;
 var StartDateDatepicker;
 var ManufactParentDom;
@@ -323,7 +329,9 @@ var CreatePO = function(PO){
 }
 
 var EstimatorEqSuggestionclickbind = function (item) {
+    console.log("Product item");
     $('.CustomerEstimateTab .tt-suggestion').click(function () { 
+        console.log("after click");
         if (EditCost == "False") {
             $(".txtUnitCost").prop("disabled", true);
             $(".txtTotalCost").prop("disabled", true);
@@ -937,8 +945,7 @@ var SearchKeyUpService = function (item, event, Service) {
                 var ttdom = $($(item).parent()).find('.tt-menu');
                 var ttdomComplete = $($(item).parent()).find('.tt-dataset-autocomplete');
                 $(ttdomComplete).html(searchresultstring);
-                $(ttdom).show();
-                console.log("click serv", Service);
+                $(ttdom).show(); 
                 if (Service == 'OneTimeService') {
                     OneTimeServiceEqSuggestionclickbind(item);
                 } else {
@@ -1034,6 +1041,13 @@ var calculateServiceAmount = function () {
     TotalTaxablePriceService = 0;
     TotalServicePriceWithTax = 0;
     ServicePlanAmount = 0;
+
+    var OneTimeServiceTaxPercentage = 0;
+    TotalOneTimeServicePrice = 0;
+    TotalTaxablePriceOneTimeService = 0;
+    TotalOneTimeServicePriceWithTax = 0;
+    OneTimeServicePlanAmount = 0;
+
     //ServiceTaxPercentage = parseFloat($("#ServicetaxType").val());
 
     $("#CustomerServiceTable .HasItem").each(function () {
@@ -1050,35 +1064,52 @@ var calculateServiceAmount = function () {
     });
     $("#CustomerOneTimeServiceTable .HasItem").each(function () {
         var Price = parseFloat($(this).find(".txtProductAmount").val());
-        TotalServicePrice += Price;
+        TotalOneTimeServicePrice += Price;
         if (TaxExemption.toLowerCase() == "no") {
             IsTaxableItem = true;
         }
 
         if (IsTaxableItem) {
-            TotalTaxablePriceService += Price;
-
+            TotalTaxablePriceOneTimeService += Price; 
         }
     });
+    /*console.log("ShowOneTimeServicePlan", ShowOneTimeServicePlan);*/
+    //if (ShowOneTimeServicePlan) {
+        
+    //    OneTimeServicePlanAmount = TotalPrice * OneTimeServicePlanRate;
+    //    TotalTaxablePriceOneTimeService += OneTimeServicePlanAmount;
+    //    $(".OneTimeServicePlan").text(Currency + OneTimeServicePlanAmount.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+    //    $(".OneTimeServicePlanSubtotal").text(Currency + (OneTimeServicePlanAmount + TotalOneTimeServicePrice).toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+    //}
+    
     if (ShowServicePlan) { 
         ServicePlanAmount = TotalPrice * ServicePlanRate;
         TotalTaxablePriceService += ServicePlanAmount;
         $(".ServicePlan").text(Currency + ServicePlanAmount.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
         $(".ServicePlanSubtotal").text(Currency + (ServicePlanAmount + TotalServicePrice ).toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
     }
+    if (!isNaN(parseFloat($("#OneTimeServicetaxType").val()))) {
+        ServiceTaxPercentage = parseFloat($("#OneTimeServicetaxType").val());
+        ServiceTaxAmount = TotalTaxablePriceService * ServiceTaxPercentage / 100;
+        TotalOneTimeServicePriceWithTax = OneTimeServiceTaxAmount + TotalOneTimeServicePrice + OneTimeServicePlanAmount;
+    }
+
+    $(".OneTimeServiceSubTotalWithoutTax").text(Currency + TotalOneTimeServicePrice.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+    $(".OneTimeServicetax_amount").text(Currency + OneTimeServiceTaxAmount.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+    $(".OneTimeServicebalanceDueAmount").text(Currency + TotalOneTimeServicePriceWithTax.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
 
     if (!isNaN(parseFloat($("#ServicetaxType").val()))) {
         ServiceTaxPercentage = parseFloat($("#ServicetaxType").val());
         ServiceTaxAmount = TotalTaxablePriceService * ServiceTaxPercentage / 100;
         TotalServicePriceWithTax = ServiceTaxAmount + TotalServicePrice + ServicePlanAmount;
     }
-
+     
     $(".ServiceSubTotalWithoutTax").text(Currency + TotalServicePrice.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
     $(".Servicetax_amount").text(Currency + ServiceTaxAmount.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
     $(".ServicebalanceDueAmount").text(Currency + TotalServicePriceWithTax.toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
 
 
-    $(".amount-big").text(Currency + (TotalPriceWithTax + TotalServicePriceWithTax ).toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
+    $(".amount-big").text(Currency + (TotalPriceWithTax + TotalServicePriceWithTax + TotalOneTimeServicePriceWithTax ).toFixed(2).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
 }
 
 var CalculateNewAmount = function () {
@@ -1101,12 +1132,9 @@ var CalculateNewAmount = function () {
         {
             IsLaborItem = false;
         }
-
-        //var QTY = parseInt($(this).find(".txtQunatity").val());
+         
         var QTY = $(this).find(".txtQunatity").val();
-        var UnitCost = parseFloat($(this).find(".txtUnitCost").val());
-        //var OverHeadRate = parseFloat($(this).attr('data-overheadrate'));
-        //var ProfitRate = parseFloat($(this).attr('data-profitrate'));
+        var UnitCost = parseFloat($(this).find(".txtUnitCost").val()); 
         var OverHead = parseFloat($(this).find(".txtOverhead").val());
         var Profit = parseFloat($(this).find(".txtProfit").val());;
         var Price = parseFloat($(this).find(".txtTotalPrice").val());
@@ -1114,17 +1142,7 @@ var CalculateNewAmount = function () {
 
         $(this).find('.txtTotalCost').val((QTY * UnitCost).toFixed(3));
         $(this).find('.spnTotalCost').text(Currency + (QTY * UnitCost).toFixed(3).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,"));
-
-
-        //TotalOverHead += UnitCost * QTY * OverHeadRate / 100; //Calculative value // We will not calculate this here
-        //TotalProfit += UnitCost * QTY * ProfitRate / 100; //Calculative value // We will not calculate this here
-
-        /**
-         * 10-29-2020 new update
-         Labor Overhead = OverHead;
-         Labor Profit + Material Overhead + Material Profit = Profit;
-         */
-
+         
 
         if (!IsLaborItem) {
             TotalOverHead += 0;
@@ -1173,6 +1191,7 @@ var CalculateNewAmount = function () {
 
     InitRowIndex();
     InitRowIndexService();
+    InitRowIndexOneTimeService();
 }
 var InitRowIndex = function () {
     var i = 1;
@@ -1213,9 +1232,9 @@ var ExpirationDateValidation = function () {
     }
     return result;
 }
-var CheckValue = [];
-
+var CheckValue = []; 
 var CheckValue = {
+    
     Id: $("#EstimatorFilteId").val(),
     GroupedbyNone: $("#GroupedbyNoneVal").prop('checked') == true ? true : false,
     GroupedbyCategory: $("#GroupedbyCategoryVal").prop('checked') == true ? true : false,
@@ -1397,6 +1416,8 @@ var SaveEstimate = function (CreatePO,PrintEstimator,EstimatorContract) {
             "Estimator.ServicePlanAmount": ServicePlanAmount,
             "Estimator.ServiceTaxAmount": ServiceTaxAmount,
             "Estimator.ServiceTotalAmount": TotalServicePrice,
+            "Estimator.OneTimeServiceTaxAmount": OneTimeServiceTaxAmount,
+            "Estimator.OneTimeServiceTotalAmount": TotalOneTimeServicePrice,
             "Estimator.ActivationFee": $("#Estimator_ActivationFee").val(),
             estimatorDetails: DetailList,
             estimatorServices: ServiceList,
@@ -1725,7 +1746,7 @@ $(document).ready(function () {
         $(".POCreated_Header").removeClass("hidden");
     });
 
-    $("#Estimator_ServicePlanType").change(function () {
+    $("#Estimator_ServicePlanType").change(function () { 
         ServicePlanRate = parseFloat($("#Estimator_ServicePlanType").val());
         CalculateNewAmount();
     });
@@ -1760,6 +1781,7 @@ $(document).ready(function () {
     }); 
     InitRowIndex();
     InitRowIndexService();
+    InitRowIndexOneTimeService();
     $(".LoadParentAddress").click(function () {
         var editor = tinymce.get('Estimator_BillingAddress');
         editor.setContent($("#Estimator_ParentBillingAddress").val());
@@ -2700,7 +2722,16 @@ $(document).ready(function () {
         }
 
     }); 
+    $("#OneTimeServicetaxType").change(function () {
+        if ($("#OneTimeServicetaxType").val() == "") {
+            $(".OneTimeServicetax_amount").text(Currency + "0.00");
+            CalculateNewAmount();
+        }
+        else {
+            CalculateNewAmount();
+        }
 
+    }); 
     
     /*$("select.dropdown-search").select2();*/
 
@@ -2752,7 +2783,7 @@ $(document).ready(function () {
             $($(e.target).parent()).addClass("focusedItem");
             $(e.target).find('input').focus();
         }
-        InitRowIndexService();
+        InitRowIndexOneTimeService();
     });
     $("#CustomerServiceTable tbody").on('click', 'tr:last', function (e) { 
         $("#CustomerServiceTable tbody tr:last").after(NewServiceRow);

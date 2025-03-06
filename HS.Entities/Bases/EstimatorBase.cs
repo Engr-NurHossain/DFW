@@ -56,7 +56,9 @@ namespace HS.Entities.Bases
 			ActivationFee = 39,
 			EstimatorSignature = 40,
 			ParentEstimatorRef = 41,
-			IsApproved = 42
+			IsApproved = 42,
+			OneTimeServiceTaxAmount = 43,
+			OneTimeServiceTotalAmount = 44
 		}
 		#endregion
 	
@@ -104,6 +106,8 @@ namespace HS.Entities.Bases
 		public const string Property_EstimatorSignature = "EstimatorSignature";		            
 		public const string Property_ParentEstimatorRef = "ParentEstimatorRef";		            
 		public const string Property_IsApproved = "IsApproved";		            
+		public const string Property_OneTimeServiceTaxAmount = "OneTimeServiceTaxAmount";		            
+		public const string Property_OneTimeServiceTotalAmount = "OneTimeServiceTotalAmount";		            
 		#endregion
 		
 		#region Private Data Types
@@ -150,6 +154,8 @@ namespace HS.Entities.Bases
 		private String _EstimatorSignature;	            
 		private String _ParentEstimatorRef;	            
 		private Boolean _IsApproved;	            
+		private Nullable<Double> _OneTimeServiceTaxAmount;	            
+		private Nullable<Double> _OneTimeServiceTotalAmount;	            
 		#endregion
 		
 		#region Properties		
@@ -798,6 +804,36 @@ namespace HS.Entities.Bases
 			}
         }
 
+		[DataMember]
+		public Nullable<Double> OneTimeServiceTaxAmount
+		{	
+			get{ return _OneTimeServiceTaxAmount; }			
+			set
+			{
+				PropertyChangingEventArgs args = new PropertyChangingEventArgs(Property_OneTimeServiceTaxAmount, value, _OneTimeServiceTaxAmount);
+				if (PropertyChanging(args))
+				{
+					_OneTimeServiceTaxAmount = value;
+					PropertyChanged(args);					
+				}	
+			}
+        }
+
+		[DataMember]
+		public Nullable<Double> OneTimeServiceTotalAmount
+		{	
+			get{ return _OneTimeServiceTotalAmount; }			
+			set
+			{
+				PropertyChangingEventArgs args = new PropertyChangingEventArgs(Property_OneTimeServiceTotalAmount, value, _OneTimeServiceTotalAmount);
+				if (PropertyChanging(args))
+				{
+					_OneTimeServiceTotalAmount = value;
+					PropertyChanged(args);					
+				}	
+			}
+        }
+
 		#endregion
 		
 		#region Cloning Base Objects
@@ -848,6 +884,8 @@ namespace HS.Entities.Bases
 			newObj.EstimatorSignature = this.EstimatorSignature;						
 			newObj.ParentEstimatorRef = this.ParentEstimatorRef;						
 			newObj.IsApproved = this.IsApproved;						
+			newObj.OneTimeServiceTaxAmount = this.OneTimeServiceTaxAmount;						
+			newObj.OneTimeServiceTotalAmount = this.OneTimeServiceTotalAmount;						
 			
 			return newObj;
 		}
@@ -900,6 +938,8 @@ namespace HS.Entities.Bases
 			info.AddValue(EstimatorBase.Property_EstimatorSignature, EstimatorSignature);				
 			info.AddValue(EstimatorBase.Property_ParentEstimatorRef, ParentEstimatorRef);				
 			info.AddValue(EstimatorBase.Property_IsApproved, IsApproved);				
+			info.AddValue(EstimatorBase.Property_OneTimeServiceTaxAmount, OneTimeServiceTaxAmount);				
+			info.AddValue(EstimatorBase.Property_OneTimeServiceTotalAmount, OneTimeServiceTotalAmount);				
 		}
 		#endregion
 

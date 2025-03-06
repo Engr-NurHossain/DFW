@@ -900,15 +900,7 @@ namespace HS.Web.UI.Controllers
               {
                   Text = x.CompanyName.ToString(),
                   Value = x.SupplierId.ToString()
-              }).ToList();
-
-            //List<Manufacturer> Manufacturer = _Util.Facade.ManufacturerFacade.GetAllManufacturers().OrderBy(x => x.Name).ToList();
-            //ViewBag.ManufacturerList = Manufacturer.Select(x =>
-            //  new SelectListItem()
-            //  {
-            //      Text = x.Name.ToString(),
-            //      Value = x.ManufacturerId.ToString()
-            //  }).ToList();
+              }).ToList(); 
             ViewBag.ManufacturerList = new List<SelectListItem>();
             ViewBag.EstimatorContractTerm = _Util.Facade.LookupFacade.GetLookupByKey("EstimatorContractTerm").Select(x =>
              new SelectListItem()
@@ -1092,10 +1084,12 @@ namespace HS.Web.UI.Controllers
             tempEstimator.ServiceTaxAmount = Model.Estimator.ServiceTaxAmount;
             tempEstimator.ServiceTotalAmount = Model.Estimator.ServiceTotalAmount;
             tempEstimator.ActivationFee = Model.Estimator.ActivationFee;
+            tempEstimator.OneTimeServiceTaxAmount = Model.Estimator.OneTimeServiceTaxAmount;
+            tempEstimator.OneTimeServiceTotalAmount = Model.Estimator.OneTimeServiceTotalAmount;
             //tempEstimator.ShowServicePlan = Plan;
             
             Model.Estimator.CustomerId = tempEstimator.CustomerId;
-            if(Model.Estimator.Status == LabelHelper.EstimateStatus.Accepted) // dite hobe
+            if(Model.Estimator.Status == LabelHelper.EstimateStatus.Accepted)  
             {
                 tempEstimator.Status = LabelHelper.EstimateStatus.Accepted;
                 tempEstimator.IsApproved = true;
@@ -1153,7 +1147,7 @@ namespace HS.Web.UI.Controllers
             #endregion
             #region Update Estimator Services
             _Util.Facade.EstimatorFacade.DeleteEstimatorOneTimeServiceByEstimatorId(Model.Estimator.EstimatorId);
-            if (Model.estimatorServices != null)
+            if (Model.estimatorOneTimeServices != null)
             {
                 foreach (var item in Model.estimatorOneTimeServices)
                 {
@@ -1405,6 +1399,7 @@ namespace HS.Web.UI.Controllers
                     temestfil.WithoutIndividualLaborPricing = Model._EstimatorPDFFilter.WithoutIndividualLaborPricing;
                     temestfil.WithoutIndividualMaterialPricing = Model._EstimatorPDFFilter.WithoutIndividualMaterialPricing;
                     temestfil.WithoutPricing = Model._EstimatorPDFFilter.WithoutPricing;
+                    temestfil.OneTimeService = Model._EstimatorPDFFilter.OneTimeService;
                     temestfil.IncludeVariation = Model._EstimatorPDFFilter.IncludeVariation;
                     _Util.Facade.EstimatorFacade.UpdateEstimatorPDFFilter(temestfil);
                 }
@@ -1485,11 +1480,12 @@ namespace HS.Web.UI.Controllers
                 //Model.estimatorDetails = _Util.Facade.EstimatorFacade.GetEstimatorDetailListByEstimatorId(Model.Estimator.EstimatorId);
                 Model.estimatorDetails = _Util.Facade.EstimatorFacade.NewGetEstimatorDetailListByEstimatorId(Model.Estimator.EstimatorId);
                 Model.estimatorServices = _Util.Facade.EstimatorFacade.GetEstimatorServicesByEstimatorId(Model.Estimator.EstimatorId);
+                Model.estimatorOneTimeServices = _Util.Facade.EstimatorFacade.GetEstimatorOneTimeServicesByEstimatorId(Model.Estimator.EstimatorId);
                 if (Model.Estimator == null || Model.Estimator.CompanyId != CurrentUser.CompanyId.Value)
                 {
                     return null;
                 }
-                if ((Model.estimatorDetails == null || Model.estimatorDetails.Count() == 0) && (Model.estimatorServices == null || Model.estimatorServices.Count() == 0))
+                if ((Model.estimatorDetails == null || Model.estimatorDetails.Count() == 0) && (Model.estimatorServices == null || Model.estimatorServices.Count() == 0) && (Model.estimatorOneTimeServices == null || Model.estimatorOneTimeServices.Count() == 0))
                 {
                     return null;
                 }
@@ -1499,7 +1495,7 @@ namespace HS.Web.UI.Controllers
                     return null;
                 }
 
-                CreateEstimator processedModel = GetEstimatorModelById(Model.Estimator, Model.estimatorDetails, Model.estimatorServices, tempCom, tempCUstomer, Model._EstimatorPDFFilter);
+                CreateEstimator processedModel = GetEstimatorModelById(Model.Estimator, Model.estimatorDetails, Model.estimatorServices, tempCom, tempCUstomer, Model._EstimatorPDFFilter, Model.estimatorOneTimeServices);
                 CreateEstimator = processedModel;
 
                 pdfname = EstimatorId.GenerateEstimateNo();
@@ -1507,7 +1503,7 @@ namespace HS.Web.UI.Controllers
             }
             else if (Model != null)
             {
-                if ((Model.estimatorDetails == null || Model.estimatorDetails.Count() == 0) && (Model.estimatorServices == null || Model.estimatorServices.Count() == 0))
+                if ((Model.estimatorDetails == null || Model.estimatorDetails.Count() == 0) && (Model.estimatorServices == null || Model.estimatorServices.Count() == 0) && (Model.estimatorOneTimeServices == null || Model.estimatorOneTimeServices.Count() == 0))
                 {
                     return null;
                 }
@@ -1516,11 +1512,7 @@ namespace HS.Web.UI.Controllers
                 { 
                     return null;
                 } 
-                CreateEstimator processedModel = GetEstimatorModelById(Model.Estimator, Model.estimatorDetails, Model.estimatorServices, tempCom, tempCUstomer, Model._EstimatorPDFFilter);
-
-
-                 
-
+                CreateEstimator processedModel = GetEstimatorModelById(Model.Estimator, Model.estimatorDetails, Model.estimatorServices, tempCom, tempCUstomer, Model._EstimatorPDFFilter, Model.estimatorOneTimeServices);
                 Estimator estimator = _Util.Facade.EstimatorFacade.GetEstimatorByEstimatorId(Model.Estimator.EstimatorId);
                 var estimatorFiledata = _Util.Facade.EstimatorFacade.GetByEstimatorFileByEstimatorId(Model.Estimator.EstimatorId);
                 if (estimator != null)
@@ -1533,7 +1525,9 @@ namespace HS.Web.UI.Controllers
                     processedModel.Estimator.ServicePlanRate = estimator.ServicePlanRate;
                     processedModel.Estimator.ServicePlanAmount = estimator.ServicePlanAmount;
                     processedModel.Estimator.ServiceTaxAmount = estimator.ServiceTaxAmount;
+                    processedModel.Estimator.OneTimeServiceTaxAmount = estimator.OneTimeServiceTaxAmount;
                     processedModel.Estimator.ServiceTotalAmount = estimator.ServiceTotalAmount;
+                    processedModel.Estimator.OneTimeServiceTotalAmount = estimator.OneTimeServiceTotalAmount; 
                     processedModel.Estimator.ShowServicePlan = estimator.ShowServicePlan;
                     processedModel.Estimator.ShowService = estimator.ShowService;
                     processedModel.Estimator.ServicePlanTypeName = "Service Plan";
@@ -1773,6 +1767,7 @@ namespace HS.Web.UI.Controllers
                     temestfil.WithoutIndividualLaborPricing = Model._EstimatorPDFFilter.WithoutIndividualLaborPricing;
                     temestfil.WithoutIndividualMaterialPricing = Model._EstimatorPDFFilter.WithoutIndividualMaterialPricing;
                     temestfil.WithoutPricing = Model._EstimatorPDFFilter.WithoutPricing;
+                    temestfil.IncludeService = Model._EstimatorPDFFilter.IncludeService;
                     temestfil.IncludeVariation = Model._EstimatorPDFFilter.IncludeVariation;
                     _Util.Facade.EstimatorFacade.UpdateEstimatorPDFFilter(temestfil);
                 }
@@ -1892,13 +1887,14 @@ namespace HS.Web.UI.Controllers
             }
         }
 
-        private CreateEstimator GetEstimatorModelById(Estimator Invoice, List<EstimatorDetail> InvoiceDetialList, List<EstimatorService> EstimatorServiceList, Company tempCom, Customer tempCUstomer, EstimatorPDFFilter EstimatorPDFFilters)
+        private CreateEstimator GetEstimatorModelById(Estimator Invoice, List<EstimatorDetail> InvoiceDetialList, List<EstimatorService> EstimatorServiceList, Company tempCom, Customer tempCUstomer, EstimatorPDFFilter EstimatorPDFFilters, List<EstimatorService> EstimatorOneTimeServiceList)
         {
             var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
             CreateEstimator Model = new CreateEstimator();
             Model.Estimator = Invoice;
             Model.estimatorDetails = InvoiceDetialList;
             Model.estimatorServices = EstimatorServiceList;
+            Model.estimatorOneTimeServices = EstimatorOneTimeServiceList;
             Model.Estimator.CustomerName = tempCUstomer.Title + " " + tempCUstomer.FirstName + " " + tempCUstomer.LastName;
 
             //  Model.Invoice.IsEstimate = false;
