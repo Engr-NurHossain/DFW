@@ -1086,6 +1086,7 @@ namespace HS.Web.UI.Controllers
             tempEstimator.ActivationFee = Model.Estimator.ActivationFee;
             tempEstimator.OneTimeServiceTaxAmount = Model.Estimator.OneTimeServiceTaxAmount;
             tempEstimator.OneTimeServiceTotalAmount = Model.Estimator.OneTimeServiceTotalAmount;
+            tempEstimator.DefaultMaterialMarkupRate = Model.Estimator.DefaultMaterialMarkupRate;
             //tempEstimator.ShowServicePlan = Plan;
             
             Model.Estimator.CustomerId = tempEstimator.CustomerId;

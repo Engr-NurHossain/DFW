@@ -1,5 +1,5 @@
 ﻿var TotalProfit = 0;
-var TotalOverHead = 0;
+var TotalOverHead = 0;   
 var TotalCost = 0;
 var TotalPrice = 0;
 var TotalTaxablePrice = 0;
@@ -924,7 +924,7 @@ var SearchKeyUpService = function (item, event, Service) {
                 for (var i = 0; i < resultparse.length; i++) {
                     searchresultstring = searchresultstring + String.format(ServiceTemplate,
                         /*0*/resultparse[i].EquipmentId,
-                        /*1*/ resultparse[i].EquipmentName.replaceAll('"', '\'\''),
+                        /*1*/ resultparse[i].EquipmentName.replaceAll('"', '\'\''), 
                         /*2*/ resultparse[i].RetailPrice,
                         /*3*/resultparse[i].Reorderpoint,
                         /*4*/ resultparse[i].QuantityAvailable,
@@ -1708,11 +1708,17 @@ $(document).ready(function () {
         firstDay: 1
     });
     InitializeSuburbDropdownChild($('#Estimator_CustomerId'));
-
+    if ($("#Terms").val() == '-1') {
+        console.log("Test Default selected", $(this).val());
+        $("#Estimator_CompletionDate").val('');
+    }
     var ToDate = $("#Estimator_StartDate").val()
-    $("#Terms").change(function () {
-        console.log("Test 01",$(this).val());
-        if ($("#Terms").val() != 0 && $("#Terms").val() != "") {
+    $("#Terms").change(function () { 
+        if ($(this).val() == '-1') {
+            console.log("Test Default 01", $(this).val());
+            $("#Estimator_CompletionDate").val('');
+        }
+        else if ($("#Terms").val() != 0 && $("#Terms").val() != "") {
             var NewStartDate = new Date(ToDate);
             if (NewStartDate == "Invalid Date") {
                 NewStartDate = new Date();
