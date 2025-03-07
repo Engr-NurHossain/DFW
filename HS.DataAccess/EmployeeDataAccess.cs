@@ -4821,7 +4821,7 @@ select *,IDENTITY(INT, 1, 1) AS paginationid into #TicketDataFilter from #Ticket
             if (!string.IsNullOrWhiteSpace(filter.viewtype)
               && filter.viewtype == "excel")
             {
-                excelquery = string.Format(" select Id as [Ticket Id], cusid as [Customer Id], CusNameOnly as [Customer Name], CustomerStatusVal as [Customer Status],CusBusinessName as [Business Name], LeadSource as [Lead Source], TicketTypeVal as [Ticket Type], CusSalesLoc as [Sales Location]" +
+                excelquery = string.Format(" select Id as [Ticket Id], cusid as [Customer Id],CustomerNo [CSID], CusNameOnly as [Customer Name], CustomerStatusVal as [Customer Status],CusBusinessName as [Business Name], LeadSource as [Lead Source], TicketTypeVal as [Ticket Type], CusSalesLoc as [Sales Location]" +
                     ",CusSalesPerson as [Sales Person], ResignByVal as [Resigned By] ,AssignedTo as [Installer] , cast(RMRAmount as decimal(12, 2)) as RMR ,StatusVal as [Ticket Status] , convert(date,CompletionDate) as [Appointment Date] , convert(date, SalesDate) as [Sales Date]" +
                     ", convert(date, InstallDate) as [Install Date] , convert(date, CreatedDate) as [Created Date]  from #TicketData   order by Id desc ");
 
@@ -4859,6 +4859,7 @@ select *,IDENTITY(INT, 1, 1) AS paginationid into #TicketDataFilter from #Ticket
                                 ticket.CompanyId, 
                                 ticket.CompletionDate, 
 								cus.Id as cusid,
+                                cus.CustomerNo,
                                 tuser.UserId as UserId,
                                 cusext.ResignedBy,
                                 ticket.CreatedDate into #TicketIdData from Ticket ticket

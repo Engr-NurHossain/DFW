@@ -1274,6 +1274,7 @@ namespace HS.Facade
                                  Id = dr["Id"] != DBNull.Value ? Convert.ToInt32(dr["Id"]) : 0,
                                  CompanyId = (Guid)dr["CompanyId"],
                                  CustomerName = dr["CustomerName"].ToString(),
+                                 CustomerNo = dr["CustomerNo"].ToString(),
                                  SalesDate = dr["SalesDate"] != DBNull.Value ? Convert.ToDateTime(dr["SalesDate"]) : new DateTime(),
                                  CreatedDate = dr["CreatedDate"] != DBNull.Value ? Convert.ToDateTime(dr["CreatedDate"]) : new DateTime(),
                                  InstallDate = dr["InstallDate"] != DBNull.Value ? Convert.ToDateTime(dr["InstallDate"]) : new DateTime(),
