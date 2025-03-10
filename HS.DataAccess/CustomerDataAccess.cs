@@ -15032,60 +15032,60 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 {18} as DisplayName,
                                 cus.CustomerId,
                                 RBS.ScheduleId,RBSI.ProductName,RBSI.Amount as RMRAmount,RBSI.CycleStartDate as RMRCycleStartDate,
-                                CASE 
-                                WHEN CHARINDEX('<br />', RBS.BillingAddress) > 0 
-                                AND CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1) > 0 
-                                THEN SUBSTRING(
-                                RBS.BillingAddress,
-                                CHARINDEX('<br />', RBS.BillingAddress) + 6,
-                                NULLIF(
-                                CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1) 
-                                - CHARINDEX('<br />', RBS.BillingAddress) - 6,
-                                0
-                                )
-                                )
-                                ELSE NULL
-                                END AS BillAdd1,
+                                    CASE 
+                                    WHEN CHARINDEX('<br />', RBS.BillingAddress) > 0 
+                                    AND CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1) > 0 
+                                    THEN SUBSTRING(
+                                    RBS.BillingAddress,
+                                    CHARINDEX('<br />', RBS.BillingAddress) + 6,
+                                    NULLIF(
+                                    CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1) 
+                                    - CHARINDEX('<br />', RBS.BillingAddress) - 6,
+                                    0
+                                    )
+                                    )
+                                    ELSE NULL
+                                    END AS BillAdd1,
 
-                                CASE 
-                                WHEN CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1) > 0
-                                AND CHARINDEX(',', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1)) > 0
-                                THEN LTRIM(SUBSTRING(
-                                RBS.BillingAddress,
-                                CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1) + 6,
-                                NULLIF(
-                                CHARINDEX(',', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1)) 
-                                - CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1) - 6,
-                                0
-                                )
-                                ))
-                                ELSE NULL
-                                END AS BillCity,
+                                    CASE 
+                                    WHEN CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1) > 0
+                                    AND CHARINDEX(',', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1)) > 0
+                                    THEN LTRIM(SUBSTRING(
+                                    RBS.BillingAddress,
+                                    CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1) + 6,
+                                    NULLIF(
+                                    CHARINDEX(',', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1)) 
+                                    - CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX('<br />', RBS.BillingAddress) + 1) - 6,
+                                    0
+                                    )
+                                    ))
+                                    ELSE NULL
+                                    END AS BillCity,
 
-                                CASE 
-                                WHEN CHARINDEX(',', RBS.BillingAddress) > 0
-                                THEN LTRIM(SUBSTRING(
-                                RBS.BillingAddress,
-                                CHARINDEX(',', RBS.BillingAddress) + 2,
-                                2
-                                ))
-                                ELSE NULL
-                                END AS BillState,
+                                    CASE 
+                                    WHEN CHARINDEX(',', RBS.BillingAddress) > 0
+                                    THEN LTRIM(SUBSTRING(
+                                    RBS.BillingAddress,
+                                    CHARINDEX(',', RBS.BillingAddress) + 2,
+                                    2
+                                    ))
+                                    ELSE NULL
+                                    END AS BillState,
 
-                                CASE 
-                                WHEN CHARINDEX(',', RBS.BillingAddress) > 0
-                                AND CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX(',', RBS.BillingAddress)) > CHARINDEX(',', RBS.BillingAddress) + 5
-                                THEN LTRIM(SUBSTRING(
-                                RBS.BillingAddress,
-                                CHARINDEX(',', RBS.BillingAddress) + 5,
-                                NULLIF(
-                                CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX(',', RBS.BillingAddress)) 
-                                - (CHARINDEX(',', RBS.BillingAddress) + 5),
-                                0
-                                )
-                                ))
-                                ELSE NULL
-                                END AS BillZip,
+                                    CASE 
+                                    WHEN CHARINDEX(',', RBS.BillingAddress) > 0
+                                    AND CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX(',', RBS.BillingAddress)) > CHARINDEX(',', RBS.BillingAddress) + 5
+                                    THEN LTRIM(SUBSTRING(
+                                    RBS.BillingAddress,
+                                    CHARINDEX(',', RBS.BillingAddress) + 5,
+                                    NULLIF(
+                                    CHARINDEX('<br />', RBS.BillingAddress, CHARINDEX(',', RBS.BillingAddress)) 
+                                    - (CHARINDEX(',', RBS.BillingAddress) + 5),
+                                    0
+                                    )
+                                    ))
+                                    ELSE NULL
+                                    END AS BillZip,
                                 pinfo.CardExpireDate,
                                 pinfo.RoutingNo,
                                 CASE 
