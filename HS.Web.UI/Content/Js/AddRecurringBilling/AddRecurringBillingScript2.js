@@ -716,35 +716,52 @@ $(".BillingSaveButton").click(function () {
         }
         formatdate = formatdate.getFullYear() + "-" + monthValue + "-" + dayVal;
         $("#PaymentCollectionDate").val(formatdate);
-    }
-    else {
-        OpenErrorMessageNew("Error!", "Please set a start  date to proceed.", function () { });
+    } else {
+        OpenErrorMessageNew("Error!", "Please set a start date to proceed.", function () { });
         return;
     }
-    var allDatesValid = true;
+
+    var cycleDateInvalid = false;
+    var effectiveDateInvalid = false;
 
     $(".CycleStartDate").each(function () {
-        var effectiveDateValue = $(this).val();
+        var cycleDateValue = $(this).val().trim();
         var productNameValue = $(this).closest("tr").find(".txtProductName").val().trim();
 
-       
         if (productNameValue.length > 0) {
-            if (!effectiveDateValue) {
-                allDatesValid = false;
+            var parsedCycleDate = new Date(cycleDateValue);
+            if (!cycleDateValue || isNaN(parsedCycleDate.getTime())) {
+                cycleDateInvalid = true;
                 return false;
             }
-            
-            if (isNaN(Date.parse(effectiveDateValue))) {
-                allDatesValid = false;
-                return false;
-            }
+            $(this).val($(this).val().trim()); 
         }
     });
 
-    if (!allDatesValid) {
+    $(".EffectiveDate").each(function () {
+        var effectiveDateValue = $(this).val().trim();
+        var productNameValue = $(this).closest("tr").find(".txtProductName").val().trim();
+
+        if (productNameValue.length > 0) {
+            var parsedEffectiveDate = new Date(effectiveDateValue);
+            if (!effectiveDateValue || isNaN(parsedEffectiveDate.getTime())) {
+                effectiveDateInvalid = true;
+                return false;
+            }
+            $(this).val($(this).val().trim());
+        }
+    });
+
+    if (cycleDateInvalid) {
         OpenErrorMessageNew("Error!", "Please set a valid cycle date for rows with product names to proceed.", function () { });
         return;
     }
+
+    if (effectiveDateInvalid) {
+        OpenErrorMessageNew("Error!", "Please set a valid effective date for rows with product names to proceed.", function () { });
+        return;
+    }
+
     SaveRecurringBilling();
 });
 

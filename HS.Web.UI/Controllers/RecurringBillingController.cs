@@ -1,5 +1,6 @@
 ﻿using ClosedXML.Excel;
 using HS.Entities;
+using HS.Entities.List;
 using HS.Framework;
 using HS.Framework.Utils;
 using HS.Web.UI.Helper;
@@ -103,8 +104,7 @@ namespace HS.Web.UI.Controllers
                     return PartialView("~/Views/Shared/_AccessDenied.cshtml");
                 }
                 model.ScheduleItems = _Util.Facade.CustomerFacade.GetRecurringBillingScheduleItemsByScheduleId(model.Schedule.ScheduleId);
-
-
+               
                 model.Schedule.ShowLineItem = false;
                 model.Schedule.ShowDayInAdvance = false;
                 model.Schedule.ShowBillDate = false;
@@ -376,6 +376,9 @@ namespace HS.Web.UI.Controllers
             ViewBag.today = DateTime.UtcNow.UTCToClientTime().SetZeroHour();
             model.Schedule.CustomerName = customerName;
             model.Schedule.CustomerIntId = model.Customer.Id;
+            var checkinvoiceitem = _Util.Facade.InvoiceFacade.GetInvoiceDetailsByInvoiceId(model.Schedule.LastRMRInvoiceRefId);
+            ViewBag.CheckInvoice = checkinvoiceitem;
+
 
             return PartialView("AddRecurringBilling", model);
         }
@@ -2693,92 +2696,15 @@ namespace HS.Web.UI.Controllers
             filter.Partners = _Util.Facade.EmployeeFacade.GetEmployeeByPartnerId(currentLoggedIn.UserId);
             filter.isPermit = IsPermitted(UserPermissions.CustomerPermissions.ShowAllCustomerList);
 
-            #region Not using it anymore
-            //if (currentLoggedIn.UserId != new Guid())
-            //{
-            //    var objRoleEmployee = _Util.Facade.EmployeeFacade.GetEmployeeRoleByEmployeeIdAndCompanyId(currentLoggedIn.UserId, currentLoggedIn.CompanyId.Value);
-            //    filter.EmployeeRole = objRoleEmployee.Tag;
-            //    filter.UserRole = currentLoggedIn.UserRole;
-            //    filter.EmployeeId = currentLoggedIn.UserId.ToString();
-            //}
-
-            //outputstring += stopwatch.ElapsedMilliseconds.ToString() + " :: ";
-            #endregion
-
             CustomerListWithCountModel customerfilterlist = new CustomerListWithCountModel();
-
-            #region Grid Settings Prepare
-            List<GridSetting> GridSettings = new List<GridSetting>();
-            GridSettings = _Util.Facade.GridSettingsFacade.GetByKey("CustomerGrid", currentLoggedIn.CompanyId.Value);
-            if (GridSettings.Count > 0)
-            {
-                GridSettings = GridSettings.OrderBy(x => x.OrderBy).Where(x => x.GridActive == true).ToList();
-            }
-
-            ViewBag.GridSettings = GridSettings;
-
-
-            List<GridSetting> GridGroupSettings = new List<GridSetting>();
-            GridGroupSettings = _Util.Facade.GridSettingsFacade.GetByKey("CustomerGridGroup", currentLoggedIn.CompanyId.Value);
-            if (GridGroupSettings.Count > 0)
-            {
-                GridGroupSettings = GridGroupSettings.OrderBy(x => x.OrderBy).Where(x => x.GridActive == true).ToList();
-            }
-
-            //outputstring += stopwatch.ElapsedMilliseconds.ToString() + " :: ";
-            ViewBag.GridGroupSettings = GridGroupSettings;
-
-            List<GridSetting> LocationGroup = GridSettings.Where(x => x.ColumnGroup == "Location" && (x.SelectedColumn.ToLower() == "street" || x.SelectedColumn.ToLower() == "city" || x.SelectedColumn.ToLower() == "state" || x.SelectedColumn.ToLower() == "zipcode" || x.SelectedColumn.ToLower() == "streetprevious" || x.SelectedColumn.ToLower() == "cityprevious" || x.SelectedColumn.ToLower() == "stateprevious" || x.SelectedColumn.ToLower() == "zipcodeprevious" || x.SelectedColumn.ToLower() == "streettype" || x.SelectedColumn.ToLower() == "appartment")).ToList();
-            ViewBag.LocationGroup = LocationGroup;
-
-            #endregion
-
 
             ViewBag.CustomerUiSetting = _Util.Facade.GlobalSettingsFacade.GetAllGlobalSettings().Where(x => x.Tag == "CustomerUiSettings").ToList();
             if (filter.PageNo == 0)
             {
                 filter.PageNo = 1;
             }
-
-            //GlobalSetting glob = _Util.Facade.GlobalSettingsFacade.GetGlobalSettingsByKey(currentLoggedIn.CompanyId.Value, "CustomerListPageSize");
-            //if (glob != null)
-            //{
-            //    filter.PageSize = 50;
-            //}
-            //else
-            //{
-            //    filter.PageSize = 50;
-            //}
             filter.PageSize = 50;
-            #region No in use
-            //outputstring += stopwatch.ElapsedMilliseconds.ToString() + " :: ";
-            //filter.PageSize = 10; 
-            //if (!string.IsNullOrEmpty(filter.SearchText))
-            //{
-            //    string str = filter.SearchText;
-            //    str = str.Replace(" ", "");
-            //    filter.SearchText = str;
-            //}
-            //Need to change
-            //if (!currentLoggedIn.UserTags.Contains("admin") && currentLoggedIn.UserRole != "Sales Manager")
-            //{
-            //    filter.SoldById = currentLoggedIn.UserId;
-            //    customerfilterlist = _Util.Facade.CustomerFacade.GetCustomerByFilter(filter);
-            //    //List<CustomerIdList> idList = _Util.Facade.CustomerFacade.GetCustomerByFilterwithoutPagination(filter);
-
-            //    Session["GetCustomerFilter"] = filter;
-
-            //    //outputstring += stopwatch.ElapsedMilliseconds.ToString() + " :: ";
-
-            //}
-            //else
-            //{
-            //List<CustomerIdList> idList = _Util.Facade.CustomerFacade.GetCustomerByFilterwithoutPagination(filter);
-
-            //outputstring += stopwatch.ElapsedMilliseconds.ToString() + " :: ";
-
-            //}
-            #endregion
+       
 
             GlobalSetting settingOrd = _Util.Facade.GlobalSettingsFacade.GetGlobalSettingsByKey(currentLoggedIn.CompanyId.Value, "CustomerListOrder");
             if (settingOrd != null)
@@ -2817,19 +2743,6 @@ namespace HS.Web.UI.Controllers
                 ViewBag.CurrentNumber = (int)ViewBag.PageNumber * filter.PageSize;
             }
             #endregion
-
-            #region Not in use
-            //outputstring += stopwatch.ElapsedMilliseconds.ToString() + " :: ";
-            //foreach (var item in customerfilterlist.CustomerList)
-            //{
-            //    item.EqpmentCount = _Util.Facade.InvoiceFacade.GetInvoiceDetailsByCustomerId(item.CustomerId).Count;
-            //    item.EmgContactCount = _Util.Facade.EmergencyContactFacade.GetAllEmergencyContactByCustomerIdAndCompanyId(item.CustomerId, currentLoggedIn.CompanyId.Value).Count;
-            //}
-
-            //outputstring += stopwatch.ElapsedMilliseconds.ToString() + " :: ";
-            //stopwatch.Stop();
-            #endregion
-
 
             ViewBag.PageCount = Math.Ceiling((double)ViewBag.OutOfNumber / filter.PageSize);
             return PartialView("_LoadRmrAuditPartial", customerfilterlist);
@@ -3185,6 +3098,7 @@ namespace HS.Web.UI.Controllers
                     else { NextDate = NextDate.AddMonths(1); }
                     #endregion
                     recurring.NextDate = NextDate;
+                    recurring.PaymentCollectionDate = NextDate;
                     recurring.LastUpdatedDate = CreatedDate;
                     recurring.LastUpdatedBy = CurrentUser.UserId;
                     recurring.LastRMRInvoiceRefId = LastInv.InvoiceId;
