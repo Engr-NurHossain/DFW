@@ -216,6 +216,7 @@ namespace HS.Entities
         public string PanelType { get; set; }
         public double RMRAmount { get; set; }
         public DateTime RMRCycleStartDate { get; set; }
+        public DateTime RMREffectiveDate { get; set; }
     }
 
     public partial class LeadOrCustomer

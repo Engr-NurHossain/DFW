@@ -3813,6 +3813,7 @@ namespace HS.Facade
                                 RMRBillDay = dr["RMRBillDay"].ToString(),
                                 RMRBillCycle = dr["RMRBillCycle"].ToString(),
                                 RMRCycleStartDate = dr["RMRCycleStartDate"] != DBNull.Value ? Convert.ToDateTime(dr["RMRCycleStartDate"]) : new DateTime(),
+                                RMREffectiveDate = dr["RMREffectiveDate"] != DBNull.Value ? Convert.ToDateTime(dr["RMRCycleStartDate"]) : new DateTime(),
 
                                 Title = dr["Title"].ToString(),
                                 SSN = dr["SSN"].ToString(),
