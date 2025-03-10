@@ -232,6 +232,7 @@ namespace HS.Web.UI.Controllers
             } 
             List<EstimatorDetail> estDet = _Util.Facade.EstimatorFacade.GetEstimatorDetailListByEstimatorId(OldEstimator);
             List<EstimatorService> estservice = _Util.Facade.EstimatorFacade.GetEstimatorServicesByEstimatorId(OldEstimator);
+            List<EstimatorService> estonetimeservice = _Util.Facade.EstimatorFacade.GetEstimatorOneTimeServicesByEstimatorId(OldEstimator);
             
             string EstimatorName = ""; 
              
@@ -244,7 +245,23 @@ namespace HS.Web.UI.Controllers
                 item.Id = 0;
                 _Util.Facade.EstimatorFacade.InsertEstimatorDetails(item);
             }
-            #endregion
+            #endregion Insert Estimator Details
+
+            #region Insert Estimator one time service
+            if(estonetimeservice != null && estonetimeservice.Count()>0)
+            {
+                foreach (var item in estonetimeservice)
+                {
+                    item.EstimatorId = est.EstimatorId;
+                    item.CreatedDate = DateTime.Now.UTCCurrentTime();
+                    item.CreatedBy = CurrentUser.UserId;
+                    item.Id = 0;
+                    item.IsOneTimeService = true;
+                    _Util.Facade.EstimatorFacade.InsertEstimatorService(item);
+                }
+            } 
+            #endregion Insert Estimator one time service
+
             #region Insert Estimator service
             foreach (var item in estservice)
             {
@@ -252,6 +269,7 @@ namespace HS.Web.UI.Controllers
                 item.CreatedDate = DateTime.Now.UTCCurrentTime();
                 item.CreatedBy = CurrentUser.UserId;
                 item.Id = 0;
+                item.IsOneTimeService = false;
                 _Util.Facade.EstimatorFacade.InsertEstimatorService(item);
             }
             #endregion
