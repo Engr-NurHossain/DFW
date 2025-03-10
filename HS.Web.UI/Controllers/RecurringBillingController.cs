@@ -376,7 +376,7 @@ namespace HS.Web.UI.Controllers
             ViewBag.today = DateTime.UtcNow.UTCToClientTime().SetZeroHour();
             model.Schedule.CustomerName = customerName;
             model.Schedule.CustomerIntId = model.Customer.Id;
-            var checkinvoiceitem = _Util.Facade.InvoiceFacade.GetInvoiceDetailsByInvoiceId(model.Schedule.LastRMRInvoiceRefId);
+            var checkinvoiceitem = _Util.Facade.InvoiceFacade.GetInvoiceDetailsByInvoiceIdRMR(model.Schedule.LastRMRInvoiceRefId);
             ViewBag.CheckInvoice = checkinvoiceitem;
 
 

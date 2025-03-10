@@ -1218,6 +1218,13 @@ namespace HS.Facade
         {
             return _InvoiceDetailDataAccess.GetByQuery(string.Format("InvoiceId = '{0}'", InvoiceId)).ToList();
         }
+        public List<Invoice> GetInvoiceDetailsByInvoiceIdRMR(string InvoiceId)
+        {
+            return _InvoiceDataAccess
+                .GetByQuery(string.Format("InvoiceId = '{0}' AND IsARBInvoice = 1", InvoiceId))
+                .ToList();
+        }
+
         public bool UpdateInvoiceDetails(InvoiceDetail invoiceDetail)
         {
             if (!invoiceDetail.Taxable.HasValue)
