@@ -218,8 +218,8 @@ namespace HS.Web.UI.Controllers
                 est.Id = 0;
                 est.IsApproved = false;
                 est.CreatedDate = DateTime.Now.UTCCurrentTime();
-                est.StartDate = DateTime.Now.UTCCurrentTime();
-                est.CompletionDate = DateTime.Now.UTCCurrentTime();
+                //est.StartDate = DateTime.Now.UTCCurrentTime();
+                //est.CompletionDate = DateTime.Now.UTCCurrentTime();
                 est.CreatedByName = User.Identity.Name;
                 est.CreatedBy = CurrentUser.UserId;
                 est.LastUpdatedDate = DateTime.Now.UTCCurrentTime();
