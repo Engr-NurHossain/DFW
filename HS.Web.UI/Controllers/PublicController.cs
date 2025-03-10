@@ -346,8 +346,8 @@ namespace HS.Web.UI.Controllers
                             estimator.Status = LabelHelper.EstimatorStatus.ContractSingned;
                         }
                         estimator.CreatedDate = DateTime.Now.UTCCurrentTime();
-                        estimator.StartDate = DateTime.Now.UTCCurrentTime();
-                        estimator.CompletionDate = DateTime.Now.UTCCurrentTime();
+                        //estimator.StartDate = DateTime.Now.UTCCurrentTime();
+                        //estimator.CompletionDate = DateTime.Now.UTCCurrentTime();
                         estimator.LastUpdatedDate = DateTime.Now.UTCCurrentTime();
                         _Util.Facade.EstimatorFacade.UpdateEstimator(estimator);
 
@@ -623,8 +623,8 @@ namespace HS.Web.UI.Controllers
                     est.Status = LabelHelper.EstimateStatus.ContractSingned;
                 }
                 est.CreatedDate = DateTime.Now.UTCCurrentTime();
-                est.StartDate = DateTime.Now.UTCCurrentTime();
-                est.CompletionDate = DateTime.Now.UTCCurrentTime();
+                //est.StartDate = DateTime.Now.UTCCurrentTime();
+                //est.CompletionDate = DateTime.Now.UTCCurrentTime();
                 est.LastUpdatedDate = DateTime.Now.UTCCurrentTime();
                 _Util.Facade.EstimatorFacade.UpdateEstimator(est);
                 if (tmpCustomer != null)
@@ -707,8 +707,8 @@ namespace HS.Web.UI.Controllers
                 EstimatorInfo.IsApproved = true;
             }
             EstimatorInfo.CreatedDate = DateTime.Now.UTCCurrentTime();
-            EstimatorInfo.StartDate = DateTime.Now.UTCCurrentTime();
-            EstimatorInfo.CompletionDate = DateTime.Now.UTCCurrentTime();
+            //EstimatorInfo.StartDate = DateTime.Now.UTCCurrentTime();
+            //EstimatorInfo.CompletionDate = DateTime.Now.UTCCurrentTime();
             EstimatorInfo.CreatedByName = customerInfo.FirstName + " " + customerInfo.LastName;
             EstimatorInfo.LastUpdatedDate = DateTime.Now.UTCCurrentTime();
             JsonResult = _Util.Facade.EstimatorFacade.UpdateEstimator(EstimatorInfo);
