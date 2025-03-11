@@ -23233,6 +23233,7 @@ namespace HS.Web.UI.Controllers
                         Estimator estimator = _Util.Facade.EstimatorFacade.GetEstimatorByEstimatorId(EstimatorId);
                         List<EstimatorDetail> estimatorDetail = _Util.Facade.EstimatorFacade.GetEstimatorDetailListByEstimatorId(EstimatorId);
                         List<EstimatorService> serviceestimator = _Util.Facade.EstimatorFacade.GetEstimatorServicesByEstimatorId(EstimatorId);
+                        List<EstimatorService> onetimeserviceestimator = _Util.Facade.EstimatorFacade.GetEstimatorOneTimeServicesByEstimatorId(EstimatorId);
 
 
                         #region obaydullah Estimator
@@ -23465,7 +23466,119 @@ namespace HS.Web.UI.Controllers
                                 _Util.Facade.CustomerAppoinmentFacade.InsertCustomerAppointmentEquipmentDetail(cae);
                             }
                         }
+                        if (onetimeserviceestimator != null && onetimeserviceestimator.Count > 0)
+                        {
+                            var EstimatorserviceTotalAmount = Math.Round(estimator.ServiceTotalAmount.HasValue ? estimator.ServiceTotalAmount.Value : 0, 2);
+                            var EstimatorServiceTax = Math.Round(estimator.ServiceTaxAmount.HasValue ? estimator.ServiceTaxAmount.Value : 0, 2);
 
+                            Invoice servicetempInv = new Invoice()
+                            {
+                                CustomerId = _Customer.CustomerId,
+                                CompanyId = CompanyId,
+                                Amount = estimator.TotalPrice.Value,
+                                Tax = Math.Round(estimator.TaxAmount.HasValue ? estimator.TaxAmount.Value : 0, 2),
+                                DiscountCode = estimator.Description,
+                                DiscountAmount = 0,
+                                TotalAmount = EstimatorserviceTotalAmount + EstimatorServiceTax,
+                                Status = LabelHelper.InvoiceStatus.Open,
+                                InvoiceDate = DateTime.UtcNow,
+                                LastUpdatedDate = DateTime.UtcNow,
+                                IsEstimate = false,
+                                IsBill = false,
+                                BillingAddress = "",
+                                DueDate = DateTime.UtcNow.AddMonths(1),
+                                Terms = "",
+                                ShippingAddress = "",
+                                ShippingVia = "",
+                                ShippingDate = DateTime.UtcNow,
+                                TrackingNo = "",
+                                ShippingCost = 0,
+                                Discountpercent = 0,
+                                BalanceDue = EstimatorserviceTotalAmount + EstimatorServiceTax,
+                                Deposit = 0,
+                                Message = "",
+                                TaxType = "",
+                                Balance = estimator.ServiceTotalAmount,
+                                Memo = "",
+                                LateFee = 0,
+                                LateAmount = 0,
+                                InstallDate = estimator.EstimateDate,
+                                Description = "Payment for one time services (1) months",
+                                DiscountType = "percent",
+                                BillingCycle = "",
+                                EstimateTerm = "",
+                                Signature = "",
+                                CancelReason = "",
+                                CreatedBy = User.Identity.Name,
+                                CreatedByUid = soldby,
+                                LastUpdatedByUid = soldby,
+                                CreatedDate = DateTime.UtcNow,
+                                RefType = "",
+                                PaymentType = "",
+                                BookingId = "",
+                                InstallationType = "",
+                                SignatureDate = DateTime.UtcNow,
+                                InvoiceEmailAddress = _Customer.EmailAddress,
+                                InvoiceCcEmailAddress = _Customer.EmailAddress,
+                                MonitoringAmount = 0,
+                                ContractTerm = estimator.ContractTerm,
+                                MonitoringDescription = estimator.Description,
+                                IsARBInvoice = false,
+                                TransactionId = "",
+                                ForteStatus = "",
+                                UpfrontMonth = "",
+                            };
+                            servicetempInv.IsEstimate = false;
+                            servicetempInv.InvoiceFor = LabelHelper.InvoiceFor.Service;
+                            servicetempInv.InstallationType = LabelHelper.InvoiceFor.Service;
+                            servicetempInv.Status = LabelHelper.InvoiceStatus.Open;
+                            servicetempInv.Id = _Util.Facade.InvoiceFacade.InsertInvoice(servicetempInv);
+                            servicetempInv.InvoiceId = servicetempInv.Id.GenerateInvoiceNo();
+                            _Util.Facade.InvoiceFacade.UpdateInvoice(servicetempInv);
+                            //createTempInv = servicetempInv;
+
+                            foreach (var itemservice in onetimeserviceestimator)
+                            {
+                                Equipment _EquipmentDetails = _Util.Facade.EquipmentFacade.GetEquipmentByEquipmentName(itemservice.EquipmentName);
+                                if (_EquipmentDetails != null)
+                                {
+                                    InvoiceDetail invoiceDetailitem = new InvoiceDetail()
+                                    {
+                                        InvoiceId = servicetempInv.InvoiceId,
+                                        CreatedDate = DateTime.UtcNow,
+                                        InventoryId = Guid.Empty,
+                                        EquipmentId = _EquipmentDetails != null ? _EquipmentDetails.EquipmentId : Guid.Empty,
+                                        EquipName = itemservice.EquipmentName,
+                                        CompanyId = CompanyId,
+                                        Quantity = itemservice.Quantity,
+                                        UnitPrice = itemservice.UnitPrice,
+                                        TotalPrice = itemservice.Amount,
+                                        CreatedBy = User.Identity.Name,
+                                        Taxable = true,
+                                        DiscountAmount = 0,
+                                        DiscountPercent = 0,
+                                        DiscountType = "",
+                                        EquipCategory = ""
+                                    };
+                                    _Util.Facade.InvoiceFacade.InsertInvoiceDetails(invoiceDetailitem);
+                                }
+                                CustomerAppointmentEquipment cae = new CustomerAppointmentEquipment()
+                                {
+                                    AppointmentId = TicketId,
+                                    EquipmentId = itemservice.EquipmentId,
+                                    CreatedBy = User.Identity.Name,
+                                    EquipDetail = "",
+                                    EquipName = itemservice.EquipmentName,
+                                    CreatedDate = DateTime.Now.UTCCurrentTime(),
+                                    Quantity = (itemservice.Quantity != null ? itemservice.Quantity : 0),
+                                    UnitPrice = (itemservice.UnitPrice != null ? itemservice.UnitPrice : 0),
+                                    TotalPrice = itemservice.Amount != null ? itemservice.Amount : 0,
+                                    IsAgreementItem = false,
+                                    CreatedByUid = soldby,
+                                };
+                                _Util.Facade.CustomerAppoinmentFacade.InsertCustomerAppointmentEquipmentDetail(cae);
+                            }
+                        }
                         CustomerCompany cc = _Util.Facade.CustomerFacade.GetCustomerCompanyByCustomerIdAndCompanyId(_Customer.CustomerId, CompanyId);
                         cc.IsLead = false;
                         _Util.Facade.CustomerFacade.UpdateCustomerCompany(cc);
