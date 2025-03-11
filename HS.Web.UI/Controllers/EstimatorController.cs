@@ -234,17 +234,20 @@ namespace HS.Web.UI.Controllers
             List<EstimatorService> estservice = _Util.Facade.EstimatorFacade.GetEstimatorServicesByEstimatorId(OldEstimator);
             List<EstimatorService> estonetimeservice = _Util.Facade.EstimatorFacade.GetEstimatorOneTimeServicesByEstimatorId(OldEstimator);
             
-            string EstimatorName = ""; 
-             
+            string EstimatorName = "";
+
             #region Insert Estimator Details
-            foreach (var item in estDet)
+            if (estDet != null && estDet.Count() > 0)
             {
-                item.EstimatorId = est.EstimatorId;
-                item.CreatedDate = DateTime.Now.UTCCurrentTime();
-                item.CreatedBy = CurrentUser.UserId;
-                item.Id = 0;
-                _Util.Facade.EstimatorFacade.InsertEstimatorDetails(item);
-            }
+                foreach (var item in estDet)
+                {
+                    item.EstimatorId = est.EstimatorId;
+                    item.CreatedDate = DateTime.Now.UTCCurrentTime();
+                    item.CreatedBy = CurrentUser.UserId;
+                    item.Id = 0;
+                    _Util.Facade.EstimatorFacade.InsertEstimatorDetails(item);
+                }
+            } 
             #endregion Insert Estimator Details
 
             #region Insert Estimator one time service
@@ -259,19 +262,22 @@ namespace HS.Web.UI.Controllers
                     item.IsOneTimeService = true;
                     _Util.Facade.EstimatorFacade.InsertEstimatorService(item);
                 }
-            } 
+            }
             #endregion Insert Estimator one time service
 
             #region Insert Estimator service
-            foreach (var item in estservice)
+            if (estservice != null && estservice.Count() > 0)
             {
-                item.EstimatorId = est.EstimatorId;
-                item.CreatedDate = DateTime.Now.UTCCurrentTime();
-                item.CreatedBy = CurrentUser.UserId;
-                item.Id = 0;
-                item.IsOneTimeService = false;
-                _Util.Facade.EstimatorFacade.InsertEstimatorService(item);
-            }
+                foreach (var item in estservice)
+                {
+                    item.EstimatorId = est.EstimatorId;
+                    item.CreatedDate = DateTime.Now.UTCCurrentTime();
+                    item.CreatedBy = CurrentUser.UserId;
+                    item.Id = 0;
+                    item.IsOneTimeService = false;
+                    _Util.Facade.EstimatorFacade.InsertEstimatorService(item);
+                }
+            } 
             #endregion
 
             #region Insert Estimator File
