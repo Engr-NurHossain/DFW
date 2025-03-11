@@ -577,7 +577,7 @@ namespace HS.Facade
                 string SearchKey = "EstimatorOverheadRate";
                 GlobalSetting globalsetting = _GlobalSettingDataAccess.GetByQuery(string.Format("CompanyId = '{0}' and SearchKey = '{1}'", CompanyId, SearchKey)).FirstOrDefault();
 
-                result = globalsetting == null ? "62" : globalsetting.Value;
+                result = globalsetting == null ? "60" : globalsetting.Value;
                 System.Web.HttpRuntime.Cache[InvMsg] = result;
             }
             else
