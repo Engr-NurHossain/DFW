@@ -11774,6 +11774,50 @@ namespace HS.API.Controllers
                 return Request.CreateResponse(HttpStatusCode.PreconditionFailed, "Token Expired.");
             }
         }
+        [Authorize]
+        [Route("clock-history")]
+        public HttpResponseMessage GetClockHistory()
+        {
+            APIInitialize();
+
+            Guid userId;
+            var headers = Request.Headers;
+
+            if (!headers.Contains("userId") || !Guid.TryParse(headers.GetValues("userId").FirstOrDefault(), out userId))
+            {
+                return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or missing userId.");
+            }
+
+            var identity = (ClaimsIdentity)User.Identity;
+            string username = identity.Claims.FirstOrDefault(c => c.Type == "username")?.Value;
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return Request.CreateResponse(HttpStatusCode.PreconditionFailed, "Token Expired.");
+            }
+
+            var usercontext = HSMainApiFacade.GetCompanyConnectionByUserName(username);
+            if (usercontext == null)
+            {
+                return Request.CreateResponse(HttpStatusCode.Unauthorized, "Authorization Denied.");
+            }
+
+            var timeClockList = HSapiFacade.GetLastClocksByUserId(userId);
+            var model = timeClockList.Select(x => new TimeClockHistory
+            {
+                ClockInOutDate = x.ClockInTime.ToString("MM/dd/yy"),
+                ClockInTime = x.ClockInTime.ToString("hh:mm:ss tt"),
+                ClockInNote = x.ClockInNote,
+                ClockInPosition = $"{x.ClockInLat} {x.ClockInLng}",
+                ClockOutTime = x.ClockOutTime.HasValue ? x.ClockOutTime.Value.ToString("hh:mm:ss tt") : "",
+                ClockOutNote = x.ClockOutNote,
+                ClockOutPosition = (!string.IsNullOrWhiteSpace(x.ClockOutLat) ? x.ClockOutLat + " " : "") + x.ClockOutLng,
+                TimeSpent = x.ClockedInSeconds?.ToString() ?? "0"
+            }).ToList();
+
+            return Request.CreateResponse(HttpStatusCode.OK, model);
+        }
+
         #endregion
 
         #region Manage User

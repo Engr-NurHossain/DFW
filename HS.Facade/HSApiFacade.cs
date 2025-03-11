@@ -6711,6 +6711,33 @@ namespace HS.Facade
                          }).ToList();
             return buildList;
         }
+        public List<EmployeeTimeClock> GetLastClocksByUserId(Guid userId)
+        {
+            DataTable dt = _employeeTimeClockDataAccess.GetLastClocksByUserIdForApi(userId);
+
+            List<EmployeeTimeClock> buildList = new List<EmployeeTimeClock>();
+            buildList = (from DataRow dr in dt.Rows
+                         select new EmployeeTimeClock()
+                         {
+                             Id = dr["Id"] != DBNull.Value ? Convert.ToInt32(dr["Id"]) : 0,
+                             UserId = (Guid)dr["UserId"],
+                             ClockInTime = dr["ClockInTime"] != DBNull.Value ? Convert.ToDateTime(dr["ClockInTime"]) : new DateTime(),
+                             ClockOutTime = dr["ClockOutTime"] != DBNull.Value ? Convert.ToDateTime(dr["ClockOutTime"]) : new DateTime(),
+                             ClockInLat = dr["ClockInLat"].ToString(),
+                             ClockInLng = dr["ClockInLng"].ToString(),
+                             ClockOutLat = dr["ClockOutLat"].ToString(),
+                             ClockOutLng = dr["ClockOutLng"].ToString(),
+                             ClockInNote = dr["ClockInNote"].ToString(),
+                             ClockOutNote = dr["ClockOutNote"].ToString(),
+                             LastUpdatedName = dr["LastUpdatedName"].ToString(),
+                             ClockInCreatedBy = (Guid)dr["ClockInCreatedBy"],
+                             ClockOutCreatedBy = (Guid)dr["ClockOutCreatedBy"],
+                             ClockedInSeconds = dr["ClockedInSeconds"] != DBNull.Value ? Convert.ToInt32(dr["ClockedInSeconds"]) : 0,
+                             LastUpdateBy = (Guid)dr["LastUpdateBy"],
+                             LastUpdatedDate = dr["LastUpdatedDate"] != DBNull.Value ? Convert.ToDateTime(dr["LastUpdatedDate"]) : new DateTime()
+                         }).ToList();
+            return buildList;
+        }
         public int GetTimeClockHistoryCount(Guid userId, DateTime StartDate, DateTime EndDate)
         {
             DataTable dt = _employeeTimeClockDataAccess.GetTimeClockHistoryCount(userId, StartDate, EndDate);
