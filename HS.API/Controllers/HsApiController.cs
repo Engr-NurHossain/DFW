@@ -11785,7 +11785,12 @@ namespace HS.API.Controllers
 
             if (!headers.Contains("userId") || !Guid.TryParse(headers.GetValues("userId").FirstOrDefault(), out userId))
             {
-                return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or missing userId.");
+                return Request.CreateResponse(HttpStatusCode.BadRequest, new
+                {
+                    success = false,
+                    error = "Invalid or missing userId.",
+                    result = (object)null
+                });
             }
 
             var identity = (ClaimsIdentity)User.Identity;
@@ -11793,30 +11798,48 @@ namespace HS.API.Controllers
 
             if (string.IsNullOrWhiteSpace(username))
             {
-                return Request.CreateResponse(HttpStatusCode.PreconditionFailed, "Token Expired.");
+                return Request.CreateResponse(HttpStatusCode.PreconditionFailed, new
+                {
+                    success = false,
+                    error = "Token Expired.",
+                    result = (object)null
+                });
             }
 
             var usercontext = HSMainApiFacade.GetCompanyConnectionByUserName(username);
             if (usercontext == null)
             {
-                return Request.CreateResponse(HttpStatusCode.Unauthorized, "Authorization Denied.");
+                return Request.CreateResponse(HttpStatusCode.Unauthorized, new
+                {
+                    success = false,
+                    error = "Authorization Denied.",
+                    result = (object)null
+                });
             }
 
             var timeClockList = HSapiFacade.GetLastClocksByUserId(userId);
-            var model = timeClockList.Select(x => new TimeClockHistory
+            var model = timeClockList.Select(x => new
             {
-                ClockInOutDate = x.ClockInTime.ToString("MM/dd/yy"),
-                ClockInTime = x.ClockInTime.ToString("hh:mm:ss tt"),
+               
+                ClockInTime = x.ClockInTime,
                 ClockInNote = x.ClockInNote,
-                ClockInPosition = $"{x.ClockInLat} {x.ClockInLng}",
-                ClockOutTime = x.ClockOutTime.HasValue ? x.ClockOutTime.Value.ToString("hh:mm:ss tt") : "",
+                ClockInPosition = $"{x.ClockInLat},{x.ClockInLng}",
+                ClockOutTime = x.ClockOutTime.HasValue ? x.ClockOutTime : null,
                 ClockOutNote = x.ClockOutNote,
-                ClockOutPosition = (!string.IsNullOrWhiteSpace(x.ClockOutLat) ? x.ClockOutLat + " " : "") + x.ClockOutLng,
-                TimeSpent = x.ClockedInSeconds?.ToString() ?? "0"
+                ClockOutPosition = (!string.IsNullOrWhiteSpace(x.ClockOutLat) ? x.ClockOutLat + "," : "") + x.ClockOutLng
+             
             }).ToList();
+   
 
-            return Request.CreateResponse(HttpStatusCode.OK, model);
+            return Request.CreateResponse(HttpStatusCode.OK, new
+            {
+                success = true,
+                error = (object)null,
+                result = model
+            });
         }
+
+
 
         #endregion
 
