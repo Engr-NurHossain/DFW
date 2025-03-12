@@ -217,9 +217,7 @@ namespace HS.Web.UI.Controllers
                 //TempStatus = est.Status;
                 est.Id = 0;
                 est.IsApproved = false;
-                est.CreatedDate = DateTime.Now.UTCCurrentTime();
-                //est.StartDate = DateTime.Now.UTCCurrentTime();
-                //est.CompletionDate = DateTime.Now.UTCCurrentTime();
+                est.CreatedDate = DateTime.Now.UTCCurrentTime(); 
                 est.CreatedByName = User.Identity.Name;
                 est.CreatedBy = CurrentUser.UserId;
                 est.LastUpdatedDate = DateTime.Now.UTCCurrentTime();
@@ -364,6 +362,7 @@ namespace HS.Web.UI.Controllers
         }
         public bool SendSMSToApprovedEstimator(int? leadid,string EstimatorId,string Estimatorstatus)
         {
+            var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
             string Status = "";
             //Estimator estimator = _Util.Facade.EstimatorFacade.GetByEstimatorId(EstimatorId);
             if(!string.IsNullOrWhiteSpace(Estimatorstatus))
@@ -383,8 +382,7 @@ namespace HS.Web.UI.Controllers
             Guid CompanyId = new Guid();
             Guid UserId = Guid.Empty;
             if (User.Identity.IsAuthenticated)
-            {
-                var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
+            { 
                 CompanyId = CurrentUser.CompanyId.Value;
                 UserId = CurrentUser.UserId;
             }
@@ -413,7 +411,7 @@ namespace HS.Web.UI.Controllers
             string PrefferedNO = "";
             string[] PrefferedNOList = PrefferedNO.Split(',');
             Employee _emp = new Employee();
-            if (Cus != null)
+            if (Cus != null && !string.IsNullOrWhiteSpace(Estimatorstatus))
             {
                 
                 if (!string.IsNullOrWhiteSpace(Cus.Soldby))
@@ -442,7 +440,7 @@ namespace HS.Web.UI.Controllers
             {
                 PrefferedNO = PrefferedNO.Replace("-", "").Replace("(", "").Replace(")", "");
             }
-            if (!string.IsNullOrWhiteSpace(_emp.Phone) && _emp.Phone != "administrator")
+            if (!string.IsNullOrWhiteSpace(_emp.Phone) && _emp.Phone != "administrator" && !string.IsNullOrWhiteSpace(Estimatorstatus))
             {
                 ReceiverNumber = _emp.Phone.Replace("-", "").Replace("(", "").Replace(")", "").Replace(" ", "");
             }
@@ -463,9 +461,7 @@ namespace HS.Web.UI.Controllers
             {
                 ReceiverNumberList.Add(ReceiverNumber);
             }  
-            List<string> phoneNumbers = ReceiverNumberList;
-                                        //.Where(item => item.StartsWith("+"))
-                                        //.ToList();
+            List<string> phoneNumbers = ReceiverNumberList; 
 
             ReceiverNumberList = phoneNumbers.Distinct().ToList();
             #endregion  
@@ -477,9 +473,19 @@ namespace HS.Web.UI.Controllers
             shortUrl2 = string.Concat(AppConfig.SiteDomain, "/shrt/", ShortUrl2.Code);  
 
             if (ReceiverNumberList.Count() > 0)
-            {    
-                bool sendResult = _Util.Facade.SMSFacade.SendEstimatorApprovedSMS(EstimatorId,CompanyId, ReceiverNumberList, false, string.Empty, UserId,Cus.Id, shortUrl2, Status);
-                return sendResult;
+            {
+                bool sendResult = false;
+                if (!string.IsNullOrWhiteSpace(Estimatorstatus))
+                {
+                    sendResult = _Util.Facade.SMSFacade.SendEstimatorApprovedSMS(EstimatorId, CompanyId, ReceiverNumberList, false, string.Empty, UserId, Cus.Id, shortUrl2, Status);
+                    return sendResult;
+                }
+                else
+                {
+                    string SalesGuy = CurrentUser.FirstName + ' ' + CurrentUser.LastName;
+                    sendResult = _Util.Facade.SMSFacade.SendEstimatorSMS(EstimatorId, CompanyId, ReceiverNumberList, false,SalesGuy, UserId, Cus.Id, shortUrl2, Status);
+                    return sendResult;
+                } 
             }
             else
             {
@@ -2408,27 +2414,27 @@ namespace HS.Web.UI.Controllers
                         { 
                             body = BodyContent; 
                         }
-                        SendEstimatorInEmail SendEmail = new SendEstimatorInEmail()
-                        {
-                            CompanyName = CompanyName,
-                            CustomerName = cus.FirstName + ' ' + cus.LastName,
-                            EstimatorId = Estimator.EstimatorId,
-                            ToEmail = cus.EmailAddress,
-                            EmailBody = body,
-                            ExpDate = Estimator.CompletionDate.HasValue ? Estimator.CompletionDate.Value.ToString("MM/dd/yy") : "",
-                            FromEmail = CurrentUser.EmailAddress.IsValidEmailAddress() ? CurrentUser.EmailAddress : "info@rmrcloud.com",
-                            FromName = string.Concat(CurrentUser.FirstName, " ", CurrentUser.LastName),
-                            SalesGuy = CurrentUser.FirstName + ' ' + CurrentUser.LastName,
-                            SalesPhone = Phone,
-                            Subject = subject,
-                            //Subject = "Estimator " + Estimator.EstimatorId + " from " + CompanyName,
-                            Url = AppConfig.SiteDomain + filename,
-                            EstimatorPdf = new Attachment(
-                                                                 FileHelper.GetFileFullPath(filename),
-                                                                 MediaTypeNames.Application.Octet)
-                        };
-                        result = _Util.Facade.MailFacade.SendEstimatorInEmail(SendEmail, CurrentUser.CompanyId.Value);
-                        SendEmail.EstimatorPdf.Dispose();
+                        //SendEstimatorInEmail SendEmail = new SendEstimatorInEmail()
+                        //{
+                        //    CompanyName = CompanyName,
+                        //    CustomerName = cus.FirstName + ' ' + cus.LastName,
+                        //    EstimatorId = Estimator.EstimatorId,
+                        //    ToEmail = cus.EmailAddress,
+                        //    EmailBody = body,
+                        //    ExpDate = Estimator.CompletionDate.HasValue ? Estimator.CompletionDate.Value.ToString("MM/dd/yy") : "",
+                        //    FromEmail = CurrentUser.EmailAddress.IsValidEmailAddress() ? CurrentUser.EmailAddress : "info@rmrcloud.com",
+                        //    FromName = string.Concat(CurrentUser.FirstName, " ", CurrentUser.LastName),
+                        //    SalesGuy = CurrentUser.FirstName + ' ' + CurrentUser.LastName,
+                        //    SalesPhone = Phone,
+                        //    Subject = subject,
+                        //    //Subject = "Estimator " + Estimator.EstimatorId + " from " + CompanyName,
+                        //    Url = AppConfig.SiteDomain + filename,
+                        //    EstimatorPdf = new Attachment(
+                        //                                         FileHelper.GetFileFullPath(filename),
+                        //                                         MediaTypeNames.Application.Octet)
+                        //};
+                        //result = _Util.Facade.MailFacade.SendEstimatorInEmail(SendEmail, CurrentUser.CompanyId.Value);
+                        //SendEmail.EstimatorPdf.Dispose();
 
                         if (Estimator.Status == LabelHelper.EstimateStatus.SentToCustomer)
                         {
@@ -2446,9 +2452,7 @@ namespace HS.Web.UI.Controllers
                         {
                             Estimator.Status = LabelHelper.EstimateStatus.SentToCustomer;
                         }
-                        Estimator.CreatedDate = DateTime.Now.UTCCurrentTime();
-                        //Estimator.StartDate = DateTime.Now.UTCCurrentTime();
-                        //Estimator.CompletionDate = DateTime.Now.UTCCurrentTime();
+                        Estimator.CreatedDate = DateTime.Now.UTCCurrentTime(); 
                         Estimator.LastUpdatedDate = DateTime.Now.UTCCurrentTime();
                         _Util.Facade.EstimatorFacade.UpdateEstimator(Estimator);
                         
@@ -2458,6 +2462,12 @@ namespace HS.Web.UI.Controllers
                             _Util.Facade.CustomerFacade.UpdateCustomer(Estcustomer); 
                         }
                         GlobalSetting ApprovedEmail = _Util.Facade.GlobalSettingsFacade.GetGlobalSettingsByOnlyKey("EstimatorSent");
+                        GlobalSetting GlobalSettingModel = _Util.Facade.GlobalSettingsFacade.GetGlobalSettingsByOnlyKey("EstimatorSentSMS"); 
+
+                        if (GlobalSettingModel != null && GlobalSettingModel.Value.ToLower() == "true")
+                        {
+                            SendSMSToApprovedEstimator(Estcustomer.Id, Estimator.EstimatorId, "");
+                        }
                         if (ApprovedEmail != null && ApprovedEmail.Value.ToLower() == "true")
                         {
                             SendnotificationEmail(Estcustomer.Id, Estimator.EstimatorId, Estimator.Status);

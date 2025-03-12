@@ -234,6 +234,30 @@ namespace HS.Facade
 
             return false;
         }
+        public bool SendEstimatorSMS(string EstimatorId, Guid CompanyId, List<string> ReceiverNumberList, bool IsSystemAutoSent, string FromName, Guid SendBy, int CustomerId, string CustomerLink, string Status)
+        {
+            try
+            {
+                Hashtable templateVars = new Hashtable();
+                templateVars.Add("EstimatorId", EstimatorId);
+                templateVars.Add("CustomerId", CustomerId);
+                templateVars.Add("CustomerLink", CustomerLink);
+                templateVars.Add("NAME", FromName);
+                templateVars.Add("Status", Status);
+                //templateVars.Add("ToNumber", sms.ToNumber);
+                if (SendSMS(templateVars, SendBy, SMSTemplateKey.EstimatorSentSMS.SendEstimatorSMS, CompanyId, ReceiverNumberList, IsSystemAutoSent, FromName))
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                HsErrorLog.AddElmah(ex);
+                //Logger.AddElmah(ex);
+            }
+
+            return false;
+        }
         public bool SendEstimatorApprovedSMS(string EstimatorId, Guid CompanyId, List<string> ReceiverNumberList, bool IsSystemAutoSent, string FromName, Guid SendBy,int CustomerId,string CustomerLink,string Status)
         {
             try
