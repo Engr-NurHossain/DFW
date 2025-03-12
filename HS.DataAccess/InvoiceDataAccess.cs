@@ -9,6 +9,8 @@ using HS.Entities.Bases;
 using HS.Entities.List;
 using System.Collections.Generic;
 using NLog;
+using NLog.Filters;
+using static HS.Entities.Custom.NMCTestAccountResponse;
 
 namespace HS.DataAccess
 {
@@ -3493,7 +3495,91 @@ namespace HS.DataAccess
                 return null;
             }
         }
+        public DataTable GetAllExportEstimateSentByCompanyId(Guid companyId, DateTime? Start, DateTime? End, string SearchText)
+        {
+            string searchquery = "";
+            string datequery = "";
+            string sqlQuery = @"   Declare @CompanyId uniqueidentifier
+                                    set @CompanyId ='{0}' 
+                                    select Distinct 
+                                    cu.FirstName + ' ' + cu.LastName As [Customer Name]
+                                    ,cu.Id as [Customer Id]
+									,est.EstimatorId as [Estimator Id]
+									,Cast(est.LastUpdatedDate as date) As [LastUpdated Date]  
+                                    from Estimator est 
+                                    left join Customer cu on cu.CustomerId = est.CustomerId
+                                    where est.CompanyId=@CompanyId
+                                    and est.Status != 'Init'
+                                    and est.Status = 'Sent To Customer'
+                                    and cu.IsActive = 1 {1} {2} order by Id desc
+                                ";
+            if (!string.IsNullOrWhiteSpace(SearchText) && SearchText != "undefined")
+            {
 
+                searchquery += string.Format("and (cu.FirstName like '%{0}%' or cu.LastName like '%{0}%' or cu.FirstName + ' ' + cu.LastName like '%{0}%' or est.EstimatorId like '%{0}%')", SearchText);
+            }
+            if (Start.HasValue && Start.Value != new DateTime() && End.HasValue && End.Value != new DateTime())
+            {
+                datequery += string.Format("and est.LastUpdatedDate between '{0}' and '{1}'", Start.Value.ToString("yyyy-MM-dd HH:mm:ss.fff"), End.Value.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            }
+            try
+            {
+                sqlQuery = string.Format(sqlQuery, companyId, datequery, searchquery);
+                using (SqlCommand cmd = GetSQLCommand(sqlQuery))
+                {
+                    DataSet dsResult = GetDataSet(cmd);
+                    return dsResult.Tables[0];
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        public DataTable GetAllEstimateSentByCompanyId(Guid companyId, DateTime? Start, DateTime? End,string SearchText)
+        {
+            string searchquery = "";
+            string datequery = "";
+            string sqlQuery = @"   Declare @CompanyId uniqueidentifier
+                                    set @CompanyId ='{0}' 
+                                    select Distinct 
+                                    cu.FirstName + ' ' + cu.LastName As [CustomerName]
+                                    ,cu.Id as [CustomerIntId]
+									,est.EstimatorId as [EstimatorId]
+									,Cast(est.LastUpdatedDate as date) As [LastUpdatedDate] 
+									,est.Id 
+									,est.Status
+                                    from Estimator est 
+                                    left join Customer cu on cu.CustomerId = est.CustomerId
+                                    where est.CompanyId=@CompanyId
+                                    and est.Status != 'Init'
+                                    and est.Status = 'Sent To Customer'
+                                    and cu.IsActive = 1 {1} {2} order by Id desc
+                                ";
+            if(!string.IsNullOrWhiteSpace(SearchText) && SearchText != "undefined")
+            {
+                
+                searchquery += string.Format("and (cu.FirstName like '%{0}%' or cu.LastName like '%{0}%' or cu.FirstName + ' ' + cu.LastName like '%{0}%' or est.EstimatorId like '%{0}%')",SearchText);
+            }
+            if (Start.HasValue && Start.Value != new DateTime() && End.HasValue && End.Value != new DateTime())
+            {
+                datequery += string.Format("and est.LastUpdatedDate between '{0}' and '{1}'", Start.Value.ToString("yyyy-MM-dd HH:mm:ss.fff"), End.Value.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            }
+            try
+            {
+                sqlQuery = string.Format(sqlQuery, companyId, datequery, searchquery);
+                using (SqlCommand cmd = GetSQLCommand(sqlQuery))
+                {
+                    DataSet dsResult = GetDataSet(cmd);
+                    return dsResult.Tables[0];
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
         public DataTable GetAllEstimateStatusDetailByCustomerId(Guid Cusidval, bool? IsDeclinedAdded)
         {
             string DeclinedAddQuery = "";

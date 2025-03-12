@@ -28,6 +28,7 @@ using System.Text.RegularExpressions;
 using HS.DataAccess;
 using Microsoft.Web.Services3.Addressing;
 using System.Security.Policy;
+using static HS.Entities.Custom.NMCTestAccountResponse;
 
 namespace HS.Web.UI.Controllers
 {
@@ -1472,8 +1473,25 @@ namespace HS.Web.UI.Controllers
             return Json(new { result = true, message = "Invoice Successfully Saved", filePath = Filename });
 
         }
+        //public ActionResult EstimateActionView(int EstimatorId)
+        //{
+
+        //    return View();
+        //}
         private string SaveEstimatorToPdf(CreateEstimator Model, int EstimatorId)
         {
+            Estimator estimator = new Estimator();
+            string StrEstimatorId = "";
+            if (EstimatorId>0)
+            {
+                Model.Estimator = _Util.Facade.EstimatorFacade.GetById(EstimatorId);
+                StrEstimatorId = Model.Estimator.EstimatorId;
+            }
+            else
+            {
+                estimator = _Util.Facade.EstimatorFacade.GetEstimatorByEstimatorId(Model.Estimator.EstimatorId);
+                StrEstimatorId = estimator.EstimatorId;
+            } 
             var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
             Company tempCom = _Util.Facade.CompanyFacade.GetCompanyByComapnyId(CurrentUser.CompanyId.Value);
             tempCom.CompanyLogo = _Util.Facade.CompanyBranchFacade.GetCompanyLogoForPDFByCompanyId(CurrentUser.CompanyId.Value);
@@ -1502,7 +1520,7 @@ namespace HS.Web.UI.Controllers
                 Model.EstimatorSetting = new EstimatorSetting();
                 Model.Company = tempCom;
 
-                Model.Estimator = _Util.Facade.EstimatorFacade.GetById(EstimatorId);
+                //Model.Estimator = _Util.Facade.EstimatorFacade.GetById(EstimatorId);
                 Model._EstimatorPDFFilter = _Util.Facade.EstimatorFacade.GetEstimatorPdfFilterByComIdCusIdUserId(CurrentUser.CompanyId.Value, CurrentUser.UserId, Model.Estimator.CustomerId);
                 if (Model._EstimatorPDFFilter == null)
                 {
@@ -1544,7 +1562,7 @@ namespace HS.Web.UI.Controllers
                     return null;
                 } 
                 CreateEstimator processedModel = GetEstimatorModelById(Model.Estimator, Model.estimatorDetails, Model.estimatorServices, tempCom, tempCUstomer, Model._EstimatorPDFFilter, Model.estimatorOneTimeServices);
-                Estimator estimator = _Util.Facade.EstimatorFacade.GetEstimatorByEstimatorId(Model.Estimator.EstimatorId);
+                //Estimator estimator = _Util.Facade.EstimatorFacade.GetEstimatorByEstimatorId(Model.Estimator.EstimatorId);
                 var estimatorFiledata = _Util.Facade.EstimatorFacade.GetByEstimatorFileByEstimatorId(Model.Estimator.EstimatorId);
                 if (estimator != null)
                 {
@@ -1624,6 +1642,26 @@ namespace HS.Web.UI.Controllers
             string Serverfilename = FileHelper.GetFileFullPath(filename);
 
             Session[SessionKeys.EstimatorPdfSession] = filename;
+            double _fileSize = 1.00;
+            string message = estimator.Status;
+            _fileSize = (double)filename.Length / 1024;
+            _fileSize = Math.Round(_fileSize, 2, MidpointRounding.AwayFromZero);
+            EstimatorFile estfile = new EstimatorFile()
+            {
+                Filename = pdfname,
+                FileDescription = filename,
+                UpdatedDate = DateTime.UtcNow,
+                CreatedDate = DateTime.UtcNow,
+                CreatedBy = new Guid(),
+                UpdatedBy = new Guid(),
+                EstimatorId = StrEstimatorId,
+                FileSize = _fileSize,
+                FileFullName = pdfname,
+                IsActive = true,
+                EstimatorType = ""
+            };
+            _Util.Facade.CustomerAppoinmentFacade.InsertEstimatorFile(estfile);
+
             FileHelper.SaveFile(applicationPDFData, Serverfilename);
 
             if (filename.IndexOf('/') != 0)

@@ -260,7 +260,7 @@
             public static int QuickMenuMyCompanyManageTeam { get { return 1097; } }
             public static int ShowHideArticleBox { get { return 1123; } }
             public static int InventoryEdit { get { return 1124; } }
-
+            public static int EstimateReport { get { return 1125; } }
 
         }           //1001
         public static class LeadPermissions
