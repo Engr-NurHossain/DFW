@@ -603,7 +603,7 @@ namespace HS.Facade
                                       {
                                           Id = dr["ID"] != DBNull.Value ? Convert.ToInt32(dr["ID"]) : 0,
                                           PurchaseOrderId = dr["PurchaseOrderId"].ToString(),
-                                          OrderDate = dr["OrderDate"] != DBNull.Value ? Convert.ToDateTime(dr["OrderDate"]) : new DateTime(),
+                                          OrderDate = dr["CreatedDate"] != DBNull.Value ? Convert.ToDateTime(dr["CreatedDate"]) : new DateTime(),
                                           Vender = dr["Vendor"].ToString(),
                                           Category = dr["Category"].ToString(),
                                           Manufacturer = dr["Manufacturer"].ToString(),

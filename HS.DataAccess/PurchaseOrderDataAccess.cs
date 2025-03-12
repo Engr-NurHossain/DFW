@@ -2083,7 +2083,7 @@ namespace HS.DataAccess
                                SELECT
     ID,
     PurchaseOrderId,
-    OrderDate,
+    CreatedDate,
     Vendor,
     Category,
     Manufacturer,
@@ -2102,7 +2102,7 @@ FROM (
     SELECT
         poware.ID,
         poware.PurchaseOrderId,
-        poware.OrderDate,
+        poware.CreatedDate,
 		ISNULL((SELECT eqt.Name FROM EquipmentType eqt WHERE eqt.Id = Eqp.EquipmentTypeId), 'Unknown') AS Category,
         ISNULL((SELECT SInf.CompanyName FROM Supplier SInf WHERE SInf.SupplierId = poware.SuplierId), 'Unknown') AS Vendor,
         ISNULL((SELECT M.Name FROM Manufacturer M WHERE M.id = Eqp.ManufacturerId), 'Unknown') AS Manufacturer,
