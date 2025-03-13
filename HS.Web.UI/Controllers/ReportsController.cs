@@ -17665,7 +17665,61 @@ namespace HS.Web.UI.Controllers
 
             return View();
         }
+        #region Estimate Report Start
+        public ActionResult EstimateReports()
+        {
+            return View();
+        }
+        public ActionResult LoadEstimateReportPartial()
+        {
+             
+            return View();
+        }
+        public ActionResult EstimateReportList(string mindate, string maxdate, string searchtxt, bool? getreport)
+        {
+            Guid userid = new Guid();
+            DateTime StartDate = new DateTime();
+            DateTime EndDate = new DateTime();
 
+            if(!string.IsNullOrWhiteSpace(mindate) && !string.IsNullOrWhiteSpace(maxdate) && mindate  !="undefined" && maxdate != "undefined")
+            {
+                 StartDate = DateTime.ParseExact(mindate, "MM_dd_yyyy", null);
+                 EndDate = DateTime.ParseExact(maxdate, "MM_dd_yyyy", null);
+            }
+            
+            var currentLoggedIn = (HS.Web.UI.Helper.CustomPrincipal)User; 
+            
+            if (getreport.HasValue && getreport.Value)
+            {
+                DataTable dt;
+                dt = _Util.Facade.InvoiceFacade.GetAllExportEstimateSentByCompanyId(currentLoggedIn.CompanyId.Value, StartDate, EndDate, searchtxt);
+                int[] colarray = {  };
+                int[] rowarray = { dt.Rows.Count + 2 };
+                 
+                return MakeExcelFromDataTable(dt, "Estimates Report", rowarray, colarray);
+            }
+            EstimateReportModel model = _Util.Facade.InvoiceFacade.GetAllEstimateSentByCompanyId(currentLoggedIn.CompanyId.Value, StartDate, EndDate, searchtxt);
+            return View(model);
+        }
+        public ActionResult EstimateActionView(string EstimatorId)
+        {
+            if(!string.IsNullOrWhiteSpace(EstimatorId))
+            {
+                var EstimatorFile = _Util.Facade.EstimatorFacade.GetEstimatorFileByEstimatorId(EstimatorId);
+                var estimator = _Util.Facade.EstimatorFacade.GetEstimatorByEstimatorId(EstimatorId);
+                ViewBag.PdfLocation = EstimatorFile.FileDescription;
+                ViewBag.EstimatorId = estimator.EstimatorId;
+                ViewBag.EstimatorIntId = estimator.Id;
+            }
+            else
+            {
+                ViewBag.PdfLocation = "";
+                ViewBag.EstimatorIntId = 0;
+            }
+                return View();
+        }
+
+        #endregion Estimate Report End
         public ActionResult UpsellsReports()
         {
             return View();

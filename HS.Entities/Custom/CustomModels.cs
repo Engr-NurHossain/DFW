@@ -3551,7 +3551,15 @@ namespace HS.Entities
         public string ticketcompletiondatemin { get; set; }
 
     }
-
+    public class EstimateModel
+    {
+        public string CustomerName { get; set; }
+        public Int32 Id { get; set; }
+        public Int32 CustomerIntId { get; set; }
+        public string EstimatorId { get; set; }
+        public string Status { get; set; }
+        public DateTime SendDate { get; set; }
+    }
     public class UpsellUserModel
     {
         public string EmpDay { get; set; }
@@ -3587,6 +3595,10 @@ namespace HS.Entities
         public TotalUpSell TotalUpSell { get; set; }
         public SumOfUpsell SumOfUpsell { get; set; }
 
+    }
+    public class EstimateReportModel
+    {
+        public List<EstimateModel> EstimateModelList { get; set; } 
     }
     public class EmployeeAccrualPtoAndApprovePtohourModel
     {

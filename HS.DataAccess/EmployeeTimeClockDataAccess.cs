@@ -381,6 +381,34 @@ namespace HS.DataAccess
             }
 
         }
+        public DataTable GetLastClocksByUserIdForApi(Guid userId)
+        {
+            string sqlQuery = @"
+        select 
+            tc.*, 
+            (select emp.FirstName + ' ' + emp.LastName 
+             from employee emp 
+             where emp.UserId = tc.UserId) as LastUpdatedName
+        from EmployeeTimeClock tc
+        where tc.UserId = @userId
+        order by tc.ClockInTime";
+
+            try
+            {
+                using (SqlCommand cmd = GetSQLCommand(sqlQuery))
+                {
+                    AddParameter(cmd, pGuid("userId", userId));
+
+                    DataSet dsResult = GetDataSet(cmd);
+                    return dsResult.Tables[0];
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
 
         public DataTable GetTimeClockHistoryCount(Guid userId, DateTime StartDate, DateTime EndDate)
         {

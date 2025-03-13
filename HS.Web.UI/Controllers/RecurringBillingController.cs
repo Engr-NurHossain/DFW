@@ -375,7 +375,7 @@ namespace HS.Web.UI.Controllers
             ViewBag.today = DateTime.UtcNow.UTCToClientTime().SetZeroHour();
             model.Schedule.CustomerName = customerName;
             model.Schedule.CustomerIntId = model.Customer.Id;
-            var checkinvoiceitem = _Util.Facade.InvoiceFacade.GetInvoiceDetailsByInvoiceId(model.Schedule.LastRMRInvoiceRefId);
+            var checkinvoiceitem = _Util.Facade.InvoiceFacade.GetInvoiceDetailsByInvoiceIdRMR(model.Schedule.LastRMRInvoiceRefId);
             ViewBag.CheckInvoice = checkinvoiceitem;
 
 
@@ -528,15 +528,12 @@ namespace HS.Web.UI.Controllers
                     DateTime Today = DateTime.Now.SetZeroHour();
                     DateTime NextPayment = Today;
                     DateTime NextInvoice = Today;
-                    if (Model.Schedule.PaymentCollectionDate != null && Model.Schedule.StartDate != null && Model.Schedule.PaymentCollectionDate > Model.Schedule.StartDate)
+                    if (Model.Schedule.PaymentCollectionDate != null && Model.Schedule.StartDate != null)
                     {
                         NextInvoice = Model.Schedule.StartDate.Value;
                         NextPayment = Model.Schedule.PaymentCollectionDate.Value;
                     }
-                    else
-                    {
-                        return Json(new { result = false, message = "Please input start date and payment collection date." });
-                    }
+               
                     string niDate = NextInvoice.ToString("dd/MM/yyyy");
                     string niDay = niDate.Split('/')[0];
                     string tDate = Today.ToString("dd/MM/yyyy");

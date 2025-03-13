@@ -11774,6 +11774,289 @@ namespace HS.API.Controllers
                 return Request.CreateResponse(HttpStatusCode.PreconditionFailed, "Token Expired.");
             }
         }
+        [Authorize]
+        [Route("clock-history")]
+        public HttpResponseMessage GetClockHistory()
+        {
+            APIInitialize();
+
+            Guid userId;
+            var headers = Request.Headers;
+
+            if (!headers.Contains("userId") || !Guid.TryParse(headers.GetValues("userId").FirstOrDefault(), out userId))
+            {
+                return Request.CreateResponse(HttpStatusCode.BadRequest, new
+                {
+                    success = false,
+                    error = "Invalid or missing userId.",
+                    result = (object)null
+                });
+            }
+
+            var identity = (ClaimsIdentity)User.Identity;
+            string username = identity.Claims.FirstOrDefault(c => c.Type == "username")?.Value;
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return Request.CreateResponse(HttpStatusCode.PreconditionFailed, new
+                {
+                    success = false,
+                    error = "Token Expired.",
+                    result = (object)null
+                });
+            }
+
+            var usercontext = HSMainApiFacade.GetCompanyConnectionByUserName(username);
+            if (usercontext == null)
+            {
+                return Request.CreateResponse(HttpStatusCode.Unauthorized, new
+                {
+                    success = false,
+                    error = "Authorization Denied.",
+                    result = (object)null
+                });
+            }
+
+            var timeClockList = HSapiFacade.GetLastClocksByUserId(userId);
+            var model = timeClockList.Select(x => new
+            {
+               
+                ClockInTime = x.ClockInTime,
+                ClockInNote = x.ClockInNote,
+                ClockInPosition = $"{x.ClockInLat},{x.ClockInLng}",
+                ClockOutTime = (x.ClockOutTime.HasValue && x.ClockOutTime != DateTime.MinValue) ? x.ClockOutTime : null,
+                ClockOutNote = x.ClockOutNote,
+                ClockOutPosition = (!string.IsNullOrWhiteSpace(x.ClockOutLat) ? x.ClockOutLat + "," : "") + x.ClockOutLng
+             
+            }).ToList();
+   
+
+            return Request.CreateResponse(HttpStatusCode.OK, new
+            {
+                success = true,
+                error = (object)null,
+                result = model
+            });
+        }
+
+        [Authorize]
+        [HttpPost]
+        [Route("clock-in")]
+        public HttpResponseMessage ClockInAPI()
+        {
+            APIInitialize();
+
+            #region Input Params
+
+            string latitude = "";
+            string longitude = "";
+            string note = "";
+            Guid userId = Guid.Empty;
+
+            #endregion
+
+            var re = Request;
+            var headers = re.Headers;
+            bool result = false;
+
+            #region Retrive Data From Headers
+
+            if (headers.Contains("latitude"))
+            {
+                latitude = headers.GetValues("latitude").First();
+            }
+            if (headers.Contains("longitude"))
+            {
+                longitude = headers.GetValues("longitude").First();
+            }
+
+            if (headers.Contains("note"))
+            {
+                note = HttpUtility.UrlDecode(headers.GetValues("note").First());
+            }
+            if (headers.Contains("userId"))
+            {
+                string UserId = headers.GetValues("userId").First();
+                Guid.TryParse(UserId, out userId);
+            }
+            #endregion
+            try
+            {
+                var identity = (ClaimsIdentity)User.Identity;
+                string username = identity.Claims.FirstOrDefault(c => c.Type == "username")?.Value;
+
+                if (!string.IsNullOrWhiteSpace(username))
+                {
+                    var usercontext = HSMainApiFacade.GetCompanyConnectionByUserName(username);
+                    if (usercontext == null)
+                        return Request.CreateResponse(HttpStatusCode.PreconditionFailed, new
+                        {
+                            success = false,
+                            error = "Authorization Denied.",
+                            result = (object)null
+                        });
+
+                    #region Insert Time Clock-In
+                    EmployeeTimeClock tc = new EmployeeTimeClock()
+                    {
+                        UserId = userId,
+                        ClockInLat = latitude,
+                        ClockInLng = longitude,
+                        ClockInTime = DateTime.UtcNow,
+                        ClockInNote = note,
+                        ClockInCreatedBy = userId,
+                        LastUpdateBy = userId,
+                        LastUpdatedDate = DateTime.UtcNow
+                    };
+
+                    int id = HSapiFacade.InsertEmployeeTimeClock(tc);
+                    if (id > 0)
+                    {
+                        return Request.CreateResponse(HttpStatusCode.OK, new
+                        {
+                            success = true,
+                            error = (object)null,
+                            result = (object)null
+                        });
+                    }
+                    else
+                    {
+                        return Request.CreateResponse(HttpStatusCode.PreconditionFailed, new
+                        {
+                            success = false,
+                            error = "Clock In failed.",
+                            result = (object)null
+                        });
+                    }
+                    #endregion
+                }
+
+                return Request.CreateResponse(HttpStatusCode.PreconditionFailed, new
+                {
+                    success = false,
+                    error = "Token Expired.",
+                    result = (object)null
+                });
+            }
+            catch (Exception ex)
+            {
+                return Request.CreateResponse(HttpStatusCode.ExpectationFailed, new
+                {
+                    success = false,
+                    error = ex.Message,
+                    result = (object)null
+                });
+            }
+        }
+        [Authorize]
+        [Route("clock-out")]
+        [HttpPost]
+        public HttpResponseMessage ClockOutAPI()
+        {
+            APIInitialize();
+
+            #region Input Params
+
+            string latitude = "";
+            string longitude = "";
+            string note = "";
+            Guid userId = Guid.Empty;
+
+            #endregion
+
+            var re = Request;
+            var headers = re.Headers;
+            bool result = false;
+
+            #region Retrieve Data From Headers
+
+            if (headers.Contains("latitude"))
+            {
+                latitude = headers.GetValues("latitude").First();
+            }
+            if (headers.Contains("longitude"))
+            {
+                longitude = headers.GetValues("longitude").First();
+            }
+
+            if (headers.Contains("note"))
+            {
+                note = HttpUtility.UrlDecode(headers.GetValues("note").First());
+            }
+            if (headers.Contains("userId"))
+            {
+                string UserId = headers.GetValues("userId").First();
+                Guid.TryParse(UserId, out userId);
+            }
+
+            #endregion
+            try
+            {
+                var identity = (ClaimsIdentity)User.Identity;
+                string Username = identity.Claims.Where(c => c.Type == "username").Select(c => c.Value).SingleOrDefault();
+                if (!string.IsNullOrWhiteSpace(Username))
+                {
+                    var usercontext = HSMainApiFacade.GetCompanyConnectionByUserName(identity.Claims.Where(c => c.Type == "username").Select(c => c.Value).SingleOrDefault());
+                    if (usercontext == null)
+                        return Request.CreateResponse(HttpStatusCode.PreconditionFailed, new
+                        {
+                            success = false,
+                            error = "Authorization Denied.",
+                            result = (object)null
+                        });
+
+                    #region UpdateTimeClockOut
+                    EmployeeTimeClock tc = HSapiFacade.GetEmployeeTimeClockByUserId(userId);
+                    if (tc == null)
+                    {
+                        return Request.CreateResponse(HttpStatusCode.PreconditionFailed, new
+                        {
+                            success = false,
+                            error = "Authorization Denied.",
+                            result = (object)null
+                        });
+                    }
+                    tc.ClockOutLat = latitude;
+                    tc.ClockOutLng = longitude;
+                    tc.ClockOutTime = DateTime.Now.UTCCurrentTime();
+                    tc.ClockOutNote = note;
+                    tc.ClockOutCreatedBy = userId;
+                    tc.LastUpdateBy = userId;
+                    tc.LastUpdatedDate = DateTime.Now.UTCCurrentTime();
+                    tc.ClockedInSeconds = (int)DateTime.Now.UTCCurrentTime().Subtract(tc.ClockInTime).TotalSeconds;
+                    result = HSapiFacade.UpdateEmployeeTimeClock(tc);
+                    #endregion
+
+                    return Request.CreateResponse(HttpStatusCode.OK, new
+                    {
+                        success = true,
+                        error = (object)null,
+                        result = (object)null
+                    });
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.PreconditionFailed, new
+                    {
+                        success = false,
+                        error = "Token Expired.",
+                        result = (object)null
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Request.CreateResponse(HttpStatusCode.ExpectationFailed, new
+                {
+                    success = false,
+                    error = ex.Message,
+                    result = (object)null
+                });
+            }
+        }
+
+
+
         #endregion
 
         #region Manage User

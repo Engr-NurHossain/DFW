@@ -76,6 +76,10 @@ namespace HS.Framework.Utils
         {
             public static string SendEstimatorApprovedSMS { get { return "EstimatorApprovedSMS"; } }
         }
+        public static class EstimatorSentSMS
+        {
+            public static string SendEstimatorSMS { get { return "EstimatorSentSMS"; } }
+        }
         public static class TicketStatusSMS
         {
             public static string SendTicketStatusSMS { get { return "TicketStatusSMS"; } }

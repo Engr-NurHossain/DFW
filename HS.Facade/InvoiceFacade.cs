@@ -136,6 +136,23 @@ namespace HS.Facade
                            }).ToList();
             return InvoiceList;
         }
+
+        public EstimateReportModel GetAllEstimateSentByCompanyId(Guid CompanyId, DateTime start, DateTime end,string searchtext)
+        {
+            DataTable dt = _InvoiceDataAccess.GetAllEstimateSentByCompanyId(CompanyId, start, end, searchtext);
+            EstimateReportModel model = new EstimateReportModel();
+            model.EstimateModelList = (from DataRow dr in dt.Rows
+                           select new EstimateModel()
+                           { 
+                               CustomerName = dr["CustomerName"].ToString(),
+                               Id = dr["Id"] != DBNull.Value ? Convert.ToInt32(dr["Id"]) : 0,
+                               CustomerIntId = dr["CustomerIntId"] != DBNull.Value ? Convert.ToInt32(dr["CustomerIntId"]) : 0,
+                               EstimatorId = dr["EstimatorId"].ToString(),
+                               Status = dr["Status"].ToString(),
+                               SendDate = dr["LastUpdatedDate"] != DBNull.Value ? Convert.ToDateTime(dr["LastUpdatedDate"]) : DateTime.Now, 
+                           }).ToList();
+            return model;
+        }
         #endregion
 
 
@@ -653,7 +670,10 @@ namespace HS.Facade
         {
             return _InvoiceDataAccess.GetAllEstimateReportByCompanyId(CompanyId, Start, End);
         }
-
+        public DataTable GetAllExportEstimateSentByCompanyId(Guid CompanyId, DateTime? Start, DateTime? End,string searchtext)
+        {
+            return _InvoiceDataAccess.GetAllExportEstimateSentByCompanyId(CompanyId, Start, End,searchtext);
+        }
         public List<Invoice> RabDataMigrationNewInvoiceList()
         {
             return _InvoiceDataAccess.RabDataMigrationNewInvoiceList();
@@ -1218,6 +1238,13 @@ namespace HS.Facade
         {
             return _InvoiceDetailDataAccess.GetByQuery(string.Format("InvoiceId = '{0}'", InvoiceId)).ToList();
         }
+        public List<Invoice> GetInvoiceDetailsByInvoiceIdRMR(string InvoiceId)
+        {
+            return _InvoiceDataAccess
+                .GetByQuery(string.Format("InvoiceId = '{0}' AND IsARBInvoice = 1", InvoiceId))
+                .ToList();
+        }
+
         public bool UpdateInvoiceDetails(InvoiceDetail invoiceDetail)
         {
             if (!invoiceDetail.Taxable.HasValue)
