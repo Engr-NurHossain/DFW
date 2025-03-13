@@ -43,8 +43,14 @@ namespace HS.Entities
         public bool IsMonitronics { get; set; }
         public bool IsCentral { get; set; }
         public bool IsLead { get; set; }
+        public bool NOPOO { get; set; }
+        public bool Replacement { get; set; }
+        public bool Transfer { get; set; }
+        public bool FCReplacement { get; set; }
         // public CustomInitialLeadPackageModel CustomInitialLeadPackageModelItems { get; set; }
         public string BillMethod { get; set; }
+        public string CellBackupCompany { get; set; }
+        public string CellSerialNo { get; set; }
         public List<QaAnswer> QAList { get; set; }
         public List<QaAnswer> QAList1 { get; set; }
         public string LeadName { get; set; }

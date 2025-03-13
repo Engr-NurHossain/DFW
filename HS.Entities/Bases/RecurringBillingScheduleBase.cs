@@ -7,7 +7,7 @@ using HS.Framework;
 namespace HS.Entities.Bases
 {
 	[Serializable]
-    [DataContract(Name = "RecurringBillingScheduleBase", Namespace = "http://www.hims-tech.com//entities")]
+    [DataContract(Name = "RecurringBillingScheduleBase", Namespace = "http://www.piistech.com//entities")]
 	public class RecurringBillingScheduleBase : BaseBusinessEntity
 	{
 	
@@ -49,7 +49,11 @@ namespace HS.Entities.Bases
 			PaymentCollectionDate = 32,
 			IsEInvoice = 33,
 			IsEReceipt = 34,
-			LastRMRInvoiceRefId = 35
+			LastRMRInvoiceRefId = 35,
+			IsReplacement = 36,
+			IsTransfer = 37,
+			IsFCReplacement = 38,
+			IsPOO = 39
 		}
 		#endregion
 	
@@ -90,6 +94,10 @@ namespace HS.Entities.Bases
 		public const string Property_IsEInvoice = "IsEInvoice";		            
 		public const string Property_IsEReceipt = "IsEReceipt";		            
 		public const string Property_LastRMRInvoiceRefId = "LastRMRInvoiceRefId";		            
+		public const string Property_IsReplacement = "IsReplacement";		            
+		public const string Property_IsTransfer = "IsTransfer";		            
+		public const string Property_IsFCReplacement = "IsFCReplacement";		            
+		public const string Property_IsPOO = "IsPOO";		            
 		#endregion
 		
 		#region Private Data Types
@@ -129,6 +137,10 @@ namespace HS.Entities.Bases
 		private Nullable<Boolean> _IsEInvoice;	            
 		private Nullable<Boolean> _IsEReceipt;	            
 		private String _LastRMRInvoiceRefId;	            
+		private Nullable<Boolean> _IsReplacement;	            
+		private Nullable<Boolean> _IsTransfer;	            
+		private Nullable<Boolean> _IsFCReplacement;	            
+		private Nullable<Boolean> _IsPOO;	            
 		#endregion
 		
 		#region Properties		
@@ -672,6 +684,66 @@ namespace HS.Entities.Bases
 			}
         }
 
+		[DataMember]
+		public Nullable<Boolean> IsReplacement
+		{	
+			get{ return _IsReplacement; }			
+			set
+			{
+				PropertyChangingEventArgs args = new PropertyChangingEventArgs(Property_IsReplacement, value, _IsReplacement);
+				if (PropertyChanging(args))
+				{
+					_IsReplacement = value;
+					PropertyChanged(args);					
+				}	
+			}
+        }
+
+		[DataMember]
+		public Nullable<Boolean> IsTransfer
+		{	
+			get{ return _IsTransfer; }			
+			set
+			{
+				PropertyChangingEventArgs args = new PropertyChangingEventArgs(Property_IsTransfer, value, _IsTransfer);
+				if (PropertyChanging(args))
+				{
+					_IsTransfer = value;
+					PropertyChanged(args);					
+				}	
+			}
+        }
+
+		[DataMember]
+		public Nullable<Boolean> IsFCReplacement
+		{	
+			get{ return _IsFCReplacement; }			
+			set
+			{
+				PropertyChangingEventArgs args = new PropertyChangingEventArgs(Property_IsFCReplacement, value, _IsFCReplacement);
+				if (PropertyChanging(args))
+				{
+					_IsFCReplacement = value;
+					PropertyChanged(args);					
+				}	
+			}
+        }
+
+		[DataMember]
+		public Nullable<Boolean> IsPOO
+		{	
+			get{ return _IsPOO; }			
+			set
+			{
+				PropertyChangingEventArgs args = new PropertyChangingEventArgs(Property_IsPOO, value, _IsPOO);
+				if (PropertyChanging(args))
+				{
+					_IsPOO = value;
+					PropertyChanged(args);					
+				}	
+			}
+        }
+
 		#endregion
 		
 		#region Cloning Base Objects
@@ -715,6 +787,10 @@ namespace HS.Entities.Bases
 			newObj.IsEInvoice = this.IsEInvoice;						
 			newObj.IsEReceipt = this.IsEReceipt;						
 			newObj.LastRMRInvoiceRefId = this.LastRMRInvoiceRefId;						
+			newObj.IsReplacement = this.IsReplacement;						
+			newObj.IsTransfer = this.IsTransfer;						
+			newObj.IsFCReplacement = this.IsFCReplacement;						
+			newObj.IsPOO = this.IsPOO;						
 			
 			return newObj;
 		}
@@ -760,6 +836,10 @@ namespace HS.Entities.Bases
 			info.AddValue(RecurringBillingScheduleBase.Property_IsEInvoice, IsEInvoice);				
 			info.AddValue(RecurringBillingScheduleBase.Property_IsEReceipt, IsEReceipt);				
 			info.AddValue(RecurringBillingScheduleBase.Property_LastRMRInvoiceRefId, LastRMRInvoiceRefId);				
+			info.AddValue(RecurringBillingScheduleBase.Property_IsReplacement, IsReplacement);				
+			info.AddValue(RecurringBillingScheduleBase.Property_IsTransfer, IsTransfer);				
+			info.AddValue(RecurringBillingScheduleBase.Property_IsFCReplacement, IsFCReplacement);				
+			info.AddValue(RecurringBillingScheduleBase.Property_IsPOO, IsPOO);				
 		}
 		#endregion
 

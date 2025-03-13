@@ -547,7 +547,7 @@ namespace HS.Web.UI.Controllers
             ViewBag.FrontEndList = _Util.Facade.LookupFacade.GetDropdownsByKey("Front-End");
             return View(_extended);
         }
-        public JsonResult UpdateCustomerExtendedSystemInfo(Guid CustomerId, string Warranty, string Keypad, string FrontEnd)
+        public JsonResult UpdateCustomerExtendedSystemInfo(Guid CustomerId, string Warranty, string Keypad, string FrontEnd, string CellSerialNo)
         {
             bool result = false;
             CustomerExtended _extended = _Util.Facade.CustomerFacade.GetCustomerExtendedByCustomerId(CustomerId);
@@ -568,6 +568,12 @@ namespace HS.Web.UI.Controllers
                     _extended.FrontEnd = FrontEnd;
                     _Util.Facade.CustomerFacade.UpdateCustomerExtended(_extended);
                 }
+                else if (!string.IsNullOrWhiteSpace(CellSerialNo))
+                {
+                    _extended.CellSerialNo = CellSerialNo;
+                    _Util.Facade.CustomerFacade.UpdateCustomerExtended(_extended);
+                }
+
                 result = true;
             }
             return Json(new { result = result, model = _extended });

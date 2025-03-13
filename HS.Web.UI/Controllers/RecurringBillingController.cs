@@ -1,6 +1,5 @@
 ﻿using ClosedXML.Excel;
 using HS.Entities;
-using HS.Entities.List;
 using HS.Framework;
 using HS.Framework.Utils;
 using HS.Web.UI.Helper;
@@ -104,7 +103,7 @@ namespace HS.Web.UI.Controllers
                     return PartialView("~/Views/Shared/_AccessDenied.cshtml");
                 }
                 model.ScheduleItems = _Util.Facade.CustomerFacade.GetRecurringBillingScheduleItemsByScheduleId(model.Schedule.ScheduleId);
-               
+
                 model.Schedule.ShowLineItem = false;
                 model.Schedule.ShowDayInAdvance = false;
                 model.Schedule.ShowBillDate = false;
@@ -474,6 +473,10 @@ namespace HS.Web.UI.Controllers
             tempSchedule.BillCycle = !string.IsNullOrWhiteSpace(Model.Schedule.BillCycle) ? Model.Schedule.BillCycle : "";
             tempSchedule.IsEInvoice = Model.Schedule.IsEInvoice;
             tempSchedule.IsEReceipt = Model.Schedule.IsEReceipt;
+            tempSchedule.IsReplacement = Model.Schedule.IsReplacement;
+            tempSchedule.IsFCReplacement = Model.Schedule.IsFCReplacement;
+            tempSchedule.IsPOO = Model.Schedule.IsPOO;
+            tempSchedule.IsTransfer = Model.Schedule.IsTransfer;
             //tempSchedule.Interval = Model.Schedule.Interval;
             tempSchedule.StartDate = StartDate;
             tempSchedule.EndDate = EndDate;
@@ -616,6 +619,10 @@ namespace HS.Web.UI.Controllers
                     if (StoreData.BCCEmail != tempSchedule.BCCEmail) { LogMsg += " bcc email address change " + StoreData.BCCEmail.ToLower() + " to " + tempSchedule.BCCEmail.ToLower() + ","; }
                     if (StoreData.IsEReceipt != tempSchedule.IsEReceipt) { LogMsg += " e-receipt change " + StoreData.IsEReceipt.ToString().ToLower() + " to " + tempSchedule.IsEReceipt.ToString().ToLower() + ","; }
                     if (StoreData.IsEInvoice != tempSchedule.IsEInvoice) { LogMsg += " e-invoice change " + StoreData.IsEInvoice.ToString().ToLower() + " to " + tempSchedule.IsEInvoice.ToString().ToLower() + ","; }
+                    if (StoreData.IsReplacement != tempSchedule.IsReplacement) { LogMsg += " Replacement change " + StoreData.IsReplacement.ToString().ToLower() + " to " + tempSchedule.IsReplacement.ToString().ToLower() + ","; }
+                    if (StoreData.IsFCReplacement != tempSchedule.IsFCReplacement) { LogMsg += " FC Replacement change " + StoreData.IsFCReplacement.ToString().ToLower() + " to " + tempSchedule.IsFCReplacement.ToString().ToLower() + ","; }
+                    if (StoreData.IsTransfer != tempSchedule.IsTransfer) { LogMsg += " Not For Transfer change " + StoreData.IsTransfer.ToString().ToLower() + " to " + tempSchedule.IsTransfer.ToString().ToLower() + ","; }
+                    if (StoreData.IsPOO != tempSchedule.IsPOO) { LogMsg += " NO POO change " + StoreData.IsPOO.ToString().ToLower() + " to " + tempSchedule.IsPOO.ToString().ToLower() + ","; }
                     if (StoreData.IncludeOpenInvoices != tempSchedule.IncludeOpenInvoices) { LogMsg += " include rmr unpaid bills change " + StoreData.IncludeOpenInvoices.ToString().ToLower() + " to " + tempSchedule.IncludeOpenInvoices.ToString().ToLower() + ","; }
                     if (StoreData.OthersUnpaidBill != tempSchedule.OthersUnpaidBill) { LogMsg += " include other unpaid bills change " + StoreData.OthersUnpaidBill.ToString().ToLower() + " to " + tempSchedule.OthersUnpaidBill.ToString().ToLower() + ","; }
                     if (StoreData.PaymentMethod != tempSchedule.PaymentMethod) { LogMsg += " payment method change " + StoreData.PaymentMethod.ToLower() + " to " + tempSchedule.PaymentMethod.ToLower() + ","; }
@@ -2620,7 +2627,6 @@ namespace HS.Web.UI.Controllers
             DateTime StartDate = new DateTime();
             DateTime EndDate = new DateTime();
             int Psize = _Util.Facade.GlobalSettingsFacade.GetLeadPageLength(CurrentUser.CompanyId.Value);
-
             if (Start != null && Start != new DateTime() && End != null && End != new DateTime())
             {
                 StartDate = Start.Value.SetZeroHour();
@@ -2704,7 +2710,7 @@ namespace HS.Web.UI.Controllers
                 filter.PageNo = 1;
             }
             filter.PageSize = 50;
-       
+
 
             GlobalSetting settingOrd = _Util.Facade.GlobalSettingsFacade.GetGlobalSettingsByKey(currentLoggedIn.CompanyId.Value, "CustomerListOrder");
             if (settingOrd != null)
