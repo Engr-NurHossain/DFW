@@ -310,7 +310,7 @@ namespace HS.Web.UI.Controllers
 
         [Authorize]
         [HttpPost]
-        public JsonResult EstimeApproveById(int Id)
+        public JsonResult EstimeApproveById(int Id,string Status)
         {
             
             var CurrentUser = (HS.Web.UI.Helper.CustomPrincipal)User;
@@ -1652,8 +1652,8 @@ namespace HS.Web.UI.Controllers
                 FileDescription = filename,
                 UpdatedDate = DateTime.UtcNow,
                 CreatedDate = DateTime.UtcNow,
-                CreatedBy = new Guid(),
-                UpdatedBy = new Guid(),
+                CreatedBy = CurrentUser.UserId,
+                UpdatedBy = CurrentUser.UserId,
                 EstimatorId = StrEstimatorId,
                 FileSize = _fileSize,
                 FileFullName = pdfname,

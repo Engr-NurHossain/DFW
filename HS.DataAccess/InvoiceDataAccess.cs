@@ -3511,7 +3511,7 @@ namespace HS.DataAccess
                                     where est.CompanyId=@CompanyId
                                     and est.Status != 'Init'
                                     and est.Status = 'Sent To Customer'
-                                    and cu.IsActive = 1 {1} {2} order by Id desc
+                                    and cu.IsActive = 1 {1} {2} order by EstimatorId desc
                                 ";
             if (!string.IsNullOrWhiteSpace(SearchText) && SearchText != "undefined")
             {
@@ -3555,7 +3555,7 @@ namespace HS.DataAccess
                                     where est.CompanyId=@CompanyId
                                     and est.Status != 'Init'
                                     and est.Status = 'Sent To Customer'
-                                    and cu.IsActive = 1 {1} {2} order by Id desc
+                                    and cu.IsActive = 1 {1} {2} order by EstimatorId desc
                                 ";
             if(!string.IsNullOrWhiteSpace(SearchText) && SearchText != "undefined")
             {

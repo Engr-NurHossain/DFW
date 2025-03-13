@@ -17707,9 +17707,18 @@ namespace HS.Web.UI.Controllers
             {
                 var EstimatorFile = _Util.Facade.EstimatorFacade.GetEstimatorFileByEstimatorId(EstimatorId);
                 var estimator = _Util.Facade.EstimatorFacade.GetEstimatorByEstimatorId(EstimatorId);
-                ViewBag.PdfLocation = EstimatorFile.FileDescription;
-                ViewBag.EstimatorId = estimator.EstimatorId;
-                ViewBag.EstimatorIntId = estimator.Id;
+                if(EstimatorFile != null)
+                {
+                    ViewBag.PdfLocation = EstimatorFile.FileDescription;
+                    ViewBag.EstimatorId = estimator.EstimatorId;
+                    ViewBag.EstimatorIntId = estimator.Id;
+                }
+                else
+                {
+                    ViewBag.PdfLocation = "";
+                    ViewBag.EstimatorId = estimator.EstimatorId;
+                    ViewBag.EstimatorIntId = estimator.Id;
+                }
             }
             else
             {
