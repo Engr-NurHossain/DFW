@@ -686,8 +686,8 @@ namespace HS.Web.UI
                defaults: new { controller = "Reports", action = "Index", id = UrlParameter.Optional }
            );
             routes.MapRoute(
-              name: "EstimateReports",
-              url: DomainPath + "EstimateReports",
+              name: "estimates",
+              url: DomainPath + "estimates",
               defaults: new { controller = "Reports", action = "Index", id = UrlParameter.Optional }
             );
             routes.MapRoute(

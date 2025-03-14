@@ -17675,30 +17675,73 @@ namespace HS.Web.UI.Controllers
              
             return View();
         }
-        public ActionResult EstimateReportList(string mindate, string maxdate, string searchtxt, bool? getreport)
-        {
-            Guid userid = new Guid();
+        public ActionResult EstimateReportList(DateTime? mindate, DateTime? maxdate, string searchtxt, bool? getreport,string order, int PageNo, int PageSize)
+        { 
+            ViewBag.Order = order;
+            ViewBag.StartDate = mindate;
+            ViewBag.EndDate = maxdate;
             DateTime StartDate = new DateTime();
             DateTime EndDate = new DateTime();
-
-            if(!string.IsNullOrWhiteSpace(mindate) && !string.IsNullOrWhiteSpace(maxdate) && mindate  !="undefined" && maxdate != "undefined")
+            string newCookie = "";
+            if(mindate.HasValue && maxdate.HasValue)
             {
-                 StartDate = DateTime.ParseExact(mindate, "MM_dd_yyyy", null);
-                 EndDate = DateTime.ParseExact(maxdate, "MM_dd_yyyy", null);
+                if (Request.Cookies[CookieKeys.DateViewFilter] != null && !string.IsNullOrWhiteSpace(Request.Cookies[CookieKeys.DateViewFilter].Value))
+                {
+                    newCookie = Request.Cookies[CookieKeys.DateViewFilter].Value;
+                    newCookie = Server.UrlDecode(newCookie);
+                    var CookieVals = newCookie.Split(',');
+
+                    if (CookieVals.Length == 3)
+                    {
+                        StartDate = CookieVals[0].ToDateTime().SetZeroHour();
+                        EndDate = CookieVals[1].ToDateTime().SetMaxHour();
+                    }
+                }
+                else
+                {
+                    StartDate = mindate.Value.SetZeroHour();
+                    EndDate = maxdate.Value.SetMaxHour();
+                }
+            } 
+            else
+            {
+                StartDate =  new DateTime();
+                EndDate =  new DateTime();
             }
-            
-            var currentLoggedIn = (HS.Web.UI.Helper.CustomPrincipal)User; 
+                var currentLoggedIn = (HS.Web.UI.Helper.CustomPrincipal)User; 
             
             if (getreport.HasValue && getreport.Value)
             {
                 DataTable dt;
-                dt = _Util.Facade.InvoiceFacade.GetAllExportEstimateSentByCompanyId(currentLoggedIn.CompanyId.Value, StartDate, EndDate, searchtxt);
+                dt = _Util.Facade.InvoiceFacade.GetAllExportEstimateSentByCompanyId(currentLoggedIn.CompanyId.Value, StartDate, EndDate, searchtxt,order);
                 int[] colarray = {  };
                 int[] rowarray = { dt.Rows.Count + 2 };
                  
                 return MakeExcelFromDataTable(dt, "Estimates Report", rowarray, colarray);
             }
-            EstimateReportModel model = _Util.Facade.InvoiceFacade.GetAllEstimateSentByCompanyId(currentLoggedIn.CompanyId.Value, StartDate, EndDate, searchtxt);
+            EstimateReportModel model = _Util.Facade.InvoiceFacade.GetAllEstimateSentByCompanyId(currentLoggedIn.CompanyId.Value, StartDate, EndDate, searchtxt,order, PageNo, PageSize);
+            ViewBag.PageNumber = PageNo;
+            ViewBag.OutOfNumber = 0;
+            ViewBag.order = order;
+            if (ViewBag.order == null)
+            {
+                ViewBag.order = 0;
+            }
+            if (model.TotalCount > 0)
+            {
+                ViewBag.OutOfNumber = model.TotalCount;
+            }
+
+            if ((int)ViewBag.PageNumber * PageSize > (int)ViewBag.OutOfNumber)
+            {
+                ViewBag.CurrentNumber = (int)ViewBag.OutOfNumber;
+            }
+            else
+            {
+                ViewBag.CurrentNumber = (int)ViewBag.PageNumber * PageSize;
+            }
+            ViewBag.PageCount = Math.Ceiling((double)ViewBag.OutOfNumber / PageSize);
+
             return View(model);
         }
         public ActionResult EstimateActionView(string EstimatorId)

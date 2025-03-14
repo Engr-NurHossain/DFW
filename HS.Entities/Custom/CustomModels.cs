@@ -3599,6 +3599,7 @@ namespace HS.Entities
     public class EstimateReportModel
     {
         public List<EstimateModel> EstimateModelList { get; set; } 
+        public int TotalCount { get; set; }
     }
     public class EmployeeAccrualPtoAndApprovePtohourModel
     {

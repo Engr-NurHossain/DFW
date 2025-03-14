@@ -3495,10 +3495,47 @@ namespace HS.DataAccess
                 return null;
             }
         }
-        public DataTable GetAllExportEstimateSentByCompanyId(Guid companyId, DateTime? Start, DateTime? End, string SearchText)
+        public DataTable GetAllExportEstimateSentByCompanyId(Guid companyId, DateTime? Start, DateTime? End, string SearchText,string order)
         {
             string searchquery = "";
-            string datequery = "";
+            string datequery = ""; 
+            string orderquery1 = "";
+            #region Order
+            if (!string.IsNullOrWhiteSpace(order) && order != "undefined")
+            {
+
+                if (order == "ascending/customername")
+                { 
+                    orderquery1 = "order by [Customer Name] asc";
+                }
+                else if (order == "descending/customername")
+                { 
+                    orderquery1 = "order by [Customer Name] desc";
+                }
+                if (order == "ascending/estimateid")
+                { 
+                    orderquery1 = "order by [Estimate Id] asc";
+                }
+                else if (order == "descending/estimateid")
+                { 
+                    orderquery1 = "order by [Estimate Id] desc";
+                }
+                else if (order == "ascending/sentdate")
+                { 
+                    orderquery1 = "order by [Sent Date]  asc";
+                }
+                else if (order == "descending/sentdate")
+                { 
+                    orderquery1 = "order by [Sent Date]  desc";
+                }
+
+
+            }
+            else
+            { 
+                orderquery1 = "order by [Estimate Id] desc";
+            }
+            #endregion
             string sqlQuery = @"   Declare @CompanyId uniqueidentifier
                                     set @CompanyId ='{0}' 
                                     select Distinct 
@@ -3511,7 +3548,7 @@ namespace HS.DataAccess
                                     where est.CompanyId=@CompanyId
                                     and est.Status != 'Init'
                                     and est.Status = 'Sent To Customer'
-                                    and cu.IsActive = 1 {1} {2} order by EstimatorId desc
+                                    and cu.IsActive = 1 {1} {2} {3}
                                 ";
             if (!string.IsNullOrWhiteSpace(SearchText) && SearchText != "undefined")
             {
@@ -3524,7 +3561,7 @@ namespace HS.DataAccess
             }
             try
             {
-                sqlQuery = string.Format(sqlQuery, companyId, datequery, searchquery);
+                sqlQuery = string.Format(sqlQuery, companyId, datequery, searchquery, orderquery1);
                 using (SqlCommand cmd = GetSQLCommand(sqlQuery))
                 {
                     DataSet dsResult = GetDataSet(cmd);
@@ -3537,11 +3574,50 @@ namespace HS.DataAccess
             }
         }
 
-        public DataTable GetAllEstimateSentByCompanyId(Guid companyId, DateTime? Start, DateTime? End,string SearchText)
+        public DataSet GetAllEstimateSentByCompanyId(Guid companyId, DateTime? Start, DateTime? End,string SearchText,string order,int pageno,int pagesize)
         {
             string searchquery = "";
             string datequery = "";
-            string sqlQuery = @"   Declare @CompanyId uniqueidentifier
+            string orderquery = ""; 
+            #region Order
+            if (!string.IsNullOrWhiteSpace(order) && order != "undefined")
+            {
+
+                if (order == "ascending/customername")
+                {
+                    orderquery = "order by CustomerName asc"; 
+                }
+                else if (order == "descending/customername")
+                {
+                    orderquery = "order by CustomerName desc"; 
+                }
+                if (order == "ascending/estimateid")
+                {
+                    orderquery = "order by EstimatorId asc"; 
+                }
+                else if (order == "descending/estimateid")
+                {
+                    orderquery = "order by EstimatorId desc"; 
+                }
+                else if (order == "ascending/sentdate")
+                {
+                    orderquery = "order by LastUpdatedDate asc"; 
+                }
+                else if (order == "descending/sentdate")
+                {
+                    orderquery = "order by LastUpdatedDate desc"; 
+                } 
+            }
+            else
+            {
+                orderquery = "order by EstimatorId desc"; 
+            }
+            #endregion
+            string sqlQuery = @"    Declare @CompanyId uniqueidentifier
+                                    Declare @pagestart int
+                                    Declare @pageend int
+                                    set @pagestart=(@pageno-1)* @pagesize 
+                                    set @pageend = @pagesize 
                                     set @CompanyId ='{0}' 
                                     select Distinct 
                                     cu.FirstName + ' ' + cu.LastName As [CustomerName]
@@ -3550,13 +3626,20 @@ namespace HS.DataAccess
 									,est.LastUpdatedDate As [LastUpdatedDate] 
 									,est.Id 
 									,est.Status
-                                    from Estimator est 
+                                    into #sentestimator from Estimator est 
                                     left join Customer cu on cu.CustomerId = est.CustomerId
                                     where est.CompanyId=@CompanyId
                                     and est.Status != 'Init'
                                     and est.Status = 'Sent To Customer'
-                                    and cu.IsActive = 1 {1} {2} order by EstimatorId desc
-                                ";
+                                    and cu.IsActive = 1 {1} {2} {3}
+
+                                    select top(@pagesize) *  from #sentestimator
+                                    where Id not in (Select TOP (@pagestart)  Id from #sentestimator order by EstimatorId desc)
+                                    order by EstimatorId desc 
+ 
+								    Select  count(Id) as [TotalCount] from #sentestimator
+
+								    Drop Table #sentestimator  ";
             if(!string.IsNullOrWhiteSpace(SearchText) && SearchText != "undefined")
             {
                 
@@ -3568,11 +3651,15 @@ namespace HS.DataAccess
             }
             try
             {
-                sqlQuery = string.Format(sqlQuery, companyId, datequery, searchquery);
+                sqlQuery = string.Format(sqlQuery, companyId, datequery, searchquery, orderquery);
                 using (SqlCommand cmd = GetSQLCommand(sqlQuery))
                 {
+                    AddParameter(cmd, pInt32("pageno", pageno));
+                    AddParameter(cmd, pInt32("pagesize", pagesize));
                     DataSet dsResult = GetDataSet(cmd);
-                    return dsResult.Tables[0];
+                    return dsResult;
+                    //DataSet dsResult = GetDataSet(cmd);
+                    //return dsResult.Tables[0];
                 }
             }
             catch (Exception ex)
