@@ -23468,8 +23468,8 @@ namespace HS.Web.UI.Controllers
                         }
                         if (onetimeserviceestimator != null && onetimeserviceestimator.Count > 0)
                         {
-                            var EstimatorserviceTotalAmount = Math.Round(estimator.ServiceTotalAmount.HasValue ? estimator.ServiceTotalAmount.Value : 0, 2);
-                            var EstimatorServiceTax = Math.Round(estimator.ServiceTaxAmount.HasValue ? estimator.ServiceTaxAmount.Value : 0, 2);
+                            var EstimatoronetimeserviceTotalAmount = Math.Round(estimator.OneTimeServiceTotalAmount.HasValue ? estimator.OneTimeServiceTotalAmount.Value : 0, 2);
+                            var EstimatorOneTimeServiceTax = Math.Round(estimator.OneTimeServiceTaxAmount.HasValue ? estimator.OneTimeServiceTaxAmount.Value : 0, 2);
 
                             Invoice servicetempInv = new Invoice()
                             {
@@ -23479,7 +23479,7 @@ namespace HS.Web.UI.Controllers
                                 Tax = Math.Round(estimator.TaxAmount.HasValue ? estimator.TaxAmount.Value : 0, 2),
                                 DiscountCode = estimator.Description,
                                 DiscountAmount = 0,
-                                TotalAmount = EstimatorserviceTotalAmount + EstimatorServiceTax,
+                                TotalAmount = EstimatoronetimeserviceTotalAmount + EstimatorOneTimeServiceTax,
                                 Status = LabelHelper.InvoiceStatus.Open,
                                 InvoiceDate = DateTime.UtcNow,
                                 LastUpdatedDate = DateTime.UtcNow,
@@ -23494,11 +23494,11 @@ namespace HS.Web.UI.Controllers
                                 TrackingNo = "",
                                 ShippingCost = 0,
                                 Discountpercent = 0,
-                                BalanceDue = EstimatorserviceTotalAmount + EstimatorServiceTax,
+                                BalanceDue = EstimatoronetimeserviceTotalAmount + EstimatorOneTimeServiceTax,
                                 Deposit = 0,
                                 Message = "",
                                 TaxType = "",
-                                Balance = estimator.ServiceTotalAmount,
+                                Balance = estimator.OneTimeServiceTotalAmount,
                                 Memo = "",
                                 LateFee = 0,
                                 LateAmount = 0,

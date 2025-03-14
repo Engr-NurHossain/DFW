@@ -29,6 +29,8 @@ using HS.DataAccess;
 using Microsoft.Web.Services3.Addressing;
 using System.Security.Policy;
 using static HS.Entities.Custom.NMCTestAccountResponse;
+using DocumentFormat.OpenXml.Wordprocessing;
+using Microsoft.Web.Services3.Security.Utility;
 
 namespace HS.Web.UI.Controllers
 {
@@ -1646,22 +1648,40 @@ namespace HS.Web.UI.Controllers
             string message = estimator.Status;
             _fileSize = (double)filename.Length / 1024;
             _fileSize = Math.Round(_fileSize, 2, MidpointRounding.AwayFromZero);
-            EstimatorFile estfile = new EstimatorFile()
+            var ExistEstimatorFile = _Util.Facade.EstimatorFacade.GetEstimatorFileByEstimatorId(StrEstimatorId);
+            if(ExistEstimatorFile != null)
             {
-                Filename = pdfname,
-                FileDescription = filename,
-                UpdatedDate = DateTime.UtcNow,
-                CreatedDate = DateTime.UtcNow,
-                CreatedBy = CurrentUser.UserId,
-                UpdatedBy = CurrentUser.UserId,
-                EstimatorId = StrEstimatorId,
-                FileSize = _fileSize,
-                FileFullName = pdfname,
-                IsActive = true,
-                EstimatorType = ""
-            };
-            _Util.Facade.CustomerAppoinmentFacade.InsertEstimatorFile(estfile);
-
+                ExistEstimatorFile.Filename = pdfname;
+                ExistEstimatorFile.FileDescription = filename;
+                ExistEstimatorFile.UpdatedDate = DateTime.UtcNow;
+                ExistEstimatorFile.CreatedDate = DateTime.UtcNow;
+                ExistEstimatorFile.CreatedBy = CurrentUser.UserId;
+                ExistEstimatorFile.UpdatedBy = CurrentUser.UserId;
+                ExistEstimatorFile.EstimatorId = StrEstimatorId;
+                ExistEstimatorFile.FileSize = _fileSize;
+                ExistEstimatorFile.FileFullName = pdfname;
+                ExistEstimatorFile.IsActive = true;
+                ExistEstimatorFile.EstimatorType = "";
+                _Util.Facade.CustomerAppoinmentFacade.UpdateEstimatorFile(ExistEstimatorFile);
+            }
+            else
+            {
+                EstimatorFile estfile = new EstimatorFile()
+                {
+                    Filename = pdfname,
+                    FileDescription = filename,
+                    UpdatedDate = DateTime.UtcNow,
+                    CreatedDate = DateTime.UtcNow,
+                    CreatedBy = CurrentUser.UserId,
+                    UpdatedBy = CurrentUser.UserId,
+                    EstimatorId = StrEstimatorId,
+                    FileSize = _fileSize,
+                    FileFullName = pdfname,
+                    IsActive = true,
+                    EstimatorType = ""
+                };
+                _Util.Facade.CustomerAppoinmentFacade.InsertEstimatorFile(estfile);
+            } 
             FileHelper.SaveFile(applicationPDFData, Serverfilename);
 
             if (filename.IndexOf('/') != 0)

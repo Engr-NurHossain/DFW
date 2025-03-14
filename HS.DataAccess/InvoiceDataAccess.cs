@@ -3504,8 +3504,8 @@ namespace HS.DataAccess
                                     select Distinct 
                                     cu.FirstName + ' ' + cu.LastName As [Customer Name]
                                     ,cu.Id as [Customer Id]
-									,est.EstimatorId as [Estimator Id]
-									,Cast(est.LastUpdatedDate as date) As [LastUpdated Date]  
+									,est.EstimatorId as [Estimate Id]
+									,Cast(est.LastUpdatedDate as date) As [Sent Date]  
                                     from Estimator est 
                                     left join Customer cu on cu.CustomerId = est.CustomerId
                                     where est.CompanyId=@CompanyId
@@ -3547,7 +3547,7 @@ namespace HS.DataAccess
                                     cu.FirstName + ' ' + cu.LastName As [CustomerName]
                                     ,cu.Id as [CustomerIntId]
 									,est.EstimatorId as [EstimatorId]
-									,Cast(est.LastUpdatedDate as date) As [LastUpdatedDate] 
+									,est.LastUpdatedDate As [LastUpdatedDate] 
 									,est.Id 
 									,est.Status
                                     from Estimator est 

@@ -5,7 +5,7 @@
 @using Localize = HS.Web.UI.Helper.LanguageHelper
 @using PermissionChekcer = HS.Web.UI.Helper.PermissionHelper
 @using Permissions = HS.Framework.UserPermissions
-
+<script src="~/Content/Js/Modals/Modals.js"></script>
 <style>
     .CloseButtonDiv {
         position: absolute;
@@ -161,184 +161,43 @@
 <script src="~/Content/Js/Login/domainurl.js"></script>
 
 <script>
-        var Currency = "@HS.Web.UI.Helper.LabelHelper.CurrentTransMakeCurrency.MakeCurrency(null)";
-        var Id = '@ViewBag.Id';
-        var Email = '@ViewBag.Email';
-        var EstimatorId = '@ViewBag.EstimatorId';
-        var EstimatorIntId = '@ViewBag.EstimatorIntId';
+     
+    var EstimatorId = '@ViewBag.EstimatorId'; 
+
+    var LoadEstimateList = function () {
+        var mindate = $("#min_date_estimate").val();
+        var maxdate = $("#max_date_estimate").val();
+        var searchtxt = encodeURI($("#search_txt_estimate").val());
+        $(".LoadEstimateList").load(domainurl + "/Reports/EstimateReportList?mindate=" + mindate + "&maxdate=" + maxdate + "&searchtxt=" + searchtxt);
+    }
         String.prototype.replaceAll = function (search, replacement) {
             var target = this;
             return target.split(search).join(replacement);
         };
         function printFrame(id) {
             var frm = document.getElementById(id).contentWindow;
-            frm.focus();// focus on contentWindow is needed on some ie versions
+            frm.focus(); 
             frm.print();
             return false;
-        }
-        var CreateEstimatorPdf = function () {
-            console.log("CreateEstimatorPdf");
-            console.log("Test 01", parent.$("#InvoiceDescriptionestimator").val());
-            var DetailList = [];
-            var ServiceList = [];
-            var OneTimeServiceList = [];
-            parent.$("#CustomerEstimateTab .HasItem").each(function () {
-                var PARTNumberTemp = $(this).find('.selPartNumber option:selected').text();
-                var PARTNumber = "";
-                var Variation = "";
-
-                if ($(this).find('.selPartNumber').val() == "-1") {
-                    PARTNumber = "";
-                }
-                else {
-                    PARTNumber = PARTNumberTemp.split(' - ')[0];
-                    if (PARTNumberTemp.split(' - ').length > 1) {
-                        Variation = PARTNumberTemp.split(' - ')[1];
-                    }
-                    console.log("part NO : "+ PARTNumber);
-                    console.log("variation : " +Variation);
-                }
-
-                DetailList.push({
-                    EquipmentId: $(this).attr('data-id'),
-                    //ManufacturerId: $(this).find('.selManufacturer').val(),
-                    //ManufacturerVal: $(this).find('.selManufacturer option:selected').text(),
-                    Qunatity: $(this).find('.txtQunatity').val(),
-                    UnitCost: $(this).find('.txtUnitCost').val().trim().replaceAll(',', ''),
-                    Profit: $(this).find('.txtProfit').val().trim().replaceAll(',', ''),
-                    Overhead: $(this).find('.txtOverhead').val().trim().replaceAll(',', ''),
-                    TotalCost: $(this).find('.txtTotalCost').val().trim().replaceAll(',', ''),
-                    TotalPrice: $(this).find('.txtTotalPrice').val().trim().replaceAll(',', ''),
-                    CategoryVal: $(this).find('.selCategory option:selected').text(),
-                    SupplierVal: $(this).find('.selSupplier option:selected').text(),
-                    CategoryId: $(this).find('.selCategory').val(),
-                    SupplierId: $(this).find('.selSupplier').val(),
-                    Unit: $(this).find('.selUnit').val(),
-                    PartDescription: $(this).find('.txtPartDescription').val(),
-                    SKU: $(this).find('.spnsku').text(),
-                    //PartNumber: $(this).find('.txtPartNumber').val(),
-                    PartNumber: PARTNumber,
-                    Variation: Variation,
-                    //InventoryId: '00000000-0000-0000-0000-000000000000',
-                    CreatedDate: '1-1-2017',
-                    EstimatorId: parent.EstimatorId
-                });
-            });
-            parent.$("#CustomerServiceTable .HasItem").each(function () {
-                ServiceList.push({
-                    EquipmentId: $(this).attr('data-id'),
-                    EquipmentName: $(this).find('.ProductName').val(),
-                    Amount: $(this).find('.txtProductAmount').val(),
-                    Quantity: $(this).find('.txtProductQuantity').val(),
-                    UnitPrice: $(this).find('.txtUnitPrice').val(),
-                    IsTaxable: $(this).find('.chkTaxable').is(":checked"),
-                    EstimatorId: parent.EstimatorId,
-                });
-            });
-            parent.$("#CustomerOneTimeServiceTable .HasItem").each(function () {
-                OneTimeServiceList.push({
-                    EquipmentId: $(this).attr('data-id'),
-                    EquipmentName: $(this).find('.ProductName').val(),
-                    Amount: $(this).find('.txtProductAmount').val(),
-                    Quantity: $(this).find('.txtProductQuantity').val(),
-                    UnitPrice: $(this).find('.txtUnitPrice').val(),
-                    IsTaxable: $(this).find('.chkTaxable').is(":checked"),
-                    EstimatorId: parent.EstimatorId,
-                });
-            });
-            var url = domainurl + "/Estimator/SaveEstimatorPdf";
-            var param = JSON.stringify({
-                "Estimator.EstimatorId": parent.EstimatorId,
-                "Estimator.BillingAddress": parent.tinyMCE.get('Estimator_BillingAddress').getContent(),
-                "Estimator.ProjectAddress": parent.tinyMCE.get('Estimator_ProjectAddress').getContent(),
-                "Estimator.StartDate": $("#Estimator_StartDate").val(),
-                "Estimator.CustomerId": parent.$("#InvoiceCustomerId").val(),
-
-                "Estimator.PaymentTerm": parent.$("#Estimator_PaymentTerm option:selected").text(),
-                "Estimator.CompletionDate": parent.$("#Estimator_CompletionDate").val(),
-                "Estimator.EmailAddress": $("#Estimator_EmailAddress").val(),
-                "Estimator.Description": parent.$("#InvoiceDescriptionestimator").val(),
-                "Estimator.TaxPercnetage": parent.TaxPercnetage,
-                "Estimator.TaxAmount": parent.TaxAmount,
-                "Estimator.TotalPrice": parent.TotalPrice,
-                "Estimator.PoriftPercentage": 0, //will be taken from the new field
-                "Estimator.TotalProfitAmount": parent.TotalProfit,
-                "Estimator.OverheadCostPercentage": 0,//will be taken from the new field
-                "Estimator.TotalOverheadCostAmount": parent.TotalOverHead,
-                "Estimator.TotalCost": parent.TotalCost,
-                "Estimator.DefaultOverheadRate": $(".MaterialMarkup").val(),
-                "Estimator.DefaultProfitRate": $(".LaborProfit").val(),
-                estimatorDetails: DetailList,
-                estimatorServices: ServiceList,
-                estimatorOneTimeServices: OneTimeServiceList,
-                _EstimatorPDFFilter: parent.CheckValue
-
-            });
-            $.ajax({
-                type: "POST",
-                ajaxStart: $(".loader-div").show(),
-                url: url,
-                data: param,
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-                cache: false,
-                success: function (data) {
-                    $("#iframePdf").attr('src', data.filePath);
-                    $("#iframePdf").removeClass('hidden');
-                },
-                error: function (jqXHR, textStatus, errorThrown) {
-                    console.log(errorThrown);
-                }
-            });
-        }
-        //var SendEstimator = function () {
-        //    parent.OpenEstimatorSend();
-        //    parent.ClosePopup();
-        //}
-    //var EstimeApproveById = function (Status) {
-    //    $.ajax({
-    //        url: domainurl + "/Estimator/EstimeApproveById",
-    //        data: { Id: EstimatorId, Status: Status },
-    //        type: "Post",
-    //        dataType: "Json",
-    //        success: function (data) {
-    //            CloseTopToBottomModal();
-    //            if (typeof (OpenAcceptedTab) != "undefined") {
-    //                OpenEstimatorTabLoad()
-    //                OpenEstimatorTab();
-    //                AcceptedEstimatorTabLoad();
-    //                OpenAcceptedTab(data.CustomerId);
-    //            }
-    //            OpenSuccessMessageNew("", data.message);
-    //            //CloseTopToBottomModal();
-    //        }
-    //    });
-    //}
-    var ClosePopup = function () {
-        $.magnificPopup.close();
-    }
+        }  
     var EstimeApproveById = function (EstimateConvertId, status, pdf) {
         $.ajax({
             url: domainurl + "/Public/EstimeApproveById",
             data: { Id: EstimateConvertId, Status: status, pdf: pdf },
             type: "Post",
             dataType: "Json",
-            success: function (data) {
-                if (typeof (OpenAcceptedTab) != "undefined") {
-                    OpenEstimatorTabLoad(); 
-                }
-                OpenSuccessMessageNew("", data.message);
-                ClosePopup();
+            success: function (data) { 
+                parent.OpenSuccessMessageNew("Success!", data.message, function () {
+                    parent.ClosePopup();
+                    LoadEstimateList();
+                });
 
             }
         });
     }
-        $(document).ready(function () {
-            //if (typeof (PdfLocation) == 'undefined'
-            //    || PdfLocation.trim() == '' || PdfLocation.trim() == '/') {
-            //    CreateEstimatorPdf();
-            //}
-        });
+    $(document).ready(function () {
+            
+    });
 /**/</script>
 
 <link href="~/Content/Css/Report/LeadsReportPartial.css" rel="stylesheet" />
@@ -354,8 +213,8 @@
     </div>
     <div class="footerContents">
         <button onclick="parent.ClosePopup()" class="btnCancel">Cancel</button>
-        <button onclick="EstimeApproveById(@ViewBag.EstimatorIntId,'Approve','@ViewBag.PdfLocation')" class="btnCancel">Approve</button>
-        <button onclick="EstimeApproveById(@ViewBag.EstimatorIntId,'Decline','@ViewBag.PdfLocation')" class="btnCancel">Decline</button>
+        <button onclick="EstimeApproveById(@ViewBag.EstimatorIntId,'Approve','@ViewBag.PdfLocation')" style="cursor:pointer;" class="btnCancel">Approve</button>
+        <button onclick="EstimeApproveById(@ViewBag.EstimatorIntId,'Decline','@ViewBag.PdfLocation')" style="cursor:pointer;" class="btnCancel">Decline</button>
         <button onclick="printFrame('iframePdf')" class="btnPrint">Print</button>
     </div>
 </div>

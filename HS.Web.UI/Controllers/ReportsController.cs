@@ -26,7 +26,7 @@ using System.EnterpriseServices;
 using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using HS.Entities.Bases;
-
+using HS.Framework.Utils;
 
 namespace HS.Web.UI.Controllers
 {
@@ -17709,7 +17709,8 @@ namespace HS.Web.UI.Controllers
                 var estimator = _Util.Facade.EstimatorFacade.GetEstimatorByEstimatorId(EstimatorId);
                 if(EstimatorFile != null)
                 {
-                    ViewBag.PdfLocation = EstimatorFile.FileDescription;
+                    var Fullpath = AppConfig.DomainSitePath + "/" + EstimatorFile.FileDescription;
+                    ViewBag.PdfLocation = Fullpath;
                     ViewBag.EstimatorId = estimator.EstimatorId;
                     ViewBag.EstimatorIntId = estimator.Id;
                 }
