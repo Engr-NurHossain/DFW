@@ -1484,10 +1484,12 @@ namespace HS.Web.UI.Controllers
         {
             Estimator estimator = new Estimator();
             string StrEstimatorId = "";
-            if (EstimatorId>0)
+            if (EstimatorId>0 && Model == null)
             {
-                Model.Estimator = _Util.Facade.EstimatorFacade.GetById(EstimatorId);
-                StrEstimatorId = Model.Estimator.EstimatorId;
+                //Model.Estimator = _Util.Facade.EstimatorFacade.GetById(EstimatorId);
+                estimator = _Util.Facade.EstimatorFacade.GetById(EstimatorId);
+                //Model.Estimator = estimator;
+                StrEstimatorId = estimator.EstimatorId;
             }
             else
             {
@@ -1516,23 +1518,22 @@ namespace HS.Web.UI.Controllers
             }
 
             if (EstimatorId > 0)
-            {
-
+            { 
                 Model = new CreateEstimator();
                 Model.EstimatorSetting = new EstimatorSetting();
                 Model.Company = tempCom;
 
                 //Model.Estimator = _Util.Facade.EstimatorFacade.GetById(EstimatorId);
-                Model._EstimatorPDFFilter = _Util.Facade.EstimatorFacade.GetEstimatorPdfFilterByComIdCusIdUserId(CurrentUser.CompanyId.Value, CurrentUser.UserId, Model.Estimator.CustomerId);
+                Model._EstimatorPDFFilter = _Util.Facade.EstimatorFacade.GetEstimatorPdfFilterByComIdCusIdUserId(CurrentUser.CompanyId.Value, CurrentUser.UserId, estimator.CustomerId);
                 if (Model._EstimatorPDFFilter == null)
                 {
                     Model._EstimatorPDFFilter = new EstimatorPDFFilter();
                 }
                 //Model.estimatorDetails = _Util.Facade.EstimatorFacade.GetEstimatorDetailListByEstimatorId(Model.Estimator.EstimatorId);
-                Model.estimatorDetails = _Util.Facade.EstimatorFacade.NewGetEstimatorDetailListByEstimatorId(Model.Estimator.EstimatorId);
-                Model.estimatorServices = _Util.Facade.EstimatorFacade.GetEstimatorServicesByEstimatorId(Model.Estimator.EstimatorId);
-                Model.estimatorOneTimeServices = _Util.Facade.EstimatorFacade.GetEstimatorOneTimeServicesByEstimatorId(Model.Estimator.EstimatorId);
-                if (Model.Estimator == null || Model.Estimator.CompanyId != CurrentUser.CompanyId.Value)
+                Model.estimatorDetails = _Util.Facade.EstimatorFacade.NewGetEstimatorDetailListByEstimatorId(estimator.EstimatorId);
+                Model.estimatorServices = _Util.Facade.EstimatorFacade.GetEstimatorServicesByEstimatorId(estimator.EstimatorId);
+                Model.estimatorOneTimeServices = _Util.Facade.EstimatorFacade.GetEstimatorOneTimeServicesByEstimatorId(estimator.EstimatorId);
+                if (estimator == null || estimator.CompanyId != CurrentUser.CompanyId.Value)
                 {
                     return null;
                 }
@@ -1540,13 +1541,13 @@ namespace HS.Web.UI.Controllers
                 {
                     return null;
                 }
-                Customer tempCUstomer = _Util.Facade.CustomerFacade.GetCustomerByCustomerId(Model.Estimator.CustomerId);
+                Customer tempCUstomer = _Util.Facade.CustomerFacade.GetCustomerByCustomerId(estimator.CustomerId);
                 if (tempCUstomer == null)
                 {
                     return null;
                 }
 
-                CreateEstimator processedModel = GetEstimatorModelById(Model.Estimator, Model.estimatorDetails, Model.estimatorServices, tempCom, tempCUstomer, Model._EstimatorPDFFilter, Model.estimatorOneTimeServices);
+                CreateEstimator processedModel = GetEstimatorModelById(estimator, Model.estimatorDetails, Model.estimatorServices, tempCom, tempCUstomer, Model._EstimatorPDFFilter, Model.estimatorOneTimeServices);
                 CreateEstimator = processedModel;
 
                 pdfname = EstimatorId.GenerateEstimateNo();
@@ -1740,9 +1741,9 @@ namespace HS.Web.UI.Controllers
                         }
                     }
 
-                    if (Model.Estimator.EstimatorFileList != null && Model.Estimator.EstimatorFileList.Count() > 0)
+                    if (estimator.EstimatorFileList != null && estimator.EstimatorFileList.Count() > 0)
                     {
-                        var EstimatorFileEndpageList = Model.Estimator.EstimatorFileList.Where(x => x.EstimatorType == "EndPage").ToList();
+                        var EstimatorFileEndpageList = estimator.EstimatorFileList.Where(x => x.EstimatorType == "EndPage").ToList();
                         foreach (var estitem in EstimatorFileEndpageList)
                         {
                             var estFilePath = Server.MapPath(estitem.FileDescription);

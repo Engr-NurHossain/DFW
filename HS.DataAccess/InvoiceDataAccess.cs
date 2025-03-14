@@ -3542,7 +3542,7 @@ namespace HS.DataAccess
                                     cu.FirstName + ' ' + cu.LastName As [Customer Name]
                                     ,cu.Id as [Customer Id]
 									,est.EstimatorId as [Estimate Id]
-									,Cast(est.LastUpdatedDate as date) As [Sent Date]  
+									,FORMAT(DATEADD(MI, 360, est.LastUpdatedDate),'M/d/yyyy') As [Sent Date]  
                                     from Estimator est 
                                     left join Customer cu on cu.CustomerId = est.CustomerId
                                     where est.CompanyId=@CompanyId
