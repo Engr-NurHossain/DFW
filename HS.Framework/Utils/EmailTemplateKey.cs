@@ -20,7 +20,7 @@ namespace HS.Framework.Utils
             public static string CustomerSignedBookingConfirmationToCustomer { get { return "CustomerSignedBookingConfirmationToCustomer"; } }
             public static string CustomerSignedBookingConfirmationToSalesPerson { get { return "CustomerSignedBookingConfirmationToSalesPerson"; } }
             public static string EstimatorApprovedEmail { get { return "EstimatorApprovedEmail"; } }
-            public static string EstimatorSent { get { return "EstimatorSent"; } }
+            public static string EstimatorSent { get { return "EstimatorSentEmail"; } }
             public static string CustomerDeclinedBookingToSalesPerson { get { return "CustomerDeclinedBookingToSalesPerson"; } }
 
         }

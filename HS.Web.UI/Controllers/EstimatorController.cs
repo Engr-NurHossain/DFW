@@ -661,7 +661,7 @@ namespace HS.Web.UI.Controllers
             var Cus = _Util.Facade.CustomerFacade.GetCustomerById(leadid.Value); 
             #region ReceiverNumber Setup
 
-            GlobalSetting GlobalSettingModel = _Util.Facade.GlobalSettingsFacade.GetGlobalSettingsByOnlyKey("EstimatorSent");
+            GlobalSetting GlobalSettingModel = _Util.Facade.GlobalSettingsFacade.GetGlobalSettingsByOnlyKey("EstimatorSentEmail");
 
             string PrefferedEmail = "";
             string Filename = "";
@@ -2519,7 +2519,7 @@ namespace HS.Web.UI.Controllers
                             Estcustomer.IsAgreement = false;
                             _Util.Facade.CustomerFacade.UpdateCustomer(Estcustomer); 
                         }
-                        GlobalSetting ApprovedEmail = _Util.Facade.GlobalSettingsFacade.GetGlobalSettingsByOnlyKey("EstimatorSent");
+                        GlobalSetting ApprovedEmail = _Util.Facade.GlobalSettingsFacade.GetGlobalSettingsByOnlyKey("EstimatorSentEmail");
                         GlobalSetting GlobalSettingModel = _Util.Facade.GlobalSettingsFacade.GetGlobalSettingsByOnlyKey("EstimatorSentSMS"); 
 
                         if (GlobalSettingModel != null && GlobalSettingModel.Value.ToLower() == "true")
