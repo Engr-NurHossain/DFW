@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -135,6 +136,25 @@ namespace HS.Facade
                                Tax = dr["DiscountAmount"] != DBNull.Value ? Convert.ToDouble(dr["DiscountAmount"]) : 0,
                            }).ToList();
             return InvoiceList;
+        }
+
+        public EstimateReportModel GetAllEstimateSentByCompanyId(Guid CompanyId, DateTime start, DateTime end,string searchtext,string order, int pageno, int pagesize)
+        {
+            DataSet ds = _InvoiceDataAccess.GetAllEstimateSentByCompanyId(CompanyId, start, end, searchtext,order,pageno,pagesize);
+            EstimateReportModel model = new EstimateReportModel();
+            model.EstimateModelList = (from DataRow dr in ds.Tables[0].Rows
+                                       select new EstimateModel()
+                           { 
+                               CustomerName = dr["CustomerName"].ToString(),
+                               Id = dr["Id"] != DBNull.Value ? Convert.ToInt32(dr["Id"]) : 0,
+                               CustomerIntId = dr["CustomerIntId"] != DBNull.Value ? Convert.ToInt32(dr["CustomerIntId"]) : 0,
+                               EstimatorId = dr["EstimatorId"].ToString(),
+                               Status = dr["Status"].ToString(),
+                               SendDate = dr["LastUpdatedDate"] != DBNull.Value ? Convert.ToDateTime(dr["LastUpdatedDate"]) : DateTime.Now, 
+                           }).ToList();
+
+            model.TotalCount = ds.Tables[1].Rows[0]["TotalCount"] != DBNull.Value ? Convert.ToInt32(ds.Tables[1].Rows[0]["TotalCount"]) : 0;
+            return model;
         }
         #endregion
 
@@ -653,7 +673,10 @@ namespace HS.Facade
         {
             return _InvoiceDataAccess.GetAllEstimateReportByCompanyId(CompanyId, Start, End);
         }
-
+        public DataTable GetAllExportEstimateSentByCompanyId(Guid CompanyId, DateTime? Start, DateTime? End,string searchtext,string order)
+        {
+            return _InvoiceDataAccess.GetAllExportEstimateSentByCompanyId(CompanyId, Start, End,searchtext,order);
+        }
         public List<Invoice> RabDataMigrationNewInvoiceList()
         {
             return _InvoiceDataAccess.RabDataMigrationNewInvoiceList();

@@ -26,7 +26,7 @@ using System.EnterpriseServices;
 using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using HS.Entities.Bases;
-
+using HS.Framework.Utils;
 
 namespace HS.Web.UI.Controllers
 {
@@ -17665,7 +17665,114 @@ namespace HS.Web.UI.Controllers
 
             return View();
         }
+        #region Estimate Report Start
+        public ActionResult EstimateReports()
+        {
+            return View();
+        }
+        public ActionResult LoadEstimateReportPartial()
+        {
+             
+            return View();
+        }
+        public ActionResult EstimateReportList(DateTime? mindate, DateTime? maxdate, string searchtxt, bool? getreport,string order, int PageNo, int PageSize)
+        { 
+            ViewBag.Order = order;
+            ViewBag.StartDate = mindate;
+            ViewBag.EndDate = maxdate;
+            DateTime StartDate = new DateTime();
+            DateTime EndDate = new DateTime();
+            string newCookie = "";
+            if(mindate.HasValue && maxdate.HasValue)
+            {
+                if (Request.Cookies[CookieKeys.DateViewFilter] != null && !string.IsNullOrWhiteSpace(Request.Cookies[CookieKeys.DateViewFilter].Value))
+                {
+                    newCookie = Request.Cookies[CookieKeys.DateViewFilter].Value;
+                    newCookie = Server.UrlDecode(newCookie);
+                    var CookieVals = newCookie.Split(',');
 
+                    if (CookieVals.Length == 3)
+                    {
+                        StartDate = CookieVals[0].ToDateTime().SetZeroHour();
+                        EndDate = CookieVals[1].ToDateTime().SetMaxHour();
+                    }
+                }
+                else
+                {
+                    StartDate = mindate.Value.SetZeroHour();
+                    EndDate = maxdate.Value.SetMaxHour();
+                }
+            } 
+            else
+            {
+                StartDate =  new DateTime();
+                EndDate =  new DateTime();
+            }
+                var currentLoggedIn = (HS.Web.UI.Helper.CustomPrincipal)User; 
+            
+            if (getreport.HasValue && getreport.Value)
+            {
+                DataTable dt;
+                dt = _Util.Facade.InvoiceFacade.GetAllExportEstimateSentByCompanyId(currentLoggedIn.CompanyId.Value, StartDate, EndDate, searchtxt,order);
+                int[] colarray = {  };
+                int[] rowarray = { dt.Rows.Count + 2 };
+                 
+                return MakeExcelFromDataTable(dt, "Estimates Report", rowarray, colarray);
+            }
+            EstimateReportModel model = _Util.Facade.InvoiceFacade.GetAllEstimateSentByCompanyId(currentLoggedIn.CompanyId.Value, StartDate, EndDate, searchtxt,order, PageNo, PageSize);
+            ViewBag.PageNumber = PageNo;
+            ViewBag.OutOfNumber = 0;
+            ViewBag.order = order;
+            if (ViewBag.order == null)
+            {
+                ViewBag.order = 0;
+            }
+            if (model.TotalCount > 0)
+            {
+                ViewBag.OutOfNumber = model.TotalCount;
+            }
+
+            if ((int)ViewBag.PageNumber * PageSize > (int)ViewBag.OutOfNumber)
+            {
+                ViewBag.CurrentNumber = (int)ViewBag.OutOfNumber;
+            }
+            else
+            {
+                ViewBag.CurrentNumber = (int)ViewBag.PageNumber * PageSize;
+            }
+            ViewBag.PageCount = Math.Ceiling((double)ViewBag.OutOfNumber / PageSize);
+
+            return View(model);
+        }
+        public ActionResult EstimateActionView(string EstimatorId)
+        {
+            if(!string.IsNullOrWhiteSpace(EstimatorId))
+            {
+                var EstimatorFile = _Util.Facade.EstimatorFacade.GetEstimatorFileByEstimatorId(EstimatorId);
+                var estimator = _Util.Facade.EstimatorFacade.GetEstimatorByEstimatorId(EstimatorId);
+                if(EstimatorFile != null)
+                {
+                    var Fullpath = AppConfig.DomainSitePath + "/" + EstimatorFile.FileDescription;
+                    ViewBag.PdfLocation = Fullpath;
+                    ViewBag.EstimatorId = estimator.EstimatorId;
+                    ViewBag.EstimatorIntId = estimator.Id;
+                }
+                else
+                {
+                    ViewBag.PdfLocation = "";
+                    ViewBag.EstimatorId = estimator.EstimatorId;
+                    ViewBag.EstimatorIntId = estimator.Id;
+                }
+            }
+            else
+            {
+                ViewBag.PdfLocation = "";
+                ViewBag.EstimatorIntId = 0;
+            }
+                return View();
+        }
+
+        #endregion Estimate Report End
         public ActionResult UpsellsReports()
         {
             return View();

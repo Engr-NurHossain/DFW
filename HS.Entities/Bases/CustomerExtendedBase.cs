@@ -7,7 +7,7 @@ using HS.Framework;
 namespace HS.Entities.Bases
 {
 	[Serializable]
-    [DataContract(Name = "CustomerExtendedBase", Namespace = "http://www.hims-tech.com//entities")]
+    [DataContract(Name = "CustomerExtendedBase", Namespace = "http://www.piistech.com//entities")]
 	public class CustomerExtendedBase : BaseBusinessEntity
 	{
 	
@@ -118,7 +118,8 @@ namespace HS.Entities.Bases
 			Warranty = 101,
 			Keypad = 102,
 			FrontEnd = 103,
-			CycleStartDate = 104
+			CycleStartDate = 104,
+			CellSerialNo = 105
 		}
 		#endregion
 	
@@ -228,6 +229,7 @@ namespace HS.Entities.Bases
 		public const string Property_Keypad = "Keypad";		            
 		public const string Property_FrontEnd = "FrontEnd";		            
 		public const string Property_CycleStartDate = "CycleStartDate";		            
+		public const string Property_CellSerialNo = "CellSerialNo";		            
 		#endregion
 		
 		#region Private Data Types
@@ -336,6 +338,7 @@ namespace HS.Entities.Bases
 		private String _Keypad;	            
 		private String _FrontEnd;	            
 		private Nullable<DateTime> _CycleStartDate;	            
+		private String _CellSerialNo;	            
 		#endregion
 		
 		#region Properties		
@@ -1914,6 +1917,21 @@ namespace HS.Entities.Bases
 			}
         }
 
+		[DataMember]
+		public String CellSerialNo
+		{	
+			get{ return _CellSerialNo; }			
+			set
+			{
+				PropertyChangingEventArgs args = new PropertyChangingEventArgs(Property_CellSerialNo, value, _CellSerialNo);
+				if (PropertyChanging(args))
+				{
+					_CellSerialNo = value;
+					PropertyChanged(args);					
+				}	
+			}
+        }
+
 		#endregion
 		
 		#region Cloning Base Objects
@@ -2026,6 +2044,7 @@ namespace HS.Entities.Bases
 			newObj.Keypad = this.Keypad;						
 			newObj.FrontEnd = this.FrontEnd;						
 			newObj.CycleStartDate = this.CycleStartDate;						
+			newObj.CellSerialNo = this.CellSerialNo;						
 			
 			return newObj;
 		}
@@ -2140,6 +2159,7 @@ namespace HS.Entities.Bases
 			info.AddValue(CustomerExtendedBase.Property_Keypad, Keypad);				
 			info.AddValue(CustomerExtendedBase.Property_FrontEnd, FrontEnd);				
 			info.AddValue(CustomerExtendedBase.Property_CycleStartDate, CycleStartDate);				
+			info.AddValue(CustomerExtendedBase.Property_CellSerialNo, CellSerialNo);				
 		}
 		#endregion
 

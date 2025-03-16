@@ -804,6 +804,10 @@ namespace HS.Facade
         {
             return _EstimatorFileDataAccess.Insert(model);
         }
+        public long UpdateEstimatorFile(EstimatorFile model)
+        {
+            return _EstimatorFileDataAccess.Update(model);
+        }
         public bool DeleteEstimatorFileById(string EstimatorId,string EstimatorType)
         {
             return _EstimatorFileDataAccess.DeleteEstimatorFileByEstimatorId(EstimatorId, EstimatorType);
