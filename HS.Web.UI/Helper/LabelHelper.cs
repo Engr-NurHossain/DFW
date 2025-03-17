@@ -213,6 +213,7 @@ namespace HS.Web.UI.Helper
             public static string ActivationNonConforming { get { return "ActivationNonConforming"; } }
             public static string LaborFee { get { return "LaborFee"; } }
             public static string Service { get { return "Service"; } }
+            public static string NonRecurring { get { return "NonRecurring"; } }
             public static string OnetimeService { get { return "OnetimeService"; } }
             public static string Equipment { get { return "Equipment"; } }
         }

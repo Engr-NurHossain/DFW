@@ -1645,12 +1645,13 @@ namespace HS.Web.UI.Controllers
             string Serverfilename = FileHelper.GetFileFullPath(filename);
 
             Session[SessionKeys.EstimatorPdfSession] = filename;
+            #region add Estimator File
             double _fileSize = 1.00;
             string message = estimator.Status;
             _fileSize = (double)filename.Length / 1024;
             _fileSize = Math.Round(_fileSize, 2, MidpointRounding.AwayFromZero);
             var ExistEstimatorFile = _Util.Facade.EstimatorFacade.GetEstimatorFileByEstimatorId(StrEstimatorId);
-            if(ExistEstimatorFile != null)
+            if (ExistEstimatorFile != null)
             {
                 ExistEstimatorFile.Filename = pdfname;
                 ExistEstimatorFile.FileDescription = filename;
@@ -1662,7 +1663,7 @@ namespace HS.Web.UI.Controllers
                 ExistEstimatorFile.FileSize = _fileSize;
                 ExistEstimatorFile.FileFullName = pdfname;
                 ExistEstimatorFile.IsActive = true;
-                ExistEstimatorFile.EstimatorType = "";
+                ExistEstimatorFile.EstimatorType = "SentEstimator";
                 _Util.Facade.CustomerAppoinmentFacade.UpdateEstimatorFile(ExistEstimatorFile);
             }
             else
@@ -1679,10 +1680,11 @@ namespace HS.Web.UI.Controllers
                     FileSize = _fileSize,
                     FileFullName = pdfname,
                     IsActive = true,
-                    EstimatorType = ""
+                    EstimatorType = "SentEstimator"
                 };
                 _Util.Facade.CustomerAppoinmentFacade.InsertEstimatorFile(estfile);
-            } 
+            }
+            #endregion add Estimator File 
             FileHelper.SaveFile(applicationPDFData, Serverfilename);
 
             if (filename.IndexOf('/') != 0)
