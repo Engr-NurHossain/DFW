@@ -2895,11 +2895,11 @@ SELECT DISTINCT
 
         string sqlQuery = @"
     SELECT
-    
+  
         poware.PurchaseOrderId,
         poware.CreatedDate as OrderDate,
-		ISNULL((SELECT eqt.Name FROM EquipmentType eqt WHERE eqt.Id = Eqp.EquipmentTypeId), 'Unknown') AS Category,
         ISNULL((SELECT SInf.CompanyName FROM Supplier SInf WHERE SInf.SupplierId = poware.SuplierId), 'Unknown') AS Vendor,
+		ISNULL((SELECT eqt.Name FROM EquipmentType eqt WHERE eqt.Id = Eqp.EquipmentTypeId), 'Unknown') AS Category,
         ISNULL((SELECT M.Name FROM Manufacturer M WHERE M.id = Eqp.ManufacturerId), 'Unknown') AS Manufacturer,
         Eqp.SKU AS SKU,
         Eqp.Name AS Description,
