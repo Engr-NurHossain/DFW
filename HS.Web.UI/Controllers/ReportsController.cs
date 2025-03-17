@@ -18445,7 +18445,22 @@ namespace HS.Web.UI.Controllers
             }
 
             DataTable dt = _Util.Facade.PurchaseOrderFacade.GetCreatedPurchaseOrderListByFiltersForReportnew(filters, StartDate, EndDate, serchtext, SKU ,Category, Manufeturelist, supplier);
-            return MakeExcelFromDataTable(dt, "PurchaseOrderReport_Finance", null, null);
+            if (dt.Columns.Contains("PO Description"))
+            {
+                dt.Columns.Remove("PO Description");
+            }
+      
+            foreach (DataRow row in dt.Rows)
+            {
+                if (row["OrderDate"] != DBNull.Value)
+                {
+                    DateTime orderDate = (DateTime)row["OrderDate"];
+
+                    row["OrderDate"] = orderDate.UTCToClientTime().ToString("M/d/yyyy");
+                }
+            }
+
+                return MakeExcelFromDataTable(dt, "PurchaseOrderReport_Finance", null, null);
         }
         public ActionResult POReportInventoryDownload(PurchaseOrderFilter filters, DateTime? Start, DateTime? End, string serchtext, string SKU, string Category, string Manufeturelist, string supplier)
         {

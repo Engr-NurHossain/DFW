@@ -667,79 +667,180 @@ namespace HS.DataAccess
                                     set @pagestart=(@pageno-1)* @pagesize 
                                     set @pageend = @pagesize
 
-                                    SELECT 
-                                        _eqp.*,
-                                        _eqpClass.Name as EquipmentClass,
-	                                    ((Select ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add' And invinner.LocationId = '22222222-2222-2222-2222-222222222222')- (Select ISNULL(SUM(invinner2.Quantity),0) from InventoryWarehouse invinner2 where invinner2.EquipmentId=_eqp.EquipmentId and Type='Release' And invinner2.LocationId = '22222222-2222-2222-2222-222222222222')
-                                            	-(select ISNull(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId =
-	                                       '22222222-2222-2222-2222-222222222222' And b.IsApprove = 0 and b.IsDecline = 0)
-                                        ) as Quantity,
-                                         sup.CompanyName as SupplierName,
-                                          _eqpType.Name as Category,
-										  --_eqp.SupplierCost as VendorCost,
-                                          eqpv.Cost as VendorCost,
-										  manu.Name as ManufacturerName,
-                                          
-                                          (SELECT 
-                                          ISNULL(SUM(Quantity),0) AS TotalQty
-                                          FROM
-                                          (SELECT 
-                                          ISNULL(SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END),0) AS Quantity
-                                          FROM 
-                                          InventoryTech
-                                          WHERE 
-                                          EquipmentId = _eqp.EquipmentId AND
-										  TechnicianId NOT IN 
-										  ('00000000-0000-0000-0000-000000000000','22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
-	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
-	                                     '22222222-2222-2222-2222-222222222233','22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222221')
-                                          GROUP BY 
-                                          TechnicianId										  
-                                          HAVING 
-                                          SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END) >= 0) AS Qty)-
-										 (select ISNULL(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId NOT IN
-										 ('00000000-0000-0000-0000-000000000000','22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
-	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
-	                                     '22222222-2222-2222-2222-222222222233','22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222221') And b.IsApprove = 0 and b.IsDecline = 0)
-										  as technician,
-                                        
-                                        (select AVG(newtab.UnitPrice) from
-                                        (select TOP 3 iwin.*, pod.UnitPrice from InventoryWarehouse iwin left join PurchaseOrderDetail pod on pod.PurchaseOrderId=iwin.PurchaseOrderId
-                                        where iwin.PurchaseOrderId != '' and (UnitPrice!=0 or UnitPrice is not null) AND iwin.EquipmentId=_eqp.EquipmentId
-                                        AND pod.EquipmentId=_eqp.EquipmentId order by LastUpdatedDate desc)
-                                        newtab group by EquipmentId) as FIFO,
-                                        ([dbo].GetAssignedInventoryTechQuantityCount(null,_eqp.EquipmentId,1)) as InQueue,
-                                   ((select ISNULL(SUM(invinner.Quantity),0) from [InventoryWarehouse] invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add'  and invinner.LocationId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
-	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
-	                              '22222222-2222-2222-2222-222222222233'))
-
-								  -
-
-                                    (select ISNULL(sum(Quantity),0) from dbo.InventoryWarehouse b where b.EquipmentId  = _eqp.EquipmentId  and Type='Release'
-			                        AND b.LocationId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
-	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
-	                               '22222222-2222-2222-2222-222222222233'))
-								   -
-
-
-
-                                   (select ISNULL(Sum(b.Quantity),0) from AssignedInventoryTechReceived b where b.EquipmentId = _eqp.EquipmentId AND b.TechnicianId IN( '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
-	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
-	                               '22222222-2222-2222-2222-222222222233') And b.IsApprove = 0 and b.IsDecline = 0)) as LocQoH,
-										  ISNULL((((Select ISNULL(SUM(invinner.Quantity),0) from InventoryWarehouse invinner where invinner.EquipmentId=_eqp.EquipmentId and Type='Add')- (Select ISNULL(SUM(invinner2.Quantity),0) from InventoryWarehouse invinner2 where invinner2.EquipmentId=_eqp.EquipmentId and Type='Release'))
-										  +
-										  (select ISNULL(SUM(tech.Quantity), 0) from InventoryTech tech where _eqp.EquipmentId = tech.EquipmentId and tech.[Type] = 'Add'
-                                          AND tech.TechnicianId Not IN('22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
-	                                     '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
-	                                     '22222222-2222-2222-2222-222222222233')  
-                                          ) 
-                                       - (select ISNULL(SUM(tech.Quantity), 0) from InventoryTech tech where _eqp.EquipmentId = tech.EquipmentId and tech.[Type] = 'Release'
-                                    AND tech.TechnicianId Not IN('22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222223','22222222-2222-2222-2222-222222222224',
-	                               '22222222-2222-2222-2222-222222222225','22222222-2222-2222-2222-222222222226','22222222-2222-2222-2222-222222222231','22222222-2222-2222-2222-222222222232',
-	                               '22222222-2222-2222-2222-222222222233')
-                                        )), 0) as TotalEq
+                            ;WITH CustomerData AS (
+ 
+    SELECT 
+         _eqp.*,
+         _eqpClass.Name AS EquipmentClass,
+         (
+           (SELECT ISNULL(SUM(invinner.Quantity), 0)
+            FROM InventoryWarehouse invinner
+            WHERE invinner.EquipmentId = _eqp.EquipmentId 
+              AND invinner.Type = 'Add' 
+              AND invinner.LocationId = '22222222-2222-2222-2222-222222222222')
+           - (SELECT ISNULL(SUM(invinner2.Quantity), 0)
+              FROM InventoryWarehouse invinner2
+              WHERE invinner2.EquipmentId = _eqp.EquipmentId 
+                AND invinner2.Type = 'Release'
+                AND invinner2.LocationId = '22222222-2222-2222-2222-222222222222')
+           - (SELECT ISNULL(SUM(b.Quantity), 0)
+              FROM AssignedInventoryTechReceived b
+              WHERE b.EquipmentId = _eqp.EquipmentId 
+                AND b.TechnicianId = '22222222-2222-2222-2222-222222222222'
+                AND b.IsApprove = 0 
+                AND b.IsDecline = 0)
+         ) AS Quantity,
+         sup.CompanyName AS SupplierName,
+         _eqpType.Name AS Category,
+         eqpv.Cost AS VendorCost,
+         manu.Name AS ManufacturerName,
+         (
+           SELECT ISNULL(SUM(Quantity), 0)
+           FROM (
+                SELECT ISNULL(SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END), 0) AS Quantity
+                FROM InventoryTech
+                WHERE EquipmentId = _eqp.EquipmentId 
+                  AND TechnicianId NOT IN (
+                      '00000000-0000-0000-0000-000000000000',
+                      '22222222-2222-2222-2222-222222222222',
+                      '22222222-2222-2222-2222-222222222223',
+                      '22222222-2222-2222-2222-222222222224',
+                      '22222222-2222-2222-2222-222222222225',
+                      '22222222-2222-2222-2222-222222222226',
+                      '22222222-2222-2222-2222-222222222231',
+                      '22222222-2222-2222-2222-222222222232',
+                      '22222222-2222-2222-2222-222222222233',
+                      '22222222-2222-2222-2222-222222222222',
+                      '22222222-2222-2222-2222-222222222221'
+                  )
+                GROUP BY TechnicianId
+                HAVING SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END) >= 0
+           ) AS Qty
+         )
+         - (SELECT ISNULL(SUM(b.Quantity), 0)
+            FROM AssignedInventoryTechReceived b
+            WHERE b.EquipmentId = _eqp.EquipmentId 
+              AND b.TechnicianId NOT IN (
+                      '00000000-0000-0000-0000-000000000000',
+                      '22222222-2222-2222-2222-222222222222',
+                      '22222222-2222-2222-2222-222222222223',
+                      '22222222-2222-2222-2222-222222222224',
+                      '22222222-2222-2222-2222-222222222225',
+                      '22222222-2222-2222-2222-222222222226',
+                      '22222222-2222-2222-2222-222222222231',
+                      '22222222-2222-2222-2222-222222222232',
+                      '22222222-2222-2222-2222-222222222233',
+                      '22222222-2222-2222-2222-222222222222',
+                      '22222222-2222-2222-2222-222222222221'
+                  )
+              AND b.IsApprove = 0 
+              AND b.IsDecline = 0
+         ) AS technician,
+         (
+           SELECT AVG(newtab.UnitPrice)
+           FROM (
+                 SELECT TOP 3 iwin.*, pod.UnitPrice
+                 FROM InventoryWarehouse iwin
+                 LEFT JOIN PurchaseOrderDetail pod 
+                    ON pod.PurchaseOrderId = iwin.PurchaseOrderId
+                 WHERE iwin.PurchaseOrderId != ''
+				   and (UnitPrice!=0 or UnitPrice is not null)
+                   AND iwin.EquipmentId = _eqp.EquipmentId
+                   AND pod.EquipmentId = _eqp.EquipmentId
+                 ORDER BY iwin.LastUpdatedDate DESC
+           ) newtab
+           GROUP BY EquipmentId
+         ) AS FIFO,
+         ([dbo].GetAssignedInventoryTechQuantityCount(NULL, _eqp.EquipmentId, 1)) AS InQueue,
+         (
+           (SELECT ISNULL(SUM(invinner.Quantity), 0)
+            FROM InventoryWarehouse invinner
+            WHERE invinner.EquipmentId = _eqp.EquipmentId 
+              AND invinner.Type = 'Add'
+              AND invinner.LocationId IN (
+                  '22222222-2222-2222-2222-222222222223',
+                  '22222222-2222-2222-2222-222222222224',
+                  '22222222-2222-2222-2222-222222222225',
+                  '22222222-2222-2222-2222-222222222226',
+                  '22222222-2222-2222-2222-222222222231',
+                  '22222222-2222-2222-2222-222222222232',
+                  '22222222-2222-2222-2222-222222222233'
+              )
+           )
+           - (SELECT ISNULL(SUM(b.Quantity), 0)
+              FROM InventoryWarehouse b
+              WHERE b.EquipmentId = _eqp.EquipmentId 
+                AND b.Type = 'Release'
+                AND b.LocationId IN (
+                  '22222222-2222-2222-2222-222222222223',
+                  '22222222-2222-2222-2222-222222222224',
+                  '22222222-2222-2222-2222-222222222225',
+                  '22222222-2222-2222-2222-222222222226',
+                  '22222222-2222-2222-2222-222222222231',
+                  '22222222-2222-2222-2222-222222222232',
+                  '22222222-2222-2222-2222-222222222233'
+              )
+           )
+           - (SELECT ISNULL(SUM(b.Quantity), 0)
+              FROM AssignedInventoryTechReceived b
+              WHERE b.EquipmentId = _eqp.EquipmentId 
+                AND b.TechnicianId IN (
+                  '22222222-2222-2222-2222-222222222223',
+                  '22222222-2222-2222-2222-222222222224',
+                  '22222222-2222-2222-2222-222222222225',
+                  '22222222-2222-2222-2222-222222222226',
+                  '22222222-2222-2222-2222-222222222231',
+                  '22222222-2222-2222-2222-222222222232',
+                  '22222222-2222-2222-2222-222222222233'
+              )
+              AND b.IsApprove = 0 
+              AND b.IsDecline = 0
+           )
+         ) AS LocQoH,
+         ISNULL(
+           (
+              (SELECT ISNULL(SUM(invinner.Quantity), 0)
+               FROM InventoryWarehouse invinner
+               WHERE invinner.EquipmentId = _eqp.EquipmentId 
+                 AND invinner.Type = 'Add')
+              - (SELECT ISNULL(SUM(invinner2.Quantity), 0)
+                 FROM InventoryWarehouse invinner2
+                 WHERE invinner2.EquipmentId = _eqp.EquipmentId 
+                   AND invinner2.Type = 'Release')
+              + (SELECT ISNULL(SUM(tech.Quantity), 0)
+                 FROM InventoryTech tech
+                 WHERE _eqp.EquipmentId = tech.EquipmentId 
+                   AND tech.[Type] = 'Add'
+                   AND tech.TechnicianId NOT IN (
+                         '22222222-2222-2222-2222-222222222222',
+                         '22222222-2222-2222-2222-222222222223',
+                         '22222222-2222-2222-2222-222222222224',
+                         '22222222-2222-2222-2222-222222222225',
+                         '22222222-2222-2222-2222-222222222226',
+                         '22222222-2222-2222-2222-222222222231',
+                         '22222222-2222-2222-2222-222222222232',
+                         '22222222-2222-2222-2222-222222222233'
+                   )
+              )
+              - (SELECT ISNULL(SUM(tech.Quantity), 0)
+                 FROM InventoryTech tech
+                 WHERE _eqp.EquipmentId = tech.EquipmentId 
+                   AND tech.[Type] = 'Release'
+                   AND tech.TechnicianId NOT IN (
+                         '22222222-2222-2222-2222-222222222222',
+                         '22222222-2222-2222-2222-222222222223',
+                         '22222222-2222-2222-2222-222222222224',
+                         '22222222-2222-2222-2222-222222222225',
+                         '22222222-2222-2222-2222-222222222226',
+                         '22222222-2222-2222-2222-222222222231',
+                         '22222222-2222-2222-2222-222222222232',
+                         '22222222-2222-2222-2222-222222222233'
+                   )
+              )
+           ), 0
+         ) AS TotalEq
                                           {1}
-                                          INTO #CustomerData
+                                        
                                           FROM Equipment _eqp
                                             LEFT JOIN EquipmentClass _eqpClass
 		                                    ON _eqp.EquipmentClassId = _eqpClass.Id and _eqp.CompanyId = _eqpClass.CompanyId
@@ -759,29 +860,344 @@ namespace HS.DataAccess
                                                 {5}
                                                 {6}
                                 
-                                           {7}
-                                           SELECT 
-                                           Id,EquipmentId,CompanyId,Name,SKU,ManufacturerId,SupplierId,EquipmentTypeId,
-										   EquipmentClassId,Point,SupplierCost,Cost,Retail,EqOrder,Service,AsOfDate,reorderpoint,
-										   IsActive,Comments,CreatedDate,LastUpdatedDate,LastUpdatedBy,POOrder,IsKit,RepCost,RackNo,Location,
-										   Type,Model,Finish,Capacity,EquipmentPriceIsCharged,ModelNumber,Barcode,Tag,Note,IsWarrenty,IsARBEnabled,
-										   IsUpsold,IsTaxable,OverheadRate,ProfitRate,Unit,TaggedEmail,IsIncludeEstimate,LaborPrice,WarehouseReorder,
-										   EquipmentClass,Quantity,SupplierName,Category,VendorCost,ManufacturerName,technician,FIFO,InQueue,LocQoH
-										   ,TotalEq = ISNULL(Quantity,0) + ISNULL(technician,0) + ISNULL(LocQoH,0) + ISNULL(InQueue,0)
-                                           INTO #CustomerFilterData
-                                           FROM #CustomerData
-                                           {2}
+                                           ),
+                                         CustomerFilterData AS (
+    SELECT 
+         Id,
+         EquipmentId,
+         CompanyId,
+         Name,
+         SKU,
+         ManufacturerId,
+         SupplierId,
+         EquipmentTypeId,
+         EquipmentClassId,
+         Point,
+         SupplierCost,
+         Cost,
+         Retail,
+         EqOrder,
+         Service,
+         AsOfDate,
+         reorderpoint,
+         IsActive,
+         Comments,
+         CreatedDate,
+         LastUpdatedDate,
+         LastUpdatedBy,
+         POOrder,
+         IsKit,
+         RepCost,
+         RackNo,
+         Location,
+         Type,
+         Model,
+         Finish,
+         Capacity,
+         EquipmentPriceIsCharged,
+         ModelNumber,
+         Barcode,
+         Tag,
+         Note,
+         IsWarrenty,
+         IsARBEnabled,
+         IsUpsold,
+         IsTaxable,
+         OverheadRate,
+         ProfitRate,
+         Unit,
+         TaggedEmail,
+         IsIncludeEstimate,
+         LaborPrice,
+         WarehouseReorder,
+         EquipmentClass,
+         Quantity,
+         SupplierName,
+         Category,
+         VendorCost,
+         ManufacturerName,
+         technician,
+         FIFO,
+         InQueue,
+         LocQoH,
+         TotalEq = ISNULL(Quantity, 0) 
+                  + ISNULL(technician, 0) 
+                  + ISNULL(LocQoH, 0) 
+                  + ISNULL(InQueue, 0)
+    FROM CustomerData
+
+                                           {2})
                                 
 	                                       SELECT TOP (@pagesize)
                                            *
-                                           FROM #CustomerFilterData _cfd
-                                           where   Id NOT IN(Select TOP (@pagestart)  Id from #CustomerData _cd {8})
+                                           FROM CustomerFilterData
+                                           where   Id NOT IN(Select TOP (@pagestart)  Id from CustomerFilterData {8})
                                            {9}
-                                           select count(*) [TotalCount]
-                                           from #CustomerFilterData
+                                        
+                           ;WITH CustomerData AS (
+  
+    SELECT 
+         _eqp.*,
+         _eqpClass.Name AS EquipmentClass,
+         (
+           (SELECT ISNULL(SUM(invinner.Quantity), 0)
+            FROM InventoryWarehouse invinner
+            WHERE invinner.EquipmentId = _eqp.EquipmentId 
+              AND invinner.Type = 'Add' 
+              AND invinner.LocationId = '22222222-2222-2222-2222-222222222222')
+           - (SELECT ISNULL(SUM(invinner2.Quantity), 0)
+              FROM InventoryWarehouse invinner2
+              WHERE invinner2.EquipmentId = _eqp.EquipmentId 
+                AND invinner2.Type = 'Release'
+                AND invinner2.LocationId = '22222222-2222-2222-2222-222222222222')
+           - (SELECT ISNULL(SUM(b.Quantity), 0)
+              FROM AssignedInventoryTechReceived b
+              WHERE b.EquipmentId = _eqp.EquipmentId 
+                AND b.TechnicianId = '22222222-2222-2222-2222-222222222222'
+                AND b.IsApprove = 0 
+                AND b.IsDecline = 0)
+         ) AS Quantity,
+         sup.CompanyName AS SupplierName,
+         _eqpType.Name AS Category,
+         eqpv.Cost AS VendorCost,
+         manu.Name AS ManufacturerName,
+         (
+           SELECT ISNULL(SUM(Quantity), 0)
+           FROM (
+                SELECT ISNULL(SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END), 0) AS Quantity
+                FROM InventoryTech
+                WHERE EquipmentId = _eqp.EquipmentId 
+                  AND TechnicianId NOT IN (
+                      '00000000-0000-0000-0000-000000000000',
+                      '22222222-2222-2222-2222-222222222222',
+                      '22222222-2222-2222-2222-222222222223',
+                      '22222222-2222-2222-2222-222222222224',
+                      '22222222-2222-2222-2222-222222222225',
+                      '22222222-2222-2222-2222-222222222226',
+                      '22222222-2222-2222-2222-222222222231',
+                      '22222222-2222-2222-2222-222222222232',
+                      '22222222-2222-2222-2222-222222222233',
+                      '22222222-2222-2222-2222-222222222222',
+                      '22222222-2222-2222-2222-222222222221'
+                  )
+                GROUP BY TechnicianId
+                HAVING SUM(CASE WHEN Type = 'ADD' THEN Quantity ELSE -Quantity END) >= 0
+           ) AS Qty
+         )
+         - (SELECT ISNULL(SUM(b.Quantity), 0)
+            FROM AssignedInventoryTechReceived b
+            WHERE b.EquipmentId = _eqp.EquipmentId 
+              AND b.TechnicianId NOT IN (
+                      '00000000-0000-0000-0000-000000000000',
+                      '22222222-2222-2222-2222-222222222222',
+                      '22222222-2222-2222-2222-222222222223',
+                      '22222222-2222-2222-2222-222222222224',
+                      '22222222-2222-2222-2222-222222222225',
+                      '22222222-2222-2222-2222-222222222226',
+                      '22222222-2222-2222-2222-222222222231',
+                      '22222222-2222-2222-2222-222222222232',
+                      '22222222-2222-2222-2222-222222222233',
+                      '22222222-2222-2222-2222-222222222222',
+                      '22222222-2222-2222-2222-222222222221'
+                  )
+              AND b.IsApprove = 0 
+              AND b.IsDecline = 0
+         ) AS technician,
+         (
+           SELECT AVG(newtab.UnitPrice)
+           FROM (
+                 SELECT TOP 3 iwin.*, pod.UnitPrice
+                 FROM InventoryWarehouse iwin
+                 LEFT JOIN PurchaseOrderDetail pod 
+                    ON pod.PurchaseOrderId = iwin.PurchaseOrderId
+                 WHERE iwin.PurchaseOrderId != ''
+                   AND iwin.EquipmentId = _eqp.EquipmentId
+                   AND pod.EquipmentId = _eqp.EquipmentId
+                 ORDER BY iwin.LastUpdatedDate DESC
+           ) newtab
+           GROUP BY EquipmentId
+         ) AS FIFO,
+         ([dbo].GetAssignedInventoryTechQuantityCount(NULL, _eqp.EquipmentId, 1)) AS InQueue,
+         (
+           (SELECT ISNULL(SUM(invinner.Quantity), 0)
+            FROM InventoryWarehouse invinner
+            WHERE invinner.EquipmentId = _eqp.EquipmentId 
+              AND invinner.Type = 'Add'
+              AND invinner.LocationId IN (
+                  '22222222-2222-2222-2222-222222222223',
+                  '22222222-2222-2222-2222-222222222224',
+                  '22222222-2222-2222-2222-222222222225',
+                  '22222222-2222-2222-2222-222222222226',
+                  '22222222-2222-2222-2222-222222222231',
+                  '22222222-2222-2222-2222-222222222232',
+                  '22222222-2222-2222-2222-222222222233'
+              )
+           )
+           - (SELECT ISNULL(SUM(b.Quantity), 0)
+              FROM InventoryWarehouse b
+              WHERE b.EquipmentId = _eqp.EquipmentId 
+                AND b.Type = 'Release'
+                AND b.LocationId IN (
+                  '22222222-2222-2222-2222-222222222223',
+                  '22222222-2222-2222-2222-222222222224',
+                  '22222222-2222-2222-2222-222222222225',
+                  '22222222-2222-2222-2222-222222222226',
+                  '22222222-2222-2222-2222-222222222231',
+                  '22222222-2222-2222-2222-222222222232',
+                  '22222222-2222-2222-2222-222222222233'
+              )
+           )
+           - (SELECT ISNULL(SUM(b.Quantity), 0)
+              FROM AssignedInventoryTechReceived b
+              WHERE b.EquipmentId = _eqp.EquipmentId 
+                AND b.TechnicianId IN (
+                  '22222222-2222-2222-2222-222222222223',
+                  '22222222-2222-2222-2222-222222222224',
+                  '22222222-2222-2222-2222-222222222225',
+                  '22222222-2222-2222-2222-222222222226',
+                  '22222222-2222-2222-2222-222222222231',
+                  '22222222-2222-2222-2222-222222222232',
+                  '22222222-2222-2222-2222-222222222233'
+              )
+              AND b.IsApprove = 0 
+              AND b.IsDecline = 0
+           )
+         ) AS LocQoH,
+         ISNULL(
+           (
+              (SELECT ISNULL(SUM(invinner.Quantity), 0)
+               FROM InventoryWarehouse invinner
+               WHERE invinner.EquipmentId = _eqp.EquipmentId 
+                 AND invinner.Type = 'Add')
+              - (SELECT ISNULL(SUM(invinner2.Quantity), 0)
+                 FROM InventoryWarehouse invinner2
+                 WHERE invinner2.EquipmentId = _eqp.EquipmentId 
+                   AND invinner2.Type = 'Release')
+              + (SELECT ISNULL(SUM(tech.Quantity), 0)
+                 FROM InventoryTech tech
+                 WHERE _eqp.EquipmentId = tech.EquipmentId 
+                   AND tech.[Type] = 'Add'
+                   AND tech.TechnicianId NOT IN (
+                         '22222222-2222-2222-2222-222222222222',
+                         '22222222-2222-2222-2222-222222222223',
+                         '22222222-2222-2222-2222-222222222224',
+                         '22222222-2222-2222-2222-222222222225',
+                         '22222222-2222-2222-2222-222222222226',
+                         '22222222-2222-2222-2222-222222222231',
+                         '22222222-2222-2222-2222-222222222232',
+                         '22222222-2222-2222-2222-222222222233'
+                   )
+              )
+              - (SELECT ISNULL(SUM(tech.Quantity), 0)
+                 FROM InventoryTech tech
+                 WHERE _eqp.EquipmentId = tech.EquipmentId 
+                   AND tech.[Type] = 'Release'
+                   AND tech.TechnicianId NOT IN (
+                         '22222222-2222-2222-2222-222222222222',
+                         '22222222-2222-2222-2222-222222222223',
+                         '22222222-2222-2222-2222-222222222224',
+                         '22222222-2222-2222-2222-222222222225',
+                         '22222222-2222-2222-2222-222222222226',
+                         '22222222-2222-2222-2222-222222222231',
+                         '22222222-2222-2222-2222-222222222232',
+                         '22222222-2222-2222-2222-222222222233'
+                   )
+              )
+           ), 0
+         ) AS TotalEq
+                                          {1}
+                                        
+                                         FROM Equipment _eqp
+    LEFT JOIN EquipmentClass _eqpClass
+         ON _eqp.EquipmentClassId = _eqpClass.Id
+         AND _eqp.CompanyId = _eqpClass.CompanyId
+    LEFT JOIN EquipmentVendor eqpv
+         ON eqpv.EquipmentId = _eqp.EquipmentId
+         AND eqpv.IsPrimary = 1
+    LEFT JOIN EquipmentType _eqpType
+         ON _eqp.EquipmentTypeId = _eqpType.Id
+         AND _eqp.CompanyId = _eqpType.CompanyId
+    LEFT JOIN Supplier sup
+         ON sup.SupplierId = eqpv.SupplierId
+    LEFT JOIN Manufacturer manu
+         ON manu.Id = _eqp.ManufacturerId
+		                                    WHERE 
+			                                    _eqp.CompanyId = '{0}'
+                                                {3}
+                                                {4}
+                                                {5}
+                                                {6}
+                                
+                                          ),
+                                       CustomerFilterData AS (
+    SELECT 
+         Id,
+         EquipmentId,
+         CompanyId,
+         Name,
+         SKU,
+         ManufacturerId,
+         SupplierId,
+         EquipmentTypeId,
+         EquipmentClassId,
+         Point,
+         SupplierCost,
+         Cost,
+         Retail,
+         EqOrder,
+         Service,
+         AsOfDate,
+         reorderpoint,
+         IsActive,
+         Comments,
+         CreatedDate,
+         LastUpdatedDate,
+         LastUpdatedBy,
+         POOrder,
+         IsKit,
+         RepCost,
+         RackNo,
+         Location,
+         Type,
+         Model,
+         Finish,
+         Capacity,
+         EquipmentPriceIsCharged,
+         ModelNumber,
+         Barcode,
+         Tag,
+         Note,
+         IsWarrenty,
+         IsARBEnabled,
+         IsUpsold,
+         IsTaxable,
+         OverheadRate,
+         ProfitRate,
+         Unit,
+         TaggedEmail,
+         IsIncludeEstimate,
+         LaborPrice,
+         WarehouseReorder,
+         EquipmentClass,
+         Quantity,
+         SupplierName,
+         Category,
+         VendorCost,
+         ManufacturerName,
+         technician,
+         FIFO,
+         InQueue,
+         LocQoH,
+         TotalEq = ISNULL(Quantity, 0) 
+                  + ISNULL(technician, 0) 
+                  + ISNULL(LocQoH, 0) 
+                  + ISNULL(InQueue, 0)
+    FROM CustomerData
 
-                                           DROP TABLE #CustomerData
-                                           DROP TABLE #CustomerFilterData
+
+                                           {2})
+SELECT COUNT(*) AS TotalCount
+FROM CustomerFilterData;
 ";
             string filtertext = "";
             string filterColumntext = "";
@@ -837,104 +1253,104 @@ namespace HS.DataAccess
                 if (filter.order == "ascending/category")
                 {
                     orderquery = "order by _eqpType.Name asc";
-                    orderquery1 = "order by _cd.Category asc";
-                    orderquery2 = "order by _cfd.Category asc";
+                    orderquery1 = "order by Category asc";
+                    orderquery2 = "order by Category asc";
                 }
                 else if (filter.order == "descending/category")
                 {
                     orderquery = "order by _eqpType.Name desc";
-                    orderquery1 = "order by _cd.Category desc";
-                    orderquery2 = "order by _cfd.Category desc";
+                    orderquery1 = "order by Category desc";
+                    orderquery2 = "order by Category desc";
                 }
                 else if (filter.order == "ascending/monthlyfee")
                 {
                     orderquery = "order by _eqp.Retail asc";
-                    orderquery1 = "order by _cd.Retail asc";
-                    orderquery2 = "order by _cfd.Retail asc";
+                    orderquery1 = "order by Retail asc";
+                    orderquery2 = "order by Retail asc";
                 }
                 else if (filter.order == "descending/monthlyfee")
                 {
                     orderquery = "order by _eqp.Retail desc";
-                    orderquery1 = "order by _cd.Retail desc";
-                    orderquery2 = "order by _cfd.Retail desc";
+                    orderquery1 = "order by Retail desc";
+                    orderquery2 = "order by Retail desc";
                 }
                 else if (filter.order == "ascending/description")
                 {
                     orderquery = "order by _eqp.Comments asc";
-                    orderquery1 = "order by _cd.Comments asc";
-                    orderquery2 = "order by _cfd.Comments asc";
+                    orderquery1 = "order by Comments asc";
+                    orderquery2 = "order by Comments asc";
                 }
                 else if (filter.order == "descending/description")
                 {
                     orderquery = "order by _eqp.Comments desc";
-                    orderquery1 = "order by _cd.Comments desc";
-                    orderquery2 = "order by _cfd.Comments desc";
+                    orderquery1 = "order by Comments desc";
+                    orderquery2 = "order by Comments desc";
                 }
                 else if (filter.order == "ascending/manu")
                 {
                     orderquery = "order by manu.Name asc";
-                    orderquery1 = "order by _cd.ManufacturerName asc";
-                    orderquery2 = "order by _cfd.ManufacturerName asc";
+                    orderquery1 = "order by ManufacturerName asc";
+                    orderquery2 = "order by ManufacturerName asc";
                 }
                 else if (filter.order == "descending/manu")
                 {
                     orderquery = "order by manu.Name desc";
-                    orderquery1 = "order by _cd.ManufacturerName desc";
-                    orderquery2 = "order by _cfd.ManufacturerName desc";
+                    orderquery1 = "order by ManufacturerName desc";
+                    orderquery2 = "order by ManufacturerName desc";
                 }
                 else if (filter.order == "ascending/des")
                 {
                     orderquery = "order by _eqp.Name asc";
-                    orderquery1 = "order by _cd.Name asc";
-                    orderquery2 = "order by _cfd.Name asc";
+                    orderquery1 = "order by Name asc";
+                    orderquery2 = "order by Name asc";
                 }
                 else if (filter.order == "descending/des")
                 {
                     orderquery = "order by _eqp.Name desc";
-                    orderquery1 = "order by _cd.Name desc";
-                    orderquery2 = "order by _cfd.Name desc";
+                    orderquery1 = "order by Name desc";
+                    orderquery2 = "order by Name desc";
                 }
                 else if (filter.order == "ascending/sku")
                 {
                     orderquery = "order by _eqp.SKU asc";
-                    orderquery1 = "order by _cd.SKU asc";
-                    orderquery2 = "order by _cfd.SKU asc";
+                    orderquery1 = "order by SKU asc";
+                    orderquery2 = "order by SKU asc";
                 }
                 else if (filter.order == "descending/sku")
                 {
                     orderquery = "order by _eqp.SKU desc";
-                    orderquery1 = "order by _cd.SKU desc";
-                    orderquery2 = "order by _cfd.SKU desc";
+                    orderquery1 = "order by SKU desc";
+                    orderquery2 = "order by SKU desc";
                 }
                 else if (filter.order == "ascending/repcost")
                 {
                     orderquery = "order by _eqp.RepCost asc";
-                    orderquery1 = "order by _cd.RepCost asc";
-                    orderquery2 = "order by _cfd.RepCost asc";
+                    orderquery1 = "order by RepCost asc";
+                    orderquery2 = "order by RepCost asc";
                 }
                 else if (filter.order == "descending/repcost")
                 {
                     orderquery = "order by _eqp.RepCost desc";
-                    orderquery1 = "order by _cd.RepCost desc";
-                    orderquery2 = "order by _cfd.RepCost desc";
+                    orderquery1 = "order by RepCost desc";
+                    orderquery2 = "order by RepCost desc";
                 }
                 else if (filter.order == "ascending/vendor")
                 {
                     orderquery = "order by sup.CompanyName asc";
-                    orderquery1 = "order by _cd.SupplierName asc";
-                    orderquery2 = "order by _cfd.SupplierName asc";
+                    orderquery1 = "order by SupplierName asc";
+                    orderquery2 = "order by SupplierName asc";
                 }
                 else if (filter.order == "descending/vendor")
                 {
                     orderquery = "order by sup.CompanyName desc";
-                    orderquery1 = "order by _cd.SupplierName desc";
-                    orderquery2 = "order by _cfd.SupplierName desc";
+                    orderquery1 = "order by SupplierName desc";
+                    orderquery2 = "order by SupplierName desc";
                 }
                 else if (filter.order == "ascending/vendorcost")
                 {
                     orderquery = "order by _eqp.SupplierCost asc";
-                    orderquery1 = "order by _cd.SupplierCost asc";
-                    orderquery2 = "order by _cfd.SupplierCost asc";
+                    orderquery1 = "order by SupplierCost asc";
+                    orderquery2 = "order by SupplierCost asc";
                 }
                 else if (filter.order == "descending/vendorcost")
                 {

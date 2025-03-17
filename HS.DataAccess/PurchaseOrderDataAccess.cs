@@ -2893,33 +2893,18 @@ SELECT DISTINCT
 
 
 
-        string sqlQuery = @"SELECT
-    
-    PurchaseOrderId,
-    OrderDate,
-    Vendor,
-    Category,
-    Manufacturer,
-    SKU,
-    Description,
-    EquipName,
-    Quantity,
-    UnitPrice,
-    TotalPrice,
-    BulkStatus,
-     [Status]
-
-FROM (
+        string sqlQuery = @"
     SELECT
-        poware.ID,
+  
         poware.PurchaseOrderId,
-        poware.OrderDate,
-		ISNULL((SELECT eqt.Name FROM EquipmentType eqt WHERE eqt.Id = Eqp.EquipmentTypeId), 'Unknown') AS Category,
+        poware.CreatedDate as OrderDate,
         ISNULL((SELECT SInf.CompanyName FROM Supplier SInf WHERE SInf.SupplierId = poware.SuplierId), 'Unknown') AS Vendor,
+		ISNULL((SELECT eqt.Name FROM EquipmentType eqt WHERE eqt.Id = Eqp.EquipmentTypeId), 'Unknown') AS Category,
         ISNULL((SELECT M.Name FROM Manufacturer M WHERE M.id = Eqp.ManufacturerId), 'Unknown') AS Manufacturer,
         Eqp.SKU AS SKU,
         Eqp.Name AS Description,
         POD.EquipName,
+        poware.Description AS [PO Description],
         POD.Quantity,
         POD.UnitPrice,
         POD.TotalPrice,
@@ -2932,7 +2917,7 @@ FROM (
 {0}
 {1}
 {2}
-) AS T";
+ ORDER BY poware.ID ASC";
             try
             {
                 sqlQuery = string.Format(sqlQuery, SearchTextFilter, DateQuery, poreportnew);           
