@@ -3512,7 +3512,7 @@ namespace HS.DataAccess
                 { 
                     orderquery1 = "order by [Customer Name] desc";
                 }
-                if (order == "ascending/estimateid")
+                else if (order == "ascending/estimateid")
                 { 
                     orderquery1 = "order by [Estimate Id] asc";
                 }
@@ -3542,7 +3542,7 @@ namespace HS.DataAccess
                                     cu.FirstName + ' ' + cu.LastName As [Customer Name]
                                     ,cu.Id as [Customer Id]
 									,est.EstimatorId as [Estimate Id]
-									,FORMAT(DATEADD(MI, 360, est.LastUpdatedDate),'M/d/yyyy') As [Sent Date]  
+									,FORMAT(DATEADD(MI, 360, est.LastUpdatedDate),'M/d/yy') As [Sent Date]  
                                     from Estimator est 
                                     left join Customer cu on cu.CustomerId = est.CustomerId
                                     where est.CompanyId=@CompanyId
@@ -3591,7 +3591,7 @@ namespace HS.DataAccess
                 {
                     orderquery = "order by CustomerName desc"; 
                 }
-                if (order == "ascending/estimateid")
+                else if (order == "ascending/estimateid")
                 {
                     orderquery = "order by EstimatorId asc"; 
                 }
@@ -3631,11 +3631,11 @@ namespace HS.DataAccess
                                     where est.CompanyId=@CompanyId
                                     and est.Status != 'Init'
                                     and est.Status = 'Sent To Customer'
-                                    and cu.IsActive = 1 {1} {2} {3}
+                                    and cu.IsActive = 1 {1} {2} 
 
                                     select top(@pagesize) *  from #sentestimator
-                                    where Id not in (Select TOP (@pagestart)  Id from #sentestimator order by EstimatorId desc)
-                                    order by EstimatorId desc 
+                                    where Id not in (Select TOP (@pagestart)  Id from #sentestimator {3})
+                                    {3} 
  
 								    Select  count(Id) as [TotalCount] from #sentestimator
 
