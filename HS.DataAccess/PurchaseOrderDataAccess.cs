@@ -2895,7 +2895,7 @@ SELECT DISTINCT
 
         string sqlQuery = @"
     SELECT
-        poware.ID,
+    
         poware.PurchaseOrderId,
         poware.CreatedDate as OrderDate,
 		ISNULL((SELECT eqt.Name FROM EquipmentType eqt WHERE eqt.Id = Eqp.EquipmentTypeId), 'Unknown') AS Category,
