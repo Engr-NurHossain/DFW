@@ -15452,6 +15452,15 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 cus.State,
 								cus.City,
                                 cus.PlatformId,
+                                cus.SecondCustomerNo,
+                                cus.PrimaryPhone,
+                                cus.TaxExemption,
+		                        cus.Street,
+                                cus.CustomerNo,
+		                        cus.ZipCode,
+                                cus.ContractTeam,
+                                cus.RenewalTerm,
+                                cus.BusinessAccountType,
                                 Ccom.ConvertionDate,
                                 --cf.FileFullName as NameFile,
                                 '' as NameFile,
@@ -15525,11 +15534,11 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 SELECT TOP (@pagesize)
                                   *  Into #CustomerResultData
                                 FROM #CustomerData
-                                where Id NOT IN(Select TOP (@pagestart)  Id from #CustomerData #cd order by #cd.RMRCreatedDate  desc)
-							    order by RMRCreatedDate  desc      
+                                where Id NOT IN(Select TOP (@pagestart)  Id from #CustomerData #cd {21})
+							   {10}     
 
 
-								select cfd.*,cus.CustomerNo,
+								select cfd.*,
                                 cus.Title,
                                 cus.FirstName ,
                                 cus.LastName ,
@@ -15537,11 +15546,9 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 cus.BusinessName ,
                                 cus.SSN,
 		                        cus.[Status],
-		                        cus.Street,
-		                        cus.ZipCode, 
 		                        cus.[Address],
 		                        cus.EmailAddress,
-		                        cus.PrimaryPhone,
+		                    
                                 cus.SecondaryPhone,
 								cus.DateofBirth,
 								cus.LeadSource,
@@ -15563,8 +15570,6 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 cus.IsAlarmCom,
                                 cus.CreditScore,
                                 cus.CreditScoreValue,
-                                cus.ContractTeam,
-                                cus.RenewalTerm,
                                 cus.FundingCompany,
                                 cus.CellularBackup,
                                 cus.CustomerFunded,
@@ -15590,7 +15595,6 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 cus.ServiceDate,
                                 cus.Area,
                                 cus.Latlng,
-                                cus.SecondCustomerNo,
                                 cus.AdditionalCustomerNo,
                                 cus.IsTechCallPassed,
                                 cus.IsDirect,
@@ -15619,12 +15623,10 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 cus.CreatedByUid,
                                 cus.CreatedDate,
                                 cus.LastUpdatedByUid,
-                                cus.BusinessAccountType,
                                 cus.PhoneType,
                                 cus.Carrier,
                                 cus.ReferringCustomer,
                                 cus.EsistingPanel,
-                                cus.[Ownership],
                                 cus.PurchasePrice,
                                 cus.ContractValue,
                                 cus.ChildOf,
@@ -15663,7 +15665,6 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 cus.SoldAmount,
                                 cus.AgreementEmail,
                                 cus.AgreementPhoneNo,
-                                cus.TaxExemption,
                                 cus.AppoinmentSet,
 								--SP.FirstName SoldbyFirstName,
 								--SP.LastName SoldbyLastName,
@@ -15677,7 +15678,7 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 cus.MapscoNo 
 								 from #CustomerResultData cfd  
 								Left Join Customer cus on cus.CustomerId = cfd.CustomerId
-									order by  cfd.RMRCreatedDate desc  
+									{10} 
 								
 								drop table #CustomerResultData
 
@@ -15698,8 +15699,8 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
             string filterForQA = "";
             string filterByIsActive = "";
             string filterbyUser = "";
-            string orderbysql = "order by #cd.RMRStartDate desc";
-            string orderbysql1 = "order by cfd.RMRStartDate desc";
+            string orderbysql = "";
+            string orderbysql1 = "";
             string TotalRMRFilter = "";
             string filterbydaterange = "";
             string BranchQuery = "";
@@ -15709,13 +15710,13 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
             {
                 if (filter.SettingOrderBy == "Id desc")
                 {
-                    orderbysql = "order by #cd.Id desc";
-                    orderbysql1 = "order by Id desc";
+                    orderbysql = "order by RMRCreatedDate desc";
+                    orderbysql1 = "order by #cd.RMRCreatedDate desc";
                 }
                 else if (filter.SettingOrderBy == "Id asc")
                 {
-                    orderbysql = "order by #cd.Id asc";
-                    orderbysql1 = "order by Id asc";
+                    orderbysql = "order by RMRCreatedDate asc";
+                    orderbysql1 = "order by #cd.RMRCreatedDate asc";
                 }
                 else if (filter.SettingOrderBy == "DisplayName desc")
                 {
@@ -15749,8 +15750,8 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                 }
                 else
                 {
-                    orderbysql = "order by #cd.Id desc";
-                    orderbysql1 = "order by Id desc";
+                    orderbysql = "order by RMRCreatedDate desc";
+                    orderbysql1 = "order by #cd.RMRCreatedDate desc"; 
                 }
             }
 
@@ -15801,215 +15802,357 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                 if (filter.order == "ascending/Branch")
                 {
                     orderbysql = "ORDER BY Ownership asc";
+                    orderbysql1 = "order by #cd.Ownership asc";
                 }
                 else if (filter.order == "descending/Branch")
                 {
                     orderbysql = "ORDER BY Ownership desc";
+                    orderbysql1 = "order by #cd.Ownership desc";
+                }
+                else if (filter.order == "ascending/TaxExemption")
+                {
+                    orderbysql = "ORDER BY TaxExemption asc";
+                    orderbysql1 = "order by #cd.TaxExemption asc";
+                }
+                else if (filter.order == "descending/TaxExemption")
+                {
+                    orderbysql = "ORDER BY TaxExemption desc";
+                    orderbysql1 = "order by #cd.TaxExemption desc";
+                }
+                else if (filter.order == "ascending/BusinessAccountType")
+                {
+                    orderbysql = "ORDER BY BusinessAccountType asc";
+                    orderbysql1 = "order by #cd.BusinessAccountType asc";
+                }
+                else if (filter.order == "descending/BusinessAccountType")
+                {
+                    orderbysql = "ORDER BY BusinessAccountType desc";
+                    orderbysql1 = "order by #cd.BusinessAccountType desc";
+                }
+                else if (filter.order == "ascending/BillingMethodType")
+                {
+                    orderbysql = "ORDER BY BillingMethodType asc";
+                    orderbysql1 = "order by #cd.BillingMethodType asc";
+                }
+                else if (filter.order == "descending/BillingMethodType")
+                {
+                    orderbysql = "ORDER BY BillingMethodType desc";
+                    orderbysql1 = "order by #cd.BillingMethodType desc";
+                }
+                else if (filter.order == "ascending/CustomerNo")
+                {
+                    orderbysql = "ORDER BY CustomerNo asc";
+                    orderbysql1 = "order by #cd.CustomerNo asc";
+                }
+                else if (filter.order == "descending/CustomerNo")
+                {
+                    orderbysql = "ORDER BY CustomerNo desc";
+                    orderbysql1 = "order by #cd.CustomerNo desc";
                 }
                 else if (filter.order == "ascending/SecondCustomerNo")
                 {
                     orderbysql = "ORDER BY SecondCustomerNo asc";
+                    orderbysql1 = "order by #cd.SecondCustomerNo asc";
                 }
                 else if (filter.order == "descending/SecondCustomerNo")
                 {
                     orderbysql = "ORDER BY SecondCustomerNo desc";
+                    orderbysql1 = "order by #cd.SecondCustomerNo desc";
                 }
                 else if (filter.order == "ascending/Id")
                 {
                     orderbysql = "ORDER BY Id asc";
+                    orderbysql1 = "order by #cd.Id asc";
                 }
                 else if (filter.order == "descending/Id")
                 {
                     orderbysql = "ORDER BY Id desc";
+                    orderbysql1 = "order by #cd.Id desc";
                 }
                 else if (filter.order == "ascending/DisplayName")
                 {
                     orderbysql = "ORDER BY DisplayName asc";
+                    orderbysql1 = "order by #cd.DisplayName asc";
                 }
                 else if (filter.order == "descending/DisplayName")
                 {
                     orderbysql = "ORDER BY DisplayName desc";
+                    orderbysql1 = "order by #cd.DisplayName desc";
                 }
                 else if (filter.order == "ascending/BillAdd1")
                 {
                     orderbysql = "ORDER BY BillAdd1 asc";
+                    orderbysql1 = "order by #cd.BillAdd1 asc";
                 }
                 else if (filter.order == "descending/BillAdd1")
                 {
                     orderbysql = "ORDER BY BillAdd1 desc";
+                    orderbysql1 = "order by #cd.BillAdd1 desc";
                 }
                 else if (filter.order == "ascending/BillCity")
                 {
                     orderbysql = "ORDER BY BillCity asc";
+                    orderbysql1 = "order by #cd.BillCity asc";
                 }
                 else if (filter.order == "descending/BillCity")
                 {
                     orderbysql = "ORDER BY BillCity desc";
+                    orderbysql1 = "order by #cd.BillCity desc";
                 }
                 else if (filter.order == "ascending/BillState")
                 {
                     orderbysql = "ORDER BY BillState asc";
+                    orderbysql1 = "order by #cd.BillState asc";
                 }
                 else if (filter.order == "descending/BillState")
                 {
                     orderbysql = "ORDER BY BillState desc";
+                    orderbysql1 = "order by #cd.BillState desc";
                 }
                 else if (filter.order == "ascending/BillZip")
                 {
                     orderbysql = "ORDER BY BillZip asc";
+                    orderbysql1 = "order by #cd.BillZip asc";
                 }
                 else if (filter.order == "descending/BillZip")
                 {
                     orderbysql = "ORDER BY BillZip desc";
+                    orderbysql1 = "order by #cd.BillZip desc";
                 }
                 else if (filter.order == "ascending/BillEmailAddress")
                 {
                     orderbysql = "ORDER BY BillEmailAddress asc";
+                    orderbysql1 = "order by #cd.BillEmailAddress asc";
                 }
                 else if (filter.order == "descending/BillEmailAddress")
                 {
                     orderbysql = "ORDER BY BillEmailAddress desc";
+                    orderbysql1 = "order by #cd.BillEmailAddress desc";
                 }
                 else if (filter.order == "ascending/PrimaryPhone")
                 {
                     orderbysql = "ORDER BY PrimaryPhone asc";
+                    orderbysql1 = "order by #cd.PrimaryPhone asc";
                 }
                 else if (filter.order == "descending/PrimaryPhone")
                 {
                     orderbysql = "ORDER BY PrimaryPhone desc";
+                    orderbysql1 = "order by #cd.PrimaryPhone desc";
                 }
                 else if (filter.order == "ascending/Street")
                 {
                     orderbysql = "ORDER BY Street asc";
+                    orderbysql1 = "order by #cd.Street asc";
                 }
                 else if (filter.order == "descending/Street")
                 {
                     orderbysql = "ORDER BY Street desc";
+                    orderbysql1 = "order by #cd.Street desc";
                 }
                 else if (filter.order == "ascending/City")
                 {
                     orderbysql = "ORDER BY City asc";
+                    orderbysql1 = "order by #cd.City asc";
                 }
                 else if (filter.order == "descending/City")
                 {
                     orderbysql = "ORDER BY City desc";
+                    orderbysql1 = "order by #cd.City desc";
                 }
                 else if (filter.order == "ascending/State")
                 {
                     orderbysql = "ORDER BY State asc";
+                    orderbysql1 = "order by #cd.State asc";
                 }
                 else if (filter.order == "descending/State")
                 {
                     orderbysql = "ORDER BY State desc";
+                    orderbysql1 = "order by #cd.State desc";
                 }
                 else if (filter.order == "ascending/ZipCode")
                 {
                     orderbysql = "ORDER BY ZipCode asc";
+                    orderbysql1 = "order by #cd.ZipCode asc";
                 }
                 else if (filter.order == "descending/ZipCode")
                 {
                     orderbysql = "ORDER BY ZipCode desc";
+                    orderbysql1 = "order by #cd.ZipCode desc";
                 }
                 else if (filter.order == "ascending/RMRStartDate")
                 {
                     orderbysql = "ORDER BY RMRStartDate asc";
+                    orderbysql1 = "order by #cd.RMRStartDate asc";
                 }
                 else if (filter.order == "descending/RMRStartDate")
                 {
                     orderbysql = "ORDER BY RMRStartDate desc";
+                    orderbysql1 = "order by #cd.RMRStartDate desc";
                 }
                 else if (filter.order == "ascending/BillCycle")
                 {
                     orderbysql = "ORDER BY BillCycle asc";
+                    orderbysql1 = "order by #cd.BillCycle asc";
                 }
                 else if (filter.order == "descending/BillCycle")
                 {
                     orderbysql = "ORDER BY BillCycle desc";
+                    orderbysql1 = "order by #cd.BillCycle desc";
                 }
                 else if (filter.order == "ascending/RMRLastBillDate")
                 {
                     orderbysql = "ORDER BY RMRLastBillDate asc";
+                    orderbysql1 = "order by #cd.RMRLastBillDate asc";
                 }
                 else if (filter.order == "descending/RMRLastBillDate")
                 {
                     orderbysql = "ORDER BY RMRLastBillDate desc";
+                    orderbysql1 = "order by #cd.RMRLastBillDate desc";
                 }
                 else if (filter.order == "ascending/RMRNextBillDate")
                 {
                     orderbysql = "ORDER BY RMRNextBillDate asc";
+                    orderbysql1 = "order by #cd.RMRNextBillDate asc";
                 }
                 else if (filter.order == "descending/RMRNextBillDate")
                 {
                     orderbysql = "ORDER BY RMRNextBillDate desc";
+                    orderbysql1 = "order by #cd.RMRNextBillDate desc";
+                }
+                else if (filter.order == "ascending/RMRCycleStartDate")
+                {
+                    orderbysql = "ORDER BY RMRCycleStartDate asc";
+                    orderbysql1 = "order by #cd.RMRCycleStartDate asc";
+                }
+                else if (filter.order == "descending/RMRCycleStartDate")
+                {
+                    orderbysql = "ORDER BY RMRCycleStartDate desc";
+                    orderbysql1 = "order by #cd.RMRCycleStartDate desc";
                 }
                 else if (filter.order == "ascending/ContractStartDate")
                 {
                     orderbysql = "ORDER BY ContractStartDate asc";
+                    orderbysql1 = "order by #cd.ContractStartDate asc";
                 }
                 else if (filter.order == "descending/ContractStartDate")
                 {
                     orderbysql = "ORDER BY ContractStartDate desc";
+                    orderbysql1 = "order by #cd.ContractStartDate desc";
                 }
                 else if (filter.order == "ascending/ContractTeam")
                 {
                     orderbysql = "ORDER BY ContractTeam asc";
+                    orderbysql1 = "order by #cd.ContractTeam asc";
                 }
                 else if (filter.order == "descending/ContractTeam")
                 {
                     orderbysql = "ORDER BY ContractTeam desc";
+                    orderbysql1 = "order by #cd.ContractTeam desc";
                 }
                 else if (filter.order == "ascending/RenewalTerm")
                 {
                     orderbysql = "ORDER BY RenewalTerm asc";
+                    orderbysql1 = "order by #cd.RenewalTerm asc";
                 }
                 else if (filter.order == "descending/RenewalTerm")
                 {
                     orderbysql = "ORDER BY RenewalTerm desc";
+                    orderbysql1 = "order by #cd.RenewalTerm desc";
                 }
                 else if (filter.order == "ascending/RMRProductName")
                 {
                     orderbysql = "ORDER BY RMRProductName asc";
+                    orderbysql1 = "order by #cd.RMRProductName asc";
                 }
                 else if (filter.order == "descending/RMRProductName")
                 {
                     orderbysql = "ORDER BY RMRProductName desc";
+                    orderbysql1 = "order by #cd.RMRProductName desc";
                 }
                 else if (filter.order == "ascending/BillDay")
                 {
                     orderbysql = "ORDER BY BillDay asc";
+                    orderbysql1 = "order by #cd.BillDay asc";
                 }
                 else if (filter.order == "descending/BillDay")
                 {
                     orderbysql = "ORDER BY BillDay desc";
+                    orderbysql1 = "order by #cd.BillDay desc";
                 }
                 else if (filter.order == "ascending/RoutingNo")
                 {
                     orderbysql = "ORDER BY RoutingNo asc";
+                    orderbysql1 = "order by #cd.RoutingNo asc";
                 }
                 else if (filter.order == "descending/RoutingNo")
                 {
                     orderbysql = "ORDER BY RoutingNo desc";
+                    orderbysql1 = "order by #cd.RoutingNo desc";
                 }
                 else if (filter.order == "ascending/CardExpireDate")
                 {
                     orderbysql = "ORDER BY CardExpireDate asc";
+                    orderbysql1 = "order by #cd.CardExpireDate asc";
                 }
                 else if (filter.order == "descending/CardExpireDate")
                 {
                     orderbysql = "ORDER BY CardExpireDate desc";
+                    orderbysql1 = "order by #cd.CardExpireDate desc";
                 }
                 else if (filter.order == "ascending/AccountName")
                 {
                     orderbysql = "ORDER BY AccountName asc";
+                    orderbysql1 = "order by #cd.AccountName asc";
                 }
                 else if (filter.order == "descending/AccountName")
                 {
                     orderbysql = "ORDER BY AccountName desc";
+                    orderbysql1 = "order by #cd.AccountName desc";
                 }
-
+                else if (filter.order == "ascending/BankAccountName")
+                {
+                    orderbysql = "ORDER BY BankAccountName asc";
+                    orderbysql1 = "order by #cd.BankAccountName asc";
+                }
+                else if (filter.order == "descending/BankAccountName")
+                {
+                    orderbysql = "ORDER BY BankAccountName desc";
+                    orderbysql1 = "order by #cd.BankAccountName desc";
+                }
+                else if (filter.order == "ascending/AutoBank")
+                {
+                    orderbysql = "ORDER BY AutoBank asc";
+                    orderbysql1 = "order by #cd.AutoBank asc";
+                }
+                else if (filter.order == "descending/AutoBank")
+                {
+                    orderbysql = "ORDER BY AutoBank desc";
+                    orderbysql1 = "order by #cd.AutoBank desc";
+                }
+                else if (filter.order == "ascending/RMRBillDay")
+                {
+                    orderbysql = "ORDER BY RMRBillDay asc";
+                    orderbysql1 = "order by #cd.RMRBillDay asc";
+                }
+                else if (filter.order == "descending/RMRBillDay")
+                {
+                    orderbysql = "ORDER BY RMRBillDay desc";
+                    orderbysql1 = "order by #cd.RMRBillDay desc";
+                }
+                else if (filter.order == "ascending/CardAccountName")
+                {
+                    orderbysql = "ORDER BY CardAccountName asc";
+                    orderbysql1 = "order by #cd.CardAccountName asc";
+                }
+                else if (filter.order == "descending/CardAccountName")
+                {
+                    orderbysql = "ORDER BY CardAccountName desc";
+                    orderbysql1 = "order by #cd.CardAccountName desc";
+                }
                 else
                 {
-                    orderbysql = string.Concat("ORDER BY ConvertionDate desc, Id Desc");
+                    orderbysql = "order by RMRCreatedDate desc";
+                    orderbysql1 = "order by #cd.RMRCreatedDate desc";
                 }
             }
             string filewrite = "";

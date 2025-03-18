@@ -2125,11 +2125,12 @@ FROM (
 ) AS T;
 
                              
-
-														SELECT TOP (@pagesize) #CPOR.* into #TestTable
-														FROM #CreatedPOReport #CPOR
-														where PurchaseOrderId NOT IN(Select TOP (@pagestart) PurchaseOrderId from #CreatedPOReport #CPOR {7})
+	
+                                                       SELECT * INTO #TestTable
+                                                        FROM #CreatedPOReport
                                                         {8}
+                                                        OFFSET @pagestart ROWS FETCH NEXT @pagesize ROWS ONLY;
+														
                                                        
 														select  count(PurchaseOrderId) as [TotalCount] from #CreatedPOReport
 
