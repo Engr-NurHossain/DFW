@@ -361,6 +361,52 @@ namespace HS.DataAccess
                 return null;
             }
         }
+        public DataTable GetAllUserMgmtListByCompanyIdAPI(string ComId)
+        {
+  
+            string sqlQuery = @"
+                                select 
+                                distinct ul.Id as Id,
+                                ul.UserId,
+                                emp.FirstName +' '+emp.LastName as Name
+                            
+                                from UserCompany uc
+                                 left join UserLogin ul 
+	                                on ul.UserId = uc.UserId and ul.CompanyId = uc.CompanyId
+                                 left join UserPermission up 
+	                                on up.UserId = ul.UserId
+                                left join PermissionGroup pg 
+	                                on pg.Id = up.PermissionGroupId
+                                Left Join Employee emp
+									on emp.UserId = ul.UserId
+                                 
+                                where ul.Id is not null
+                                   and ul.IsDeleted = 0
+	                                and pg.Name is not null
+                                    and emp.FirstName is not null 
+									and emp.LastName is not null
+                                    and emp.Recruited =1 
+                                    and uc.CompanyId ='{0}'
+                                    and emp.CompanyId = '{0}'
+                                     and emp.IsCurrentEmployee = 1
+                             and (pg.Tag LIKE '%Installer%' OR pg.Tag LIKE '%Technician%')
+                                  
+                              
+                                    ";
+            try
+            {
+                sqlQuery = string.Format(sqlQuery, ComId);
+                using (SqlCommand cmd = GetSQLCommand(sqlQuery))
+                {
+                    DataSet dsResult = GetDataSet(cmd);
+                    return dsResult.Tables.Count > 0 ? dsResult.Tables[0] : new DataTable();
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
         public DataTable GetAllIsCurrentUserMgmtListByCompanyId(Guid ComId, int? UserGroup, string currentemp, string grpname, string searchText)
         {
             string UserGroupFilterQuery = "";

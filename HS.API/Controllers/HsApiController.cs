@@ -8955,6 +8955,71 @@ namespace HS.API.Controllers
             }
         }
 
+        [Route("view-mode")]
+        [HttpGet]
+        public HttpResponseMessage GetAllTechnicianUser()
+        {
+            Guid userId = Guid.Empty;
+            var re = Request;
+            var headers = re.Headers;
+
+            if (headers.Contains("userId"))
+            {
+                Guid.TryParse(headers.GetValues("userId").First(), out userId);
+            }
+
+            try
+            {
+                var identity = (ClaimsIdentity)User.Identity;
+                var username = identity.Claims.FirstOrDefault(c => c.Type == "username")?.Value;
+                var companyIdClaim = identity.Claims.FirstOrDefault(c => c.Type == "CompanyId")?.Value;
+
+                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(companyIdClaim))
+                {
+                    return Request.CreateResponse(HttpStatusCode.PreconditionFailed, "Token Expired.");
+                }
+
+                var usercontext = HSMainApiFacade.GetCompanyConnectionByUsernameAndCompanyId(username, new Guid(companyIdClaim));
+                if (usercontext == null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.PreconditionFailed, "Authorization Denied.");
+                }
+
+                string ComId = usercontext.CompanyId.ToString();
+                APIInitialize();
+
+              
+                var model = HSapiFacade.GetAllUserMgmtListByCompanyId(ComId);
+
+                if (model != null && model.UserMgmtList.Any())
+                {
+                    var userList = model.UserMgmtList
+                        .Select(u => new
+                        {
+                            UserId = u.UserId,
+                            Name = u.ContactName
+                        })
+                        .ToList();
+
+                    var response = new
+                    {
+                        success = true,
+                        error = (string)null,
+                        result = userList
+                    };
+
+                    return Request.CreateResponse(HttpStatusCode.OK, response);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, new { success = false, error = "Not found.", result = new List<object>() });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, new { success = false, error = ex.Message, result = new List<object>() });
+            }
+        }
 
         [Route("ticket")]
         [HttpGet]

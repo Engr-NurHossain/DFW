@@ -1287,6 +1287,31 @@ namespace HS.Facade
                                 }).ToList();
             return model;
         }
+        public UserMgmtListModel GetAllUserMgmtListByCompanyId(string ComId)
+        {
+            DataTable dt = _UserLoginDataAccess.GetAllUserMgmtListByCompanyIdAPI(ComId);
+
+            UserMgmtListModel UserList = new UserMgmtListModel();
+
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                UserList.UserMgmtList = (from DataRow dr in dt.Rows
+                                         select new UserMgmtList()
+                                         {
+                                             Id = dr["Id"] != DBNull.Value ? Convert.ToInt32(dr["Id"]) : 0,
+                                             UserId = dr["UserId"] != DBNull.Value ? (Guid)dr["UserId"] : Guid.Empty,
+                                             ContactName = dr["Name"] != DBNull.Value ? dr["Name"].ToString() : string.Empty
+                                         }).ToList();
+            }
+            else
+            {
+                UserList.UserMgmtList = new List<UserMgmtList>();
+            }
+
+            return UserList;
+        }
+
+
         public JobsCustomModel GetAllJobsDetailByFilter(Guid comid, string from, string to, Guid userid, string status, string type, bool permission)
         {
             DataSet ds = _customerDataAccess.GetAllJobsDetailByFilter(comid, from, to, userid, status, type, permission);
