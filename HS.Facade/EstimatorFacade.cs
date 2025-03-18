@@ -118,6 +118,10 @@ namespace HS.Facade
         {
             return _EstimatorFileDataAccess.GetByQuery(string.Format(" EstimatorId = '{0}'", estimatorId)).FirstOrDefault();
         }
+        public EstimatorFile GetSentEstimatorFileByEstimatorId(string estimatorId)
+        {
+            return _EstimatorFileDataAccess.GetByQuery(string.Format(" EstimatorId = '{0}' and EstimatorType = 'SentEstimator' ", estimatorId)).FirstOrDefault();
+        }
         public EstimatorFile GetEstimatorFileById(int Id)
         {
             return _EstimatorFileDataAccess.GetByQuery(string.Format(" Id = {0}", Id)).FirstOrDefault();

@@ -14994,7 +14994,7 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                 else if (sort == "ascending/sitezip")
                 {
                     sqlorderby = " order by ZipCode asc";
-                    sqlorderby = " order by #ft.ZipCode asc";
+                    sqlorderby1 = " order by #ft.ZipCode asc";
                 }
                 else if (sort == "descending/sitezip")
                 {
@@ -15031,12 +15031,12 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                     sqlorderby = " order by PanelType desc";
                     sqlorderby1 = " order by #ft.PanelType desc";
                 }
-                else if (sort == "ascending/cellbackupco")
+                else if (sort == "ascending/cell")
                 {
                     sqlorderby = " order by CellBackupCompany asc";
                     sqlorderby1 = " order by #ft.CellBackupCompany asc";
                 }
-                else if (sort == "descending/cellbackupco")
+                else if (sort == "descending/cell")
                 {
                     sqlorderby = " order by CellBackupCompany desc";
                     sqlorderby1 = " order by #ft.CellBackupCompany desc";
@@ -15073,13 +15073,13 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                 }
                 else if (sort == "ascending/sitecustomescincedate")
                 {
-                    sqlorderby = " order by CustomerSinceDate asc";
-                    sqlorderby1 = " order by #ft.CustomerSinceDate asc";
+                    sqlorderby = " order by CustomerSince asc";
+                    sqlorderby1 = " order by #ft.CustomerSince asc";
                 }
                 else if (sort == "descending/sitecustomescincedate")
                 {
-                    sqlorderby = " order by CustomerSinceDate desc";
-                    sqlorderby1 = " order by #ft.CustomerSinceDate desc";
+                    sqlorderby = " order by CustomerSince desc";
+                    sqlorderby1 = " order by #ft.CustomerSince desc";
                 }
                 else if (sort == "ascending/sitetype")
                 {
@@ -15259,7 +15259,14 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
 	                                        WHEN (cus.DBA = '' or cus.DBA IS NULL) AND  (cus.BusinessName = '' or cus.BusinessName IS NULL) THEN cus.FirstName +' '+cus.LastName
 	                                        WHEN (cus.DBA = '' or cus.DBA IS NULL)  THEN cus.BusinessName
 	                                        ELSE  cus.DBA
-                                        END as customerName,cus.BusinessName,cus.StreetPrevious,cus.CityPrevious,cus.StatePrevious,cus.ZipCodePrevious,cus.Street,cus.State,cus.City,cus.ZipCode,cus.CustomerNo,cus.CSProvider,cus.ContractTeam,cus.RenewalTerm,cus.Type,cus.CreditScore,Format(cus.BillAmount,'N2') [BillAmount],cus.ContractValue,cus.PurchasePrice,cus.Ownership
+                                        END as customerName,cus.BusinessName,cus.StreetPrevious,cus.CityPrevious,cus.StatePrevious,cus.ZipCodePrevious,cus.Street,cus.State,cus.City,cus.ZipCode,cus.CustomerNo,cus.CSProvider
+,CAST(
+        CASE 
+            WHEN TRY_CAST(cus.ContractTeam AS FLOAT) = -1 THEN 0 
+            ELSE ROUND(TRY_CAST(cus.ContractTeam AS FLOAT) * 12, 0) 
+        END AS INT
+    ) AS ContractTeam
+,cus.RenewalTerm,cus.Type,cus.CreditScore,Format(cus.BillAmount,'N2') [BillAmount],cus.ContractValue,cus.PurchasePrice,cus.Ownership
 										 --,cusExtended.CustomerSince
                                         ,cusExtended.ContractStartDate,cusExtended.MonthlyBatch,cusExtended.Batch,cusExtended.CustomerSince 
                                         ,emp.FirstName+' '+emp.LastName as SalesPerson,setupalm.PanelType
