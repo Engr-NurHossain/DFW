@@ -985,8 +985,8 @@ namespace HS.Web.UI.Controllers
             //string shortUrl2 = "";
             //ShortUrl ShortUrl2 = _Util.Facade.ShortUrlFacade.GetSortUrlByUrl(CustomerLink, null);
             //shortUrl2 = string.Concat(AppConfig.SiteDomain, "/shrt/", ShortUrl2.Code);
-
-            if (ReceiverEmailList.Count() > 0 && System.IO.File.Exists(Filename))
+            var serverFile = Server.MapPath(Filename);
+            if (ReceiverEmailList.Count() > 0 && System.IO.File.Exists(serverFile))
             {
                 for (int i = 0; i < ReceiverEmailList.Count; i++)
                 {
