@@ -3545,9 +3545,11 @@ namespace HS.DataAccess
 									,FORMAT(DATEADD(MI, 360, est.LastUpdatedDate),'M/d/yy') As [Sent Date]  
                                     from Estimator est 
                                     left join Customer cu on cu.CustomerId = est.CustomerId
+                                    left join EstimatorFile estfile on est.EstimatorId = estfile.EstimatorId  
                                     where est.CompanyId=@CompanyId
                                     and est.Status != 'Init'
                                     and est.Status = 'Sent To Customer'
+                                    and estfile.EstimatorType = 'SentEstimator'
                                     and cu.IsActive = 1 {1} {2} {3}
                                 ";
             if (!string.IsNullOrWhiteSpace(SearchText) && SearchText != "undefined")
@@ -3628,9 +3630,11 @@ namespace HS.DataAccess
 									,est.Status
                                     into #sentestimator from Estimator est 
                                     left join Customer cu on cu.CustomerId = est.CustomerId
+                                    left join EstimatorFile estfile on est.EstimatorId = estfile.EstimatorId 
                                     where est.CompanyId=@CompanyId
                                     and est.Status != 'Init'
                                     and est.Status = 'Sent To Customer'
+                                    and estfile.EstimatorType = 'SentEstimator'
                                     and cu.IsActive = 1 {1} {2} 
 
                                     select top(@pagesize) *  from #sentestimator

@@ -17748,7 +17748,7 @@ namespace HS.Web.UI.Controllers
         {
             if(!string.IsNullOrWhiteSpace(EstimatorId))
             {
-                var EstimatorFile = _Util.Facade.EstimatorFacade.GetEstimatorFileByEstimatorId(EstimatorId);
+                var EstimatorFile = _Util.Facade.EstimatorFacade.GetSentEstimatorFileByEstimatorId(EstimatorId);
                 var estimator = _Util.Facade.EstimatorFacade.GetEstimatorByEstimatorId(EstimatorId);
                 if(EstimatorFile != null)
                 {

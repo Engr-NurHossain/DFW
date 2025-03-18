@@ -23503,7 +23503,7 @@ namespace HS.Web.UI.Controllers
                                 LateFee = 0,
                                 LateAmount = 0,
                                 InstallDate = estimator.EstimateDate,
-                                Description = "Payment for one time services (1) months",
+                                Description = "Payment for non-recurring services (1) months",
                                 DiscountType = "percent",
                                 BillingCycle = "",
                                 EstimateTerm = "",
@@ -23529,8 +23529,8 @@ namespace HS.Web.UI.Controllers
                                 UpfrontMonth = "",
                             };
                             servicetempInv.IsEstimate = false;
-                            servicetempInv.InvoiceFor = LabelHelper.InvoiceFor.Service;
-                            servicetempInv.InstallationType = LabelHelper.InvoiceFor.Service;
+                            servicetempInv.InvoiceFor = LabelHelper.InvoiceFor.NonRecurring;
+                            servicetempInv.InstallationType = LabelHelper.InvoiceFor.NonRecurring;
                             servicetempInv.Status = LabelHelper.InvoiceStatus.Open;
                             servicetempInv.Id = _Util.Facade.InvoiceFacade.InsertInvoice(servicetempInv);
                             servicetempInv.InvoiceId = servicetempInv.Id.GenerateInvoiceNo();
