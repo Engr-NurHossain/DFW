@@ -1,49 +1,39 @@
-﻿using HS.Entities;
-using Rotativa;
-using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Drawing;
-using System.Web;
-using System.Web.Mvc;
-using Rotativa.Options;
-using HS.Web.UI.Helper;
-using System.Configuration;
-using HS.Payments.RecurringBilling;
-using HS.Payments.CustomerProfiles;
-using AuthorizeNet.Api.Contracts.V1;
-using Newtonsoft.Json;
-using System.Text.RegularExpressions;
-using HS.Framework;
-using HS.Alarm.CustomerManager;
-using HtmlAgilityPack;
-using System.Net;
-using HS.Framework.Utils;
-using System.Reflection;
-using HS.Web.UI.Controllers;
-using Forte.Entities;
+﻿using AuthorizeNet.Api.Contracts.V1;
 using Forte;
-using System.Globalization;
-using HS.Kickbox.Models;
-using System.Net.Http;
+using Forte.Entities;
+using HS.Entities;
 using HS.Entities.Custom;
-using System.Xml.Linq;
-using System.Text;
-
+using HS.Framework;
+using HS.Framework.Utils;
+using HS.Kickbox.Models;
+using HS.Payments.CustomerProfiles;
+using HS.Payments.RecurringBilling;
+using HS.Web.UI.Helper;
 using HS.Web.UI.Models;
-using PermissionList = HS.Framework.UserPermissions;
-using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
-using System.Web.Routing;
+using Newtonsoft.Json;
+using NLog;
+using OS.AWS.S3.Services;
+using Rotativa;
+using Rotativa.Options;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
 using System.Data;
+using System.Drawing;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Net.Mail;
 using System.Net.Mime;
-using NLog;
-using OS.AWS.S3;
-using OS.AWS.S3.Services;
-using System.Threading;
-using iTextSharp.text.pdf.qrcode;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using PermissionChecker = HS.Web.UI.Helper.PermissionHelper;
+using PermissionList = HS.Framework.UserPermissions;
 
 namespace HS.Web.UI.Controllers
 {
@@ -92,7 +82,7 @@ namespace HS.Web.UI.Controllers
             Text = x.DisplayText.ToString(),
             Value = x.DataValue.ToString()
         }).ToList();
-         
+
             ViewBag.CreditType = JsonConvert.SerializeObject(creditTypes);
             return PartialView("_CustomerCreditBalanceTransactions", Model);
         }
@@ -3817,7 +3807,8 @@ namespace HS.Web.UI.Controllers
                 var OnlyFileName = "CancellationAgreementMail.pdf";
                 var returnurl = "";
 
-                var task = Task.Run(async () => {
+                var task = Task.Run(async () =>
+                {
                     AWSS3ObjectService AWSobject = new AWSS3ObjectService();
 
                     await AWSobject.UploadFile(FileKey, applicationPDFData);
@@ -4417,7 +4408,8 @@ namespace HS.Web.UI.Controllers
 
             var returnurl = string.Empty;
 
-            var task = Task.Run(async () => {
+            var task = Task.Run(async () =>
+            {
                 AWSS3ObjectService AWSobject = new AWSS3ObjectService();
                 await AWSobject.UploadFile(FileKey, applicationPDFData);
                 await AWSobject.MakePublic(FileName, FilePath);
@@ -4554,13 +4546,13 @@ namespace HS.Web.UI.Controllers
                     base.AddUserActivityForCustomer(logMessage, LabelHelper.ActivityAction.AddDocumentFileManagement, null, cus.Id, null);
 
                     CustomerCancellationQueue queuemodel = _Util.Facade.CustomerFacade.GetActiveCustomerCancellationQueueByCustomerId(CustomerId);
-                    if(queuemodel != null)
+                    if (queuemodel != null)
                     {
-                        if(queuemodel.ExpirationDays > 0 && queuemodel.ExpirationDate.HasValue)
+                        if (queuemodel.ExpirationDays > 0 && queuemodel.ExpirationDate.HasValue)
                         {
                             double doublevalue = Convert.ToDouble(queuemodel.ExpirationDays);
                             CustomerCancellationQueue queue = new CustomerCancellationQueue()
-                            { 
+                            {
                                 Id = queuemodel.Id,
                                 ExpirationDate = queuemodel.ExpirationDate.Value.AddDays(doublevalue),
                                 CancellationId = Guid.NewGuid(),
@@ -4574,11 +4566,11 @@ namespace HS.Web.UI.Controllers
                                 IsSigned = false,
                                 IsActive = true,
                                 IsCancelled = false,
-                                EmployeeReason = queuemodel.EmployeeReason, 
+                                EmployeeReason = queuemodel.EmployeeReason,
                                 FileId = cfs.FileId
                             };
                             _Util.Facade.CustomerFacade.UpdateCustomerCancellationQueue(queue);
-                        }  
+                        }
                     }
                     #endregion
                     if (AgreementResult == true)
@@ -4872,7 +4864,8 @@ namespace HS.Web.UI.Controllers
 
             var returnurl = "";
 
-            var task = Task.Run(async () => {
+            var task = Task.Run(async () =>
+            {
                 AWSS3ObjectService AWSobject = new AWSS3ObjectService();
 
                 await AWSobject.UploadFile(FileKey, applicationPDFData);
@@ -4911,17 +4904,17 @@ namespace HS.Web.UI.Controllers
             //// "mayur" AWS S3 Changes //// End
 
 
-           // var OnlyFileName = FileKey.Split('/');
+            // var OnlyFileName = FileKey.Split('/');
             string OnlyFileName = ViewBag.FileName;
             if (OnlyFileName.Contains("-___"))
             {
                 string[] delimeter = new string[] { "-___" };
                 //var fullFileName = OnlyFileName[3].Split(delimeter, StringSplitOptions.RemoveEmptyEntries);
             }
-                
+
             //var delimeter = new string[] { "-___" };
-            
-           
+
+
 
             List<Employee> EmployeeDetails = _Util.Facade.EmployeeFacade.GetAllQAEmployee(_Company.CompanyId);
             LeadtoCustomerCancellation leadtocus = new LeadtoCustomerCancellation();
@@ -4961,7 +4954,7 @@ namespace HS.Web.UI.Controllers
             leadtocus.fileManagementpdf = new Attachment(stream, FileName, MediaTypeNames.Application.Octet);
 
             leadtocus.CustomerAddress = leadDetails.Address;
-            leadtocus.ToEmail = leadDetails.EmailAddress;   
+            leadtocus.ToEmail = leadDetails.EmailAddress;
             _Util.Facade.MailFacade.EmailToCustomerForCancellation(leadtocus, _Company.CompanyId);
 
             return result;
@@ -5301,7 +5294,7 @@ namespace HS.Web.UI.Controllers
             {
                 message += " Unchecked From Test Account";
             }
-            if(_cusExd != null)
+            if (_cusExd != null)
             {
                 _cusExd.IsTestAccount = IsTestAccount;
                 result = _Util.Facade.CustomerFacade.UpdateCustomerExtended(_cusExd);
@@ -5309,7 +5302,7 @@ namespace HS.Web.UI.Controllers
             #region Log
             base.AddUserActivityForCustomer(message, LabelHelper.ActivityAction.Update, CustomerId, null, null);
             #endregion
-            return Json(new { result = result});
+            return Json(new { result = result });
         }
         #endregion
 
@@ -6540,7 +6533,7 @@ namespace HS.Web.UI.Controllers
                         customer.CustomerAccountType = string.Join(", ", customer.CustomerAccountTypeList);
                     }
 
-                    if(!string.IsNullOrEmpty(customer.Street))
+                    if (!string.IsNullOrEmpty(customer.Street))
                     {
                         customer.Street = customer.Street.Replace("'", "`");
                     }
@@ -7229,7 +7222,7 @@ namespace HS.Web.UI.Controllers
                             if (CustomerNoteObj.TeamSettingId.HasValue && CustomerNoteObj.TeamSettingId > 0)
                             {
                                 TeamSetting teamUsers = _Util.Facade.UserLoginFacade.GetTeamSettingById(CustomerNoteObj.TeamSettingId.Value);
-                                if(teamUsers != null)
+                                if (teamUsers != null)
                                 {
                                     var userarray = teamUsers.UserId.Split(',');
                                     if (userarray != null && userarray.Count() > 0)
@@ -7455,6 +7448,7 @@ namespace HS.Web.UI.Controllers
                     _extended.ResignedBy = customer.CustomerExtended.ResignedBy;
                     _extended.DealerFee = customer.CustomerExtended.DealerFee;
                     _extended.CycleStartDate = customer.CustomerExtended.CycleStartDate;
+                    _extended.CustomerSince = customer.CustomerExtended.CustomerSince;
                     _Util.Facade.CustomerFacade.UpdateCustomerExtended(_extended);
 
                 }
@@ -7514,7 +7508,7 @@ namespace HS.Web.UI.Controllers
                         CreatedDay = DateTime.Today,
                         ResignedBy = customer.CustomerExtended.ResignedBy,
                         IsTestAccount = false,
-                        CycleStartDate= customer.CustomerExtended.CycleStartDate,
+                        CycleStartDate = customer.CustomerExtended.CycleStartDate,
                         DealerFee = customer.CustomerExtended.DealerFee
 
                     };
@@ -11402,7 +11396,7 @@ namespace HS.Web.UI.Controllers
         [Authorize]
         public JsonResult FavoriteCustomerListFilteredLite(CustomerLiteFilter filter)
         {
-            
+
 
             filter.searchid = DESEncryptionDecryption.DecryptCipherTextToPlainText(filter.searchid);
             string outputstring = "";
@@ -11931,20 +11925,20 @@ namespace HS.Web.UI.Controllers
         }
         [Authorize]
         public JsonResult CustomerListFilteredLite(CustomerLiteFilter filter)
-        { 
+        {
             if (!string.IsNullOrWhiteSpace(filter.SearchText))
-            { 
+            {
                 string decodedSearchText = HttpUtility.UrlDecode(filter.SearchText);
                 if (decodedSearchText.Contains("&#39;"))
                 {
                     decodedSearchText = decodedSearchText.Replace("&#39;", "%60");
-                    filter.SearchText = decodedSearchText; 
+                    filter.SearchText = decodedSearchText;
                 }
                 else
                 {
                     decodedSearchText = decodedSearchText.Replace("'", "`");
-                    filter.SearchText = decodedSearchText; 
-                } 
+                    filter.SearchText = decodedSearchText;
+                }
             }
             string outputstring = "";
 
@@ -12065,12 +12059,12 @@ namespace HS.Web.UI.Controllers
             {
                 filter.LeadStatusText = Server.UrlDecode(filter.LeadStatusText);
             }
-            
+
             if (!string.IsNullOrWhiteSpace(filter.SearchText))
             {
                 filter.SearchText = Server.UrlDecode(filter.SearchText);
             }
-            
+
 
 
             #region Not using it anymore
@@ -12951,7 +12945,7 @@ namespace HS.Web.UI.Controllers
                     }
                     if (newreminderdate != "" && newreminderdate != prevdate)
                     {
-                        remindermsg += $"Task Date and Time is updated from {prevdateforlog } to {CustomerNote.reminderdatetimeforlog} </br>";
+                        remindermsg += $"Task Date and Time is updated from {prevdateforlog} to {CustomerNote.reminderdatetimeforlog} </br>";
                     }
 
                     if (CustomerNote.IsEmail != Obj.IsEmail)
@@ -18250,7 +18244,7 @@ namespace HS.Web.UI.Controllers
                 CreatedDate = DateTime.Now.UTCCurrentTime(),
                 IsRefund = false,
                 CreditReason = model.CreditReason,
-                CreditType=model.CreditType,
+                CreditType = model.CreditType,
                 IsRMRCredit = model.IsRMRCredit
             };
 
@@ -19103,7 +19097,7 @@ namespace HS.Web.UI.Controllers
                         CustomerExtended extended = new CustomerExtended()
                         {
                             CustomerId = customer.CustomerId,
-                            IsSignAgrSendToCus=true
+                            IsSignAgrSendToCus = true
                         };
                         _Util.Facade.CustomerFacade.InsertCustomerExtended(extended);
                         CustomerCompany cc = new CustomerCompany()

@@ -14865,7 +14865,7 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
             }
 
         }
-        public DataSet GetAllMarginReport(DateTime? start, DateTime? end, string searchtext, int pageno, int pagesize, string sort)
+        public DataSet GetAllMarginReport1(DateTime? start, DateTime? end, string searchtext, int pageno, int pagesize, string sort)
         {
             string DateQuery = "";
             string SearchTextQ = "";
@@ -15266,7 +15266,7 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
             ELSE ROUND(TRY_CAST(cus.ContractTeam AS FLOAT) * 12, 0) 
         END AS INT
     ) AS ContractTeam
-,cus.RenewalTerm,cus.Type,cus.CreditScore,Format(cus.BillAmount,'N2') [BillAmount],cus.ContractValue,cus.PurchasePrice,cus.Ownership
+,cus.RenewalTerm,cus.Type,cus.CreditScore,Format(cus.BillAmount,'N2') [BillAmount],cus.CreditScoreValue,cus.PurchasePrice,cus.Ownership
 										 --,cusExtended.CustomerSince
                                         ,cusExtended.ContractStartDate,cusExtended.MonthlyBatch,cusExtended.Batch,cusExtended.CustomerSince 
                                         ,emp.FirstName+' '+emp.LastName as SalesPerson,setupalm.PanelType
@@ -15297,6 +15297,511 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 drop table #tempmain
                                 drop table #tempFinal
                                 drop table #temp2";
+
+            try
+            {
+                sqlQuery = string.Format(sqlQuery,
+                                        pageno, // 0
+                                        pagesize, // 1
+                                        SearchTextQ, //2
+                                        DateQuery, // 3
+                                        sqlorderby, // 4
+                                        sqlorderby1 //5
+                                        );
+                using (SqlCommand cmd = GetSQLCommand(sqlQuery))
+                {
+                    AddParameter(cmd, pNVarChar("SearchText", string.Format("%{0}%", HttpUtility.UrlDecode(searchtext))));
+
+                    DataSet dsResult = GetDataSet(cmd);
+                    return dsResult;
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public DataSet GetAllMarginReport(DateTime? start, DateTime? end, string searchtext, int pageno, int pagesize, string sort)
+        {
+            string DateQuery = "";
+            string SearchTextQ = "";
+            string sqlorderby = " order by Id desc";
+            string sqlorderby1 = " order by #ft.Id desc";
+
+            if (!string.IsNullOrWhiteSpace(searchtext))
+            {
+                SearchTextQ = string.Format(@" and (cus.FirstName like '%{0}%' 
+                or cus.LastName like '%{0}%' 
+                or cus.FirstName + ' ' + cus.LastName like '%{0}%' 
+                or cus.BusinessName like '%{0}%' 
+                or cus.DBA like '%{0}%') ", searchtext);
+            }
+            if (start.HasValue && end.HasValue && start.Value != new DateTime() && end.Value != new DateTime())
+            {
+
+                var StartDate = start.Value.SetZeroHour().ClientToUTCTime();
+                var EndDate = end.Value.SetMaxHour().ClientToUTCTime();
+                DateQuery = string.Format(@"AND Ccom.ConvertionDate between '{0}' and '{1}'", StartDate, EndDate);
+                //DateQuery = string.Format("and Ccom.ConvertionDate between '{0}' and '{1}'", start.Value.SetZeroHour().ToString("yyyy-MM-dd HH:mm:ss"), end.Value.SetMaxHour().ToString("yyyy-MM-dd HH:mm:ss"));
+            }
+            if (!string.IsNullOrWhiteSpace(sort))
+            {
+                if (sort == "ascending/id")
+                {
+                    sqlorderby = " order by id asc";
+                    sqlorderby1 = " order by #ft.id asc";
+                }
+                else if (sort == "descending/id")
+                {
+                    sqlorderby = " order by id desc ";
+                    sqlorderby1 = " order by #ft.id desc ";
+                }
+                else if (sort == "ascending/name")
+                {
+                    sqlorderby = " order by customerName asc";
+                    sqlorderby1 = " order by #ft.customerName asc";
+                }
+                else if (sort == "descending/name")
+                {
+                    sqlorderby = " order by customerName desc ";
+                    sqlorderby1 = " order by #ft.customerName desc ";
+                }
+                else if (sort == "ascending/businessname")
+                {
+                    sqlorderby = " order by BusinessName asc";
+                    sqlorderby1 = " order by #ft.BusinessName asc";
+                }
+                else if (sort == "descending/businessname")
+                {
+                    sqlorderby = " order by BusinessName desc ";
+                    sqlorderby1 = " order by #ft.BusinessName desc ";
+                }
+                else if (sort == "ascending/billAddress")
+                {
+                    sqlorderby = " order by StreetPrevious asc";
+                    sqlorderby1 = " order by #ft.StreetPrevious asc";
+                }
+                else if (sort == "descending/billAddress")
+                {
+                    sqlorderby = " order by StreetPrevious desc";
+                    sqlorderby1 = " order by #ft.StreetPrevious desc";
+                }
+                else if (sort == "ascending/billAddress2")
+                {
+                    //sqlorderby = " order by StreetPrevious asc";
+                    //sqlorderby1 = " order by #ft.StreetPrevious asc"; 
+                }
+                else if (sort == "descending/billAddress2")
+                {
+                    //sqlorderby = " order by StreetPrevious desc";
+                    //sqlorderby1 = " order by #ft.StreetPrevious desc";
+                }
+                else if (sort == "ascending/billcity")
+                {
+                    sqlorderby = " order by CityPrevious asc";
+                    sqlorderby1 = " order by #ft.CityPrevious asc";
+                }
+                else if (sort == "descending/billcity")
+                {
+                    sqlorderby = " order by CityPrevious desc ";
+                    sqlorderby1 = " order by #ft.CityPrevious desc ";
+                }
+                else if (sort == "ascending/billstate")
+                {
+                    sqlorderby = " order by StatePrevious asc";
+                    sqlorderby1 = " order by #ft.StatePrevious asc";
+                }
+                else if (sort == "descending/billstate")
+                {
+                    sqlorderby = " order by StatePrevious desc ";
+                    sqlorderby1 = " order by #ft.StatePrevious desc ";
+                }
+                else if (sort == "ascending/billzip")
+                {
+                    sqlorderby = " order by ZipCodePrevious asc";
+                    sqlorderby1 = " order by #ft.ZipCodePrevious asc";
+                }
+                else if (sort == "descending/billzip")
+                {
+                    sqlorderby = " order by ZipCodePrevious desc ";
+                    sqlorderby1 = " order by #ft.ZipCodePrevious desc ";
+                }
+                else if (sort == "ascending/siteaddress")
+                {
+                    sqlorderby = " order by Street asc";
+                    sqlorderby1 = " order by #ft.Street asc";
+                }
+                else if (sort == "descending/siteaddress")
+                {
+                    sqlorderby = " order by Street desc";
+                    sqlorderby1 = " order by #ft.Street desc";
+                }
+                else if (sort == "ascending/sitecity")
+                {
+                    sqlorderby = " order by City asc";
+                    sqlorderby1 = " order by #ft.City asc";
+                }
+                else if (sort == "descending/sitecity")
+                {
+                    sqlorderby = " order by City desc";
+                    sqlorderby1 = " order by #ft.City desc";
+                }
+                else if (sort == "ascending/sitestate")
+                {
+                    sqlorderby = " order by State asc";
+                    sqlorderby1 = " order by #ft.State asc";
+                }
+                else if (sort == "descending/sitestate")
+                {
+                    sqlorderby = " order by State desc";
+                    sqlorderby1 = " order by #ft.State desc";
+                }
+                else if (sort == "ascending/sitezip")
+                {
+                    sqlorderby = " order by ZipCode asc";
+                    sqlorderby1 = " order by #ft.ZipCode asc";
+                }
+                else if (sort == "descending/sitezip")
+                {
+                    sqlorderby = " order by ZipCode desc";
+                    sqlorderby1 = " order by #ft.ZipCode desc";
+                }
+                else if (sort == "ascending/customerno")
+                {
+                    sqlorderby = " order by CustomerNo asc";
+                    sqlorderby1 = " order by #ft.CustomerNo asc";
+                }
+                else if (sort == "descending/customerno")
+                {
+                    sqlorderby = " order by CustomerNo desc";
+                    sqlorderby1 = " order by #ft.CustomerNo desc";
+                }
+                else if (sort == "ascending/centralstation")
+                {
+                    sqlorderby = " order by CSProvider asc";
+                    sqlorderby1 = " order by #ft.CSProvider asc";
+                }
+                else if (sort == "descending/centralstation")
+                {
+                    sqlorderby = " order by CSProvider desc";
+                    sqlorderby1 = " order by #ft.CSProvider desc";
+                }
+                else if (sort == "ascending/paneltype")
+                {
+                    sqlorderby = " order by PanelType asc";
+                    sqlorderby1 = " order by #ft.PanelType asc";
+                }
+                else if (sort == "descending/paneltype")
+                {
+                    sqlorderby = " order by PanelType desc";
+                    sqlorderby1 = " order by #ft.PanelType desc";
+                }
+                else if (sort == "ascending/cell")
+                {
+                    sqlorderby = " order by CellBackupCompany asc";
+                    sqlorderby1 = " order by #ft.CellBackupCompany asc";
+                }
+                else if (sort == "descending/cell")
+                {
+                    sqlorderby = " order by CellBackupCompany desc";
+                    sqlorderby1 = " order by #ft.CellBackupCompany desc";
+                }
+                else if (sort == "ascending/contractdate")
+                {
+                    sqlorderby = " order by ContractStartDate asc";
+                    sqlorderby1 = " order by #ft.ContractStartDate asc";
+                }
+                else if (sort == "descending/contractdate")
+                {
+                    sqlorderby = " order by ContractStartDate desc";
+                    sqlorderby1 = " order by #ft.ContractStartDate desc";
+                }
+                else if (sort == "ascending/contracttrem")
+                {
+                    sqlorderby = " order by ContractTeam asc";
+                    sqlorderby1 = " order by #ft.ContractTeam asc";
+                }
+                else if (sort == "descending/contracttrem")
+                {
+                    sqlorderby = " order by ContractTeam desc";
+                    sqlorderby1 = " order by #ft.ContractTeam desc";
+                }
+                else if (sort == "ascending/contractrenewal")
+                {
+                    sqlorderby = " order by RenewalTerm asc";
+                    sqlorderby1 = " order by RenewalTerm asc";
+                }
+                else if (sort == "descending/contractrenewal")
+                {
+                    sqlorderby = " order by RenewalTerm desc";
+                    sqlorderby1 = " order by #ft.RenewalTerm desc";
+                }
+                else if (sort == "ascending/sitecustomescincedate")
+                {
+                    sqlorderby = " order by CustomerSince asc";
+                    sqlorderby1 = " order by #ft.CustomerSince asc";
+                }
+                else if (sort == "descending/sitecustomescincedate")
+                {
+                    sqlorderby = " order by CustomerSince desc";
+                    sqlorderby1 = " order by #ft.CustomerSince desc";
+                }
+                else if (sort == "ascending/sitetype")
+                {
+                    sqlorderby = " order by Type asc";
+                    sqlorderby1 = " order by #ft.Type asc";
+                }
+                else if (sort == "descending/sitetype")
+                {
+                    sqlorderby = " order by Type desc";
+                    sqlorderby1 = " order by #ft.Type desc";
+                }
+                else if (sort == "ascending/creditscore")
+                {
+                    sqlorderby = " order by CreditScore asc";
+                    sqlorderby1 = " order by #ft.CreditScore asc";
+                }
+                else if (sort == "descending/creditscore")
+                {
+                    sqlorderby = " order by CreditScore desc";
+                    sqlorderby1 = " order by #ft.CreditScore desc";
+                }
+                else if (sort == "ascending/billedRMR")
+                {
+                    sqlorderby = " order by BillAmount asc";
+                    sqlorderby1 = " order by #ft.BillAmount asc";
+                }
+                else if (sort == "descending/billedRMR")
+                {
+                    sqlorderby = " order by BillAmount desc";
+                    sqlorderby1 = " order by #ft.BillAmount desc";
+                }
+                else if (sort == "ascending/canceleffectivedate")
+                {
+                    sqlorderby = " order by CancellationDate asc";
+                    sqlorderby1 = " order by #ft.CancellationDate asc";
+                }
+                else if (sort == "descending/canceleffectivedate")
+                {
+                    sqlorderby = " order by CancellationDate desc";
+                    sqlorderby1 = " order by #ft.CancellationDate desc";
+                }
+                else if (sort == "ascending/contractval")
+                {
+                    sqlorderby = " order by ContractValue asc";
+                    sqlorderby1 = " order by #ft.ContractValue asc";
+                }
+                else if (sort == "descending/contractval")
+                {
+                    sqlorderby = " order by ContractValue desc";
+                    sqlorderby1 = " order by #ft.ContractValue desc";
+                }
+                else if (sort == "ascending/purchaseprice")
+                {
+                    sqlorderby = " order by PurchasePrice asc";
+                    sqlorderby1 = " order by #ft.PurchasePrice asc";
+                }
+                else if (sort == "descending/purchaseprice")
+                {
+                    sqlorderby = " order by PurchasePrice desc";
+                    sqlorderby1 = " order by #ft.PurchasePrice desc";
+                }
+                else if (sort == "ascending/weeklybatchno")
+                {
+                    sqlorderby = " order by WeeklyBatch asc";
+                    sqlorderby1 = " order by #ft.WeeklyBatch asc";
+                }
+                else if (sort == "descending/weeklybatchno")
+                {
+                    sqlorderby = " order by WeeklyBatch desc";
+                    sqlorderby1 = " order by #ft.WeeklyBatch desc";
+                }
+                else if (sort == "ascending/monthlybatchno")
+                {
+                    sqlorderby = " order by MonthlyBatch asc";
+                    sqlorderby1 = " order by #ft.MonthlyBatch asc";
+                }
+                else if (sort == "descending/monthlybatchno")
+                {
+                    sqlorderby = " order by MonthlyBatch desc";
+                    sqlorderby1 = " order by #ft.MonthlyBatch desc";
+                }
+                else if (sort == "ascending/acctownership")
+                {
+                    sqlorderby = " order by Ownership asc";
+                    sqlorderby1 = " order by #ft.Ownership asc";
+                }
+                else if (sort == "descending/acctownership")
+                {
+                    sqlorderby = " order by Ownership desc";
+                    sqlorderby1 = " order by #ft.Ownership desc";
+                }
+                else if (sort == "ascending/replacement")
+                {
+                    sqlorderby = " order by Replacement asc";
+                    sqlorderby1 = " order by #ft.Replacement asc";
+                }
+                else if (sort == "descending/replacement")
+                {
+                    sqlorderby = " order by Replacement desc";
+                    sqlorderby1 = " order by #ft.Replacement desc";
+                }
+                else if (sort == "ascending/notfortransfer")
+                {
+                    sqlorderby = " order by Transfer asc";
+                    sqlorderby1 = " order by #ft.Transfer asc";
+                }
+                else if (sort == "descending/notfortransfer")
+                {
+                    sqlorderby = " order by Transfer desc";
+                    sqlorderby1 = " order by #ft.Transfer desc";
+                }
+                else if (sort == "ascending/fcreplacement")
+                {
+                    sqlorderby = " order by FCReplacement asc";
+                    sqlorderby1 = " order by #ft.FCReplacement asc";
+                }
+                else if (sort == "descending/fcreplacement")
+                {
+                    sqlorderby = " order by FCReplacement desc";
+                    sqlorderby1 = " order by #ft.FCReplacement desc";
+                }
+                else if (sort == "ascending/salesperson")
+                {
+                    sqlorderby = " order by SalesPerson asc";
+                    sqlorderby1 = " order by #ft.SalesPerson asc";
+                }
+                else if (sort == "descending/salesperson")
+                {
+                    sqlorderby = " order by SalesPerson desc";
+                    sqlorderby1 = " order by #ft.SalesPerson desc";
+                }
+                else if (sort == "ascending/comacct")
+                {
+                    //sqlorderby = " order by SalesPerson asc";
+                    //sqlorderby1 = " order by #ft.SalesPerson asc";
+                }
+                else if (sort == "descending/comacct")
+                {
+                    //sqlorderby = " order by SalesPerson desc";
+                    //sqlorderby1 = " order by #ft.SalesPerson desc";
+                }
+                else if (sort == "ascending/cellserialno")
+                {
+                    sqlorderby = " order by CellSerialNo asc";
+                    sqlorderby1 = " order by #ft.CellSerialNo asc";
+                }
+                else if (sort == "descending/cellserialno")
+                {
+                    sqlorderby = " order by CellSerialNo desc";
+                    sqlorderby1 = " order by #ft.CellSerialNo desc";
+                }
+                else if (sort == "ascending/nopoo")
+                {
+                    sqlorderby = " order by NOPOO asc";
+                    sqlorderby1 = " order by #ft.NOPOO asc";
+                }
+                else if (sort == "descending/nopoo")
+                {
+                    sqlorderby = " order by NOPOO desc";
+                    sqlorderby1 = " order by #ft.NOPOO desc";
+                }
+
+
+            }
+            string sqlQuery = @"DECLARE @pageno INT = {0};
+                                DECLARE @pagesize INT = {1};
+                                DECLARE @pagestart INT = (@pageno - 1) * @pagesize;
+                                DECLARE @pageend INT = @pagesize;
+
+                                    
+                                    WITH CTE AS (
+    SELECT 
+        cus.Id,
+        CASE 
+            WHEN (cus.DBA = '' OR cus.DBA IS NULL) AND (cus.BusinessName = '' OR cus.BusinessName IS NULL) THEN cus.FirstName + ' ' + cus.LastName
+            WHEN (cus.DBA = '' OR cus.DBA IS NULL) THEN cus.BusinessName
+            ELSE cus.DBA
+        END AS customerName,
+        cus.BusinessName,
+        cus.StreetPrevious,
+        cus.CityPrevious,
+        cus.StatePrevious,
+        cus.ZipCodePrevious,
+        cus.Street,
+        cus.State,
+        cus.City,
+        cus.ZipCode,
+        cus.CustomerNo,
+        cus.CSProvider,
+        cus.ContractValue,
+        CAST(
+            CASE 
+                WHEN TRY_CAST(cus.ContractTeam AS FLOAT) = -1 THEN 0 
+                ELSE ROUND(TRY_CAST(cus.ContractTeam AS FLOAT) * 12, 0) 
+            END AS INT
+        ) AS ContractTeam,
+        cus.RenewalTerm,
+        cus.Type,
+        cus.CreditScore,
+        FORMAT(cus.BillAmount, 'N2') AS [BillAmount],
+        cus.CreditScoreValue,
+        cus.PurchasePrice,
+        cus.Ownership,
+        cusExtended.ContractStartDate,
+        cusExtended.MonthlyBatch,
+        cusExtended.Batch,
+        cusExtended.CustomerSince,
+        emp.FirstName + ' ' + emp.LastName AS SalesPerson,
+        setupalm.PanelType,
+        ccq.CancellationDate,
+        RBS.IsPOO AS NOPOO,
+        RBS.IsReplacement AS Replacement,
+        RBS.IsTransfer AS [Transfer],
+        RBS.IsFCReplacement AS FCReplacement,
+        cusExtended.CellSerialNo,
+        lk.DisplayText AS CellBackupCompany,
+        ROW_NUMBER() OVER (ORDER BY cus.Id DESC) AS RowNum
+    FROM customer cus
+    LEFT JOIN CustomerCompany Ccom ON cus.CustomerId = Ccom.CustomerId
+    LEFT JOIN CustomerExtended cusExtended ON cusExtended.customerid = cus.CustomerId
+    LEFT JOIN Employee emp ON emp.UserId = cus.SoldBy1
+    LEFT JOIN SetupAlarm setupalm ON setupalm.customerid = cus.CustomerId
+    OUTER APPLY (
+        SELECT TOP 1 CancellationDate 
+        FROM CustomerCancellationQueue ccq 
+        WHERE ccq.CustomerId = cus.CustomerId 
+        ORDER BY id DESC
+    ) ccq
+    OUTER APPLY (
+        SELECT TOP 1 IsPOO, IsReplacement, IsTransfer, IsFCReplacement 
+        FROM recurringBillingSchedule RBS 
+        WHERE RBS.CustomerId = cus.CustomerId 
+        ORDER BY id DESC
+    ) RBS
+    LEFT JOIN lookup lk ON lk.DataKey = 'Front-End' AND lk.DataValue = cusExtended.FrontEnd
+    WHERE 
+        Ccom.IsLead = 0
+        AND Ccom.IsActive = 1
+        AND cus.JoinDate IS NOT NULL {2} {3}
+)
+SELECT *
+FROM CTE
+WHERE RowNum > @pagestart AND RowNum <= @pagestart + @pageend
+{4}
+--ORDER BY RowNum;
+
+-- Total Count
+SELECT COUNT(*) AS Total
+FROM customer cus
+LEFT JOIN CustomerCompany Ccom ON cus.CustomerId = Ccom.CustomerId
+WHERE 
+    Ccom.IsLead = 0
+    AND Ccom.IsActive = 1
+    AND cus.JoinDate IS NOT NULL
+    {2} {3}   ;
+
+";
 
             try
             {
@@ -19984,7 +20489,7 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                 filtertext = string.Format(" Where FilterText like '%{0}%'", SearchText);
             }
 
-            //if (!string.IsNullOrWhiteSpace(filter.Source) && filter.Source != "-1" && filter.Source != "undefined")
+            //if (!string.IsNullOrWhiteSpace(filter.Source) && f FilterText like '%{0}%'ilter.Source != "-1" && filter.Source != "undefined")
             //{
             //    filterByLeadSource = string.Format("AND cs.LeadSource = '{0}'", filter.Source);
             //}

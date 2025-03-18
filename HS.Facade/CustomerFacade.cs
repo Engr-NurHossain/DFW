@@ -3603,7 +3603,7 @@ namespace HS.Facade
                                            ContractTeam = dr["ContractTeam"].ToString(),
                                            RenewalTerm = dr["RenewalTerm"] != DBNull.Value ? Convert.ToInt32(dr["RenewalTerm"]) : 0,
                                            Type = dr["Type"].ToString(),
-                                           CreditScore = dr["CreditScore"].ToString(),
+                                           CreditScore = dr["CreditScoreValue"].ToString(),
                                            BillAmount = dr["BillAmount"] != DBNull.Value ? Convert.ToDouble(dr["BillAmount"]) : 0.0,
                                            ContractValue = dr["ContractValue"].ToString(),
                                            PurchasePrice = dr["PurchasePrice"] != DBNull.Value ? Convert.ToDouble(dr["PurchasePrice"]) : 0.0,
