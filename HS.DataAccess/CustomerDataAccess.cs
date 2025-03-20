@@ -15441,12 +15441,7 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                         ELSE Busaccounttype.DisplayText
                                     END AS CSBankAccountType,
                                 lkstatus.DisplayText as StatusVal,
-								SP.FirstName SoldbyFirstName,
-								SP.LastName SoldbyLastName,
-								Q1.FirstName Q1FirstName, 
-								Q1.LastName Q1LastName,
-								Q2.FirstName Q2FirstName,
-								Q2.LastName Q2LastName, 
+							
                                 cus.CutInDate ,
                                 cus.MonthlyMonitoringFee ,
                                 cus.State,
@@ -15462,42 +15457,24 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 cus.RenewalTerm,
                                 cus.BusinessAccountType,
                                 Ccom.ConvertionDate,
-                                --cf.FileFullName as NameFile,
-                                '' as NameFile,
-                                Ins.FirstName +' '+ Ins.LastName as TechnicianName,
-                                SP.FirstName +' '+ SP.LastName as PersonSales,
-                                (select SUM(_invoice.BalanceDue) from Invoice _invoice
-								where cus.CustomerId = _invoice.CustomerId
-								and (_invoice.Status = 'Open' or _invoice.Status = 'Partial')) as UnpaidInvoiceTotal,
-								Created.FirstName +' '+ Created.LastName as CreatedByVal,
-                                cus.DoNotCall,
-                                cus.PreferredContactMethod
-                                ,_AppoinmentSetBy.FirstName +' '+ _AppoinmentSetBy.LastName as AppoinmentSetByVal
-                                --,(Select _emp.FirstName +' '+ _emp.LastName from Employee _emp where _emp.UserId=_extend.AppoinmentSetBy) as AppoinmentSetByVal
-                                 
-                                ,_extend.ContractStartDate
-								,_extend.RemainingContractTerm
+                             
+                                _extend.ContractStartDate
                                 INTO #CustomerData
                                 FROM Customer cus
                                 LEFT JOIN CustomerCompany Ccom
                                   ON cus.CustomerId = Ccom.CustomerId
 
-                                Left Join Employee Created on Created.UserId= cus.CreatedByUid
-								Left JOin Employee Q1 on convert(nvarchar(50), Q1.UserId) = cus.QA1
-								Left JOin Employee Q2 on convert(nvarchar(50), Q2.UserId )= cus.QA2
-                                Left Join Employee SP on convert(nvarchar(50), SP.UserId )= cus.Soldby
-                                Left Join Employee Ins on CONVERT(nvarchar(50), Ins.UserId )= cus.Installer
+                             
                                 left join Lookup lkstatus on lkstatus.DataValue = cus.Status and lkstatus.DataKey = 'LeadStatus'
                                 left join Lookup Busaccounttype on Busaccounttype.DataValue = cus.BusinessAccountType and Busaccounttype.DataKey = 'BussinessAccountType'
-                                left join QaAnswer _QAns on cus.CustomerId = _QAns.CustomerId
+                           
                                 left join [Lookup] lkinstalledstatus on lkinstalledstatus.DataValue = iif(cus.InstalledStatus != '-1', cus.InstalledStatus, '') and lkinstalledstatus.DataKey = 'InstalledStatus'
-                                --left join CustomerFile cf on cf.CustomerId = cus.CustomerId
-                                --and cf.FileFullName like '%Agreement.Pdf'
+                               
                                 Left Join Employee emp
                                 on cus.LastUpdatedBy = emp.UserName
-                                left join Invoice inv on inv.CustomerId = cus.CustomerId
+                            
                                 left join CustomerExtended _extend on _extend.CustomerId = cus.CustomerId
-                                Left Join Employee _AppoinmentSetBy on _AppoinmentSetBy.UserId=_extend.AppoinmentSetBy
+                          
                                 left JOIN RecurringBillingSchedule RBS ON RBS.CustomerId = cus.CustomerId 
 								left JOIN RecurringBillingScheduleItems RBSI ON RBSI.ScheduleId = RBS.ScheduleId 
                                 left JOIN PaymentInfo pinfo on RBS.CustomerPaymentProfileId = pinfo.Id
@@ -15524,11 +15501,7 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 {15}
                                 {16}
                                 {1}
-                                --{10}
-            
-
-                                --select * into #CustomerFilterData
-								--FROM #CustomerData
+                            
                                 {2}
 
                                 SELECT TOP (@pagesize)
@@ -15538,144 +15511,7 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
 							   {10}     
 
 
-								select cfd.*,
-                                cus.Title,
-                                cus.FirstName ,
-                                cus.LastName ,
-                                cus.MiddleName ,
-                                cus.BusinessName ,
-                                cus.SSN,
-		                        cus.[Status],
-		                        cus.[Address],
-		                        cus.EmailAddress,
-		                    
-                                cus.SecondaryPhone,
-								cus.DateofBirth,
-								cus.LeadSource,
-								cus.LastUpdatedDate,
-								cus.LastUpdatedBy,
-                                cus.StreetType,
-								cus.Appartment,
-                                cus.CellNo,
-                                cus.Fax,
-                                cus.CallingTime,
-                                cus.Address2,
-                                cus.Country,
-                                cus.StreetPrevious,
-                                cus.CityPrevious,
-                                cus.StatePrevious,
-                                cus.ZipCodePrevious,
-                                cus.CountryPrevious,
-                                cus.AccountNo,
-                                cus.IsAlarmCom,
-                                cus.CreditScore,
-                                cus.CreditScoreValue,
-                                cus.FundingCompany,
-                                cus.CellularBackup,
-                                cus.CustomerFunded,
-                                cus.PlatformId,
-                                cus.Maintenance,
-                                cus.Note,
-                                cus.SalesDate,
-                                cus.FollowUpDate,
-                                cus.InstallDate,
-                                cus.Installer,
-                                cus.FundingDate,
-                                cus.ReminderDate,
-                                cus.QA1Date,
-                                cus.QA2Date,
-                                cus.BillAmount,
-                                cus.PaymentMethod,
-                                cus.BillCycle,
-                                cus.LeadSourceType,
-                                cus.BillDay,
-                                cus.BillNotes,
-                                cus.BillTax,
-                                cus.BillOutStanding,
-                                cus.ServiceDate,
-                                cus.Area,
-                                cus.Latlng,
-                                cus.AdditionalCustomerNo,
-                                cus.IsTechCallPassed,
-                                cus.IsDirect,
-                                cus.AuthorizeRefId,
-                                cus.AuthorizeCusProfileId,
-                                cus.AuthorizeCusPaymentProfileId,
-                                cus.AuthorizeDescription,
-                                cus.IsRequiredCsvSync,
-                                cus.Passcode,
-                                cus.ActivationFee,
-                                cus.FirstBilling,
-                                cus.ActivationFeePaymentMethod,
-                                cus.LastGeneratedInvoice,
-                                cus.Singature,
-                                cus.CrossStreet,
-                                cus.DBA,
-                                cus.AlarmRefId,
-                                cus.TransunionRefId,
-                                cus.MonitronicsRefId,
-                                cus.CentralStationRefId,
-                                cus.CmsRefId,
-                                cus.PreferedEmail,
-                                cus.PreferedSms,
-                                cus.IsAgreement,
-                                cus.IsFireAccount,
-                                cus.CreatedByUid,
-                                cus.CreatedDate,
-                                cus.LastUpdatedByUid,
-                                cus.PhoneType,
-                                cus.Carrier,
-                                cus.ReferringCustomer,
-                                cus.EsistingPanel,
-                                cus.PurchasePrice,
-                                cus.ContractValue,
-                                cus.ChildOf,
-                                cus.EmailVerified,
-                                cus.HomeVerified,
-                                cus.County,
-                                cus.CustomerToken,
-                                cus.PaymentToken,
-                                cus.ScheduleToken,
-                                cus.EstCloseDate,
-                                cus.ProjectWalkDate,
-                                cus.BranchId,
-                                cus.SubscriptionStatus,
-                                cus.AnnualRevenue,
-                                cus.Website,
-                                cus.Market,
-                                cus.Passengers,
-                                cus.Budget,
-                                cus.SmartSetUpStep,
-                                cus.CustomerAccountType,
-                                cus.IsPrimaryPhoneVerified,
-                                cus.IsSecondaryPhoneVerified,
-                                cus.IsCellNoVerified,
-                                cus.JoinDate,
-                                cus.[Type],
-                                cus.MovingDate,
-                                cus.ContactedPerviously,
-                                cus.InstalledStatus,
-                                cus.AcquiredFrom,
-                                cus.FollowUpDate,
-                                cus.BuyoutAmountByADS,
-                                cus.BuyoutAmountBySalesRep,
-                                cus.FinancedTerm,
-                                cus.FinancedAmount,
-                                cus.Levels,
-                                cus.SoldAmount,
-                                cus.AgreementEmail,
-                                cus.AgreementPhoneNo,
-                                cus.AppoinmentSet,
-								--SP.FirstName SoldbyFirstName,
-								--SP.LastName SoldbyLastName,
-								--Q1.FirstName Q1FirstName, 
-								--Q1.LastName Q1LastName,
-								--Q2.FirstName Q2FirstName,
-								--Q2.LastName Q2LastName, 
-                                ISNULL(cfd.SoldbyFirstName,'')+' '+ ISNULL(cfd.SoldbyLastName,'') Soldby,
-                                ISNULL(cfd.Q1FirstName,'')+' '+ ISNULL(cfd.Q1LastName,'') QA1,
-                                ISNULL(cfd.Q2FirstName,'')+' '+ ISNULL(cfd.Q2LastName,'') QA2,
-                                cus.MapscoNo 
+								select cfd.*
 								 from #CustomerResultData cfd  
 								Left Join Customer cus on cus.CustomerId = cfd.CustomerId
 									{10} 
@@ -15687,7 +15523,7 @@ cusex.CustomerPaymentAmount,cusex.FinanceRep,cusex.FinanceRepCommissionRate,cuse
                                 from #CustomerData
                                 
                                 DROP TABLE #CustomerData
-                                --DROP TABLE #CustomerFilterData";
+                            ";
 
             string filtertext = "";
             string filterColumntext = "";
