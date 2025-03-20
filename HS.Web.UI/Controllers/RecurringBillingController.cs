@@ -533,7 +533,7 @@ namespace HS.Web.UI.Controllers
                         NextInvoice = Model.Schedule.StartDate.Value;
                         NextPayment = Model.Schedule.PaymentCollectionDate.Value;
                     }
-               
+
                     string niDate = NextInvoice.ToString("dd/MM/yyyy");
                     string niDay = niDate.Split('/')[0];
                     string tDate = Today.ToString("dd/MM/yyyy");
@@ -2645,6 +2645,7 @@ namespace HS.Web.UI.Controllers
 
             ViewBag.PageNumber = pageno;
             ViewBag.Order = order;
+            ViewBag.searchtext = searchtext;
             ViewBag.OutOfNumber = 0;
             if (model.CustomerModel.Count > 0)
             {
