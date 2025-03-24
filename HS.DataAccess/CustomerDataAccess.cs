@@ -15927,7 +15927,10 @@ WHERE
                                 THEN DAY(RBS.PaymentCollectionDate) 
                                 ELSE 28 
                                 END AS RMRBillDay,
-	                            RBS.BillCycle as RMRBillCycle,
+                                CASE 
+                                WHEN RBS.BillCycle = '-1' THEN '' 
+                                ELSE RBS.BillCycle 
+                                END AS RMRBillCycle,
                                  RBS.EmailAddress as BillEmailAddress,
                                 RBS.StartDate as RMRStartDate,
 	                            RBS.CreatedDate as RMRCreatedDate,
@@ -16260,6 +16263,16 @@ WHERE
                     orderbysql = "ORDER BY BillZip desc";
                     orderbysql1 = "order by #cd.BillZip desc";
                 }
+                else if (filter.order == "ascending/RMREffectiveDate")
+                {
+                    orderbysql = "ORDER BY RMREffectiveDate asc";
+                    orderbysql1 = "order by #cd.RMREffectiveDate asc";
+                }
+                else if (filter.order == "descending/RMREffectiveDate")
+                {
+                    orderbysql = "ORDER BY RMREffectiveDate desc";
+                    orderbysql1 = "order by #cd.RMREffectiveDate desc";
+                }
                 else if (filter.order == "ascending/BillEmailAddress")
                 {
                     orderbysql = "ORDER BY BillEmailAddress asc";
@@ -16330,15 +16343,25 @@ WHERE
                     orderbysql = "ORDER BY RMRStartDate desc";
                     orderbysql1 = "order by #cd.RMRStartDate desc";
                 }
-                else if (filter.order == "ascending/BillCycle")
+                else if (filter.order == "ascending/RMRAmount")
                 {
-                    orderbysql = "ORDER BY BillCycle asc";
-                    orderbysql1 = "order by #cd.BillCycle asc";
+                    orderbysql = "ORDER BY RMRAmount asc";
+                    orderbysql1 = "order by #cd.RMRAmount asc";
                 }
-                else if (filter.order == "descending/BillCycle")
+                else if (filter.order == "descending/RMRAmount")
                 {
-                    orderbysql = "ORDER BY BillCycle desc";
-                    orderbysql1 = "order by #cd.BillCycle desc";
+                    orderbysql = "ORDER BY RMRAmount desc";
+                    orderbysql1 = "order by #cd.RMRAmount desc";
+                }
+                else if (filter.order == "ascending/RMRBillCycle")
+                {
+                    orderbysql = "ORDER BY RMRBillCycle asc";
+                    orderbysql1 = "order by #cd.RMRBillCycle asc";
+                }
+                else if (filter.order == "descending/RMRBillCycle")
+                {
+                    orderbysql = "ORDER BY RMRBillCycle desc";
+                    orderbysql1 = "order by #cd.RMRBillCycle desc";
                 }
                 else if (filter.order == "ascending/RMRLastBillDate")
                 {
@@ -16469,6 +16492,16 @@ WHERE
                 {
                     orderbysql = "ORDER BY AutoBank desc";
                     orderbysql1 = "order by #cd.AutoBank desc";
+                }
+                else if (filter.order == "ascending/AutoCC")
+                {
+                    orderbysql = "ORDER BY AutoCC asc";
+                    orderbysql1 = "order by #cd.AutoCC asc";
+                }
+                else if (filter.order == "descending/AutoCC")
+                {
+                    orderbysql = "ORDER BY AutoCC desc";
+                    orderbysql1 = "order by #cd.AutoCC desc";
                 }
                 else if (filter.order == "ascending/RMRBillDay")
                 {
