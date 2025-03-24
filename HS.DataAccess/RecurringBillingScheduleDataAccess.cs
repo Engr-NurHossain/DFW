@@ -8,6 +8,7 @@ using HS.Entities;
 using HS.Entities.Bases;
 using HS.Entities.List;
 using System.Web.Caching;
+using NLog.Filters;
 
 namespace HS.DataAccess
 {
@@ -282,7 +283,7 @@ namespace HS.DataAccess
                 return null;
             }
         }
-        public DataSet GetReurringBillingScheduleList(string SearchText,int? BillDay, String Interval,String BillingMethod,String BillingStatus, int PageNo, int PageSize, string Order)
+        public DataSet GetReurringBillingScheduleList(string SearchText, string Start, string END, int? BillDay, String Interval,String BillingMethod,String BillingStatus, int PageNo, int PageSize, string Order)
         {
             string SearchTextQ = "";
             string BillDayQ = "";
@@ -291,6 +292,7 @@ namespace HS.DataAccess
             String BillingStatusQ = "";
             string orderquery = "";
             string orderquery1 = "";
+            string filterbydaterange = "";
             #region Order
             if (!string.IsNullOrWhiteSpace(Order) && Order != "null")
             {
@@ -386,6 +388,18 @@ namespace HS.DataAccess
                 orderquery1 = "order by Id desc";
             }
             #endregion
+            if (!string.IsNullOrEmpty(Start) && !string.IsNullOrEmpty(END))
+            {
+                DateTime StartDate = DateTime.Parse(Start).SetZeroHour().ClientToUTCTime();
+                DateTime EndDate = DateTime.Parse(END).SetMaxHour().ClientToUTCTime();
+
+                filterbydaterange = string.Format(@"
+                AND (
+                (r.StartDate BETWEEN '{0}' AND '{1}') 
+                OR (r.StartDate BETWEEN '{0}' AND '{1}')
+                )", StartDate, EndDate);
+            }
+
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
                 SearchTextQ = string.Format("and (c.CustomerName like '%{0}%' OR r.TemplateName like '%{0}%')", SearchText);
@@ -438,7 +452,7 @@ namespace HS.DataAccess
                                 {3}
                                 {4}
                                 {5}
-                              
+                                {9}
                                 select inv.Id as Inv2Id, inv.Status, inv.BookingId into #tempInvoice2 from Invoice inv where inv.BookingId in (select cast(Id as nvarchar(20)) from #tempRecurring) and inv.IsARBInvoice =1 and inv.Status not in ('Paid','Cancel', 'Cancelled', 'Rolled Over', 'Init')
 
                                 select top(@pagesize)*, 
@@ -459,7 +473,7 @@ namespace HS.DataAccess
             {
                 sqlQuery = string.Format(sqlQuery, PageNo,
                                         PageSize, SearchTextQ, BillDayQ, IntervalQ, BillingMethodQ, BillingStatusQ, orderquery,
-                                        orderquery1);
+                                        orderquery1, filterbydaterange);
                 using (SqlCommand cmd = GetSQLCommand(sqlQuery))
                 {
                     DataSet dsResult = GetDataSet(cmd);
@@ -472,7 +486,7 @@ namespace HS.DataAccess
             }
         }
 
-        public DataTable GetReurringBillingScheduleListExportReport(string SearchText, int? BillDay, String Interval, String BillingMethod, String BillingStatus, string Order)
+        public DataTable GetReurringBillingScheduleListExportReport(string SearchText, string Start, string END, int? BillDay, String Interval, String BillingMethod, String BillingStatus, string Order)
         {
             string SearchTextQ = "";
             string BillDayQ = "";
@@ -481,6 +495,7 @@ namespace HS.DataAccess
             String BillingStatusQ = "";
             string orderquery = "";
             string orderquery1 = "";
+            string filterbydaterange = "";
             #region Order
             if (!string.IsNullOrWhiteSpace(Order) && Order != "null")
             {
@@ -576,6 +591,17 @@ namespace HS.DataAccess
                 orderquery1 = "order by Id desc";
             }
             #endregion
+            if (!string.IsNullOrEmpty(Start) && !string.IsNullOrEmpty(END))
+            {
+                DateTime StartDate = DateTime.Parse(Start).SetZeroHour().ClientToUTCTime();
+                DateTime EndDate = DateTime.Parse(END).SetMaxHour().ClientToUTCTime();
+
+                filterbydaterange = string.Format(@"
+                AND (
+                (r.StartDate BETWEEN '{0}' AND '{1}') 
+                OR (r.StartDate BETWEEN '{0}' AND '{1}')
+                )", StartDate, EndDate);
+            }
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
                 SearchTextQ = string.Format("and (c.CustomerName like '%{0}%' OR r.TemplateName like '%{0}%')", SearchText);
@@ -623,6 +649,7 @@ namespace HS.DataAccess
                                 {1}
                                 {2}
                                 {3}
+                                 {6}
                                 Select Id, TemplateName,StartDate,TotalBillAmount,Interval,Status,	PaymentMethod,LastInvoice, BillDate,CustomerName,ISNULL(InvoiceId,'') As InvoiceId,InvoiceDate into #rmrtemplist from #tempList
 
                                 select inv.Id as Inv2Id, inv.Status, inv.BookingId into #tempInvoice2 from Invoice inv where inv.BookingId in (select cast(Id as nvarchar(20)) from #tempRecurring) and inv.IsARBInvoice =1 and inv.Status not in ('Paid','Cancel', 'Cancelled', 'Rolled Over', 'Init')
@@ -656,7 +683,7 @@ namespace HS.DataAccess
                                 drop table #dwnreccurring ";
             try
             {
-                sqlQuery = string.Format(sqlQuery, SearchTextQ, BillDayQ, IntervalQ, BillingMethodQ, BillingStatusQ, orderquery);
+                sqlQuery = string.Format(sqlQuery, SearchTextQ, BillDayQ, IntervalQ, BillingMethodQ, BillingStatusQ, orderquery, filterbydaterange);
                 using (SqlCommand cmd = GetSQLCommand(sqlQuery))
                 {
                     DataSet dsResult = GetDataSet(cmd);

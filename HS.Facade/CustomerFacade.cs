@@ -6837,9 +6837,9 @@ namespace HS.Facade
                      }).FirstOrDefault();
             return model;
         }
-        public RecurringBillingScheduleReportModel GetRecurringBilliingScheduleForReport(String SearchText, int? BillDay, String Interval, String BillingMethod, String BillingStatus, int PageNo, int PageSize, string Order)
+        public RecurringBillingScheduleReportModel GetRecurringBilliingScheduleForReport(String SearchText, string Start, string END, int? BillDay, String Interval, String BillingMethod, String BillingStatus, int PageNo, int PageSize, string Order)
         {
-            DataSet dsResult = _RecurringBillingScheduleDataAccess.GetReurringBillingScheduleList(SearchText, BillDay, Interval, BillingMethod, BillingStatus, PageNo, PageSize, Order);
+            DataSet dsResult = _RecurringBillingScheduleDataAccess.GetReurringBillingScheduleList(SearchText, Start, END, BillDay, Interval, BillingMethod, BillingStatus, PageNo, PageSize, Order);
             DataTable dt = dsResult.Tables[0];
             DataTable dt1 = dsResult.Tables[1];
             //DataTable dt2 = dsResult.Tables[2];
@@ -6872,9 +6872,9 @@ namespace HS.Facade
             Model.ScheduleList = RecurringBillingScheduleList;
             return Model;
         }
-        public DataTable GetReurringBillingScheduleListExportReport(string SearchText, int? BillDay, String Interval, String BillingMethod, String BillingStatus, string Order)
+        public DataTable GetReurringBillingScheduleListExportReport(string SearchText, string Start, string END, int? BillDay, String Interval, String BillingMethod, String BillingStatus, string Order)
         {
-            return _RecurringBillingScheduleDataAccess.GetReurringBillingScheduleListExportReport(SearchText, BillDay, Interval, BillingMethod, BillingStatus, Order);
+            return _RecurringBillingScheduleDataAccess.GetReurringBillingScheduleListExportReport(SearchText, Start, END, BillDay, Interval, BillingMethod, BillingStatus, Order);
         }
         public RecurringBillingScheduleReportModel GetRecurringBilliingScheduleForReport(string SearchText, string Cycle, string Method, DateTime? Start, DateTime? End, int PageNo, int PageSize, string Order)
         {

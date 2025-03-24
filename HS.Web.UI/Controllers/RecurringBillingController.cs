@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Wordprocessing;
 using HS.Entities;
 using HS.Framework;
 using HS.Framework.Utils;
@@ -2536,6 +2537,16 @@ namespace HS.Web.UI.Controllers
                  Value = x.DataValue.ToString()
              }).ToList();
 
+            DateTime startDate, endDate;
+
+            if (DateTime.TryParse(Start, out startDate) && DateTime.TryParse(End, out endDate))
+            {
+                if (startDate == DateTime.MinValue && endDate == DateTime.MinValue)
+                {
+                    Start = "";
+                    End = "";
+                }
+            }
             if (GetReport.HasValue && GetReport == true)
             {
                 if (!string.IsNullOrWhiteSpace(Order) && Order != "undefined")
@@ -2547,17 +2558,17 @@ namespace HS.Web.UI.Controllers
                 {
                     StartDate = Convert.ToDateTime(Start).SetZeroHour().ClientToUTCTime();
                     EndDate = Convert.ToDateTime(End).SetMaxHour().ClientToUTCTime();
-                    dt = _Util.Facade.CustomerFacade.GetReurringBillingScheduleListExportReport(searchtxt, BillDay, Interval, BillingMethod, BillingStatus, Order);
+                    dt = _Util.Facade.CustomerFacade.GetReurringBillingScheduleListExportReport(searchtxt, Start, End, BillDay, Interval, BillingMethod, BillingStatus, Order);
                 }
                 else
                 {
                     if (StartDate != new DateTime() && EndDate != new DateTime())
                     {
-                        dt = _Util.Facade.CustomerFacade.GetReurringBillingScheduleListExportReport(searchtxt, BillDay, Interval, BillingMethod, BillingStatus, Order);
+                        dt = _Util.Facade.CustomerFacade.GetReurringBillingScheduleListExportReport(searchtxt, Start, End, BillDay, Interval, BillingMethod, BillingStatus, Order);
                     }
                     else
                     {
-                        dt = _Util.Facade.CustomerFacade.GetReurringBillingScheduleListExportReport(searchtxt, BillDay, Interval, BillingMethod, BillingStatus, Order);
+                        dt = _Util.Facade.CustomerFacade.GetReurringBillingScheduleListExportReport(searchtxt, Start, End, BillDay, Interval, BillingMethod, BillingStatus, Order);
                     }
                 }
 
@@ -2569,7 +2580,7 @@ namespace HS.Web.UI.Controllers
                 return MakeExcelFromDataTable(dt, "Reccurring Billing RMR Report", rowarray, colarray);
             }
             RecurringBillingScheduleReportModel Model = new RecurringBillingScheduleReportModel();
-            Model = _Util.Facade.CustomerFacade.GetRecurringBilliingScheduleForReport(searchtxt, BillDay, Interval, BillingMethod, BillingStatus, pageno, pagesize, Order);
+            Model = _Util.Facade.CustomerFacade.GetRecurringBilliingScheduleForReport(searchtxt,Start,End, BillDay, Interval, BillingMethod, BillingStatus, pageno, pagesize, Order);
             ViewBag.PageNumber = pageno;
             ViewBag.OutOfNumber = 0;
             //ViewBag.order = null;
