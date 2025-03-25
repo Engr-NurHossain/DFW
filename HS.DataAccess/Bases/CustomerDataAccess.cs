@@ -326,10 +326,7 @@ namespace HS.DataAccess
             string StatusQuery = "";
             string TypeQuery = "";
             string PermissionQuery = "";
-            if (!permission)
-            {
-                PermissionQuery = "and tk.IsClosed = 0";
-            }
+          
             if (!string.IsNullOrWhiteSpace(from) && !string.IsNullOrWhiteSpace(to))
             {
                 from = from + " 00:00:00";
@@ -345,7 +342,7 @@ namespace HS.DataAccess
             }
             if (userid != new Guid())
             {
-                UserQuery = string.Format("and (assign.UserId = '{0}' or tk.CreatedBy = '{0}')", userid);
+                UserQuery = string.Format("and (tu.UserId = '{0}' or tk.CreatedBy = '{0}')", userid);
             }
             if (!string.IsNullOrWhiteSpace(status) && status != "-1")
             {
@@ -362,26 +359,20 @@ namespace HS.DataAccess
             {
                 TypeQuery = string.Format("and tk.TicketType = '{0}'", type);
             }
-            string sqlQuery = @"select * into #temp from [Lookup] where DataKey = 'TicketStatus'
+            string sqlQuery = @"
 
-                                select tk.*, case when cus.BusinessName != '' and cus.BusinessName is not null then cus.BusinessName else cus.FirstName + ' ' + cus.LastName end as CustomerName, cus.Id as CustomerIntId, assign.FirstName + ' ' + assign.LastName as AssignedPerson
-                                , createdby.FirstName + ' ' + createdby.LastName as CreatedPerson, #t.DisplayText as AssignedStatus
-                                ,cus.Street, cus.City, cus.State, cus.ZipCode
-                                ,ca.AppointmentStartTime, ca.AppointmentEndTime
+                                select tk.Id ,tk.TicketId
                                 from Ticket tk
-                                left join Customer cus on cus.CustomerId = tk.CustomerId
-                                left join TicketUser tu on tu.TiketId = tk.TicketId -- and tu.IsPrimary = 1
-                                left join Employee assign on assign.UserId = tu.UserId 
-                                left join Employee createdby on createdby.UserId = tk.CreatedBy
-                                left join CustomerAppointment ca on ca.AppointmentId = tk.TicketId
-                                left join #temp #t on #t.DataValue = tk.[Status]
-                                where tk.CompanyId = '{0}' and tk.[Status] NOT LIKE '%cancel%' and tk.[Status] NOT LIKE '%lost%' and tk.[Status] NOT LIKE '%no%' 
+                              
+                                left join TicketUser tu on tu.TiketId = tk.TicketId
+                              
+                                where tk.CompanyId = '{0}'
                                 {5} 
                                 {1}
                                 {2}
                                 {3}
                                 {4}
-                                drop table #temp";
+                                ";
             try
             {
                 sqlQuery = string.Format(sqlQuery, comid, subquery, UserQuery, StatusQuery, TypeQuery, PermissionQuery);

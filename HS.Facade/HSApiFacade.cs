@@ -1321,26 +1321,7 @@ namespace HS.Facade
                                 {
                                     Id = dr["Id"] != DBNull.Value ? Convert.ToInt32(dr["Id"]) : 0,
                                     TicketId = (Guid)dr["TicketId"],
-                                    CompanyId = (Guid)dr["CompanyId"],
-                                    CustomerId = (Guid)dr["CustomerId"],
-                                    TicketType = dr["TicketType"].ToString(),
-                                    Subject = dr["Subject"].ToString(),
-                                    Message = dr["Message"].ToString(),
-                                    CreatedDate = dr["CreatedDate"] != DBNull.Value ? Convert.ToDateTime(dr["CreatedDate"]) : new DateTime(),
-                                    CompletionDate = dr["CompletionDate"] != DBNull.Value ? Convert.ToDateTime(dr["CompletionDate"]) : new DateTime(),
-                                    Status = dr["Status"].ToString(),
-                                    CompletedDate = dr["CompletedDate"] != DBNull.Value ? Convert.ToDateTime(dr["CompletedDate"]) : new DateTime(),
-                                    CustomerName = dr["CustomerName"].ToString(),
-                                    AssignedPerson = dr["AssignedPerson"].ToString(),
-                                    CreatedPerson = dr["CreatedPerson"].ToString(),
-                                    AssignedStatus = dr["AssignedStatus"].ToString(),
-                                    Street = dr["Street"].ToString(),
-                                    City = dr["City"].ToString(),
-                                    State = dr["State"].ToString(),
-                                    ZipCode = dr["ZipCode"].ToString(),
-                                    AppointmentStartTime = dr["AppointmentStartTime"].ToString(),
-                                    AppointmentEndTime = dr["AppointmentEndTime"].ToString(),
-                                    CustomerIntId = dr["CustomerIntId"] != DBNull.Value ? Convert.ToInt32(dr["CustomerIntId"]) : 0
+                                 
                                 }).OrderByDescending(ticket => ticket.Id).ToList();
             return model;
         }
