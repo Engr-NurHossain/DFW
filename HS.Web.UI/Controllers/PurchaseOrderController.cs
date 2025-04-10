@@ -1170,13 +1170,13 @@ namespace HS.Web.UI.Controllers
                 {
                     model.PurchaseOrderWarehouse.Status = LabelHelper.PurchaseOrderStatus.ReceivedPartially;
                     model.PurchaseOrderWarehouse.RecieveByUid = CurrentUser.UserId;
-                    model.PurchaseOrderWarehouse.RecieveDate = model.PurchaseOrderWarehouse.RecieveDate;
+                    model.PurchaseOrderWarehouse.RecieveDate = DateTime.Now.UTCCurrentTime();
                 }
                 else if (TotalQty <= TotalReceiveQty)
                 {
                     model.PurchaseOrderWarehouse.Status = LabelHelper.PurchaseOrderStatus.Received;
                     model.PurchaseOrderWarehouse.RecieveByUid = CurrentUser.UserId;
-                    model.PurchaseOrderWarehouse.RecieveDate = model.PurchaseOrderWarehouse.RecieveDate;
+                    model.PurchaseOrderWarehouse.RecieveDate = DateTime.Now.UTCCurrentTime();
                 }
 
                 if (model.OpenTab == "Ware")
@@ -1185,7 +1185,7 @@ namespace HS.Web.UI.Controllers
                     PurchaseOrderWare.Status = LabelHelper.PurchaseOrderStatus.Received;
                     PurchaseOrderWare.IsReceived = true;
                     PurchaseOrderWare.RecieveByUid = CurrentUser.UserId;
-                    PurchaseOrderWare.RecieveDate = model.PurchaseOrderWarehouse.RecieveDate;
+                    PurchaseOrderWare.RecieveDate = DateTime.Now.UTCCurrentTime();
                     _Util.Facade.PurchaseOrderFacade.UpdatePurchaseOrderWarehouse(PurchaseOrderWare);
                 }
             }
