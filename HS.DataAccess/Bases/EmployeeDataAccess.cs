@@ -390,8 +390,8 @@ namespace HS.DataAccess
 				if(!reader.IsDBNull(67)) employeeObject.IsDefaultInCalendar = reader.GetBoolean( start + 67 );			
 				if(!reader.IsDBNull(68)) employeeObject.IsLocation = reader.GetBoolean( start + 68 );			
 				if(!reader.IsDBNull(69)) employeeObject.PasswordUpdateDays = reader.GetInt32( start + 69 );			
-				if(!reader.IsDBNull(70)) employeeObject.PayType = reader.GetString( start + 70 );			
-			FillBaseObject(employeeObject, reader, (start + 71));
+				//if(!reader.IsDBNull(70)) employeeObject.PayType = reader.GetString( start + 70 );			
+			FillBaseObject(employeeObject, reader, (start + 70));
 
 			
 			employeeObject.RowState = BaseBusinessEntity.RowStateEnum.NormalRow;	
