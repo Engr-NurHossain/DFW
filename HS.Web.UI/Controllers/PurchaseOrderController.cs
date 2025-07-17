@@ -1225,8 +1225,8 @@ namespace HS.Web.UI.Controllers
                     _Util.Facade.BillFacade.UpdateBill(Bill);
                 }
            
-                foreach (var item in model.PurchaseOrderDetail)
-                {
+                 foreach (var item in model.PurchaseOrderDetail.GroupBy(x => x.EquipmentId).Select(g => g.First()))
+                    {
                     var existingDetail = purchaseOrderDetailget?.FirstOrDefault(x => x.EquipmentId == item.EquipmentId);
 
                     if (item.CurrentQty > 0)
@@ -1415,7 +1415,7 @@ namespace HS.Web.UI.Controllers
             new Guid("22222222-2222-2222-2222-222222222232"),
             new Guid("22222222-2222-2222-2222-222222222233")
                 };
-                    foreach (var purchaseDetails in model.PurchaseOrderDetail)
+                    foreach (var purchaseDetails in model.PurchaseOrderDetail.GroupBy(x => x.EquipmentId).Select(g => g.First()))
                     {
                         if(!Array.Exists(excludedTechnicianIds, id => id == model.PurchaseOrderWarehouse.POFor))
                         {
